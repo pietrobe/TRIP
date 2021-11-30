@@ -1,29 +1,17 @@
 # README #
 
-This README would normally document whatever steps are necessary to get your application up and running.
+Parallel implementation for PRD radiative transfer in 3D
 
-### What is this repository for? ###
+### Library Dependencies ### 
+* MPI
+* (PETSc)
+* (Kokkos)
 
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+### Input Dependencies ###
+* input files encoding the atmospheric model 
 
-### How do I get set up? ###
+### Compile ###
+TODO
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
-
-### Contribution guidelines ###
-
-* Writing tests
-* Code review
-* Other guidelines
-
-### Who do I talk to? ###
-
-* Repo owner or admin
-* Other community or team contact
+### Run ###
+TODO
