@@ -10,7 +10,7 @@ void RT_problem::init_fields(){
 		eta_field_ = std::make_shared<Field_t>("eta", space_grid_, block_size_, sgrid::BOX_STENCIL);
 		rho_field_ = std::make_shared<Field_t>("rho", space_grid_, block_size_, sgrid::BOX_STENCIL);
 
-		// TODO?
+		// necessary?
 		I_field_->  allocate_on_device(); 
 		S_field_->  allocate_on_device(); 
 		eta_field_->allocate_on_device(); 
@@ -80,6 +80,63 @@ void RT_problem::init_atmosphere(){
 	k_c_      -> allocate_on_device(); 
 	eps_c_th_ -> allocate_on_device(); 
 	T_KQ_     -> allocate_on_device(); 
+}
+
+
+void RT_problem::set_theta_chi_grids(const size_t N_theta, const size_t N_chi, const bool double_GL){
+
+	if (mpi_rank_ == 0 and N_theta % 2 != 0) std::cerr << "\n========= WARNING: N_theta odd! =========\n" << std::endl;
+
+	// init theta and mu grids and weights 
+    // legendre_rule(N_theta,  0.0, pi_, theta_grid_, w_theta_);
+
+    if (double_GL)    	
+    {
+    	std::vector<Real> mu_1;
+    	std::vector<Real> mu_2;
+
+    	std::vector<Real> w_1;
+    	std::vector<Real> w_2;
+
+    	legendre_rule(N_theta / 2,  -1.0, 0.0, mu_1, w_1);
+    	legendre_rule(N_theta / 2,   0.0, 1.0, mu_2, w_2);
+
+    	// first half
+    	for (size_t i = 0; i < N_theta / 2; ++i)
+	    {
+	    	mu_grid_.push_back(mu_1[i]);
+	    	w_theta_.push_back(w_1[i]);
+
+			theta_grid_.push_back(std::acos(mu_1[i]));		    	
+	    }
+
+	    // second half
+    	for (size_t i = 0; i < N_theta / 2; ++i)
+	    {
+	    	mu_grid_.push_back(mu_2[i]);
+	    	w_theta_.push_back(w_2[i]);
+
+			theta_grid_.push_back(std::acos(mu_2[i]));		    	
+	    }
+    }
+    else
+    {
+    	legendre_rule(N_theta,  -1.0, 1.0, mu_grid_, w_theta_);
+
+	    for (size_t i = 0; i < N_theta; ++i)
+	    {
+	    	theta_grid_.push_back(std::acos(mu_grid_[i]));
+	    }
+    }
+
+    // init equidistant chi grid in [0, 2pi] and trap weights
+    const Real delta_chi = 2.0 * pi_ / N_chi;
+
+    for (size_t i = 0; i < N_chi; ++i)
+    {
+    	chi_grid_.push_back(i * delta_chi);	    	
+    	w_chi_.push_back(delta_chi);
+    }    
 }
 
 

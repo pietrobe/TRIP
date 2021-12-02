@@ -4,6 +4,7 @@
 // #include "Utilities.hpp"
 // #include "Rotation_matrix.hpp"
 #include "sgrid_Core.hpp"
+#include "Legendre_rule.hpp"
 
 using Real = double;
 
@@ -33,11 +34,12 @@ public:
 
     	// now hardcoded 
 
-    	N_x_ = 100;     
-		N_y_ = 100;     
-		N_z_ = 100;  
+    	N_x_ = 10;     
+		N_y_ = 10;     
+		N_z_ = 10;  
 		N_s_ = N_x_ * N_y_ * N_z_;
-		
+
+		if (mpi_rank_ == 0 and mpi_size_ > (int) N_s_) std::cerr << "\n========= WARNING: mpi_size > N_s! =========\n" << std::endl;		
 
 		N_theta_ = N_theta; 
 		N_chi_   = N_chi;   
@@ -46,6 +48,9 @@ public:
 
 		block_size_ = 4 * N_nu_ * N_theta_ * N_chi_;
 		tot_size_   = N_s_ * block_size_;
+
+		// set sizes and directions grids and weigths
+		set_theta_chi_grids(N_theta, N_chi);
 
 		Real start = MPI_Wtime();
 
@@ -122,6 +127,10 @@ private:
 	std::vector<Real> mu_grid_; 	
 	std::vector<Real> chi_grid_; 
 
+	// Legendre and trapezoidal weights 
+	std::vector<Real> w_theta_;
+	std::vector<Real> w_chi_;
+
 	// grids sizes	
 	size_t N_x_;     
 	size_t N_y_;     
@@ -178,8 +187,31 @@ private:
 	// quantities depending on position and direction
 	Field_ptr_t T_KQ_; // polarization tensor 
 
+	// init grid fields 
 	void init_fields();
 	void init_atmosphere();
+	
+	// set grids and sizes
+	void set_theta_chi_grids(const size_t N_theta, const size_t N_chi, const bool double_GL = true);
+	// void set_sizes();
+
+	// read input file
+	// void read_input(std::string filename);
+
+	// // precompute quantities
+	// void set_up();
+
+	// // precompute quantities
+	// void set_up();
+
+	// // init I,S, eta and rho using the following order: [i j k n i_stokes]
+	// void init_fields();
+
+	// // perform checks
+	// void const check_sizes();	
+
+	// // print infos on screen
+	// void const print_info();
 };
 
 #endif 
