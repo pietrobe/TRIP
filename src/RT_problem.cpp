@@ -388,12 +388,14 @@ void RT_problem::set_up(){
 
 	Kokkos::parallel_for("INIT-TKQ", space_grid_complex_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
 	{
-		auto *T_KQ          = T_KQ_dev.block(i, j, k);
-		
+		auto *T_KQ = T_KQ_dev.block(i, j, k);
+
+		size_t counter = 0;
+
 		// on position and direction
 		const int KQ_block_size = 6 * N_dirs_;
 
-		for (int i = 0; i < 4; ++i)
+		for (int i = 0; i < 4; ++i) // TODO change order?
 		{
 			for (size_t j = 0; j < N_theta_; ++j)
 			{
@@ -403,7 +405,9 @@ void RT_problem::set_up(){
 
 					for (int KQ = 0; KQ < 6; ++KQ)
 					{
-						T_KQ[i * KQ_block_size + N_dirs_ + KQ] = T_KQ_vec[KQ];	
+						T_KQ[counter] = T_KQ_vec[KQ];	
+
+						counter++;
 					}				
 				}
 			}
