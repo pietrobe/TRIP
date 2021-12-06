@@ -3,11 +3,11 @@
 
 #include "Utilities.hpp"
 
-typedef const std::vector<double> input_vec;
-typedef const std::vector<std::vector<double> > input_field;
+typedef const std::vector<Real> input_vec;
+typedef const std::vector<std::vector<Real> > input_field;
 
-typedef std::vector<double> output_vec;
-typedef std::vector<std::vector<double> > output_field;
+typedef std::vector<Real> output_vec;
+typedef std::vector<std::vector<Real> > output_field;
 
 // base class
 class Formal_solver
@@ -48,7 +48,7 @@ public:
 	void solve(input_vec &dts, input_field &K, input_field &S, input_vec &I_in, output_field &I_out);
 
 	// solve, for one step (dt), I' = K * I - S with initial condition I_in and K = [K1 K2] and S = [S1 S2]
-	void one_step(const double dt, input_vec &K1, input_vec &K2, input_vec &S1, input_vec &S2, input_vec &I_in, output_vec &I_out);
+	void one_step(const Real dt, input_vec &K1, input_vec &K2, input_vec &S1, input_vec &S2, input_vec &I_in, output_vec &I_out);
 
 private:
 

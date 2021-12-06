@@ -1,18 +1,22 @@
 #ifndef RT_problem_hpp
 #define RT_problem_hpp
 
-// #include "Utilities.hpp"
-// #include "Rotation_matrix.hpp"
+#include "Utilities.hpp"
 #include "sgrid_Core.hpp"
 #include "Legendre_rule.hpp"
-
-using Real = double;
+// #include "Rotation_matrix.hpp"
 
 using Grid_t  = sgrid::Grid<Real, 3>;
 using Field_t = sgrid::Field<Grid_t>;
 
+using Grid_complex_t  = sgrid::Grid<std::complex<Real>, 3>;
+using Field_complex_t = sgrid::Field<Grid_complex_t>;
+
 using Grid_ptr_t  = std::shared_ptr<Grid_t>;
 using Field_ptr_t = std::shared_ptr<Field_t>;
+
+using Grid_complex_ptr_t  = std::shared_ptr<Grid_complex_t>;
+using Field_complex_ptr_t = std::shared_ptr<Field_complex_t>;
 
 class RT_problem
 {
@@ -27,50 +31,58 @@ public:
     	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size_);
 
     	if (mpi_rank_ == 0) std::cout << "\n~~~~~~ MPI size = " << mpi_size_ << " ~~~~~~" << std::endl;		
+    	if (mpi_rank_ == 0) std::cout << "\n=========== Reading input files ===========\n" << std::endl;				
 
-    	//reading input
-    	// if (mpi_rank_ == 0) std::cout << "\n=========== Reading input files ===========\n" << std::endl;				
-    	// TODO	
+    	Real start = MPI_Wtime();
+    	
+    	// reading input
+    	read_frequency(input_path + "/frequency.dat");		
+    	
+    	// set sizes and directions grids and weigths
 
-    	// now hardcoded 
-
-    	N_x_ = 10;     
-		N_y_ = 10;     
-		N_z_ = 10;  
+		// now hardcoded 
+    	N_x_ = 3;     
+		N_y_ = 3;     
+		N_z_ = 3;  
 		N_s_ = N_x_ * N_y_ * N_z_;
 
-		if (mpi_rank_ == 0 and mpi_size_ > (int) N_s_) std::cerr << "\n========= WARNING: mpi_size > N_s! =========\n" << std::endl;		
-
-		N_theta_ = N_theta; 
-		N_chi_   = N_chi;   
-		N_dirs_  = N_theta_ * N_chi_;   
-		N_nu_    = 100;
-
-		block_size_ = 4 * N_nu_ * N_theta_ * N_chi_;
-		tot_size_   = N_s_ * block_size_;
-
-		// set sizes and directions grids and weigths
 		set_theta_chi_grids(N_theta, N_chi);
-
-		Real start = MPI_Wtime();
-
+		set_sizes();
+								
 		// init grid
 		space_grid_ = std::make_shared<Grid_t>();
 		space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {0, 0, 0});
 
-		// init fields and atmospheric quantities 
-		init_fields();	
-		init_atmosphere();	
+		space_grid_complex_ = std::make_shared<Grid_complex_t>();
+		space_grid_complex_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {0, 0, 0});
 
 		MPI_Barrier(space_grid_->raw_comm());
-	    Real end = MPI_Wtime();
+		Real end = MPI_Wtime();
 	    Real user_time = end - start;
 
-	    if (mpi_rank_ == 0) {
-	    	printf("Device: \"%s\"\n", typeid(DeviceExecutionSpace).name());
-      		printf("Setup and kernel call:\t%g (seconds)\n", user_time);
-    	}	
+	    if (mpi_rank_ == 0) printf("Init grid:\t%g (seconds)\n", user_time);
 
+	    start = MPI_Wtime();
+
+		// init fields
+		allocate_fields();					
+
+		// init atmospheric quantities 
+		allocate_atmosphere();	
+
+		MPI_Barrier(space_grid_->raw_comm());
+	    end = MPI_Wtime();
+	    user_time = end - start;
+	    if (mpi_rank_ == 0) printf("Allocate:\t%g (seconds)\n", user_time);
+		start = MPI_Wtime();
+
+		// precompute
+		set_up();
+
+		MPI_Barrier(space_grid_->raw_comm());
+	    end = MPI_Wtime();
+	    user_time = end - start;
+	    if (mpi_rank_ == 0) printf("Set up:\t%g (seconds)\n", user_time);
     	start = MPI_Wtime();
 
     	I_field_->exchange_halos();    	
@@ -81,10 +93,9 @@ public:
 	    end = MPI_Wtime();
 	    user_time = end - start;
 
-	    if (mpi_rank_ == 0) {
-	      printf("Exchange:\t\t%g (seconds)\n", user_time);
-	    }   
+	    if (mpi_rank_ == 0) printf("Exchange:\t\t%g (seconds)\n", user_time);	      
 
+	    print_info();
 	}
 
 private:
@@ -112,14 +123,12 @@ private:
 	// reference frame
 	const Real gamma_ = 0.5 * pi_;	  
 
-		// depolarizing rate due to elastic collisions
-	std::vector<Real> D1_, D2_; 
-
 	// atom constant, to precompute
 	Real nu_0_;	
 
 	// spatial grid
 	Grid_ptr_t space_grid_; 
+	Grid_complex_ptr_t space_grid_complex_; 
 
 	// auxiliary grids	
 	std::vector<Real> nu_grid_; 
@@ -144,7 +153,10 @@ private:
 	
 	size_t block_size_; // 4 * N_nu_ * N_theta_ * N_chi_;
 	size_t tot_size_;   // N_s_ * block_size;
-	
+
+	// Space coordinates
+	Field_ptr_t space_coord;
+
 	// unknown quantities 
 	Field_ptr_t I_field_; // intensity 
 	Field_ptr_t S_field_; // source function
@@ -152,6 +164,10 @@ private:
 	// propagation matrix entries 
 	Field_ptr_t eta_field_; 
 	Field_ptr_t rho_field_;
+
+	// depolarizing rate due to elastic collisions
+	Field_ptr_t	D1_; 
+	Field_ptr_t	D2_;
 
 	// atmospheric quantities
 	Field_ptr_t Nl_;   // lower level populations 
@@ -185,24 +201,27 @@ private:
 	Field_ptr_t eps_c_th_;
 
 	// quantities depending on position and direction
-	Field_ptr_t T_KQ_; // polarization tensor 
+	Field_complex_ptr_t T_KQ_; // polarization tensor 
 
-	// init grid fields 
-	void init_fields();
-	void init_atmosphere();
+	// allocate grid fields 
+	void allocate_fields();
+	void allocate_atmosphere();
+
+	// init fields 
+	void init_field(Field_ptr_t input_field, const Real input_value);
 	
 	// set grids and sizes
 	void set_theta_chi_grids(const size_t N_theta, const size_t N_chi, const bool double_GL = true);
-	// void set_sizes();
+	void set_sizes();
 
-	// read input file
-	// void read_input(std::string filename);
+	// read inputs
+	void read_frequency(std::string filename);
 
-	// // precompute quantities
-	// void set_up();
+	// precompute quantities
+	void set_up();
 
-	// // precompute quantities
-	// void set_up();
+	// compute polarization tensors (vector of six components)
+	std::vector<std::complex<Real> > compute_T_KQ(const size_t stokes_i, const Real theta, const Real chi);
 
 	// // init I,S, eta and rho using the following order: [i j k n i_stokes]
 	// void init_fields();
@@ -210,8 +229,8 @@ private:
 	// // perform checks
 	// void const check_sizes();	
 
-	// // print infos on screen
-	// void const print_info();
+	// print infos on screen
+	void const print_info();
 };
 
 #endif 

@@ -2,12 +2,12 @@
 
 // solve I' = KI - S
 
-void Formal_solver::one_step(const double dt, input_vec &K1, input_vec &K2, input_vec &S1, input_vec &S2, input_vec &I_in, output_vec &I_out){
+void Formal_solver::one_step(const Real dt, input_vec &K1, input_vec &K2, input_vec &S1, input_vec &S2, input_vec &I_in, output_vec &I_out){
 
 	if (debug_mode_ and (K2.size() != 16 or S2.size() != 4 or I_in.size() != 4) and mpi_rank_ == 0) std::cerr << "ERROR: wrong input size in one_step().\n";
 	
-	std::vector<double> A(16); 
-	std::vector<double> b(4); 
+	std::vector<Real> A(16); 
+	std::vector<Real> b(4); 
 	
 	if (type_ == "implicit_Euler") // K1 and S1 are not needed here 
 	{		
@@ -32,9 +32,9 @@ void Formal_solver::one_step(const double dt, input_vec &K1, input_vec &K2, inpu
 	{		
 		if (debug_mode_ and (K1.size() != 16 or S1.size() != 4) and mpi_rank_ == 0) std::cerr << "\nERROR: wrong input size for Crank–Nicolson!\n";
 
-		std::vector<double> K_times_I_in(4); 
+		std::vector<Real> K_times_I_in(4); 
 
-		double dt_half = 0.5 * dt;
+		Real dt_half = 0.5 * dt;
 
 		int index_ij;
 
@@ -64,7 +64,7 @@ void Formal_solver::one_step(const double dt, input_vec &K1, input_vec &K2, inpu
         const long double F = 1.0 - E;
         const long double G = (1.0 - (1.0 + dt_aux) * E) / dt_aux; 
         
-        std::vector<double> K_times_I_in(4, 0.0);
+        std::vector<Real> K_times_I_in(4, 0.0);
         int index_ij;
 				
         bool Id;

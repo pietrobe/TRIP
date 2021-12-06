@@ -9,6 +9,8 @@
 #include "Faddeeva.hpp"
 #include "Rotation_matrix.hpp"
 
+using Real = double; // TODO use Real in the file 
+
 #ifndef MPI_CHECK
 #define MPI_CHECK(stmt)                         \
     do                                  \
@@ -65,6 +67,5 @@ double W3JS(int J1, int J2, int J3, int M1, int M2, int M3);
 std::vector<double> refine_vector(const std::vector<double> &v);
 std::vector<double> refine_vector_blocked(const std::vector<double> &v, const size_t block_size);
 std::vector<double> refine_vector_blocked2(const std::vector<double> &v, const size_t block_size_fn);
-
 
 #endif 

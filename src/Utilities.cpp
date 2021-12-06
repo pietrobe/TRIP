@@ -587,7 +587,7 @@ std::vector<double> refine_vector_blocked2(const std::vector<double> &v, const s
 
   size_t index;
 
-  for (int i = 0; i < number_of_blocks; ++i)
+  for (int i = 0; i < (int)number_of_blocks; ++i)
   {
 
     // copy

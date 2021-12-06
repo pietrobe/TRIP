@@ -13,14 +13,10 @@ int main(int argc, char *argv[])
 
 	    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
-	    const size_t N_theta = 10; 
-	    const size_t N_chi   = 10;     
-
-	    const std::string input_path= "path/to/input/files";
-
-	    RT_problem rt_problem(input_path, N_theta, N_chi);
-
-	    if (mpi_rank == 0) std::cout << "RT problem constructed" << std::endl;		
+	    const size_t N_theta = 4; 
+	    const size_t N_chi   = 4;     
+	    
+	    RT_problem rt_problem("../input/FAL-C/1_B0_V0_12T_8C_99F", N_theta, N_chi);	    
 	}
     
 	Kokkos::finalize();
