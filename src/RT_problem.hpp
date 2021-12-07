@@ -3,20 +3,12 @@
 
 #include "Utilities.hpp"
 #include "sgrid_Core.hpp"
-#include "Legendre_rule.hpp"
-// #include "Rotation_matrix.hpp"
 
-using Grid_t  = sgrid::Grid<Real, 3>;
+using Grid_t  = sgrid::Grid<Real, 3>; 
 using Field_t = sgrid::Field<Grid_t>;
-
-using Grid_complex_t  = sgrid::Grid<std::complex<Real>, 3>;
-using Field_complex_t = sgrid::Field<Grid_complex_t>;
 
 using Grid_ptr_t  = std::shared_ptr<Grid_t>;
 using Field_ptr_t = std::shared_ptr<Field_t>;
-
-using Grid_complex_ptr_t  = std::shared_ptr<Grid_complex_t>;
-using Field_complex_ptr_t = std::shared_ptr<Field_complex_t>;
 
 class RT_problem
 {
@@ -52,10 +44,7 @@ public:
 		// init grid
 		space_grid_ = std::make_shared<Grid_t>();
 		space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {0, 0, 0});
-
-		space_grid_complex_ = std::make_shared<Grid_complex_t>();
-		space_grid_complex_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {0, 0, 0});
-
+		
 		MPI_Barrier(space_grid_->raw_comm());
 		Real end = MPI_Wtime();
 	    Real user_time = end - start;
@@ -98,11 +87,33 @@ public:
 	    print_info();
 	}
 
+	// convert block index to to local ones = [j_theta, k_chi, n_nu, i_stokes]
+	inline std::vector<size_t> block_to_local(const size_t block_index)
+	{
+		std::vector<size_t> local_indeces;
+
+		const size_t i_stokes =  block_index % 4;
+		const size_t n        = (block_index / 4) % N_nu_;
+		const size_t k        = (block_index / (4 * N_nu_)) % N_chi_;
+		const size_t j        = (block_index / (4 * N_nu_ * N_chi_)) % N_theta_;
+				
+		local_indeces.push_back(j);
+		local_indeces.push_back(k);
+		local_indeces.push_back(n);
+		local_indeces.push_back(i_stokes);
+
+		return local_indeces;	
+	}
+
+
 private:
 
 	// MPI varables
 	int mpi_rank_;
 	int mpi_size_;	
+
+	// flag to enable continuum 
+	bool enable_continuum_ = true;
 
 	// physical and math constants 
 	const Real c_   = 2.99792458e+10;
@@ -127,14 +138,16 @@ private:
 	Real nu_0_;	
 
 	// spatial grid
-	Grid_ptr_t space_grid_; 
-	Grid_complex_ptr_t space_grid_complex_; 
+	Grid_ptr_t space_grid_; 	
 
 	// auxiliary grids	
 	std::vector<Real> nu_grid_; 
 	std::vector<Real> theta_grid_; 
 	std::vector<Real> mu_grid_; 	
 	std::vector<Real> chi_grid_; 
+
+	// horixontal spacing
+	Real L_; // L = dx = dy
 
 	// Legendre and trapezoidal weights 
 	std::vector<Real> w_theta_;
@@ -155,7 +168,7 @@ private:
 	size_t tot_size_;   // N_s_ * block_size;
 
 	// Space coordinates
-	Field_ptr_t space_coord;
+	Field_ptr_t space_coord_;  // TODO x,y not needed?
 
 	// unknown quantities 
 	Field_ptr_t I_field_; // intensity 
@@ -201,31 +214,40 @@ private:
 	Field_ptr_t eps_c_th_;
 
 	// quantities depending on position and direction
-	Field_complex_ptr_t T_KQ_; // polarization tensor 
+	std::vector<std::vector<std::complex<Real> > > T_KQ_; // polarization tensor 
 
 	// allocate grid fields 
 	void allocate_fields();
 	void allocate_atmosphere();
 
 	// init fields 
-	void init_field(Field_ptr_t input_field, const Real input_value);
+	void init_field(Field_ptr_t input_field, const Real input_value); // TODO remove?
 	
 	// set grids and sizes
 	void set_theta_chi_grids(const size_t N_theta, const size_t N_chi, const bool double_GL = true);
 	void set_sizes();
 
 	// read inputs
-	void read_frequency(std::string filename);
-
-	// precompute quantities
-	void set_up();
+	void read_atmosphere(    const std::string filename);
+	void read_bulk_velocity( const std::string filename);
+	void read_frequency(     const std::string filename);
+	void read_magnetic_field(const std::string filename);
+	void read_sigma(         const std::string filename);
+	void read_k_c(           const std::string filename);
+	void read_eps_c_th(      const std::string filename);			   
+	
+	void read_input_1D(const std::string filename, const Real L, const size_t N_x, const size_t N_y);
 
 	// compute polarization tensors (vector of six components)
 	std::vector<std::complex<Real> > compute_T_KQ(const size_t stokes_i, const Real theta, const Real chi);
+	std::complex<Real> get_TKQi(const size_t i_stokes, const int K, const int Q, const size_t j, const size_t k);
 
-	// // init I,S, eta and rho using the following order: [i j k n i_stokes]
-	// void init_fields();
-
+	// compute elements of the propagation matrix K
+	void set_eta_and_rhos();
+	
+	// precompute quantities
+	void set_up();
+	
 	// // perform checks
 	// void const check_sizes();	
 

@@ -1,7 +1,94 @@
 #include "RT_problem.hpp"
 
 
-void RT_problem::read_frequency(std::string filename){
+void RT_problem::read_input_1D(const std::string filename, const Real L, const size_t N_x, const size_t N_y){
+
+	// set horizontal grid parameters 
+	L_   = L;
+	N_x_ = N_x;
+	N_y_ = N_y;
+
+	read_atmosphere(filename);
+}
+
+
+void RT_problem::read_atmosphere(const std::string filename){
+	
+	if (mpi_rank_ == 0) std::cout << "Reading atmospheric data from " << filename << std::endl;
+
+	std::ifstream myFile(filename);
+	std::string line;	
+
+	if (not myFile.good()) std::cerr << "\nERROR: File " << filename << " does not exist!\n" << std::endl;
+
+	bool first_line = true;
+
+	while(getline(myFile, line))
+	{
+		std::istringstream lineStream(line);
+		double entry;
+		std::string line_entry;
+
+		if (first_line) // skip first line 
+		{
+			lineStream >> line_entry;
+			if (line_entry.compare("Height[km]") != 0) std::cout << line_entry << " is not Height[km]" << '\n';			
+			lineStream >> line_entry;
+			if (line_entry.compare("Temp[K]") != 0)    std::cout << line_entry << " is not Temp[K]" << '\n';			
+			lineStream >> line_entry;
+			if (line_entry.compare("Vmic[cm/s]") != 0) std::cout << line_entry << " is not Vmic[cm/s]" << '\n';
+			lineStream >> line_entry;
+			if (line_entry.compare("Damp") != 0)       std::cout << line_entry << " Damp" << '\n';
+			lineStream >> line_entry;
+			if (line_entry.compare("Nl[cm-3]") != 0)   std::cout << line_entry << " is not Nl[cm-3]" << '\n';
+			lineStream >> line_entry;
+			if (line_entry.compare("Nu[cm-3]") != 0)   std::cout << line_entry << " is not Nu[cm-3]" << '\n';
+			lineStream >> line_entry;
+			if (line_entry.compare("Cul[s-1]") != 0)   std::cout << line_entry << " is not Cul[s-1]" << '\n';						
+			lineStream >> line_entry;
+			if (line_entry.compare("Qel[s-1]") != 0)   std::cout << line_entry << " is not Qel[s-1]" << '\n';						
+		}
+		else
+		{	
+			// auto space_coord_dev = space_coord_->view_device();
+
+			// auto slice = space_grid_->md_range_slice(2);
+
+		    sgrid::parallel_for("READ Z", space_grid_->md_range_slice(2), SGRID_LAMBDA(int i, int j) 
+		    {         
+		        // auto *space_coord = space_coord_dev.block(i, j);
+
+		        
+
+		         
+		        
+		    });
+
+			// lineStream >> entry;		
+			// space_coord_
+			// depth_grid_.push_back(entry);
+			// lineStream >> entry;
+			// T_.push_back(entry);
+			// lineStream >> entry;
+			// xi_.push_back(entry);
+			// lineStream >> entry;
+			// a_.push_back(entry);
+			// lineStream >> entry;
+			// Nl_.push_back(entry);
+			// lineStream >> entry;
+			// Nu_.push_back(entry);
+			// lineStream >> entry;
+			// Cul_.push_back(entry);
+			// lineStream >> entry;
+			// Qel_.push_back(entry);
+		}		
+
+		first_line = false;
+	} 
+}
+
+
+void RT_problem::read_frequency(const std::string filename){
 
 	if (mpi_rank_ == 0) std::cout << "Reading frequencies [s-1] from " << filename << std::endl;
 
@@ -95,7 +182,7 @@ void RT_problem::allocate_fields(){
 void RT_problem::allocate_atmosphere(){
 
 	// create spatial coordinates
-	space_coord = std::make_shared<Field_t>("xyz",   space_grid_, 3, sgrid::BOX_STENCIL);
+	space_coord_ = std::make_shared<Field_t>("xyz", space_grid_, 3, sgrid::BOX_STENCIL);
 
 	// create atmospheric quantities 
 	D1_   = std::make_shared<Field_t>("D1",   space_grid_, 1, sgrid::BOX_STENCIL);
@@ -129,11 +216,10 @@ void RT_problem::allocate_atmosphere(){
 	sigma_    = std::make_shared<Field_t>("sigma",    space_grid_, N_nu_, sgrid::BOX_STENCIL);
 	k_c_      = std::make_shared<Field_t>("k_c",      space_grid_, N_nu_, sgrid::BOX_STENCIL);
 	eps_c_th_ = std::make_shared<Field_t>("eps_c_th", space_grid_, N_nu_, sgrid::BOX_STENCIL);
-
-	// quantities depending on position and direction
-	T_KQ_ = std::make_shared<Field_complex_t>("Doppler_width", space_grid_complex_, 4 * 6 * N_dirs_, sgrid::BOX_STENCIL);  
-
+	
 	// allocate
+	space_coord_ -> allocate_on_device(); 
+
 	D1_  -> allocate_on_device(); 
 	D2_  -> allocate_on_device(); 
 	Nl_  -> allocate_on_device(); 
@@ -161,7 +247,6 @@ void RT_problem::allocate_atmosphere(){
 	sigma_ 	  -> allocate_on_device(); 
 	k_c_      -> allocate_on_device(); 
 	eps_c_th_ -> allocate_on_device(); 
-	T_KQ_     -> allocate_on_device(); 
 }
 
 
@@ -179,6 +264,7 @@ void RT_problem::init_field(Field_ptr_t input_field, const Real input_value){
         }
     });
 }
+
 
 void RT_problem::set_theta_chi_grids(const size_t N_theta, const size_t N_chi, const bool double_GL){
 
@@ -235,6 +321,7 @@ void RT_problem::set_theta_chi_grids(const size_t N_theta, const size_t N_chi, c
     	w_chi_.push_back(delta_chi);
     }    
 }
+
 
 std::vector<std::complex<Real> > RT_problem::compute_T_KQ(const size_t stokes_i, const Real theta, const Real chi){
 
@@ -310,6 +397,212 @@ std::vector<std::complex<Real> > RT_problem::compute_T_KQ(const size_t stokes_i,
 	return T_KQ;
 }
 
+
+std::complex<Real> RT_problem::get_TKQi(const size_t i_stokes, const int K, const int Q, const size_t j, const size_t k){
+
+	// checks 	
+	if ( i_stokes >= 4) std::cerr  << "\nERROR: i_stokes is too large" << std::endl; 					
+	if (K > 2) std::cerr           << "\nERROR: K is too large"        << std::endl; 			
+	if (std::abs(Q) > K) std::cerr << "\nERROR: Q is too large"        << std::endl; 	
+	if (j >= N_theta_) std::cerr   << "\nERROR: N_theta_ is too large" << std::endl; 	
+	if (k >= N_chi_) std::cerr     << "\nERROR: N_chi_ is too large"   << std::endl; 	
+
+	int index = i_stokes * N_theta_ * N_chi_ + j * N_chi_ + k;
+
+	std::complex<Real> T_KQ;
+
+	if (K == 0)
+	{
+		T_KQ = T_KQ_[index][0];
+	}
+	else if (K == 1)
+	{
+		if (Q == 0)
+		{
+			T_KQ = T_KQ_[index][1];
+		}
+		else if (Q == 1)
+		{
+			T_KQ = T_KQ_[index][2];
+		}
+		else if (Q == -1)
+		{
+			T_KQ = - 1.0 * std::conj(T_KQ_[index][2]);
+		}				
+		else { std::cerr << "\nERROR: wrong Q input" << std::endl; }		
+	}
+	else if (K == 2)
+	{
+		if (Q == 0)
+		{
+			T_KQ = T_KQ_[index][3];
+		}
+		else if (Q == 1)
+		{
+			T_KQ = T_KQ_[index][4];
+		}
+		else if (Q == -1)
+		{
+			T_KQ = - 1.0 * std::conj(T_KQ_[index][4]);
+		}
+		else if (Q == 2)
+		{
+			T_KQ = T_KQ_[index][5];
+		}
+		else if (Q == -2)
+		{
+			T_KQ = std::conj(T_KQ_[index][5]);
+		}
+		else { std::cerr << "\nERROR: wrong Q input" << std::endl; }		
+	}
+	else
+	{
+		std::cerr << "\nERROR: wrong K input" << std::endl; 
+	}
+
+	return T_KQ;
+}
+
+
+void RT_problem::set_eta_and_rhos(){
+
+	auto eta_dev = eta_field_->view_device();
+	auto rho_dev = rho_field_->view_device();
+
+	auto theta_B_dev = theta_B_->view_device();
+	auto chi_B_dev   = chi_B_  ->view_device();
+
+	auto a_dev    = a_    ->view_device();
+	auto u_dev    = u_    ->view_device();
+	auto k_L_dev  = k_L_  ->view_device();
+	auto k_c_dev  = k_c_  ->view_device();	
+	auto nu_L_dev = nu_L_ ->view_device();
+
+	auto v_b_dev       = v_b_       ->view_device();
+	auto theta_v_b_dev = theta_v_b_ ->view_device();
+	auto chi_v_b_dev   = chi_v_b_   ->view_device();
+	
+	auto Doppler_width_dev = Doppler_width_->view_device();
+
+    Kokkos::parallel_for("INIT ETA-RHO", space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
+    {         
+        auto *block_eta = eta_dev.block(i, j, k);
+        auto *block_rho = rho_dev.block(i, j, k);
+
+        auto *theta_B = theta_B_dev.block(i, j, k);
+        auto *chi_B   = chi_B_dev.block(i, j, k);
+
+        auto *a    = a_dev.block(i, j, k);
+        auto *u    = u_dev.block(i, j, k);
+		auto *k_L  = k_L_dev.block(i, j, k);
+		auto *k_c  = k_c_dev.block(i, j, k);		
+        auto *nu_L = nu_L_dev.block(i, j, k);
+
+        auto *v_b       = v_b_dev.block(i, j, k);
+        auto *theta_v_b = theta_v_b_dev.block(i, j, k);
+        auto *chi_v_b   = chi_v_b_dev.block(i, j, k);
+        
+        auto *Doppler_width = Doppler_width_dev.block(i, j, k);
+
+        Rotation_matrix R(0.0, -theta_B[0], -chi_B[0]);
+
+        // indeces
+        std::vector<size_t> local_idx;
+        size_t j_theta, k_chi, n_nu;
+
+		// coeffs
+		int q;
+		Real fact, coeff_K, W3J1, W3J2, um, v_dot_Omega;
+		Real u_red, u_b;
+
+		std::complex<Real> D_KQQ, faddeva, fact_re, fact_im;
+         
+        for (size_t b = 0; b < block_size_; b = b + 4) 
+        {        	
+			local_idx = block_to_local(b);
+
+        	j_theta = local_idx[0];
+        	k_chi   = local_idx[1];
+        	n_nu    = local_idx[1];
+
+        	const Real theta = theta_grid_[j_theta];
+			const Real chi   = chi_grid_[k_chi];	
+
+			const Real coeff  =  k_L[0] / (std::sqrt(pi_) * Doppler_width[0]) ;
+			const Real coeff2 = nu_L[0] / Doppler_width[0];
+
+			const std::complex<Real> a_damp(0.0, a[0]);
+
+			// for reduced frequency
+			v_dot_Omega = v_b[0] * ( std::cos(theta_v_b[0]) * std::cos(theta) + std::sin(theta_v_b[0]) * std::sin(theta) * std::cos(chi - chi_v_b[0]));
+			u_b = nu_0_ * v_dot_Omega / (c_ * Doppler_width[0]);
+			u_red = u[n_nu] + u_b;
+
+			for (int K = 0; K < 3; ++K)
+			{
+				coeff_K = coeff * std::sqrt(3 * ( 2 * K + 1));
+	
+				for (int Mu = - Ju_; Mu < Ju_ + 1; ++Mu)
+				{
+					for (int Ml = - Jl_; Ml < Jl_ + 1; ++Ml)
+					{						
+						if (std::abs(Mu - Ml) <= 1)
+						{
+							q = Ml - Mu;
+
+							W3J1 = W3JS(Ju_, Jl_, 1, -Mu, Ml, -q);
+							W3J2 = W3JS(1, 1, K, q, -q, 0);
+
+							fact = coeff_K * std::pow(-1,q + 1) * std::pow(W3J1,2) * W3J2;
+
+							um = coeff2 * (gu_ * Mu - gl_ * Ml) + u_red;
+					
+							for (int Q = -K; Q < K + 1; ++Q)
+							{			
+								faddeva = Faddeeva::w(um + a_damp);
+								D_KQQ   = std::conj(R(K, 0, Q));
+
+								fact_re = fact * std::real(faddeva) * D_KQQ;
+								fact_im = fact * std::imag(faddeva) * D_KQQ;
+							
+								// etas							
+								block_eta[b + 0] += std::real(fact_re * get_TKQi(0, K, Q, j_theta, k_chi)); 
+								block_eta[b + 1] += std::real(fact_re * get_TKQi(1, K, Q, j_theta, k_chi));
+								block_eta[b + 2] += std::real(fact_re * get_TKQi(2, K, Q, j_theta, k_chi));
+								block_eta[b + 3] += std::real(fact_re * get_TKQi(3, K, Q, j_theta, k_chi));						
+								
+								// rhos
+								block_rho[b + 0] += std::real(fact_im * get_TKQi(1, K, Q, j_theta, k_chi));
+								block_rho[b + 1] += std::real(fact_im * get_TKQi(2, K, Q, j_theta, k_chi));
+								block_rho[b + 2] += std::real(fact_im * get_TKQi(3, K, Q, j_theta, k_chi));						
+							}
+						}
+					}		
+				}
+        	}
+
+        	if (enable_continuum_) block_eta[b + 0] += k_c[n_nu];        	        	
+        }
+
+        // check positivity
+        for (size_t b = 0; b < block_size_; ++b) 
+        {      
+        	if (block_eta[b] < 0) std::cerr << "\nWARNING: negative eta!" << std::endl; 		
+        	if (block_rho[b] < 0) std::cerr << "\nWARNING: negative rho!" << std::endl; 		        	
+        }  	
+    });	
+
+	// // debug		
+	// if (etas_and_rhos[0] <= 0)  std::cerr << "\nWARNING: eta_I not positive!" << std::endl; 
+
+	// const Real dichroism_module = std::sqrt(etas_and_rhos[1] * etas_and_rhos[1] + etas_and_rhos[2] * etas_and_rhos[2] + etas_and_rhos[3] * etas_and_rhos[3]);
+	
+	// if (etas_and_rhos[0] < dichroism_module) dichroism_warning = true;
+				
+	// if (dichroism_warning) std::cout << "\nWARNING: eta_I < eta! (Eq. (7) Gioele Paganini 2018, Part III)" << std::endl; 	
+}
+
+
 void RT_problem::set_up(){
  
     if (mpi_rank_ == 0) std::cout << "\nPrecomputing quantities...";				
@@ -321,7 +614,7 @@ void RT_problem::set_up(){
 	const Real dE = Eu_ - El_;
 	nu_0_ = dE * c_;
 
-	// compute coefficients depending on the spatial point //////////////////////////
+	// compute coefficients depending on the spatial point 
 	
 	// const for k_L
 	tmp_const = c_ * c_* (2 * Ju_ + 1) * Aul_ / (8 * pi_ * nu_0_ * nu_0_ * (2 * Jl_ + 1));
@@ -347,9 +640,8 @@ void RT_problem::set_up(){
 	auto Doppler_width_dev = Doppler_width_->view_device();
 	auto epsilon_dev       = epsilon_ ->view_device();
 	auto W_T_dev           = W_T_->view_device();
-	auto T_KQ_dev          = T_KQ_->view_device();
 
-	// fill
+	// compute atmospheric quantities 
     Kokkos::parallel_for("INIT-ATM", space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
     {   
     	auto *xi  = xi_dev.block(i, j, k);      
@@ -385,194 +677,24 @@ void RT_problem::set_up(){
 			u[n] = (nu_0_ - nu_grid_[n]) / Doppler_width[0];
 		}	
     });	
-
-	Kokkos::parallel_for("INIT-TKQ", space_grid_complex_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
+		    
+	// precompute polarization tensors T_KQ
+	for (int i = 0; i < 4; ++i)
 	{
-		auto *T_KQ = T_KQ_dev.block(i, j, k);
-
-		size_t counter = 0;
-
-		// on position and direction
-		const int KQ_block_size = 6 * N_dirs_;
-
-		for (int i = 0; i < 4; ++i) // TODO change order?
+		for (size_t j = 0; j < N_theta_; ++j)
 		{
-			for (size_t j = 0; j < N_theta_; ++j)
+			for (size_t k = 0; k < N_chi_; ++k)
 			{
-				for (size_t k = 0; k < N_chi_; ++k)
-				{
-					auto T_KQ_vec = compute_T_KQ(i, theta_grid_[j], chi_grid_[k]);
-
-					for (int KQ = 0; KQ < 6; ++KQ)
-					{
-						T_KQ[counter] = T_KQ_vec[KQ];	
-
-						counter++;
-					}				
-				}
+				auto T_KQ = compute_T_KQ(i, theta_grid_[j], chi_grid_[k]);
+			
+				T_KQ_.push_back(T_KQ);							
 			}
 		}
-	});	
+	}
 	   	
-	// // precompute etas and rhos //////////////////////////////////////////
-	// PetscErrorCode ierr;
-
-	// int istart, iend;
-	// int ix[4];
-
-	// bool dichroism_warning = false;
-
-	// ierr = VecGetOwnershipRange(eta_field_, &istart, &iend);CHKERRV(ierr);
+	// compute etas and rhos
+	set_eta_and_rhos();
 	
-	// std::vector<Real> etas_and_rhos;
-
-	// size_t i_loc, j_loc = 0, k_loc = 0, n_loc = 0;
-	
-	// for (int i = istart; i < iend; i = i + 4) 
-	// {	
-	// 	i_loc = i/block_size_;
-		
-	// 	etas_and_rhos = compute_eta_and_rhos(i_loc, j_loc, k_loc, n_loc);	
-
-	// 	n_loc++;
-
-	// 	if (n_loc == N_nu_)
-	// 	{
-	// 		n_loc = 0;
-	// 		k_loc++;
-
-	// 		if (k_loc == N_chi_)
-	// 		{
-	// 			k_loc = 0;
-	// 			j_loc++;
-
-	// 			if (j_loc == N_theta_) j_loc = 0;				
-	// 		}
-	// 	}		
-
-	// 	// assign ix[ii] = i + ii;
-	// 	std::iota(ix, ix + 4, i);
-
-	// 	// debug		
-	// 	if (etas_and_rhos[0] <= 0)  std::cerr << "\nWARNING: eta_I not positive!" << std::endl; 
-
-	// 	const Real dichroism_module = std::sqrt(etas_and_rhos[1] * etas_and_rhos[1] + etas_and_rhos[2] * etas_and_rhos[2] + etas_and_rhos[3] * etas_and_rhos[3]);
-		
-	// 	if (etas_and_rhos[0] < dichroism_module) dichroism_warning = true;
-	// 	// {			
-	// 	// 	std::cout << "eta_I = " << etas_and_rhos[0] << std::endl;
-	// 	// 	std::cout << "dichroism_module = " << dichroism_module << std::endl;
-	// 	// } 
-				
-	// 	ierr = VecSetValues(eta_field_, 4, ix, &etas_and_rhos[0], INSERT_VALUES);CHKERRV(ierr); 
-	// 	ierr = VecSetValues(rho_field_, 4, ix, &etas_and_rhos[4], INSERT_VALUES);CHKERRV(ierr); 		
-	// }
-
-	// ierr = VecAssemblyBegin(eta_field_);CHKERRV(ierr); 
-	// ierr = VecAssemblyEnd(eta_field_);CHKERRV(ierr); 
-	// ierr = VecAssemblyBegin(rho_field_);CHKERRV(ierr); 
-	// ierr = VecAssemblyEnd(rho_field_);CHKERRV(ierr); 
-
-	// if (dichroism_warning) std::cout << "\nWARNING: eta_I < eta! (Eq. (7) Gioele Paganini 2018, Part III)" << std::endl; 	
-
-	// // precomputing dtau /////////////////////////////////////////////////////////////
-
-	// const int stoke_block = block_size_ / 4; // stoke_block = N_chi_ * N_theta * N_nu
-
-	// int eta_start, eta_end;
-
-	// ierr = VecGetOwnershipRange(eta_field_, &eta_start, &eta_end);CHKERRV(ierr);
-
-	// // copy the portion of eta_field_ that is needed //////////
-	// const bool not_last_rank = mpi_rank_ < mpi_size_ - 1;
-
-	// // create vector for the first portion of eta own by the next processor
-	// Vec next_eta; 		
-
-	// ierr = VecCreate(PETSC_COMM_WORLD, &next_eta);CHKERRV(ierr);	
-	// ierr = VecSetSizes(next_eta, stoke_block, mpi_size_ * stoke_block);CHKERRV(ierr);		
-	// ierr = VecSetFromOptions(next_eta);CHKERRV(ierr);				
-					
-	// IS is_send, is_recive;
-
-	// if (not_last_rank)	
-	// {
-	// 	ierr = ISCreateStride(PETSC_COMM_SELF, stoke_block, eta_end, 4, &is_send);CHKERRV(ierr);
-	// 	ierr = ISCreateStride(PETSC_COMM_SELF, stoke_block, stoke_block * mpi_rank_, 1, &is_recive);CHKERRV(ierr);
-	// }
-	// else
-	// {
-	// 	ierr = ISCreateStride(PETSC_COMM_SELF, 0, 0, 1, &is_send);CHKERRV(ierr);
-	// 	ierr = ISCreateStride(PETSC_COMM_SELF, 0, 0, 1, &is_recive);CHKERRV(ierr);
-	// }
-		
-	// VecScatter scatter_ctx;	
-
-	// ierr = VecScatterCreate(eta_field_,is_send,next_eta,is_recive, &scatter_ctx);CHKERRV(ierr);
-	// ierr = VecScatterBegin(scatter_ctx, eta_field_, next_eta, INSERT_VALUES,SCATTER_FORWARD);CHKERRV(ierr);
- //    ierr = VecScatterEnd(scatter_ctx, eta_field_, next_eta, INSERT_VALUES,SCATTER_FORWARD);CHKERRV(ierr);
-    
- //    // clean
- //    ierr = VecScatterDestroy(&scatter_ctx);CHKERRV(ierr);
- //    ierr = ISDestroy(&is_send);CHKERRV(ierr);
-	// ierr = ISDestroy(&is_recive);CHKERRV(ierr);
-
- //    /////////////// scattering done ///////////////
-	
- //    ierr = VecGetOwnershipRange(dtau_, &istart, &iend);CHKERRV(ierr);    
-
- //    int start_next, end_next, counter = 0;
- //    ierr = VecGetOwnershipRange(next_eta, &start_next, &end_next);CHKERRV(ierr);    
-          
-	// Real eta1, eta2, dtau;
-	// int index;		
-
-	// bool sign_err = false; 
-	
-	// for (int i = istart; i < iend; ++i) 
-	// {
-	// 	i_loc = i/stoke_block;	
-		
-	// 	index = i * 4;
-	// 	ierr = VecGetValues(eta_field_, 1, &index, &eta1);CHKERRV(ierr);
-
-	// 	index += block_size_;
-
-	// 	if (index < eta_end)
-	// 	{
-	// 		ierr = VecGetValues(eta_field_, 1, &index, &eta2);	CHKERRV(ierr);
-
-	// 		dtau = 0.5 * (eta1 + eta2) * 1e5 * std::abs(depth_grid_[i_loc + 1] - depth_grid_[i_loc]); // conversion to cm			
-
-	// 		ierr = VecSetValue(dtau_, i, dtau, INSERT_VALUES);CHKERRV(ierr);
-
-	// 		if (dtau <= 0) sign_err = true; 
-
-	// 	}
-	// 	else if (not_last_rank)// use data copied from next processor
-	// 	{							
-	// 		index = start_next + counter;
-	// 		ierr = VecGetValues(next_eta, 1, &index, &eta2);CHKERRV(ierr);	
-	// 		counter++;
-
-	// 		dtau = 0.5 * (eta1 + eta2) * 1e5 * std::abs(depth_grid_[i_loc + 1] - depth_grid_[i_loc]); // conversion to cm					
-
-	// 		ierr = VecSetValue(dtau_, i, dtau, INSERT_VALUES);CHKERRV(ierr);
-
-	// 		if (dtau <= 0) sign_err = true; 
-	// 	}				
-	// }
-
-	// if (sign_err) std::cerr << "\nWARNING: dtau negative!" << std::endl; 
-
-	// ierr = VecAssemblyBegin(dtau_);CHKERRV(ierr); 
-	// ierr = VecAssemblyEnd(dtau_);CHKERRV(ierr); 
-
-	// // save_vec(dtau_, "../output/dtau.m","dt");
-
-	// // clean	
-	// ierr = VecDestroy(&next_eta);CHKERRV(ierr); 		
-
 	if (mpi_rank_ == 0) std::cout << "done" << std::endl;	
 }
 

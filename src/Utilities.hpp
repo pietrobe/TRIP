@@ -6,10 +6,9 @@
 #include "petsc.h" 
 #include "Legendre_rule.hpp"
 #include "Faddeeva.hpp"
-#include "Faddeeva.hpp"
 #include "Rotation_matrix.hpp"
 
-using Real = double; // TODO use Real in the file 
+using Real = double; 
 
 #ifndef MPI_CHECK
 #define MPI_CHECK(stmt)                         \
