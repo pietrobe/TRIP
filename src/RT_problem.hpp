@@ -26,24 +26,23 @@ public:
     	if (mpi_rank_ == 0) std::cout << "\n=========== Reading input files ===========\n" << std::endl;				
 
     	Real start = MPI_Wtime();
-    	
-    	// reading input
-    	read_frequency(input_path + "/frequency.dat");		
-    	
+
+    	// TODO: now hardcoded
+    	L_   = 1.0;
+    	N_x_ = 4;
+    	N_y_ = 4;
+
+    	// reading some input
+    	read_depth(    input_path + "/atmosphere.dat");	
+    	read_frequency(input_path + "/frequency.dat");	
+    	    	
     	// set sizes and directions grids and weigths
-
-		// now hardcoded 
-    	N_x_ = 3;     
-		N_y_ = 3;     
-		N_z_ = 3;  
-		N_s_ = N_x_ * N_y_ * N_z_;
-
 		set_theta_chi_grids(N_theta, N_chi);
 		set_sizes();
 								
 		// init grid
 		space_grid_ = std::make_shared<Grid_t>();
-		space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {0, 0, 0});
+		space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0});
 		
 		MPI_Barrier(space_grid_->raw_comm());
 		Real end = MPI_Wtime();
@@ -58,6 +57,11 @@ public:
 
 		// init atmospheric quantities 
 		allocate_atmosphere();	
+
+		// read atm data (needs grid object)
+		read_atmosphere_1D( input_path + "/atmosphere.dat");		
+		read_bulk_velocity( input_path + "/bulk_velocity.dat");	
+		read_magnetic_field(input_path + "/magnetic_field.dat");
 
 		MPI_Barrier(space_grid_->raw_comm());
 	    end = MPI_Wtime();
@@ -85,6 +89,17 @@ public:
 	    if (mpi_rank_ == 0) printf("Exchange:\t\t%g (seconds)\n", user_time);	      
 
 	    print_info();
+
+		start = MPI_Wtime();
+
+		// T_->synch_device_to_host();
+		T_->write("T.raw");				
+
+		MPI_Barrier(space_grid_->raw_comm());
+		end = MPI_Wtime();
+		user_time = end - start;
+
+		if (mpi_rank_ == 0) printf("Output Time:\t\t%g (seconds)\n", user_time);		   
 	}
 
 	// convert block index to to local ones = [j_theta, k_chi, n_nu, i_stokes]
@@ -141,11 +156,12 @@ private:
 	Grid_ptr_t space_grid_; 	
 
 	// auxiliary grids	
+	std::vector<Real> depth_grid_; // in Km 
 	std::vector<Real> nu_grid_; 
 	std::vector<Real> theta_grid_; 
 	std::vector<Real> mu_grid_; 	
 	std::vector<Real> chi_grid_; 
-
+	
 	// horixontal spacing
 	Real L_; // L = dx = dy
 
@@ -167,9 +183,6 @@ private:
 	size_t block_size_; // 4 * N_nu_ * N_theta_ * N_chi_;
 	size_t tot_size_;   // N_s_ * block_size;
 
-	// Space coordinates
-	Field_ptr_t space_coord_;  // TODO x,y not needed?
-
 	// unknown quantities 
 	Field_ptr_t I_field_; // intensity 
 	Field_ptr_t S_field_; // source function
@@ -184,7 +197,7 @@ private:
 
 	// atmospheric quantities
 	Field_ptr_t Nl_;   // lower level populations 
-	Field_ptr_t Nu_;   // upper level populations 
+	// Field_ptr_t Nu_;   // upper level populations 
 	Field_ptr_t T_;    // temperature 
 	Field_ptr_t xi_;   // microturbulent velocity (a.k.a. non-thermal microscopic velocity)		
 	Field_ptr_t nu_L_; // Larmor frequency
@@ -193,14 +206,11 @@ private:
 	Field_ptr_t a_;    // damping constant 
 	Field_ptr_t W_T_;  // Wien function
 
-	// magnetic field direction, in polar coordinates   
-	Field_ptr_t theta_B_; 
-	Field_ptr_t chi_B_;   
+	// magnetic field [nu_L, theta_B_, chi_B_]
+	Field_ptr_t B_; 	
 
-	// bulk velocities, in polar coordinates
+	// bulk velocities [v_b, theta_b, chi_b]
 	Field_ptr_t v_b_;       
-	Field_ptr_t theta_v_b_; 
-	Field_ptr_t chi_v_b_;   
 	
 	// quantities depending on position that can be precomputed
 	Field_ptr_t Doppler_width_;
@@ -213,7 +223,7 @@ private:
 	Field_ptr_t k_c_;
 	Field_ptr_t eps_c_th_;
 
-	// quantities depending on position and direction
+	// quantities depending on direction
 	std::vector<std::vector<std::complex<Real> > > T_KQ_; // polarization tensor 
 
 	// allocate grid fields 
@@ -228,16 +238,16 @@ private:
 	void set_sizes();
 
 	// read inputs
-	void read_atmosphere(    const std::string filename);
-	void read_bulk_velocity( const std::string filename);
+	void read_depth(         const std::string filename);
 	void read_frequency(     const std::string filename);
+	void read_atmosphere_1D( const std::string filename);
+	void read_bulk_velocity( const std::string filename);	
 	void read_magnetic_field(const std::string filename);
-	void read_sigma(         const std::string filename);
-	void read_k_c(           const std::string filename);
-	void read_eps_c_th(      const std::string filename);			   
-	
-	void read_input_1D(const std::string filename, const Real L, const size_t N_x, const size_t N_y);
 
+	void read_sigma(   const std::string filename);
+	void read_k_c(     const std::string filename);
+	void read_eps_c_th(const std::string filename);			   
+	
 	// compute polarization tensors (vector of six components)
 	std::vector<std::complex<Real> > compute_T_KQ(const size_t stokes_i, const Real theta, const Real chi);
 	std::complex<Real> get_TKQi(const size_t i_stokes, const int K, const int Q, const size_t j, const size_t k);
