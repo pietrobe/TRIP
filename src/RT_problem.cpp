@@ -14,17 +14,13 @@ void RT_problem::read_magnetic_field(std::string filename){
 
 	auto B_dev = B_ ->view_device();
 
-	auto horizontal_slice = space_grid_->md_range_slice(2);	
-	
+	Real entry;	
 	std::string entry_label;		
 
-	Real nu_L_entry;
-	Real theta_B_entry;
-	Real chi_B_entry;
-
-	// depth index
-	int k = N_z_ - 1;
-
+	std::vector<Real> nu_L_vec;
+	std::vector<Real> theta_B_vec;
+	std::vector<Real> chi_B_vec;
+	
 	while(getline(myFile, line))
 	{
 		std::istringstream lineStream(line);
@@ -41,29 +37,29 @@ void RT_problem::read_magnetic_field(std::string filename){
 		else
 		{						
 			// read data
-			lineStream >> nu_L_entry;			
-			lineStream >> theta_B_entry;
-			lineStream >> chi_B_entry;
-
-			// convert to Larmor frequency
-			nu_L_entry *= 1399600; 
-			
-			sgrid::parallel_for("READ B", horizontal_slice, SGRID_LAMBDA(int i, int j) {
-
-				auto *B = B_dev.block(i, j, k);
-				
-				B[0] = nu_L_entry;					
-				B[1] = theta_B_entry;					
-				B[2] = chi_B_entry;													
-	        });		
-
-	        k--;
+			lineStream >> entry;			
+			entry *= 1399600; // convert to Larmor frequency
+			nu_L_vec.push_back(entry);
+			lineStream >> entry;
+			theta_B_vec.push_back(entry);
+			lineStream >> entry;
+			chi_B_vec.push_back(entry);								
 		}		
 
 		first_line = false;
 	} 
 
-	if (k != -1) std::cout << "ERROR: something went wrong in read_magnetic_field(), k = " << k << std::endl;
+	auto g_dev = space_grid_->view_device();
+
+	// fill field
+	sgrid::parallel_for("READ B", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
+				
+		const int k_global = g_dev.start[2] + k - g_dev.margin[2];
+
+		B_dev.block(i, j, k)[0] =    nu_L_vec[k_global];					
+		B_dev.block(i, j, k)[1] = theta_B_vec[k_global];					
+		B_dev.block(i, j, k)[2] =   chi_B_vec[k_global];													
+	});		
 }
 
 
@@ -79,18 +75,14 @@ void RT_problem::read_bulk_velocity(std::string filename){
 	bool first_line = true;
 
 	auto v_b_dev = v_b_ ->view_device();
-
-	auto horizontal_slice = space_grid_->md_range_slice(2);	
 	
+	Real entry;
 	std::string entry_label;		
 
-	Real v_b_entry;
-	Real theta_b_entry;
-	Real chi_b_entry;
-
-	// depth index
-	int k = N_z_ - 1;
-
+	std::vector<Real> v_b_vec;
+	std::vector<Real> theta_b_vec;
+	std::vector<Real> chi_b_vec;
+	
 	while(getline(myFile, line))
 	{
 		std::istringstream lineStream(line);
@@ -107,27 +99,28 @@ void RT_problem::read_bulk_velocity(std::string filename){
 		else
 		{				
 			// read data
-			lineStream >> v_b_entry;
-			lineStream >> theta_b_entry;
-			lineStream >> chi_b_entry;
-			
-			sgrid::parallel_for("READ BULK_VEL", horizontal_slice, SGRID_LAMBDA(int i, int j) {
-
-				auto *v_b = v_b_dev.block(i, j, k);
-				
-				v_b[0] = v_b_entry;					
-				v_b[1] = theta_b_entry;					
-				v_b[2] = chi_b_entry;															
-	        });
-
-	        k--;
+			lineStream >> entry;
+			v_b_vec.push_back(entry);
+			lineStream >> entry;
+			theta_b_vec.push_back(entry);
+			lineStream >> entry;
+			chi_b_vec.push_back(entry);					
 		}	
-
 
 		first_line = false;
 	} 
 
-	if (k != -1) std::cout << "ERROR: something went wrong in read_bulk_velocity(), k = " << k << std::endl;
+	auto g_dev = space_grid_->view_device();
+
+	// fill field
+	sgrid::parallel_for("READ BULK-VEL", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
+		
+		const int k_global = g_dev.start[2] + k - g_dev.margin[2];
+
+		v_b_dev.block(i, j, k)[0] =     v_b_vec[k_global];					
+		v_b_dev.block(i, j, k)[1] = theta_b_vec[k_global];					
+		v_b_dev.block(i, j, k)[2] =   chi_b_vec[k_global];															
+    });
 }
 
 
@@ -149,25 +142,20 @@ void RT_problem::read_atmosphere_1D(const std::string filename){
 	// auto Nu_dev   = Nu_  ->view_device();
 	auto Cul_dev = Cul_ ->view_device();
 	auto Qel_dev = Qel_ ->view_device();
-
-	auto horizontal_slice = space_grid_->md_range_slice(2);	
-
+	
+	Real entry;
 	std::string entry_label;
+	
+	std::vector<Real> T_vec;
+	std::vector<Real> xi_vec;
+	std::vector<Real> a_vec;
+	std::vector<Real> Nl_vec;
+	// std::vector<Real> Nu_vec;
+	std::vector<Real> Cul_vec;
+	std::vector<Real> Qel_vec;
 
-	Real depth_entry;
-	Real T_entry;
-	Real xi_entry;
-	Real a_entry;
-	Real Nl_entry;
-	Real Nu_entry;
-	Real Cul_entry;
-	Real Qel_entry;
-
-	// depth index // TODO ask PAT???
-	int k = N_z_;
-
-	// TODO, is k on current processor?
-
+	int counter = 0;
+	
 	while(getline(myFile, line))
 	{	
 		std::istringstream lineStream(line);	
@@ -194,57 +182,41 @@ void RT_problem::read_atmosphere_1D(const std::string filename){
 		else
 		{					
 			// read data
-			lineStream >> depth_entry;
-			lineStream >> T_entry;
-			lineStream >> xi_entry;
-			lineStream >> a_entry;
-			lineStream >> Nl_entry;
-			lineStream >> Nu_entry;
-			lineStream >> Cul_entry;
-			lineStream >> Qel_entry;
-
-			sgrid::parallel_for("READ-ATM1D", horizontal_slice, SGRID_LAMBDA(int i, int j) {
-				
-				auto *T   =   T_dev.block(i, j, k);
-				auto *xi  =  xi_dev.block(i, j, k);
-				auto *a   =   a_dev.block(i, j, k);
-				auto *Nl  =  Nl_dev.block(i, j, k);
-				auto *Cul = Cul_dev.block(i, j, k);
-				auto *Qel = Qel_dev.block(i, j, k);
-				
-				// T[0]   = T_entry;	
-				T_dev.block(i, j, k)[0] = T_entry;		// TODO like this all around		
-				xi[0]  = xi_entry;
-				a[0]   = a_entry;
-				Nl[0]  = Nl_entry;					
-				// Nu[0] = Nu_entry;					
-				Cul[0] = Cul_entry;					
-				Qel[0] = Qel_entry;					
-	        });
-
-	        k--;
+			lineStream >> entry;
+			// depth_grid_.push_back(entry);					
+			lineStream >> entry;
+			T_vec.push_back(entry);
+			lineStream >> entry;
+			xi_vec.push_back(entry);
+			lineStream >> entry;
+			a_vec.push_back(entry);
+			lineStream >> entry;
+			Nl_vec.push_back(entry);
+			lineStream >> entry;
+			// Nu_vec.push_back(entry);
+			lineStream >> entry;
+			Cul_vec.push_back(entry);
+			lineStream >> entry;
+			Qel_vec.push_back(entry);		
 		}		
 
 		first_line = false;
-	} 
+	} 	
 
-	if (k != -1) std::cout << "ERROR: something went wrong in read_atmosphere_1D(), k = " << k << std::endl;
+	auto g_dev = space_grid_->view_device();
 
-	// // test
-	// std::cout << "============ TEST ===============" << std::endl;
+	// fill field 
+	sgrid::parallel_for("READ-ATM1D", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
 
-	// sgrid::parallel_for("READ-ATM1D", horizontal_slice, SGRID_LAMBDA(int i, int j) {
-
-	// 	for (int k = 0; k < (int)N_z_ + 1; ++k)
-	// 	{
-	// 		auto *T = T_dev.block(i, j, k);
-
-	// 		T[0] = k;					
-
-	// 		// std::cout << "k = " << k << std::endl;
-	// 		// std::cout << T[0] << std::endl;
-	// 	}
-	// });
+		const int k_global = g_dev.start[2] + k - g_dev.margin[2];
+										
+		T_dev.ref(  i, j, k) =   T_vec[k_global];
+		xi_dev.ref( i, j, k) =  xi_vec[k_global];		
+		a_dev.ref(  i, j, k) =   a_vec[k_global];		
+		Nl_dev.ref( i, j, k) =  Nl_vec[k_global];		
+		Cul_dev.ref(i, j, k) = Cul_vec[k_global];		
+		Qel_dev.ref(i, j, k) = Qel_vec[k_global];						
+	});
 }
 
 
@@ -377,33 +349,33 @@ void RT_problem::allocate_fields(){
 void RT_problem::allocate_atmosphere(){
 	
 	// create atmospheric quantities 
-	D1_  = std::make_shared<Field_t>("D1",   space_grid_, 1, sgrid::BOX_STENCIL);
-	D2_  = std::make_shared<Field_t>("D2",   space_grid_, 1, sgrid::BOX_STENCIL);
-	Nl_  = std::make_shared<Field_t>("Nl",   space_grid_, 1, sgrid::BOX_STENCIL);
-	// Nu_   = std::make_shared<Field_t>("Nu",   space_grid_, 1, sgrid::BOX_STENCIL);
-	T_   = std::make_shared<Field_t>("T",    space_grid_, 1, sgrid::BOX_STENCIL);
-	xi_  = std::make_shared<Field_t>("xi",   space_grid_, 1, sgrid::BOX_STENCIL);	
-	Cul_ = std::make_shared<Field_t>("Cul",  space_grid_, 1, sgrid::BOX_STENCIL);
-	Qel_ = std::make_shared<Field_t>("Qel",  space_grid_, 1, sgrid::BOX_STENCIL);
-	a_   = std::make_shared<Field_t>("a",    space_grid_, 1, sgrid::BOX_STENCIL);
-	W_T_ = std::make_shared<Field_t>("W_T",  space_grid_, 1, sgrid::BOX_STENCIL);
+	D1_  = std::make_shared<Field_t>("D1",   space_grid_);
+	D2_  = std::make_shared<Field_t>("D2",   space_grid_);
+	Nl_  = std::make_shared<Field_t>("Nl",   space_grid_);
+	// Nu_   = std::make_shared<Field_t>("Nu",   space_grid);
+	T_   = std::make_shared<Field_t>("T",    space_grid_);
+	xi_  = std::make_shared<Field_t>("xi",   space_grid_);
+	Cul_ = std::make_shared<Field_t>("Cul",  space_grid_);
+	Qel_ = std::make_shared<Field_t>("Qel",  space_grid_);
+	a_   = std::make_shared<Field_t>("a",    space_grid_);
+	W_T_ = std::make_shared<Field_t>("W_T",  space_grid_);
 
 	// magnetic field 
-	B_ = std::make_shared<Field_t>("B", space_grid_, 3, sgrid::BOX_STENCIL); 	
+	B_ = std::make_shared<Field_t>("B", space_grid_, 3, sgrid::STAR_STENCIL); 	
 
 	// bulk velocities, in polar coordinates
-	v_b_ = std::make_shared<Field_t>("v_b", space_grid_, 3, sgrid::BOX_STENCIL);    
+	v_b_ = std::make_shared<Field_t>("v_b", space_grid_, 3, sgrid::STAR_STENCIL);    
 	
 	// quantities depending on position that can be precomputed
-	Doppler_width_ = std::make_shared<Field_t>("Doppler_width", space_grid_, 1, sgrid::BOX_STENCIL);
-	k_L_           = std::make_shared<Field_t>("k_L", 		    space_grid_, 1, sgrid::BOX_STENCIL);
-	epsilon_       = std::make_shared<Field_t>("epsilon_", 		space_grid_, 1, sgrid::BOX_STENCIL);
+	Doppler_width_ = std::make_shared<Field_t>("Doppler_width", space_grid_);
+	k_L_           = std::make_shared<Field_t>("k_L", 		    space_grid_);
+	epsilon_       = std::make_shared<Field_t>("epsilon_", 		space_grid_);
 
 	// input quantities depending on position and frequency 
-	u_        = std::make_shared<Field_t>("u",        space_grid_, N_nu_, sgrid::BOX_STENCIL);  
-	sigma_    = std::make_shared<Field_t>("sigma",    space_grid_, N_nu_, sgrid::BOX_STENCIL);
-	k_c_      = std::make_shared<Field_t>("k_c",      space_grid_, N_nu_, sgrid::BOX_STENCIL);
-	eps_c_th_ = std::make_shared<Field_t>("eps_c_th", space_grid_, N_nu_, sgrid::BOX_STENCIL);
+	u_        = std::make_shared<Field_t>("u",        space_grid_, N_nu_, sgrid::STAR_STENCIL);  
+	sigma_    = std::make_shared<Field_t>("sigma",    space_grid_, N_nu_, sgrid::STAR_STENCIL);
+	k_c_      = std::make_shared<Field_t>("k_c",      space_grid_, N_nu_, sgrid::STAR_STENCIL);
+	eps_c_th_ = std::make_shared<Field_t>("eps_c_th", space_grid_, N_nu_, sgrid::STAR_STENCIL);
 	
 	// allocate
 	D1_  -> allocate_on_device(); 
@@ -653,7 +625,7 @@ void RT_problem::set_eta_and_rhos(){
 	auto u_dev   = u_    ->view_device();
 	auto k_L_dev = k_L_  ->view_device();
 	auto k_c_dev = k_c_  ->view_device();	
-	auto B_dev   = B_->view_device();	
+	auto B_dev   = B_    ->view_device();	
 	auto v_b_dev = v_b_  ->view_device();
 	
 	auto Doppler_width_dev = Doppler_width_->view_device();
@@ -662,16 +634,12 @@ void RT_problem::set_eta_and_rhos(){
     {         
         auto *block_eta = eta_dev.block(i, j, k);
         auto *block_rho = rho_dev.block(i, j, k);
-
-        auto *a   = a_dev.block(i, j, k);
-        auto *u   = u_dev.block(i, j, k);
-		auto *k_L = k_L_dev.block(i, j, k);
+        
+        auto *u   =   u_dev.block(i, j, k);		
 		auto *k_c = k_c_dev.block(i, j, k);		
-		auto *B   = B_dev.block(i, j, k);       
+		auto *B   =   B_dev.block(i, j, k);       
         auto *v_b = v_b_dev.block(i, j, k);
-                
-        auto *Doppler_width = Doppler_width_dev.block(i, j, k);
-
+                        
         // assign some variables for readability
         Real theta_v_b = v_b[1];
         Real chi_v_b   = v_b[2];
@@ -680,6 +648,11 @@ void RT_problem::set_eta_and_rhos(){
         Real theta_B = B[1];
         Real chi_B   = B[2];
 
+        Real Doppler_width = Doppler_width_dev.ref(i,j,k);
+    	Real k_L           = k_L_dev.ref(i,j,k);
+		Real a             = a_dev.ref(i,j,k);
+
+		// init rotation matrix
         Rotation_matrix R(0.0, -theta_B, -chi_B);
         
         // indeces
@@ -704,14 +677,14 @@ void RT_problem::set_eta_and_rhos(){
         	const Real theta = theta_grid_[j_theta];
 			const Real chi   = chi_grid_[k_chi];	
 
-			const Real coeff  =  k_L[0] / (std::sqrt(pi_) * Doppler_width[0]) ;
-			const Real coeff2 = nu_L / Doppler_width[0]; 
+			const Real coeff  =  k_L / (std::sqrt(pi_) * Doppler_width) ;
+			const Real coeff2 = nu_L / Doppler_width; 
 
-			const std::complex<Real> a_damp(0.0, a[0]);
+			const std::complex<Real> a_damp(0.0, a);
 
 			// for reduced frequency
 			v_dot_Omega = v_b[0] * ( std::cos(theta_v_b) * std::cos(theta) + std::sin(theta_v_b) * std::sin(theta) * std::cos(chi - chi_v_b));
-			u_b = nu_0_ * v_dot_Omega / (c_ * Doppler_width[0]);
+			u_b = nu_0_ * v_dot_Omega / (c_ * Doppler_width);
 			u_red = u[n_nu] + u_b;
 
 			for (int K = 0; K < 3; ++K)
@@ -811,7 +784,7 @@ void RT_problem::set_up(){
 	auto D2_dev   = D2_  ->view_device();
 	auto D1_dev   = D1_  ->view_device();
 	auto k_L_dev  = k_L_ ->view_device();
-	auto u_dev    = u_ ->view_device();
+	auto u_dev    = u_   ->view_device();
 
 	auto Doppler_width_dev = Doppler_width_->view_device();
 	auto epsilon_dev       = epsilon_ ->view_device();
@@ -819,38 +792,36 @@ void RT_problem::set_up(){
 
 	// compute atmospheric quantities 
     Kokkos::parallel_for("INIT-ATM", space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
-    {   
-    	auto *xi  = xi_dev.block(i, j, k);      
-    	auto *T   = T_dev.block(i, j, k);      
-    	auto *Nl  = Nl_dev.block(i, j, k);     
-    	auto *Cul = Cul_dev.block(i, j, k);      
-    	auto *Qel = Qel_dev.block(i, j, k);      
-        auto *D2  = D2_dev.block(i, j, k);
-        auto *D1  = D1_dev.block(i, j, k);
-        auto *k_L = k_L_dev.block(i, j, k);
-        auto *u   = u_dev.block(i, j, k);
+    {       	
+    	auto *u = u_dev.block(i, j, k);
 
-        auto *Doppler_width = Doppler_width_dev.block(i, j, k);
-        auto *epsilon       = epsilon_dev.block(i, j, k);
-        auto *W_T           = W_T_dev.block(i, j, k);        
+    	// assign some variables for readability
+    	Real T   =   T_dev.ref(i,j,k);
+    	Real Qel = Qel_dev.ref(i,j,k);
+    	Real D2  =  D2_dev.ref(i,j,k);
+    	Real Nl  =  Nl_dev.ref(i,j,k);
+    	Real xi  =  xi_dev.ref(i,j,k);
+    	Real Cul = Cul_dev.ref(i,j,k);
+
+    	Real Doppler_width = Doppler_width_dev.ref(i,j,k);
 
         // precompute quantities depening only on position
-        D2[0]  = 0.5 * Qel[0];
+        D2_dev.ref(i,j,k)  = 0.5 * Qel;
 
-		D1[0]  = tmp_const3 * D2[0];
+		D1_dev.ref(i,j,k)  = tmp_const3 * D2;
 
-		k_L[0] = tmp_const * Nl[0];
+		k_L_dev.ref(i,j,k) = tmp_const * Nl;
+		
+		Doppler_width_dev.ref(i,j,k) = dE * std::sqrt(2 * k_B_ * T / mass_real + xi * xi);
 
-		Doppler_width[0] = dE * std::sqrt(2 * k_B_ * T[0] / mass_real + xi[0] * xi[0]);
+		epsilon_dev.ref(i,j,k) = Cul/(Cul + Aul_);	
 
-		epsilon[0] = Cul[0]/(Cul[0] + Aul_);	
-
-		W_T[0] = tmp_const2 * std::exp(- h_ * nu_0_ / (k_B_ * T[0]));		
+		W_T_dev.ref(i,j,k) = tmp_const2 * std::exp(- h_ * nu_0_ / (k_B_ * T));		
 
 		// on position and frequency
 		for (size_t n = 0; n < N_nu_; ++n)
 		{
-			u[n] = (nu_0_ - nu_grid_[n]) / Doppler_width[0];
+			u[n] = (nu_0_ - nu_grid_[n]) / Doppler_width;
 		}	
     });	
 		    

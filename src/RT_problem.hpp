@@ -59,7 +59,7 @@ public:
 		allocate_atmosphere();	
 
 		// read atm data (needs grid object)
-		read_atmosphere_1D( input_path + "/atmosphere.dat");		
+		read_atmosphere_1D( input_path + "/atmosphere.dat");			
 		read_bulk_velocity( input_path + "/bulk_velocity.dat");	
 		read_magnetic_field(input_path + "/magnetic_field.dat");
 
@@ -92,8 +92,8 @@ public:
 
 		start = MPI_Wtime();
 
-		// T_->synch_device_to_host();
-		T_->write("T.raw");				
+		T_->write("T.raw");		
+		// k_L_->write("k_L.raw");				
 
 		MPI_Barrier(space_grid_->raw_comm());
 		end = MPI_Wtime();
@@ -199,8 +199,7 @@ private:
 	Field_ptr_t Nl_;   // lower level populations 
 	// Field_ptr_t Nu_;   // upper level populations 
 	Field_ptr_t T_;    // temperature 
-	Field_ptr_t xi_;   // microturbulent velocity (a.k.a. non-thermal microscopic velocity)		
-	Field_ptr_t nu_L_; // Larmor frequency
+	Field_ptr_t xi_;   // microturbulent velocity (a.k.a. non-thermal microscopic velocity)			
 	Field_ptr_t Cul_;  // rate of inelastic de-exciting collisions
 	Field_ptr_t Qel_;  // rate of elastic collisions 
 	Field_ptr_t a_;    // damping constant 
