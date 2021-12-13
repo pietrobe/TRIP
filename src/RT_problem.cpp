@@ -1,7 +1,85 @@
 #include "RT_problem.hpp"
 
 
-void RT_problem::read_magnetic_field(std::string filename){
+void RT_problem::read_continumm_1D(const std::string filename_sigma, const std::string filename_k_c, const std::string filename_eps_c_th){
+
+	if (mpi_rank_ == 0) std::cout << "Reading sigma from "    << filename_sigma    << std::endl;
+	if (mpi_rank_ == 0) std::cout << "Reading k_c from "      << filename_k_c      << std::endl;
+	if (mpi_rank_ == 0) std::cout << "Reading eps_c_th from " << filename_eps_c_th << std::endl;
+
+	std::ifstream myFile_sigma(filename_sigma);
+	std::ifstream myFile_k_c(filename_k_c);
+	std::ifstream myFile_eps_c_th(filename_eps_c_th);
+
+	std::string line;	
+
+	if (not myFile_sigma.good())    std::cerr << "\nERROR: File " << filename_sigma    << " does not exist!\n" << std::endl;
+	if (not myFile_k_c.good())      std::cerr << "\nERROR: File " << filename_k_c      << " does not exist!\n" << std::endl;
+	if (not myFile_eps_c_th.good()) std::cerr << "\nERROR: File " << filename_eps_c_th << " does not exist!\n" << std::endl;
+
+	bool first_line = true;
+
+	auto sigma_dev    = sigma_    ->view_device();
+	auto k_c_dev      = k_c_      ->view_device();
+	auto eps_c_th_dev = eps_c_th_ ->view_device();
+
+	Real entry;	
+
+	std::vector<Real> sigma_vec;
+	std::vector<Real> k_c_vec;
+	std::vector<Real> eps_c_th_vec;
+
+	while(getline(myFile_sigma, line))
+	{	
+		std::stringstream iss(line);
+	
+		if (not first_line) while (iss >> entry) sigma_vec.push_back(entry);					
+					
+		first_line = false;
+	} 
+
+	first_line = true;
+
+	while(getline(myFile_k_c, line))
+	{	
+		std::stringstream iss(line);
+	
+		if (not first_line) while (iss >> entry) k_c_vec.push_back(entry);					
+					
+		first_line = false;
+	} 
+
+	first_line = true;
+		
+	while(getline(myFile_eps_c_th, line))
+	{	
+		std::stringstream iss(line);
+	
+		if (not first_line) while (iss >> entry) eps_c_th_vec.push_back(entry);					
+					
+		first_line = false;
+	} 
+
+	auto g_dev = space_grid_->view_device();
+
+	// fill field
+	sgrid::parallel_for("READ SIGMA", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
+
+		int k_global;
+
+		for (int n = 0; n < (int)N_nu_; ++n)
+		{
+			k_global = N_nu_ * (g_dev.start[2] + k - g_dev.margin[2]) + n;
+
+			sigma_dev.block(   i, j, k)[n] = sigma_vec[k_global];		
+			k_c_dev.block(     i, j, k)[n] = k_c_vec[k_global];		
+			eps_c_th_dev.block(i, j, k)[n] = eps_c_th_vec[k_global];					
+		}			
+	});	
+}
+
+
+void RT_problem::read_magnetic_field_1D(std::string filename){
 
 	if (mpi_rank_ == 0) std::cout << "Reading magnetic field from " << filename << std::endl;
 
@@ -63,7 +141,7 @@ void RT_problem::read_magnetic_field(std::string filename){
 }
 
 
-void RT_problem::read_bulk_velocity(std::string filename){
+void RT_problem::read_bulk_velocity_1D(std::string filename){
 	
 	if (mpi_rank_ == 0) std::cout << "Reading bulk velocities from " << filename << std::endl;
 
@@ -209,7 +287,7 @@ void RT_problem::read_atmosphere_1D(const std::string filename){
 	sgrid::parallel_for("READ-ATM1D", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
 
 		const int k_global = g_dev.start[2] + k - g_dev.margin[2];
-										
+								
 		T_dev.ref(  i, j, k) =   T_vec[k_global];
 		xi_dev.ref( i, j, k) =  xi_vec[k_global];		
 		a_dev.ref(  i, j, k) =   a_vec[k_global];		
@@ -249,7 +327,7 @@ void RT_problem::read_depth(const std::string filename){
 		}		
 
 		first_line = false;
-	} 
+	} 	
 }
 
 

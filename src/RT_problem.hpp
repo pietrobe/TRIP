@@ -59,9 +59,13 @@ public:
 		allocate_atmosphere();	
 
 		// read atm data (needs grid object)
-		read_atmosphere_1D( input_path + "/atmosphere.dat");			
-		read_bulk_velocity( input_path + "/bulk_velocity.dat");	
-		read_magnetic_field(input_path + "/magnetic_field.dat");
+		read_atmosphere_1D(    input_path + "/atmosphere.dat");			 // NOTE: solar surface for space index k = 0
+		read_bulk_velocity_1D( input_path + "/bulk_velocity.dat");	
+		read_magnetic_field_1D(input_path + "/magnetic_field.dat");
+		
+		read_continumm_1D(  input_path + "/continuum/continuum_scat_opac.dat", 
+						    input_path + "/continuum/continuum_tot_opac.dat",
+						    input_path + "/continuum/continuum_therm_emiss.dat");
 
 		MPI_Barrier(space_grid_->raw_comm());
 	    end = MPI_Wtime();
@@ -92,8 +96,8 @@ public:
 
 		start = MPI_Wtime();
 
-		T_->write("T.raw");		
-		// k_L_->write("k_L.raw");				
+		// T_->write("T.raw");		
+		k_c_->write("k_c_.raw");				
 
 		MPI_Barrier(space_grid_->raw_comm());
 		end = MPI_Wtime();
@@ -237,16 +241,16 @@ private:
 	void set_sizes();
 
 	// read inputs
-	void read_depth(         const std::string filename);
-	void read_frequency(     const std::string filename);
-	void read_atmosphere_1D( const std::string filename);
-	void read_bulk_velocity( const std::string filename);	
-	void read_magnetic_field(const std::string filename);
-
-	void read_sigma(   const std::string filename);
-	void read_k_c(     const std::string filename);
-	void read_eps_c_th(const std::string filename);			   
+	void read_depth(            const std::string filename);
+	void read_frequency(        const std::string filename);
+	void read_atmosphere_1D(    const std::string filename);
+	void read_bulk_velocity_1D( const std::string filename);	
+	void read_magnetic_field_1D(const std::string filename);
 	
+	void read_continumm_1D(const std::string filename_sigma, 
+						   const std::string filename_k_c, 
+						   const std::string filename_eps_c_th);
+
 	// compute polarization tensors (vector of six components)
 	std::vector<std::complex<Real> > compute_T_KQ(const size_t stokes_i, const Real theta, const Real chi);
 	std::complex<Real> get_TKQi(const size_t i_stokes, const int K, const int Q, const size_t j, const size_t k);
