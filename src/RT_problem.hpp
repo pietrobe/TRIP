@@ -10,13 +10,15 @@ using Field_t = sgrid::Field<Grid_t>;
 using Grid_ptr_t  = std::shared_ptr<Grid_t>;
 using Field_ptr_t = std::shared_ptr<Field_t>;
 
+typedef const std::string input_string;
+
 class RT_problem
 {
 
 public:
 
 	// constructor
-	RT_problem(const std::string input_path, const size_t N_theta, const size_t N_chi)			   
+	RT_problem(input_string input_path, const size_t N_theta, const size_t N_chi)			   
 	{
 		// assign MPI varaibles 
     	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank_);
@@ -94,16 +96,16 @@ public:
 
 	    print_info();
 
-		start = MPI_Wtime();
+		// start = MPI_Wtime();
 
 		// T_->write("T.raw");		
-		k_c_->write("k_c_.raw");				
+		// k_c_->write("k_c_.raw");				
 
-		MPI_Barrier(space_grid_->raw_comm());
-		end = MPI_Wtime();
-		user_time = end - start;
+		// MPI_Barrier(space_grid_->raw_comm());
+		// end = MPI_Wtime();
+		// user_time = end - start;
 
-		if (mpi_rank_ == 0) printf("Output Time:\t\t%g (seconds)\n", user_time);		   
+		// if (mpi_rank_ == 0) printf("Output Time:\t\t%g (seconds)\n", user_time);		   
 	}
 
 	// convert block index to to local ones = [j_theta, k_chi, n_nu, i_stokes]
@@ -124,38 +126,13 @@ public:
 		return local_indeces;	
 	}
 
-
-private:
-
 	// MPI varables
 	int mpi_rank_;
 	int mpi_size_;	
 
 	// flag to enable continuum 
 	bool enable_continuum_ = true;
-
-	// physical and math constants 
-	const Real c_   = 2.99792458e+10;
-	const Real k_B_ = 1.38065e-16;
-	const Real h_   = 6.62607e-27;
-	const Real pi_  = 3.1415926535897932384626;	  
-
-	// 2-level atom constants
-	const Real mass_ = 40.078;
-	const Real El_   = 0.0;
-	const Real Eu_   = 23652.304;
-	const int Jl_    = 0.0;
-	const int Ju_    = 1.0;
-	const int gl_    = 0.0;
-	const int gu_    = 1.0;
-	const Real Aul_  = 2.18e+8;	// Einstein coefficients for spontaneous emission
-
-	// reference frame
-	const Real gamma_ = 0.5 * pi_;	  
-
-	// atom constant, to precompute
-	Real nu_0_;	
-
+	
 	// spatial grid
 	Grid_ptr_t space_grid_; 	
 
@@ -195,10 +172,6 @@ private:
 	Field_ptr_t eta_field_; 
 	Field_ptr_t rho_field_;
 
-	// depolarizing rate due to elastic collisions
-	Field_ptr_t	D1_; 
-	Field_ptr_t	D2_;
-
 	// atmospheric quantities
 	Field_ptr_t Nl_;   // lower level populations 
 	// Field_ptr_t Nu_;   // upper level populations 
@@ -226,6 +199,34 @@ private:
 	Field_ptr_t k_c_;
 	Field_ptr_t eps_c_th_;
 
+private:
+
+	// physical and math constants 
+	const Real c_   = 2.99792458e+10;
+	const Real k_B_ = 1.38065e-16;
+	const Real h_   = 6.62607e-27;
+	const Real pi_  = 3.1415926535897932384626;	  
+
+	// 2-level atom constants
+	const Real mass_ = 40.078;
+	const Real El_   = 0.0;
+	const Real Eu_   = 23652.304;
+	const int Jl_    = 0.0;
+	const int Ju_    = 1.0;
+	const int gl_    = 0.0;
+	const int gu_    = 1.0;
+	const Real Aul_  = 2.18e+8;	// Einstein coefficients for spontaneous emission
+
+	// reference frame
+	const Real gamma_ = 0.5 * pi_;	  
+
+	// atom constant, to precompute
+	Real nu_0_;	
+
+	// depolarizing rate due to elastic collisions
+	Field_ptr_t	D1_; 
+	Field_ptr_t	D2_;
+
 	// quantities depending on direction
 	std::vector<std::vector<std::complex<Real> > > T_KQ_; // polarization tensor 
 
@@ -241,15 +242,15 @@ private:
 	void set_sizes();
 
 	// read inputs
-	void read_depth(            const std::string filename);
-	void read_frequency(        const std::string filename);
-	void read_atmosphere_1D(    const std::string filename);
-	void read_bulk_velocity_1D( const std::string filename);	
-	void read_magnetic_field_1D(const std::string filename);
+	void read_depth(            input_string filename);
+	void read_frequency(        input_string filename);
+	void read_atmosphere_1D(    input_string filename);
+	void read_bulk_velocity_1D( input_string filename);	
+	void read_magnetic_field_1D(input_string filename);
 	
-	void read_continumm_1D(const std::string filename_sigma, 
-						   const std::string filename_k_c, 
-						   const std::string filename_eps_c_th);
+	void read_continumm_1D(input_string filename_sigma, 
+						   input_string filename_k_c, 
+						   input_string filename_eps_c_th);
 
 	// compute polarization tensors (vector of six components)
 	std::vector<std::complex<Real> > compute_T_KQ(const size_t stokes_i, const Real theta, const Real chi);
@@ -261,9 +262,6 @@ private:
 	// precompute quantities
 	void set_up();
 	
-	// // perform checks
-	// void const check_sizes();	
-
 	// print infos on screen
 	void const print_info();
 };

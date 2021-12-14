@@ -1,7 +1,7 @@
 #include "RT_problem.hpp"
 
 
-void RT_problem::read_continumm_1D(const std::string filename_sigma, const std::string filename_k_c, const std::string filename_eps_c_th){
+void RT_problem::read_continumm_1D(input_string filename_sigma, input_string filename_k_c, input_string filename_eps_c_th){
 
 	if (mpi_rank_ == 0) std::cout << "Reading sigma from "    << filename_sigma    << std::endl;
 	if (mpi_rank_ == 0) std::cout << "Reading k_c from "      << filename_k_c      << std::endl;
@@ -60,6 +60,13 @@ void RT_problem::read_continumm_1D(const std::string filename_sigma, const std::
 		first_line = false;
 	} 
 
+	const size_t N_z_N_nu_ = N_z_ * N_nu_;
+
+	// safety check
+	if (sigma_vec.size()    != N_z_N_nu_) std::cout << "WARNING: size mismatch in read_continumm_1D()" << std::endl;
+	if (k_c_vec.size()      != N_z_N_nu_) std::cout << "WARNING: size mismatch in read_continumm_1D()" << std::endl;
+	if (eps_c_th_vec.size() != N_z_N_nu_) std::cout << "WARNING: size mismatch in read_continumm_1D()" << std::endl;
+	
 	auto g_dev = space_grid_->view_device();
 
 	// fill field
@@ -79,7 +86,7 @@ void RT_problem::read_continumm_1D(const std::string filename_sigma, const std::
 }
 
 
-void RT_problem::read_magnetic_field_1D(std::string filename){
+void RT_problem::read_magnetic_field_1D(input_string filename){
 
 	if (mpi_rank_ == 0) std::cout << "Reading magnetic field from " << filename << std::endl;
 
@@ -121,12 +128,17 @@ void RT_problem::read_magnetic_field_1D(std::string filename){
 			lineStream >> entry;
 			theta_B_vec.push_back(entry);
 			lineStream >> entry;
-			chi_B_vec.push_back(entry);								
+			chi_B_vec.push_back(entry);				
 		}		
 
 		first_line = false;
 	} 
 
+	// safety check
+	if (nu_L_vec.size()    != N_z_) std::cout << "WARNING: size mismatch in read_magnetic_field_1D()" << std::endl;
+	if (theta_B_vec.size() != N_z_) std::cout << "WARNING: size mismatch in read_magnetic_field_1D()" << std::endl;
+	if (chi_B_vec.size()   != N_z_) std::cout << "WARNING: size mismatch in read_magnetic_field_1D()" << std::endl;
+	
 	auto g_dev = space_grid_->view_device();
 
 	// fill field
@@ -141,7 +153,7 @@ void RT_problem::read_magnetic_field_1D(std::string filename){
 }
 
 
-void RT_problem::read_bulk_velocity_1D(std::string filename){
+void RT_problem::read_bulk_velocity_1D(input_string filename){
 	
 	if (mpi_rank_ == 0) std::cout << "Reading bulk velocities from " << filename << std::endl;
 
@@ -188,6 +200,11 @@ void RT_problem::read_bulk_velocity_1D(std::string filename){
 		first_line = false;
 	} 
 
+	// safety check
+	if (v_b_vec.size()     != N_z_) std::cout << "WARNING: size mismatch in read_bulk_velocity_1D()" << std::endl;
+	if (theta_b_vec.size() != N_z_) std::cout << "WARNING: size mismatch in read_bulk_velocity_1D()" << std::endl;
+	if (chi_b_vec.size()   != N_z_) std::cout << "WARNING: size mismatch in read_bulk_velocity_1D()" << std::endl;
+
 	auto g_dev = space_grid_->view_device();
 
 	// fill field
@@ -202,7 +219,7 @@ void RT_problem::read_bulk_velocity_1D(std::string filename){
 }
 
 
-void RT_problem::read_atmosphere_1D(const std::string filename){
+void RT_problem::read_atmosphere_1D(input_string filename){
 
 	if (mpi_rank_ == 0) std::cout << "Reading atmospheric data from " << filename << std::endl;
 
@@ -231,8 +248,6 @@ void RT_problem::read_atmosphere_1D(const std::string filename){
 	// std::vector<Real> Nu_vec;
 	std::vector<Real> Cul_vec;
 	std::vector<Real> Qel_vec;
-
-	int counter = 0;
 	
 	while(getline(myFile, line))
 	{	
@@ -281,6 +296,14 @@ void RT_problem::read_atmosphere_1D(const std::string filename){
 		first_line = false;
 	} 	
 
+	// safety check
+	if (T_vec.size()   != N_z_) std::cout << "WARNING: size mismatch in T_vec"  << std::endl;
+	if (xi_vec.size()  != N_z_) std::cout << "WARNING: size mismatch in xi_vec" << std::endl;
+	if (a_vec.size()   != N_z_) std::cout << "WARNING: size mismatch in a"      << std::endl;
+	if (Nl_vec.size()  != N_z_) std::cout << "WARNING: size mismatch in Nl"     << std::endl;
+	if (Cul_vec.size() != N_z_) std::cout << "WARNING: size mismatch in Cul"    << std::endl;
+	if (Qel_vec.size() != N_z_) std::cout << "WARNING: size mismatch in Qel"    << std::endl;
+
 	auto g_dev = space_grid_->view_device();
 
 	// fill field 
@@ -298,7 +321,7 @@ void RT_problem::read_atmosphere_1D(const std::string filename){
 }
 
 
-void RT_problem::read_depth(const std::string filename){
+void RT_problem::read_depth(input_string filename){
 	
 	if (mpi_rank_ == 0) std::cout << "Reading depth data from " << filename << std::endl;
 
@@ -327,11 +350,11 @@ void RT_problem::read_depth(const std::string filename){
 		}		
 
 		first_line = false;
-	} 	
+	} 		
 }
 
 
-void RT_problem::read_frequency(const std::string filename){
+void RT_problem::read_frequency(input_string filename){
 
 	if (mpi_rank_ == 0) std::cout << "Reading frequencies [s-1] from " << filename << std::endl;
 
@@ -403,7 +426,17 @@ void const RT_problem::print_info(){
 		std::cout << "N_nu = "    << N_nu_    << std::endl;			
 		
 		std::cout << "\ntotal size = " << tot_size_   << std::endl;			
-		std::cout << "block size = "   << block_size_ << std::endl;			
+		std::cout << "block size = "   << block_size_ << std::endl;		
+
+		std::cout << "theta grid = [ ";
+
+		for (int i = 0; i < (int)N_theta_; ++i) std::cout << theta_grid_[i] << " ";
+
+		std::cout << "]\nchi grid = [ ";
+
+		for (int i = 0; i < (int)N_chi_; ++i) std::cout   << chi_grid_[i] << " ";
+
+		std::cout << "] " << std::endl;		
 	}
 }
 
@@ -543,11 +576,14 @@ void RT_problem::set_theta_chi_grids(const size_t N_theta, const size_t N_chi, c
     }
 
     // init equidistant chi grid in [0, 2pi] and trap weights
+
+    if (N_chi % 2 != 0) std::cout << "WARNING: chi grid is not even!" << std::endl;
+    
     const Real delta_chi = 2.0 * pi_ / N_chi;
 
     for (size_t i = 0; i < N_chi; ++i)
     {
-    	chi_grid_.push_back(i * delta_chi);	    	
+    	chi_grid_.push_back((i + 0.5) * delta_chi);	 // avoiding grid axes   	
     	w_chi_.push_back(delta_chi);
     }    
 }

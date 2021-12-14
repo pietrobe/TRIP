@@ -1,4 +1,4 @@
-#include "RT_problem.hpp"
+#include "RT_solver.hpp"
 #include <chrono>  
 
 //  make -j4 && mpirun -n 4 ./main
@@ -12,7 +12,11 @@ int main(int argc, char *argv[])
 	    const size_t N_theta = 2; 
 	    const size_t N_chi   = 2;     
 	    
-	    RT_problem rt_problem("../input/FAL-C/1_B0_V0_12T_8C_99F", N_theta, N_chi);				   	
+	    RT_problem rt_problem("../input/FAL-C/1_B0_V0_12T_8C_99F", N_theta, N_chi);	
+
+	    auto rt_problem_ptr = std::make_shared<RT_problem>(rt_problem);
+
+	    RT_solver rt_solver(rt_problem_ptr);
 	}
     
 	Kokkos::finalize();
