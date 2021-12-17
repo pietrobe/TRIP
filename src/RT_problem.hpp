@@ -126,6 +126,9 @@ public:
 		return local_indeces;	
 	}
 
+	// convert local indeces to block one (of fields) for the first Stokes parameter and vice versa
+	inline size_t local_to_block(const size_t j, const size_t k, const size_t n) { return 4 * ( N_nu_ * ( N_chi_ * j + k ) + n); }
+		
 	// MPI varables
 	int mpi_rank_;
 	int mpi_size_;	

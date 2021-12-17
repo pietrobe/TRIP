@@ -37,6 +37,9 @@ using Real = double;
     while(0)
 #endif
 
+#define MIN(a,b) ((a)<(b) ? (a) : (b))
+#define MAX(a,b) ((a)>(b) ? (a) : (b))
+
 
 void save_vec(Vec &m, const char * filename, const char * name);
 void save_mat(Mat &m, const char * filename, const char * name);
