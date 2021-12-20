@@ -845,18 +845,19 @@ void RT_problem::set_eta_and_rhos(){
         	}
 
         	if (enable_continuum_) block_eta[b + 0] += k_c[n_nu];        	        	
-        }
 
-        // check positivity
-        for (size_t b = 0; b < block_size_; ++b) 
-        {      
-        	if (block_eta[b] < 0) std::cerr << "\nWARNING: negative eta!" << std::endl; 		
-        	if (block_rho[b] < 0) std::cerr << "\nWARNING: negative rho!" << std::endl; 		        	
-        }  	
+        	// checks
+        	if (block_eta[b] == 0) std::cerr << "\nWARNING: zero eta_I!"     << std::endl; 
+        	if (block_eta[b] < 0)  std::cerr << "\nWARNING: negative eta_I!" << std::endl; 		
+        	if (block_rho[b] < 0)  std::cerr << "\nWARNING: negative rho_I!" << std::endl; 	 
+
+        	std::cout << "k = " << k << std::endl;		   	
+        	std::cout << "b = " << b << std::endl;		   	
+        	std::cout << "block_eta[b] = " << block_eta[b] << std::endl;		   	
+        } 	
     });	
 
-	// // debug		
-	// if (etas_and_rhos[0] <= 0)  std::cerr << "\nWARNING: eta_I not positive!" << std::endl; 
+	// // debug			
 
 	// const Real dichroism_module = std::sqrt(etas_and_rhos[1] * etas_and_rhos[1] + etas_and_rhos[2] * etas_and_rhos[2] + etas_and_rhos[3] * etas_and_rhos[3]);
 	

@@ -17,6 +17,7 @@ int main(int argc, char *argv[])
 	    auto rt_problem_ptr = std::make_shared<RT_problem>(rt_problem);
 
 	    RT_solver rt_solver(rt_problem_ptr);
+	    rt_solver.solve();
 	}
     
 	Kokkos::finalize();
