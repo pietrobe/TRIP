@@ -428,11 +428,15 @@ void const RT_problem::print_info(){
 		std::cout << "\ntotal size = " << tot_size_   << std::endl;			
 		std::cout << "block size = "   << block_size_ << std::endl;		
 
-		std::cout << "theta grid = [ ";
+		std::cout << "\ntheta grid = [ ";
 
 		for (int i = 0; i < (int)N_theta_; ++i) std::cout << theta_grid_[i] << " ";
 
-		std::cout << "]\nchi grid = [ ";
+		std::cout << "]\nmu grid    = [ ";
+
+		for (int i = 0; i < (int)N_chi_; ++i) std::cout   << mu_grid_[i] << " ";
+
+		std::cout << "]\nchi grid   = [ ";
 
 		for (int i = 0; i < (int)N_chi_; ++i) std::cout   << chi_grid_[i] << " ";
 
@@ -849,11 +853,7 @@ void RT_problem::set_eta_and_rhos(){
         	// checks
         	if (block_eta[b] == 0) std::cerr << "\nWARNING: zero eta_I!"     << std::endl; 
         	if (block_eta[b] < 0)  std::cerr << "\nWARNING: negative eta_I!" << std::endl; 		
-        	if (block_rho[b] < 0)  std::cerr << "\nWARNING: negative rho_I!" << std::endl; 	 
-
-        	std::cout << "k = " << k << std::endl;		   	
-        	std::cout << "b = " << b << std::endl;		   	
-        	std::cout << "block_eta[b] = " << block_eta[b] << std::endl;		   	
+        	if (block_rho[b] < 0)  std::cerr << "\nWARNING: negative rho_I!" << std::endl; 	    
         } 	
     });	
 

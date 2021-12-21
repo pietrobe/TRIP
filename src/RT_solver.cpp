@@ -23,10 +23,10 @@ void MF_context::apply_bc(Field_ptr_t I_field, const Real I0){
 
 		// just in max depth
 		if (k_global == N_z - 1) 
-		{
+		{		
 			W_T_deep = I0 * W_T_dev.ref(i,j,k);
 
-			for (int b = 0; b < (int)block_size; ++b) 
+			for (int b = 0; b < (int)block_size; b = b + 4) 
 			{
 				I_field_dev.block(i,j,k)[b] = W_T_deep; 
 			}
@@ -35,16 +35,20 @@ void MF_context::apply_bc(Field_ptr_t I_field, const Real I0){
 }
 
 
-void MF_context::find_intersection(const double theta, const double chi, const double Z_down, const double Z_top, const double L, t_intersect *T) {
+void MF_context::find_intersection(double theta, double chi, const double Z_down, const double Z_top, const double L, t_intersect *T) {
     
     // check theta
-    if (theta == 0 or chi == 0) std::cout << "WARNING: ray direction not supported!" << std::endl;   
-    
-    // {        
-    //     theta += 1e-16;
-    //     chi   += 1e-16;                 
-    // }
+    if (theta == 0 or chi == 0) std::cout << "WARNING: ray direction not supported!" << std::endl;       
+    {        
+        theta += 1e-16;
+        chi   += 1e-16;                 
+    }
 
+    // check widths
+    if (Z_down <= 0 ) std::cout << "WARNING: Z_down not positive" << std::endl;       
+    if (Z_top  <= 0 ) std::cout << "WARNING: Z_top not positive"  << std::endl;       
+    if (L      <= 0 ) std::cout << "WARNING: L not positive"      << std::endl;       
+    
     // unit vector in the direction of the ray
     const double x = sin(theta) * cos(chi);
     const double y = sin(theta) * sin(chi); 
@@ -104,6 +108,22 @@ void MF_context::find_intersection(const double theta, const double chi, const d
     T->w[1] = norm * (u-u1) * (v2-v);
     T->w[2] = norm * (u-u1) * (v-v1);
     T->w[3] = norm * (u2-u) * (v-v1);
+
+    for (int i = 0; i < 4; ++i)
+    {
+    	if (T->w[i] < 0 or T->w[i] > 1)
+    	{
+    		std::cout << "WARNING: w has a problem!" << std::endl;         	
+    		std::cout << "theta = " << theta << std::endl;         	
+    		std::cout << "chi = "  << chi << std::endl;         	
+    		std::cout << "Z_down = "  << Z_down << std::endl;         	
+    		std::cout << "Z_top = "  << Z_top << std::endl;         	
+    		std::cout << "L = "  << L << std::endl;         	
+    		
+    		std::cout << "i = " << i << std::endl;         	
+    		std::cout << "w = " << T->w[i] << std::endl;         	
+    	}  
+    }
 }
 
 
@@ -115,7 +135,7 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
  	// S_field_->exchange_halos();    	
 
 
-	if (mpi_rank_ == 0) std::cout << "\nStart formal solution ..." << std::endl;
+	if (mpi_rank_ == 0) std::cout << "\nStart formal solution..." << std::endl;
 
 	// init some quantities 
 	const auto N_theta = RT_problem_->N_theta_;
@@ -130,7 +150,7 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
 	const auto tot_size   = RT_problem_->tot_size_;
 	
 	const auto mu_grid    = RT_problem_->mu_grid_;
-	const auto theta_grid = RT_problem_->chi_grid_;	
+	const auto theta_grid = RT_problem_->theta_grid_;	
 	const auto chi_grid   = RT_problem_->chi_grid_;	
 	const auto depth_grid = RT_problem_->depth_grid_;	
 
@@ -155,20 +175,20 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
 		if (not boundary)
 		{				
 			// steps sizes in z direction		
-			const double Z_down = depth_grid[k_global] - depth_grid[k_global - 1];
-			const double Z_top  = depth_grid[k_global + 1] - depth_grid[k_global];
+			const double Z_down = depth_grid[k_global] -  depth_grid[k_global + 1];
+			const double Z_top  = depth_grid[k_global - 1] - depth_grid[k_global] ;
 
 			// set coorect order depending on direction
-			const int i_reverse = g_dev.dim[0] + g_dev.margin[0] - i - 1;
-			const int j_reverse = g_dev.dim[1] + g_dev.margin[1] - j - 1;
-			const int k_reverse = g_dev.dim[2] + g_dev.margin[2] - k - 1;
+			const int i_reverse = g_dev.dim[0] + g_dev.margin[0] - i;
+			const int j_reverse = g_dev.dim[1] + g_dev.margin[1] - j;
+			const int k_reverse = g_dev.dim[2] + g_dev.margin[2] - k;			
 
 			// quantities depending on spatial point i
 			std::vector<double> I1(4), I2(4), S1(4), S2(4), etas(4), rhos(4), K1(16), K2(16);
 
 			int i_aux, j_aux, k_aux, b_start, b_index, i_intersect, j_intersect, k_intersect;
 
-			double theta, chi, mu, mu_coeff, weight, dz, dtau;	
+			double theta, chi, mu, mu_coeff, weight, dz, dtau, eta_I_1;	
 
 			t_intersect intersection_data;
 
@@ -177,54 +197,44 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
 			{
 				theta = theta_grid[j_theta];
 				mu    = mu_grid[j_theta];
-
+							
 				k_aux = (mu > 0.0) ? k : k_reverse;
 
 				dz    = (mu > 0.0) ? Z_top : Z_down;
 
 				// minus for optical depth conversion, trap rule and conversion to cm
-				mu_coeff = - 0.5 * 1e5 * dz / std::abs(mu); 				
+				mu_coeff = - 0.5 * 1e5 / std::abs(mu); 				
 
 				for (int k_chi = 0; k_chi < (int)N_chi; ++k_chi)
 				{				
 					chi = chi_grid[j_theta];
 
-					i_aux = (std::cos(chi) > 0.0) ? i : i_reverse;
-					j_aux = (std::sin(chi) > 0.0) ? j : j_reverse;	
+					i_aux = (cos(chi) > 0.0) ? i : i_reverse;
+					j_aux = (sin(chi) > 0.0) ? j : j_reverse;	
 
 					// loop on freqs
 					for (int n = 0; n < (int)N_nu; ++n)
 					{
 						// block index
-						b_start = RT_problem_->local_to_block(j_theta, k_chi, n);
-
-						std::cout << "b_start = " << b_start << std::endl;		
-						std::cout << "k_aux = " << k_aux << std::endl;		
-
+						b_start = RT_problem_->local_to_block(j_theta, k_chi, n); // errore qui?
+						
 						for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
 						{				
 							b_index = b_start + i_stokes;
 
 							// get eta and rho
 							etas[i_stokes] = eta_dev.block(i_aux,j_aux,k_aux)[b_index];						
-							rhos[i_stokes] = rho_dev.block(i_aux,j_aux,k_aux)[b_index];
-
+							rhos[i_stokes] = rho_dev.block(i_aux,j_aux,k_aux)[b_index];		
+							
 							// set S2 with values in the current grid nodes 							
 							S2[i_stokes] = S_dev.block(i_aux,j_aux,k_aux)[b_index];									
-						}
+						}		
 
-						// if (etas[0] == 0)
-						// {
-						// 	std::cout << "i_aux = " << i_aux << std::endl;									
-						// 	std::cout << "j_aux = " << j_aux << std::endl;									
-						// 	std::cout << "k_aux = " << k_aux << std::endl;		
-
-						// 	std::cout << "b_start = " << b_start << std::endl;									
-						// }
-						
+						// for optical depth conversion
+						eta_I_1 = etas[0];										
 
 						K2 = assemble_propagation_matrix_scaled(etas, rhos);
-
+						
 						// compute initial point
 						find_intersection(theta, chi, Z_down, Z_top, L, &intersection_data);
 
@@ -244,8 +254,14 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
 							j_intersect = j_aux + intersection_data.iy[face_vertices];
 							k_intersect = k_aux + intersection_data.iz[face_vertices];
 
+							// correct ofor periodic boundary
+							if (i_intersect == 0)       i_intersect = N_x;
+							if (j_intersect == 0)       j_intersect = N_y;
+							if (i_intersect == (int)N_x + 1) i_intersect = 1;
+							if (j_intersect == (int)N_y + 1) j_intersect = 1;
+							
 							weight = intersection_data.w[face_vertices];
-
+							
 							for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
 							{
 								b_index = b_start + i_stokes;
@@ -258,18 +274,42 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
 								S1[i_stokes] += weight * S_dev.block(i_intersect,j_intersect,k_intersect)[b_index];												
 								I1[i_stokes] += weight * I_dev.block(i_intersect,j_intersect,k_intersect)[b_index];																			
 							}
-						}
-
-						K2 = assemble_propagation_matrix_scaled(etas, rhos);
+						} 						
+						
+						K1 = assemble_propagation_matrix_scaled(etas, rhos);
 
 						// optical depth step
-						dtau = mu_coeff * (K1[0] + K2[0]);
+						dtau = mu_coeff * (eta_I_1 + etas[0]) * intersection_data.distance;
+
+						if (dtau > 0 ) std::cout << "ERROR in dtau sign" << std::endl;
+						
+
+						// if (k_global == N_z - 2 and j_theta == 1)
+						// {
+							// std::cout << "dtau = " << dtau << std::endl;
+
+							// std::cout << "I1 = " << std::endl;
+							// for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << I1[i_stokes] << std::endl;
+
+							// std::cout << "S1 = " << std::endl;
+							// for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S1[i_stokes] << std::endl;
+
+							// std::cout << "S2 = " << std::endl;
+							// for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S2[i_stokes] << std::endl;
+														
+							// std::cout << "K1 = " << std::endl;
+							// for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K1[i_stokes] << std::endl;
+
+							// std::cout << "K2 = " << std::endl;
+							// for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K2[i_stokes] << std::endl;
+							
+						// }
 						
 						formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);			
 
 						// write result back
 						for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
-						{
+						{							
 							I_dev.block(i_aux,j_aux,k_aux)[b_start + i_stokes] = I2[i_stokes];													
 						}
 					}				

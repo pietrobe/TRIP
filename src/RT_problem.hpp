@@ -31,8 +31,8 @@ public:
 
     	// TODO: now hardcoded
     	L_   = 1.0;
-    	N_x_ = 1;
-    	N_y_ = 1;
+    	N_x_ = 3;
+    	N_y_ = 3;
 
     	// reading some input
     	read_depth(    input_path + "/atmosphere.dat");	
@@ -98,8 +98,8 @@ public:
 
 		// start = MPI_Wtime();
 
-		eta_field_->write("eta.raw");		
-		// k_c_->write("k_c_.raw");				
+		// eta_field_->write("eta.raw");		
+		// T_->write("T.raw");				
 
 		// MPI_Barrier(space_grid_->raw_comm());
 		// end = MPI_Wtime();

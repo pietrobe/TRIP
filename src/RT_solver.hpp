@@ -42,7 +42,7 @@ struct MF_context {
 	// rii_include::emission_coefficient_computation::compute_height_function_type epsilon_computation_function_approx_;
 
 	// find intersection
-	void find_intersection(const double theta, const double chi, const double Z_down, const double Z_top, const double L, t_intersect *T);
+	void find_intersection(double theta, double chi, const double Z_down, const double Z_top, const double L, t_intersect *T);
 
 	// formal solvers methods 	
 	void formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);	
@@ -140,10 +140,14 @@ public:
 
 	// solve linear system
 	inline void solve()
-	{
-		if (mpi_rank_ == 0) std::cout << "\nStart solve..."<< std::endl;
+	{				
+		mf_ctx_.apply_bc(RT_problem_->I_field_, 1.0);	
+
+		RT_problem_->I_field_->write("I_in.raw");		
 
 		mf_ctx_.formal_solve_local(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);	
+
+		RT_problem_->I_field_->write("I_out.raw");		
 	}
 
 	// void set_I_from_input(const std::string input_path, Vec &I);
