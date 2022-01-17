@@ -30,7 +30,7 @@ public:
     	Real start = MPI_Wtime();
 
     	// TODO: now hardcoded
-    	L_   = 1.0;
+    	L_   = 1000.0;
     	N_x_ = 3;
     	N_y_ = 3;
 
@@ -63,7 +63,7 @@ public:
 		// read atm data (needs grid object)
 		read_atmosphere_1D(    input_path + "/atmosphere.dat");			 // NOTE: solar surface for space index k = 0
 		read_bulk_velocity_1D( input_path + "/bulk_velocity.dat");	
-		read_magnetic_field_1D(input_path + "/magnetic_field.dat");
+		read_magnetic_field_1D(input_path + "/magnetic_field_50.dat");
 		
 		read_continumm_1D(  input_path + "/continuum/continuum_scat_opac.dat", 
 						    input_path + "/continuum/continuum_tot_opac.dat",
@@ -140,7 +140,7 @@ public:
 	Grid_ptr_t space_grid_; 	
 
 	// auxiliary grids	
-	std::vector<Real> depth_grid_; // in Km 
+	std::vector<Real> depth_grid_; // ordering: [surf,...,deep] in km
 	std::vector<Real> nu_grid_; 
 	std::vector<Real> theta_grid_; 
 	std::vector<Real> mu_grid_; 	
@@ -204,11 +204,10 @@ public:
 
 private:
 
-	// physical and math constants 
+	// physical constants 
 	const Real c_   = 2.99792458e+10;
 	const Real k_B_ = 1.38065e-16;
 	const Real h_   = 6.62607e-27;
-	const Real pi_  = 3.1415926535897932384626;	  
 
 	// 2-level atom constants
 	const Real mass_ = 40.078;
@@ -220,8 +219,11 @@ private:
 	const int gu_    = 1.0;
 	const Real Aul_  = 2.18e+8;	// Einstein coefficients for spontaneous emission
 
+	const int Jl2_ = 2 * Jl_;
+	const int Ju2_ = 2 * Ju_;		
+
 	// reference frame
-	const Real gamma_ = 0.5 * pi_;	  
+	const Real gamma_ = 0.5 * PI;	  
 
 	// atom constant, to precompute
 	Real nu_0_;	

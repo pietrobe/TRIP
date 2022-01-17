@@ -40,6 +40,7 @@ using Real = double;
 #define MIN(a,b) ((a)<(b) ? (a) : (b))
 #define MAX(a,b) ((a)>(b) ? (a) : (b))
 
+#define PI 3.1415926535897932384626
 
 void save_vec(Vec &m, const char * filename, const char * name);
 void save_mat(Mat &m, const char * filename, const char * name);

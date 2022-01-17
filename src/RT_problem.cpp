@@ -434,7 +434,7 @@ void const RT_problem::print_info(){
 
 		std::cout << "]\nmu grid    = [ ";
 
-		for (int i = 0; i < (int)N_chi_; ++i) std::cout   << mu_grid_[i] << " ";
+		for (int i = 0; i < (int)N_theta_; ++i) std::cout   << mu_grid_[i] << " ";
 
 		std::cout << "]\nchi grid   = [ ";
 
@@ -458,7 +458,7 @@ void RT_problem::allocate_fields(){
 		I_field_->  allocate_on_device(); 
 		S_field_->  allocate_on_device(); 
 		eta_field_->allocate_on_device(); 
-		rho_field_->allocate_on_device(); 
+		rho_field_->allocate_on_device(); 		
 }
 
 void RT_problem::allocate_atmosphere(){
@@ -538,7 +538,7 @@ void RT_problem::set_theta_chi_grids(const size_t N_theta, const size_t N_chi, c
 	if (mpi_rank_ == 0 and N_theta % 2 != 0) std::cerr << "\n========= WARNING: N_theta odd! =========\n" << std::endl;
 
 	// init theta and mu grids and weights 
-    // legendre_rule(N_theta,  0.0, pi_, theta_grid_, w_theta_);
+    // legendre_rule(N_theta,  0.0, PI, theta_grid_, w_theta_);
 
     if (double_GL)    	
     {
@@ -583,7 +583,7 @@ void RT_problem::set_theta_chi_grids(const size_t N_theta, const size_t N_chi, c
 
     if (N_chi % 2 != 0) std::cout << "WARNING: chi grid is not even!" << std::endl;
     
-    const Real delta_chi = 2.0 * pi_ / N_chi;
+    const Real delta_chi = 2.0 * PI / N_chi;
 
     for (size_t i = 0; i < N_chi; ++i)
     {
@@ -790,35 +790,38 @@ void RT_problem::set_eta_and_rhos(){
 
         	j_theta = local_idx[0];
         	k_chi   = local_idx[1];
-        	n_nu    = local_idx[1];
+        	n_nu    = local_idx[2];
 
         	const Real theta = theta_grid_[j_theta];
 			const Real chi   = chi_grid_[k_chi];	
 
-			const Real coeff  =  k_L / (std::sqrt(pi_) * Doppler_width) ;
+			const Real coeff  =  k_L / (std::sqrt(PI) * Doppler_width) ;
 			const Real coeff2 = nu_L / Doppler_width; 
 
 			const std::complex<Real> a_damp(0.0, a);
 
 			// for reduced frequency
-			v_dot_Omega = v_b[0] * ( std::cos(theta_v_b) * std::cos(theta) + std::sin(theta_v_b) * std::sin(theta) * std::cos(chi - chi_v_b));
+			v_dot_Omega = v_b[0] * ( cos(theta_v_b) * cos(theta) + sin(theta_v_b) * sin(theta) * cos(chi - chi_v_b));
 			u_b = nu_0_ * v_dot_Omega / (c_ * Doppler_width);
-			u_red = u[n_nu] + u_b;
+			u_red = u[n_nu] + u_b;			
 
 			for (int K = 0; K < 3; ++K)
 			{
 				coeff_K = coeff * std::sqrt(3 * ( 2 * K + 1));
 	
-				for (int Mu = - Ju_; Mu < Ju_ + 1; ++Mu)
+				for (int Mu2 = - Ju2_; Mu2 < Ju2_ + 1; Mu2 += 2)
 				{
-					for (int Ml = - Jl_; Ml < Jl_ + 1; ++Ml)
-					{						
+					for (int Ml2 = - Jl2_; Ml2 < Jl2_ + 1; Ml2 += 2)
+					{				
+						const int Mu  = Mu2/2;
+						const int Ml  = Ml2/2;
+
 						if (std::abs(Mu - Ml) <= 1)
 						{
 							q = Ml - Mu;
 
-							W3J1 = W3JS(Ju_, Jl_, 1, -Mu, Ml, -q);
-							W3J2 = W3JS(1, 1, K, q, -q, 0);
+							W3J1 = W3JS(Ju2_, Jl2_, 2, -Mu2, Ml2, -2*q);
+							W3J2 = W3JS(2, 2, 2*K, 2*q, -2*q, 0);
 
 							fact = coeff_K * std::pow(-1,q + 1) * std::pow(W3J1,2) * W3J2;
 
@@ -826,36 +829,40 @@ void RT_problem::set_eta_and_rhos(){
 					
 							for (int Q = -K; Q < K + 1; ++Q)
 							{			
-								faddeva = Faddeeva::w(um + a_damp);
+								faddeva = Faddeeva::w(um + a_damp);								
 								D_KQQ   = std::conj(R(K, 0, Q));
 
 								fact_re = fact * std::real(faddeva) * D_KQQ;
 								fact_im = fact * std::imag(faddeva) * D_KQQ;
-							
+
 								// etas							
-								block_eta[b + 0] += std::real(fact_re * get_TKQi(0, K, Q, j_theta, k_chi)); 
+								block_eta[b    ] += std::real(fact_re * get_TKQi(0, K, Q, j_theta, k_chi)); 
 								block_eta[b + 1] += std::real(fact_re * get_TKQi(1, K, Q, j_theta, k_chi));
 								block_eta[b + 2] += std::real(fact_re * get_TKQi(2, K, Q, j_theta, k_chi));
 								block_eta[b + 3] += std::real(fact_re * get_TKQi(3, K, Q, j_theta, k_chi));						
 								
 								// rhos
-								block_rho[b + 0] += std::real(fact_im * get_TKQi(1, K, Q, j_theta, k_chi));
-								block_rho[b + 1] += std::real(fact_im * get_TKQi(2, K, Q, j_theta, k_chi));
-								block_rho[b + 2] += std::real(fact_im * get_TKQi(3, K, Q, j_theta, k_chi));						
+								block_rho[b + 1] += std::real(fact_im * get_TKQi(1, K, Q, j_theta, k_chi));
+								block_rho[b + 2] += std::real(fact_im * get_TKQi(2, K, Q, j_theta, k_chi));
+								block_rho[b + 3] += std::real(fact_im * get_TKQi(3, K, Q, j_theta, k_chi));						
 							}
 						}
 					}		
 				}
         	}
 
-        	if (enable_continuum_) block_eta[b + 0] += k_c[n_nu];        	        	
+        	if (enable_continuum_) block_eta[b] += k_c[n_nu];         	
 
         	// checks
         	if (block_eta[b] == 0) std::cerr << "\nWARNING: zero eta_I!"     << std::endl; 
         	if (block_eta[b] < 0)  std::cerr << "\nWARNING: negative eta_I!" << std::endl; 		
-        	if (block_rho[b] < 0)  std::cerr << "\nWARNING: negative rho_I!" << std::endl; 	    
+        	if (block_rho[b] < 0)  std::cerr << "\nWARNING: negative rho_I!" << std::endl; 	            	
         } 	
     });	
+
+	// // exchange ghost layers (for periodic boundary) ------------------> TO TEST
+	// eta_field_->exchange_halos(); 
+	// rho_field_->exchange_halos(); 
 
 	// // debug			
 
@@ -881,7 +888,7 @@ void RT_problem::set_up(){
 	// compute coefficients depending on the spatial point 
 	
 	// const for k_L
-	tmp_const = c_ * c_* (2 * Ju_ + 1) * Aul_ / (8 * pi_ * nu_0_ * nu_0_ * (2 * Jl_ + 1));
+	tmp_const = c_ * c_* (2 * Ju_ + 1) * Aul_ / (8 * PI * nu_0_ * nu_0_ * (2 * Jl_ + 1));
 
 	// const for Wien 
 	tmp_const2 = 2 * h_ * nu_0_ * nu_0_ * nu_0_ / (c_ * c_);
@@ -911,21 +918,16 @@ void RT_problem::set_up(){
     	auto *u = u_dev.block(i, j, k);
 
     	// assign some variables for readability
-    	Real T   =   T_dev.ref(i,j,k);
-    	Real Qel = Qel_dev.ref(i,j,k);
-    	Real D2  =  D2_dev.ref(i,j,k);
-    	Real Nl  =  Nl_dev.ref(i,j,k);
+    	Real T   =   T_dev.ref(i,j,k);    	    	
     	Real xi  =  xi_dev.ref(i,j,k);
     	Real Cul = Cul_dev.ref(i,j,k);
-
-    	Real Doppler_width = Doppler_width_dev.ref(i,j,k);
-
+    	
         // precompute quantities depening only on position
-        D2_dev.ref(i,j,k)  = 0.5 * Qel;
+        D2_dev.ref(i,j,k)  = 0.5 * Qel_dev.ref(i,j,k); 
 
-		D1_dev.ref(i,j,k)  = tmp_const3 * D2;
+		D1_dev.ref(i,j,k)  = tmp_const3 * D2_dev.ref(i,j,k);
 
-		k_L_dev.ref(i,j,k) = tmp_const * Nl;
+		k_L_dev.ref(i,j,k) = tmp_const * Nl_dev.ref(i,j,k);
 		
 		Doppler_width_dev.ref(i,j,k) = dE * std::sqrt(2 * k_B_ * T / mass_real + xi * xi);
 
@@ -936,7 +938,7 @@ void RT_problem::set_up(){
 		// on position and frequency
 		for (size_t n = 0; n < N_nu_; ++n)
 		{
-			u[n] = (nu_0_ - nu_grid_[n]) / Doppler_width;
+			u[n] = (nu_0_ - nu_grid_[n]) / Doppler_width_dev.ref(i,j,k);			
 		}	
     });	
 		    

@@ -145,7 +145,13 @@ public:
 
 		RT_problem_->I_field_->write("I_in.raw");		
 
-		mf_ctx_.formal_solve_local(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);	
+		const int n_iter = 1;		
+		
+		for (int i = 0; i < n_iter; ++i)
+		{
+			cout << "local formal solve " << i << endl;
+			mf_ctx_.formal_solve_local(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);	
+		}	
 
 		RT_problem_->I_field_->write("I_out.raw");		
 	}

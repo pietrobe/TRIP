@@ -191,7 +191,7 @@ std::vector<double> assemble_propagation_matrix_scaled(const std::vector<double>
 
   std::vector<double> K(16);
 
-  if ( etas_and_rhos[0] == 0) std::cerr << "\n WARNING: eta_I = 0!\n" << std::endl;
+  if ( etas_and_rhos[0] == 0) std::cout << "\n WARNING: eta_I = 0!\n" << std::endl;
   
   const double scaling_factor = 1.0 / etas_and_rhos[0];
 
@@ -227,10 +227,10 @@ std::vector<double> assemble_propagation_matrix_scaled(const std::vector<double>
 
   std::vector<double> K(16);
 
-  if ( etas[0] == 0) std::cerr << "\n WARNING: eta_I = 0!\n" << std::endl;
+  if ( etas[0] == 0) std::cout << "\n WARNING: eta_I = 0!\n" << std::endl;
   
   const double scaling_factor = 1.0 / etas[0];
-
+  
   // etas
   K[0]  = 1.0;
   K[5]  = 1.0;
@@ -298,14 +298,14 @@ double W3JS(int J1, int J2, int J3, int M1, int M2, int M3) {
   int JSUM, Z, ZMIN, ZMAX;
   double CC, CC1, CC2, DENOM;
 
-  // correction from Simone
-  J1 *= 2;
-  J2 *= 2;
-  J3 *= 2;
-  M1 *= 2;
-  M2 *= 2;
-  M3 *= 2;
-  /////////////////////////
+  // // correction from Simone
+  // J1 *= 2;
+  // J2 *= 2;
+  // J3 *= 2;
+  // M1 *= 2;
+  // M2 *= 2;
+  // M3 *= 2;
+  // /////////////////////////
   
 
   if (M1 + M2 + M3 != 0)
