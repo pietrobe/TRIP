@@ -310,24 +310,9 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
 
 								formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);	
 								
+								// test
 								if (j_theta == 1 and k_chi == 0 and n == 0)
-								{
-									// std::cout << "dtau = " << dtau << std::endl;
-									// std::cout << "mu_coeff = " << mu_coeff << std::endl;
-									// std::cout << "eta_I_1 = " << eta_I_1 << std::endl;
-									// std::cout << "etas[0] = " << etas[0] << std::endl;
-									// std::cout << "intersection_data.distance = " << intersection_data.distance << std::endl;
-
-									// std::cout << "i_intersect = " << i_intersect << std::endl;
-									// std::cout << "j_intersect = " << j_intersect << std::endl;
-									// std::cout << "k_intersect = " << k_intersect << std::endl;
-
-									// std::cout << "k_global = " << k_global << std::endl;
-									// std::cout << "k_aux = " << k_aux << std::endl;
-									// std::cout << "depth = " << depth_grid[k_global] << std::endl;
-
-									// cout << "b_start = " << b_start << endl;		
-
+								{									
 									// std::cout << "I1 = " << I1[0] << std::endl;		
 									if (i == 1 and j == 1)
 									{

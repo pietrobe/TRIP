@@ -1,6 +1,5 @@
 #include "RT_problem.hpp"
 
-
 void RT_problem::read_continumm_1D(input_string filename_sigma, input_string filename_k_c, input_string filename_eps_c_th){
 
 	if (mpi_rank_ == 0) std::cout << "Reading sigma from "    << filename_sigma    << std::endl;
@@ -190,7 +189,7 @@ void RT_problem::read_bulk_velocity_1D(input_string filename){
 		{				
 			// read data
 			lineStream >> entry;
-			v_b_vec.push_back(entry);
+			v_b_vec.push_back(1e5 * entry); // conversion to cm
 			lineStream >> entry;
 			theta_b_vec.push_back(entry);
 			lineStream >> entry;
@@ -803,6 +802,7 @@ void RT_problem::set_eta_and_rhos(){
 			// for reduced frequency
 			v_dot_Omega = v_b[0] * ( cos(theta_v_b) * cos(theta) + sin(theta_v_b) * sin(theta) * cos(chi - chi_v_b));
 			u_b = nu_0_ * v_dot_Omega / (c_ * Doppler_width);
+
 			u_red = u[n_nu] + u_b;			
 
 			for (int K = 0; K < 3; ++K)

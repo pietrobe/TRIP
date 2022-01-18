@@ -63,7 +63,7 @@ public:
 		// read atm data (needs grid object)
 		read_atmosphere_1D(    input_path + "/atmosphere.dat");			 // NOTE: solar surface for space index k = 0
 		read_bulk_velocity_1D( input_path + "/bulk_velocity.dat");	
-		read_magnetic_field_1D(input_path + "/magnetic_field_50.dat");
+		read_magnetic_field_1D(input_path + "/magnetic_field.dat");
 		
 		read_continumm_1D(  input_path + "/continuum/continuum_scat_opac.dat", 
 						    input_path + "/continuum/continuum_tot_opac.dat",
