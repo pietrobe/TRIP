@@ -18,12 +18,13 @@ int main(int argc, char *argv[])
 
 	    RT_solver rt_solver(rt_problem_ptr, "DELO_linear");
 	    rt_solver.solve();
+
+	    cout << "Solve() done" << endl;
 	}
     
 	Kokkos::finalize();
     return MPI_Finalize();
 }
-
 
 // output 
 // python ../../sgrid/scripts/transpose_data.py -x 4 -y 4 -z 70 -b 99 -p sigma.raw 

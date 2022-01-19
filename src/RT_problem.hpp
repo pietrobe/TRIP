@@ -44,7 +44,8 @@ public:
 								
 		// init grid
 		space_grid_ = std::make_shared<Grid_t>();
-		space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0});
+		// space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0});
+		space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0}, {1, 1, mpi_size_}); // horizotnal decompostion (Jiri)
 		
 		MPI_Barrier(space_grid_->raw_comm());
 		Real end = MPI_Wtime();
@@ -61,13 +62,13 @@ public:
 		allocate_atmosphere();	
 
 		// read atm data (needs grid object)
-		read_atmosphere_1D(    input_path + "/atmosphere.dat");			 // NOTE: solar surface for space index k = 0
+		read_atmosphere_1D(    input_path + "/atmosphere.dat");    // NOTE: solar surface for space index k = 0
 		read_bulk_velocity_1D( input_path + "/bulk_velocity.dat");	
 		read_magnetic_field_1D(input_path + "/magnetic_field.dat");
 		
-		read_continumm_1D(  input_path + "/continuum/continuum_scat_opac.dat", 
-						    input_path + "/continuum/continuum_tot_opac.dat",
-						    input_path + "/continuum/continuum_therm_emiss.dat");
+		read_continumm_1D(input_path + "/continuum/continuum_scat_opac.dat", 
+						  input_path + "/continuum/continuum_tot_opac.dat",
+						  input_path + "/continuum/continuum_therm_emiss.dat");
 
 		MPI_Barrier(space_grid_->raw_comm());
 	    end = MPI_Wtime();

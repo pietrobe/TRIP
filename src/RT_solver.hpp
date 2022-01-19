@@ -143,23 +143,18 @@ public:
 	{				
 		mf_ctx_.apply_bc(RT_problem_->I_field_, 1.0);	
 
-		RT_problem_->I_field_->write("I_in.raw");		
+		// RT_problem_->I_field_->write("I_in.raw");		
 
 		const int n_iter = 1;		
 		
 		for (int i = 0; i < n_iter; ++i)
 		{
-			cout << "local formal solve " << i << endl;
+			if (mpi_rank_ == 0) cout << "Local formal solve " << i << endl;
 			mf_ctx_.formal_solve_local(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);	
 		}	
 
-		RT_problem_->I_field_->write("I_out.raw");		
+		// RT_problem_->I_field_->write("I_out.raw");		
 	}
-
-	// void set_I_from_input(const std::string input_path, Vec &I);
-
-	// // save matrices for Matlab
-	// void save_Lamda();
 	
 private:	
 

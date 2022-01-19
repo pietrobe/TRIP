@@ -860,9 +860,9 @@ void RT_problem::set_eta_and_rhos(){
         } 	
     });	
 
-	// // exchange ghost layers (for periodic boundary) ------------------> TO TEST
-	// eta_field_->exchange_halos(); 
-	// rho_field_->exchange_halos(); 
+	// exchange ghost layers (for periodic boundary)
+	eta_field_->exchange_halos(); 
+	rho_field_->exchange_halos(); 	
 
 	// // debug			
 
