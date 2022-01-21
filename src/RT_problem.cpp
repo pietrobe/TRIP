@@ -440,6 +440,8 @@ void const RT_problem::print_info(){
 		for (int i = 0; i < (int)N_chi_; ++i) std::cout   << chi_grid_[i] << " ";
 
 		std::cout << "] " << std::endl;		
+
+		if (only_vertical_decompostion_) cout << "\nDomain decompostion only in the z direction (Jiri method)" << endl;		
 	}
 }
 
@@ -794,7 +796,7 @@ void RT_problem::set_eta_and_rhos(){
         	const Real theta = theta_grid_[j_theta];
 			const Real chi   = chi_grid_[k_chi];	
 
-			const Real coeff  =  k_L / (std::sqrt(PI) * Doppler_width) ;
+			const Real coeff  =  k_L / (std::sqrt(PI) * Doppler_width);
 			const Real coeff2 = nu_L / Doppler_width; 
 
 			const std::complex<Real> a_damp(0.0, a);
@@ -864,7 +866,7 @@ void RT_problem::set_eta_and_rhos(){
 	eta_field_->exchange_halos(); 
 	rho_field_->exchange_halos(); 	
 
-	// // debug			
+	// debug			
 
 	// const Real dichroism_module = std::sqrt(etas_and_rhos[1] * etas_and_rhos[1] + etas_and_rhos[2] * etas_and_rhos[2] + etas_and_rhos[3] * etas_and_rhos[3]);
 	
@@ -959,7 +961,7 @@ void RT_problem::set_up(){
 	// compute etas and rhos
 	set_eta_and_rhos();
 
-	// delete stuff that is not needed // TODO?
+	// delete stuff that is not needed -----------------------------------> TODO?
 	
 	if (mpi_rank_ == 0) std::cout << "done" << std::endl;	
 }

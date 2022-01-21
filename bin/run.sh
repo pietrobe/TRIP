@@ -7,7 +7,7 @@
 #SBATCH --time=01:10:00
 #SBATCH --account=u2
 
-#export LD_LIBRARY_PATH=/users/pietrob/rii/rii-c/build/
+export LD_LIBRARY_PATH=/users/pietrob/rii/rii-c/build/
 export LD_LIBRARY_PATH=$TRILINOS_DIR/lib:$LD_LIBRARY_PATH
 
 srun ./main  

@@ -146,6 +146,8 @@ public:
 		// RT_problem_->I_field_->write("I_in.raw");		
 
 		const int n_iter = 1;		
+
+		Real start = MPI_Wtime();
 		
 		for (int i = 0; i < n_iter; ++i)
 		{
@@ -153,7 +155,12 @@ public:
 			mf_ctx_.formal_solve_local(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);	
 		}	
 
+		Real end = MPI_Wtime();
+
 		// RT_problem_->I_field_->write("I_out.raw");		
+		
+		if (mpi_rank_ == 0) cout << "Solve time (s) = " << end - start << endl;
+
 	}
 	
 private:	

@@ -31,8 +31,8 @@ public:
 
     	// TODO: now hardcoded
     	L_   = 1000.0;
-    	N_x_ = 3;
-    	N_y_ = 3;
+    	N_x_ = 10;
+    	N_y_ = 10;
 
     	// reading some input
     	read_depth(    input_path + "/atmosphere.dat");	
@@ -44,9 +44,16 @@ public:
 								
 		// init grid
 		space_grid_ = std::make_shared<Grid_t>();
-		// space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0});
-		space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0}, {1, 1, mpi_size_}); // horizotnal decompostion (Jiri)
-		
+
+		if (only_vertical_decompostion_)
+		{
+			space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0}, {1, 1, mpi_size_});
+		}
+		else
+		{
+			space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0});
+		}
+ 		
 		MPI_Barrier(space_grid_->raw_comm());
 		Real end = MPI_Wtime();
 	    Real user_time = end - start;
@@ -133,6 +140,9 @@ public:
 	// MPI varables
 	int mpi_rank_;
 	int mpi_size_;	
+
+	// decompostion in planes (Jiri method)
+	bool only_vertical_decompostion_ = true;
 
 	// flag to enable continuum 
 	bool enable_continuum_ = true;

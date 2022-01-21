@@ -129,10 +129,7 @@ void MF_context::find_intersection(double theta, double chi, const double Z_down
 
 void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0){
 
-
-	// TODO 
-	// I_field_->exchange_halos();    	
- 	// S_field_->exchange_halos();    	
+	 // S_field->exchange_halos(); to include in update S 			
 
 	if (mpi_rank_ == 0) std::cout << "\nStart formal solution..." << std::endl;
 
@@ -144,6 +141,8 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
 	const auto N_y     = RT_problem_->N_y_;
 	const auto N_z     = RT_problem_->N_z_;
 	const auto N_s     = RT_problem_->N_s_;
+
+	const auto vertical_decompostion = RT_problem_->only_vertical_decompostion_;
 
 	const auto block_size = RT_problem_->block_size_;
 	const auto tot_size   = RT_problem_->tot_size_;
@@ -176,10 +175,10 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
 
 	int i_aux, j_aux, k_aux, k_global, i_intersect, j_intersect, k_intersect, b_start, b_index;
 
-	bool i_reverse, j_reverse, k_reverse;
-
 	// misc coeffs
 	double theta, chi, mu, weight, dtau, eta_I_1, Z_down, Z_top;	
+
+	bool boundary;
 
 	// quantities depending on spatial point i
 	std::vector<double> I1(4), I2(4), S1(4), S2(4), etas(4), rhos(4), K1(16), K2(16);
@@ -192,53 +191,47 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
 
 	for (int rank = 0; rank < mpi_size_; ++rank)
 	{			
-		// loop over directions (TODO could be parallel)
-		for (int j_theta = 0; j_theta < (int)N_theta; ++j_theta)
-		{
-			theta = theta_grid[j_theta];
-			mu    = mu_grid[j_theta];
-
-			k_reverse = mu > 0.0;		
+		// loop over spatial points
+		for (int k = k_start; k < k_end; ++k)					
+		{													
+			// exchange boundary info ---------------------> TODO use buffer to speed up?
+			if (not vertical_decompostion) I_field->exchange_halos(); 			    	
 			
-			for (int k_chi = 0; k_chi < (int)N_chi; ++k_chi)
-			{			
-				chi = chi_grid[k_chi];
-
-				i_reverse = cos(chi) < 0.0;
-				j_reverse = sin(chi) < 0.0;
-
-				// loop on freqs
-				for (int n = 0; n < (int)N_nu; ++n)
+			for (int j = j_start; j < j_end; ++j)
+			{
+				for (int i = i_start; i < i_end; ++i)
 				{
-					// block index
-					b_start = RT_problem_->local_to_block(j_theta, k_chi, n); 
+					// loop over directions (TODO could be parallel)
+					for (int j_theta = 0; j_theta < (int)N_theta; ++j_theta)
+					{
+						theta = theta_grid[j_theta];
+						mu    = mu_grid[j_theta];						
 
-					// loop over spatial points
-					for (int k = k_start; k < k_end; ++k)					
-					{								
-						// exchange boundary info (bit redundant, TODO) ----------------------- TODO
-						// I_field->exchange_halos(); 
+						k_aux = (mu > 0.0) ? k_end - k : k; 
 
-						k_aux = (k_reverse) ? k_end - k : k; // WARNING: tested just for margin = 1
+						// depth index
+						k_global = g_dev.global_coord(2, k_aux);	
 
-						// depth index k_global = g_dev.start[2] - g_dev.margin[2] + k_aux; 
-						k_global = g_dev.global_coord(2, k_aux);					
-
-						const bool boundary = (k_global == 0 and mu < 0) or (k_global == (int)N_z - 1 and k_reverse);
-
+						boundary = (k_global == 0 and mu < 0) or (k_global == (int)N_z - 1 and mu > 0);
+						
 						if (not boundary)
-						{
+						{						
 							// set vertical box size
 							Z_down = (mu > 0) ? depth_grid[k_global] -  depth_grid[k_global + 1] : 1.0;
 							Z_top  = (mu < 0) ? depth_grid[k_global - 1] - depth_grid[k_global]  : 1.0;						
 
-							for (int j = j_start; j < j_end; ++j)
-							{
-								j_aux = (j_reverse) ? j_end - j : j;
+							for (int k_chi = 0; k_chi < (int)N_chi; ++k_chi)
+							{			
+								chi = chi_grid[k_chi];
+							
+								i_aux = (cos(chi) < 0.0) ? i_end - i : i;	
+								j_aux = (sin(chi) < 0.0) ? j_end - j : j;
 
-								for (int i = i_start; i < i_end; ++i)
-								{				
-									i_aux = (i_reverse) ? i_end - i : i;	
+								// loop on freqs
+								for (int n = 0; n < (int)N_nu; ++n)
+								{
+									// block index
+									b_start = RT_problem_->local_to_block(j_theta, k_chi, n); 
 
 									// solve ODE
 									
@@ -278,15 +271,16 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
 										i_intersect = i_aux + intersection_data.ix[face_vertices];
 										j_intersect = j_aux + intersection_data.iy[face_vertices];
 										k_intersect = k_aux - intersection_data.iz[face_vertices]; // minus because k increases going downwards		
+																				
+										// correct for periodic boundary
+										if (vertical_decompostion)
+										{
+											if (i_intersect == 0)            i_intersect = N_x; 
+											if (j_intersect == 0)            j_intersect = N_y;
+											if (i_intersect == (int)N_x + 1) i_intersect = 1;
+											if (j_intersect == (int)N_y + 1) j_intersect = 1;	
+										}										
 
-
-										// correct for periodic boundary ------------------- TODO now hardcoded for serial
-										if (i_intersect == 0)            i_intersect = N_x; 
-										if (j_intersect == 0)            j_intersect = N_y;
-										if (i_intersect == (int)N_x + 1) i_intersect = 1;
-										if (j_intersect == (int)N_y + 1) j_intersect = 1;
-								
-										
 										weight = intersection_data.w[face_vertices];
 										
 										for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
@@ -313,7 +307,7 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
 									formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);	
 									
 									// test
-									if (j_theta == 1 and k_chi == 0 and n == 0)
+									if (j_theta == 1 and k_chi == 0 and n == 0 and rank == mpi_size_ - 1)
 									{									
 										// std::cout << "I1 = " << I1[0] << std::endl;		
 										if (i == 1 and j == 1)
@@ -324,7 +318,7 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
 											// std::cout << "etas[0] = " << etas[0] << std::endl;	
 											// std::cout << "intersection_data.distance = " << intersection_data.distance << std::endl;					
 											
-											std::cout << "I1 = " << I1[0] << std::endl;	
+											// std::cout << "I1 = " << I1[0] << std::endl;	
 											std::cout << "I2 = " << I2[0] << std::endl;		
 											// std::cout << "Z_down = " << Z_down << std::endl;					
 											// std::cout << "Z_top = "  << Z_top  << std::endl;					
@@ -350,389 +344,21 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
 									for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
 									{							
 										I_dev.block(i_aux,j_aux,k_aux)[b_start + i_stokes] = I2[i_stokes];										
-									}											
-								}			
-							}								 	
-						} 
+									}
+								}						
+							}
+						}
 					}
 				}
-			}
+			}		
 		}
-
+		
 		// communication
-		I_field->exchange_halos(); 	
+		if (mpi_size_ > 1) I_field->exchange_halos(); 			
 	}
 }
  				
-
-// 	for (int k_seq = 0; k_seq < N_z; ++k_seq)
-// 	{				
-// 		// loop over directions and frequencies 
-// 		sgrid::parallel_for("FORMAL SOLVE", space_grid->md_range(), SGRID_LAMBDA(int i, int j, int k) { 
-			
-// 			// depth index
-// 			const int k_global = g_dev.start[2] + k - g_dev.margin[2]; 			
-						
-// 			if (k_global == k_seq)
-// 			{							
-// 				// set reverse order
-// 				const int i_reverse = g_dev.dim[0] + g_dev.margin[0] - i;
-// 				const int j_reverse = g_dev.dim[1] + g_dev.margin[1] - j;
-// 				const int k_reverse = g_dev.dim[2] + g_dev.margin[2] - k;			
-
-// 				// quantities depending on spatial point i
-// 				std::vector<double> I1(4), I2(4), S1(4), S2(4), etas(4), rhos(4), K1(16), K2(16);
-
-// 				int i_aux, j_aux, k_aux, b_start, b_index, i_intersect, j_intersect, k_intersect, k_global_reverse;
-
-// 				double theta, chi, mu, mu_coeff, weight, dtau, eta_I_1, Z_down, Z_top;	
-
-// 				t_intersect intersection_data;
-
-// 				// loop over directions
-// 				for (int j_theta = 0; j_theta < (int)N_theta; ++j_theta)
-// 				{
-// 					theta = theta_grid[j_theta];
-// 					mu    = mu_grid[j_theta];
-
-// 					// const bool boundary = (k_global == 0 and mu < 0) or (k_global == (int)N_z - 1 and mu > 0); 
-// 					// const bool boundary = (k_global == 0) or (k_global == (int)N_z - 1); 
-			
-// 					// nothing is done on the boundary 
-// 					if (k_global > 0)
-// 					{																		
-// 						k_aux = (mu < 0) ? k : k_reverse;	
-
-// 						// if not needed
-// 						Z_down = 1.0;
-// 						Z_top  = 1.0;	
-
-// 						// steps sizes in z direction
-// 						if (mu < 0)
-// 						{
-// 							// Z_down = depth_grid[k_global] -  depth_grid[k_global + 1]; 							
-// 							Z_top  = depth_grid[k_global - 1] - depth_grid[k_global] ;
-// 						}		
-// 						else
-// 						{
-// 							k_global_reverse = N_z - k_global - 1;
-
-// 							Z_down = depth_grid[k_global_reverse] -  depth_grid[k_global_reverse + 1]; 
-// 							// Z_top  = depth_grid[k_global_reverse - 1] - depth_grid[k_global_reverse];														
-// 						}
-								
-// 						// minus for optical depth conversion, trap rule and conversion to cm
-// 						mu_coeff = - 0.5 * 1e5 / std::abs(mu); 				
-
-// 						for (int k_chi = 0; k_chi < (int)N_chi; ++k_chi)
-// 						{				
-// 							chi = chi_grid[k_chi];
-
-// 							i_aux = (cos(chi) > 0.0) ? i : i_reverse;
-// 							j_aux = (sin(chi) > 0.0) ? j : j_reverse;	
-
-// 							// loop on freqs
-// 							for (int n = 0; n < (int)N_nu; ++n)
-// 							{
-// 								// block index
-// 								b_start = RT_problem_->local_to_block(j_theta, k_chi, n); // errore qui?
-								
-// 								for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
-// 								{				
-// 									b_index = b_start + i_stokes;
-
-// 									// get eta and rho
-// 									etas[i_stokes] = eta_dev.block(i_aux,j_aux,k_aux)[b_index];						
-// 									rhos[i_stokes] = rho_dev.block(i_aux,j_aux,k_aux)[b_index];		
-									
-// 									// set S2 with values in the current grid nodes 							
-// 									S2[i_stokes] = S_dev.block(i_aux,j_aux,k_aux)[b_index];									
-// 								}		
-
-// 								// for optical depth conversion
-// 								eta_I_1 = etas[0];										
-
-// 								K2 = assemble_propagation_matrix_scaled(etas, rhos);
-								
-// 								// compute initial point
-// 								find_intersection(theta, chi, Z_down, Z_top, L, &intersection_data);
-
-// 								// set etas, rhos and S1 and I1 to zero
-// 								for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
-// 								{
-// 									etas[i_stokes] = 0;
-// 									rhos[i_stokes] = 0;
-// 									S1[i_stokes]   = 0;
-// 									I1[i_stokes]   = 0;
-// 								}
-
-// 								// loop over the four vertex of the intersection face
-// 								for (int face_vertices = 0; face_vertices < 4; ++face_vertices)
-// 								{
-// 									i_intersect = i_aux + intersection_data.ix[face_vertices];
-// 									j_intersect = j_aux + intersection_data.iy[face_vertices];
-// 									k_intersect = k_aux + intersection_data.iz[face_vertices];
-
-// 									// correct for periodic boundary
-// 									if (i_intersect == 0)            i_intersect = N_x; // TODO, maybe problematic in parallel?
-// 									if (j_intersect == 0)            j_intersect = N_y;
-// 									if (i_intersect == (int)N_x + 1) i_intersect = 1;
-// 									if (j_intersect == (int)N_y + 1) j_intersect = 1;
-									
-// 									weight = intersection_data.w[face_vertices];
-									
-// 									for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
-// 									{
-// 										b_index = b_start + i_stokes;
-
-// 										// get eta and rho
-// 										etas[i_stokes] += weight * eta_dev.block(i_intersect,j_intersect,k_intersect)[b_index];						
-// 										rhos[i_stokes] += weight * rho_dev.block(i_intersect,j_intersect,k_intersect)[b_index];
-
-// 										// set S1 and I1
-// 										S1[i_stokes] += weight * S_dev.block(i_intersect,j_intersect,k_intersect)[b_index];												
-// 										I1[i_stokes] += weight * I_dev.block(i_intersect,j_intersect,k_intersect)[b_index];																			
-// 									}
-// 								} 						
-								
-// 								K1 = assemble_propagation_matrix_scaled(etas, rhos);
-
-// 								// optical depth step
-// 								dtau = mu_coeff * (eta_I_1 + etas[0]) * intersection_data.distance;
-
-// 								if (dtau > 0 ) std::cout << "ERROR in dtau sign" << std::endl;
-
-// 								formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);			
-								
-// 								if (j_theta == 1 and n == 0 and k_chi == 0)
-// 								{
-// 									// std::cout << "dtau = " << dtau << std::endl;
-
-// 									// std::cout << "k_global = " << k_global << std::endl;
-// 									std::cout << "k_aux = " << k_aux << std::endl;
-// 									std::cout << "depth = " << depth_grid[k_aux] << std::endl;
-
-// 									std::cout << "I1 = " << I1[0] << std::endl;		
-// 									std::cout << "I2 = " << I2[0] << std::endl;							
-									
-// 									// std::cout << "S1 = " << std::endl;
-// 									// for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S1[i_stokes] << std::endl;
-
-// 									// std::cout << "S2 = " << std::endl;
-// 									// for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S2[i_stokes] << std::endl;
-																
-// 									// std::cout << "K1 = " << std::endl;
-// 									// for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K1[i_stokes] << std::endl;
-
-// 									// std::cout << "K2 = " << std::endl;
-// 									// for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K2[i_stokes] << std::endl;												
-// 								}
-														
-// 								// write result back
-// 								for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
-// 								{							
-// 									I_dev.block(i_aux,j_aux,k_aux)[b_start + i_stokes] = I2[i_stokes];																																							
-// 								}
-
-// 							}
-// 						}				
-// 					}
-// 				}				
-// 			}	
-// 		});
-// 	}			
-// }
-
-
-// // TODO: improve communication pattern
-// void MF_context::formal_solve(Vec &I_field, const Vec &S_field, const double I0){
-
-// 	PetscErrorCode ierr;
-			
-//   	int ix[4], ix_pre[4];
-//   	int istart, iend; 
-// 	ierr = VecGetOwnershipRange(I_field, &istart, &iend);CHKERRV(ierr);	
-// 	size_t iglobal, tag;	
-
-// 	const int istart_local = istart / block_size;
-// 	const int iend_local   = iend   / block_size;
-
-// 	double dtau, mu, mu_coeff;
-// 	bool ingoing_ray;
-
-// 	// quantities depending on spatial point i
-// 	std::vector<double> I1(4), I2(4), S1(4), S2(4), etas(4), rhos(4), K1(16), K2(16);	
-
-// 	// test
-// 	// dtau = - 0.1;
-// 	// std::vector<double> K1{ 1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0 };
-// 	// std::vector<double> K2{ 1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0 };
-		
-// 	// loop over directions and frequencies 
-// 	for (size_t j = 0; j < N_theta; ++j)    
-// 	{		
-// 		mu = (*mu_grid)[j]; 
-// 		ingoing_ray = mu < 0; 
-
-// 		mu_coeff = - 1.0 / std::abs(mu); // minus for optical depth conversion
-				
-// 		for (size_t k = 0; k < N_chi; ++k)
-// 		{		
-// 			for (size_t n = 0; n < N_nu; ++n)
-// 			{
-// 				tag = N_nu * ( N_chi * j + k ) + n;
-
-// 				if (ingoing_ray) // from surface to deep
-// 				{							
-// 					for (int i = istart_local; i < iend_local; ++i)
-// 					{							
-// 						// set global index
-// 						iglobal = RT_problem_->local_to_global(i, j, k, n);
-
-// 						// assemble K2
-// 						etas = RT_problem_->get_field(i, j, k, n, *eta_field);
-// 						rhos = RT_problem_->get_field(i, j, k, n, *rho_field);
-						
-// 						K2 = assemble_propagation_matrix_scaled(etas, rhos);
-
-// 						// set S2
-// 						std::iota(ix, ix + 4, iglobal); 
-
-// 						ierr = VecGetValues(S_field, 4, ix, &S2[0]);CHKERRV(ierr);									
-																														
-// 						if (i == istart_local and mpi_rank_ == 0) // initial condition
-// 						{
-// 							// fill I2 to send in case only one proc for space point is used
-// 							if (i == iend_local - 1 and mpi_rank_ < mpi_size_ - 1) ierr = VecGetValues(I_field, 4, ix, &I2[0]);CHKERRV(ierr);																								
-// 						}
-// 						else if (i == istart_local and mpi_rank_ > 0) // first node from local processor
-// 						{	 
-// 							// get initial condition, K and dtau from previous proc						
-// 							MPI_CHECK(MPI_Recv(&I1[0],  4, MPI_DOUBLE, mpi_rank_ - 1, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE));							
-// 							MPI_CHECK(MPI_Recv(&K1[0], 16, MPI_DOUBLE, mpi_rank_ - 1, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
-// 							MPI_CHECK(MPI_Recv(&S1[0],  4, MPI_DOUBLE, mpi_rank_ - 1, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
-// 							MPI_CHECK(MPI_Recv(&dtau,   1, MPI_DOUBLE, mpi_rank_ - 1, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
-																												
-// 							// perform formal solve
-// 							formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);
-
-// 							// set initial condition of current slab with
-// 							ierr = VecSetValues(I_field, 4, ix, &I2[0], INSERT_VALUES);CHKERRV(ierr); 							
-// 						}
-// 						else // interior point
-// 						{													
-// 							std::iota(ix_pre, ix_pre + 4, iglobal - block_size); 
-
-// 							// get I_field						
-// 							ierr = VecGetValues(I_field, 4, ix_pre, &I1[0]);CHKERRV(ierr);							
-// 							ierr = VecGetValues(S_field, 4, ix_pre, &S1[0]);CHKERRV(ierr);									
-
-// 							dtau = mu_coeff * (RT_problem_->get_field_scalar(i - 1, j, k, n, *dtau_field)); 								
-
-// 							etas = RT_problem_->get_field(i - 1, j, k, n, *eta_field);
-// 							rhos = RT_problem_->get_field(i - 1, j, k, n, *rho_field);
-
-// 							K1 = assemble_propagation_matrix_scaled(etas, rhos);
-							
-// 							// for the next point for multistep methods 													
-// 							formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);
-											
-// 							// insert new value
-// 							ierr = VecSetValues(I_field, 4, ix, &I2[0], INSERT_VALUES);CHKERRV(ierr); 							
-// 						}						
-
-// 						// send initial condition to next processor
-// 						if (i == iend_local - 1 and mpi_rank_ < mpi_size_ - 1)
-// 						{	
-// 							dtau = mu_coeff * (RT_problem_->get_field_scalar(i, j, k, n, *dtau_field));							
-
-// 							// send 			
-// 							MPI_CHECK(MPI_Send(&I2[0],  4, MPI_DOUBLE, mpi_rank_ + 1, tag, MPI_COMM_WORLD));
-// 							MPI_CHECK(MPI_Send(&K2[0], 16, MPI_DOUBLE, mpi_rank_ + 1, tag, MPI_COMM_WORLD));	
-// 							MPI_CHECK(MPI_Send(&S2[0],  4, MPI_DOUBLE, mpi_rank_ + 1, tag, MPI_COMM_WORLD));	
-// 							MPI_CHECK(MPI_Send(&dtau,   1, MPI_DOUBLE, mpi_rank_ + 1, tag, MPI_COMM_WORLD));								
-// 						}
-// 					}		
-// 				}
-// 				else // outgoing ray (from deep to surface)
-// 				{
-// 					for (int i = iend_local - 1; i >= istart_local; --i) 
-// 					{								
-// 						// set global index
-// 						iglobal = RT_problem_->local_to_global(i, j, k, n);	
-
-// 						// assemble K2
-// 						etas = RT_problem_->get_field(i, j, k, n, *eta_field);
-// 						rhos = RT_problem_->get_field(i, j, k, n, *rho_field);	
-
-// 						K2 = assemble_propagation_matrix_scaled(etas, rhos);	
-
-// 						// set S2
-// 						std::iota(ix, ix + 4, iglobal);
-
-// 						ierr = VecGetValues(S_field, 4, ix, &S2[0]);CHKERRV(ierr);																																		
-
-// 						// receive init condition		
-// 						if (i == iend_local - 1 and mpi_rank_ == mpi_size_ - 1) // first initial condition
-// 						{
-// 							// fill I2 to send in case only one proc for space point is used
-// 							if (i == istart_local and mpi_rank_ > 0) ierr = VecGetValues(I_field, 4, ix, &I2[0]);CHKERRV(ierr);																							
-// 						}	
-// 						else if (i == iend_local - 1 and mpi_rank_ < mpi_size_ - 1) // initial condition of local processor
-// 						{								
-// 							MPI_CHECK(MPI_Recv(&I1[0],  4, MPI_DOUBLE, mpi_rank_ + 1, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
-// 							MPI_CHECK(MPI_Recv(&K1[0], 16, MPI_DOUBLE, mpi_rank_ + 1, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
-// 							MPI_CHECK(MPI_Recv(&S1[0],  4, MPI_DOUBLE, mpi_rank_ + 1, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE));							
-
-// 							dtau = mu_coeff * (RT_problem_->get_field_scalar(i, j, k, n, *dtau_field)); 													
-														
-// 							// perform formal solve
-// 							formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);
-
-// 							// set initial condition of current slab
-// 							ierr = VecSetValues(I_field, 4, ix, &I2[0], INSERT_VALUES);CHKERRV(ierr); 							
-// 						} 
-// 						else // interior point
-// 						{							
-// 							std::iota(ix_pre, ix_pre + 4, iglobal + block_size); 
-
-// 							// get I_field						
-// 							ierr = VecGetValues(I_field, 4, ix_pre, &I1[0]);CHKERRV(ierr);							
-// 							ierr = VecGetValues(S_field, 4, ix_pre, &S1[0]);CHKERRV(ierr);	
-
-// 							dtau = mu_coeff * (RT_problem_->get_field_scalar(i, j, k, n, *dtau_field)); 
-
-// 							etas = RT_problem_->get_field(i + 1, j, k, n, *eta_field);
-// 							rhos = RT_problem_->get_field(i + 1, j, k, n, *rho_field);
-
-// 							K1 = assemble_propagation_matrix_scaled(etas, rhos);							
-
-// 							// for the next point for multistep methods 							
-// 							formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);
-
-// 							// insert new value
-// 							ierr = VecSetValues(I_field, 4, ix, &I2[0], INSERT_VALUES);CHKERRV(ierr);
-// 						}	
-						
-// 						// send initial condition to next processor
-// 						if (i == istart_local and mpi_rank_ > 0)
-// 						{										
-// 							MPI_CHECK(MPI_Send(&I2[0],  4, MPI_DOUBLE, mpi_rank_ - 1, tag, MPI_COMM_WORLD));
-// 							MPI_CHECK(MPI_Send(&K2[0], 16, MPI_DOUBLE, mpi_rank_ - 1, tag, MPI_COMM_WORLD));	
-// 							MPI_CHECK(MPI_Send(&S2[0],  4, MPI_DOUBLE, mpi_rank_ - 1, tag, MPI_COMM_WORLD));								
-// 						}															
-// 					}
-// 				}
-// 			}
-// 		}
-// 	}
-
-// 	// force non-negativity
-// 	// make_intensity_positive(I_field);
-
-// 	ierr = VecAssemblyBegin(I_field);CHKERRV(ierr); 
-//   	ierr = VecAssemblyEnd(I_field);CHKERRV(ierr); 
-// }
+// TOOD invert loops order
 
 // void MF_context::make_intensity_positive(Vec &I_field){
 
