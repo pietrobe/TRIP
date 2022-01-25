@@ -45,8 +45,8 @@ struct MF_context {
 	void find_intersection(double theta, double chi, const double Z_down, const double Z_top, const double L, t_intersect *T);
 
 	// formal solvers methods 	
-	void formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);	
-	// void formal_solve(Vec &I_field, const Vec &S_field, const double I0);	
+	void formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);
+	void formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
 	
 	void apply_bc(Field_ptr_t I_field, const Real I0);	
 
@@ -151,8 +151,11 @@ public:
 		
 		for (int i = 0; i < n_iter; ++i)
 		{
-			if (mpi_rank_ == 0) cout << "Local formal solve " << i << endl;
-			mf_ctx_.formal_solve_local(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);	
+			// if (mpi_rank_ == 0) cout << "Local formal solve " << i << endl;
+			// mf_ctx_.formal_solve_local(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);	
+
+			if (mpi_rank_ == 0) cout << "Global formal solve " << i << endl;
+			mf_ctx_.formal_solve_global(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);	
 		}	
 
 		Real end = MPI_Wtime();

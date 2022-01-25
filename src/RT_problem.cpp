@@ -441,7 +441,7 @@ void const RT_problem::print_info(){
 
 		std::cout << "] " << std::endl;		
 
-		if (only_vertical_decompostion_) cout << "\nDomain decompostion only in the z direction (Jiri method)" << endl;		
+		if (only_vertical_decomposition_) cout << "\nDomain decompostion only in the z direction (Jiri method)" << endl;		
 	}
 }
 

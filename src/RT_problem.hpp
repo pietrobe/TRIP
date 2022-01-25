@@ -30,7 +30,8 @@ public:
     	Real start = MPI_Wtime();
 
     	// TODO: now hardcoded
-    	L_   = 1000.0;
+    	L_   = 10.0;
+    	// L_   = 1.0;
     	N_x_ = 10;
     	N_y_ = 10;
 
@@ -45,7 +46,7 @@ public:
 		// init grid
 		space_grid_ = std::make_shared<Grid_t>();
 
-		if (only_vertical_decompostion_)
+		if (only_vertical_decomposition_)
 		{
 			space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0}, {1, 1, mpi_size_});
 		}
@@ -142,7 +143,7 @@ public:
 	int mpi_size_;	
 
 	// decompostion in planes (Jiri method)
-	bool only_vertical_decompostion_ = true;
+	bool only_vertical_decomposition_ = true;
 
 	// flag to enable continuum 
 	bool enable_continuum_ = true;
