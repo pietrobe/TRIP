@@ -57,6 +57,7 @@ void create_identity_matrix(int size, Mat &Id);
 
 // propagation matrix methods
 std::vector<double> assemble_propagation_matrix(const std::vector<double> &etas_and_rhos);
+std::vector<double> assemble_propagation_matrix(const std::vector<double> &etas, const std::vector<double> &rhos); 
 std::vector<double> assemble_propagation_matrix_scaled(const std::vector<double> &etas_and_rhos); 
 std::vector<double> assemble_propagation_matrix_scaled(const std::vector<double> &etas, const std::vector<double> &rhos); 
 void print_propagation_matrix(const std::vector<double> &K);

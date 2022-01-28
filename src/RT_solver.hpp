@@ -33,7 +33,10 @@ struct MF_context {
 	int mpi_rank_;
 	int mpi_size_;
 
-	bool threaded_;
+	// if false linear interpolation is used
+	bool use_log_interpolation_ = false;
+
+	// bool threaded_;
 
 	// // pointer for emission module and offset
 	// std::shared_ptr<rii_include::emission_coefficient_computation> ecc_sh_ptr_;
@@ -43,6 +46,7 @@ struct MF_context {
 
 	// find intersection
 	void find_intersection(double theta, double chi, const double Z_down, const double Z_top, const double L, t_intersect *T);
+	void get_2D_weigths(const double x, const double y, double *w);
 
 	// formal solvers methods 	
 	void formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);
@@ -73,12 +77,12 @@ public:
     	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size_);  
 
     	RT_problem_ = RT_problem;  
-    	using_prec_ = using_prec;    	
+    	// using_prec_ = using_prec;    	
 
     	mf_ctx_.RT_problem_    = RT_problem;  
     	mf_ctx_.mpi_rank_      = mpi_rank_;
     	mf_ctx_.mpi_size_      = mpi_size_;
-    	mf_ctx_.threaded_      = threaded;
+    	// mf_ctx_.threaded_      = threaded;
     	mf_ctx_.formal_solver_ = Formal_solver(formal_solver);     
     	// mf_ctx_.set_up_emission_module();  	    		
 
@@ -140,14 +144,14 @@ public:
 
 	// solve linear system
 	inline void solve()
-	{				
+	{						
 		mf_ctx_.apply_bc(RT_problem_->I_field_, 1.0);	
 
 		// RT_problem_->I_field_->write("I_in.raw");		
 
 		const int n_iter = 1;		
 
-		Real start = MPI_Wtime();
+		Real start = MPI_Wtime();		
 		
 		for (int i = 0; i < n_iter; ++i)
 		{
@@ -173,23 +177,23 @@ private:
 	int mpi_size_;
 
 	std::shared_ptr<RT_problem> RT_problem_;	
-	
+
 	// MF context
 	MF_context mf_ctx_;
 
-	// linear system quantities
-	Mat MF_operator_;
-	Mat MF_operator_approx_;
-	Vec rhs_;
+	// // linear system quantities
+	// Mat MF_operator_;
+	// Mat MF_operator_approx_;
+	// Vec rhs_;
 	
-	KSP ksp_solver_;
-	PC pc_;
+	// KSP ksp_solver_;
+	// PC pc_;
 
-	bool LTE_ = false;
-	bool using_prec_;
+	// bool LTE_ = false;
+	// bool using_prec_;
 			
-	// assemble Lam[eps_th] + t
-	void assemble_rhs();		
+	// // assemble Lam[eps_th] + t
+	// void assemble_rhs();		
 };
 
 

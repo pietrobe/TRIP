@@ -218,16 +218,48 @@ std::vector<double> assemble_propagation_matrix_scaled(const std::vector<double>
   return K;
 }
 
+
+std::vector<double> assemble_propagation_matrix(const std::vector<double> &etas, const std::vector<double> &rhos){
+
+  // check input sizes
+  if (etas.size() != 4 or rhos.size() != 4) std::cout << "\nERROR in assemble_propagation_matrix()\n" << std::endl;
+  
+  if ( etas[0] == 0) std::cout << "\n WARNING: eta_I = 0!\n" << std::endl;
+
+  std::vector<double> K(16);
+
+  // etas
+  K[0]  = etas[0];
+  K[5]  = etas[0];
+  K[10] = etas[0];
+  K[15] = etas[0];
+  K[1]  = etas[1];
+  K[4]  = etas[1];
+  K[2]  = etas[2];
+  K[8]  = etas[2];
+  K[3]  = etas[3];
+  K[12] = etas[3];
+
+  // rhos    
+  K[6]  =  rhos[3];
+  K[9]  = -rhos[3];
+  K[7]  = -rhos[2];
+  K[13] =  rhos[2];
+  K[11] =  rhos[1];
+  K[14] = -rhos[1];
+      
+  return K;
+
+}
+
 std::vector<double> assemble_propagation_matrix_scaled(const std::vector<double> &etas, const std::vector<double> &rhos)
 {
   // check input sizes
   if (etas.size() != 4 or rhos.size() != 4) std::cout << "\nERROR in assemble_propagation_matrix()\n" << std::endl;
 
-  // etas_and_rhos = [eta0 eta1 eta2 eta3 rho1 rho2 rho3]
+  if ( etas[0] == 0) std::cout << "\n WARNING: eta_I = 0!\n" << std::endl;
 
   std::vector<double> K(16);
-
-  if ( etas[0] == 0) std::cout << "\n WARNING: eta_I = 0!\n" << std::endl;
   
   const double scaling_factor = 1.0 / etas[0];
   

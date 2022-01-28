@@ -127,6 +127,20 @@ void MF_context::find_intersection(double theta, double chi, const double Z_down
 }
 
 
+void MF_context::get_2D_weigths(const double x, const double y, double *w)
+{
+	// get weigths in the unit square
+	if (x >= 1 or x <= 0) cout << "Problem in x input "<< endl;
+	if (y >= 1 or y <= 0) cout << "Problem in y input "<< endl;
+
+	const double xy = x * y;
+
+	w[0] = 1.0 - x - y + xy; // (1.0 - x) * (1.0 - y) 
+	w[1] = x - xy; // (1.0 - y) * x
+	w[2] = xy;
+	w[3] = y - xy;  //(1.0 - x) * y; 
+}
+
 void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0){
 
 	// S_field->exchange_halos(); to include in update S 			
@@ -260,11 +274,21 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
 																		
 									// set etas, rhos and S1 and I1 to zero
 									for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
-									{
-										etas[i_stokes] = 0;
-										rhos[i_stokes] = 0;
-										S1[i_stokes]   = 0;
-										I1[i_stokes]   = 0;
+									{									
+										if (use_log_interpolation_)
+										{
+											etas[i_stokes] = 1;
+											rhos[i_stokes] = 1;
+											S1[i_stokes]   = 1;
+											I1[i_stokes]   = 1;											
+										}
+										else // linear
+										{
+											etas[i_stokes] = 0;
+											rhos[i_stokes] = 0;
+											S1[i_stokes]   = 0;
+											I1[i_stokes]   = 0;
+										}																	
 									}
 
 									// loop over the four vertex of the intersection face
@@ -287,15 +311,28 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
 										
 										for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
 										{
-											b_index = b_start + i_stokes;										
+											b_index = b_start + i_stokes;	
 
-											// get eta and rho
-											etas[i_stokes] += weight * eta_dev.block(i_intersect,j_intersect,k_intersect)[b_index];						
-											rhos[i_stokes] += weight * rho_dev.block(i_intersect,j_intersect,k_intersect)[b_index];
+											if (use_log_interpolation_)
+											{
+												// get eta and rho
+												etas[i_stokes] *= pow(eta_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight); 
+												rhos[i_stokes] *= pow(rho_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight);
 
-											// set S1 and I1
-											S1[i_stokes] += weight * S_dev.block(i_intersect,j_intersect,k_intersect)[b_index];												
-											I1[i_stokes] += weight * I_dev.block(i_intersect,j_intersect,k_intersect)[b_index];																														
+												// set S1 and I1
+												S1[i_stokes] *= pow(S_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight);												
+												I1[i_stokes] *= pow(I_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight);																														
+											}
+											else
+											{
+												// get eta and rho
+												etas[i_stokes] += weight * eta_dev.block(i_intersect,j_intersect,k_intersect)[b_index]; 
+												rhos[i_stokes] += weight * rho_dev.block(i_intersect,j_intersect,k_intersect)[b_index];
+
+												// set S1 and I1
+												S1[i_stokes] += weight * S_dev.block(i_intersect,j_intersect,k_intersect)[b_index];												
+												I1[i_stokes] += weight * I_dev.block(i_intersect,j_intersect,k_intersect)[b_index];																														
+											}									
 										}
 									}								
 																	
@@ -415,9 +452,9 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 	double theta, chi, mu, weight, dtau, eta_I_1, Z_down, Z_top, cos_chi, sin_chi;	
 
 	// coeffs for lon ray 
-	double phi, sin_phi, cos_phi, R, tmp_coeff, tmp_coeff2, tmp_coeff3;
+	double phi, R, tmp_coeff, tmp_coeff2, tmp_coeff3;
 
-	bool boundary;
+	bool boundary, horizontal_face;
 
 	// quantities depending on spatial point i
 	std::vector<double> I1(4), I2(4), S1(4), S2(4), etas(4), rhos(4), K1(16), K2(16);
@@ -470,69 +507,45 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 								i_aux = (cos_chi < 0.0) ? i_end - i : i;	
 								j_aux = (sin_chi < 0.0) ? j_end - j : j;		
 
-								// compute interesection point
 								find_intersection(theta, chi, Z_down, Z_top, L, &intersection_data);
 
-								// cout << "theta = " << theta << endl;									
-								// cout << "chi = " << chi << endl;
-								// cout << "i = " << i << endl;									
-								// cout << "j = " << j << endl;									
-								// cout << "k = " << k << endl;	
-								// cout << "intersection_data.iz[0] = " << intersection_data.iz[0] << endl;	
-								// cout << "intersection_data.iz[1] = " << intersection_data.iz[1] << endl;	
-								// cout << "intersection_data.iz[2] = " << intersection_data.iz[2] << endl;	
-								// cout << "intersection_data.iz[3] = " << intersection_data.iz[3] << endl;									
+								horizontal_face = intersection_data.iz[0] == intersection_data.iz[1] and 
+									     		  intersection_data.iz[0] == intersection_data.iz[2] and 
+									     		  intersection_data.iz[0] == intersection_data.iz[3];	
 
+								// check if a vertical face is intersected and use long ray
+								if (not horizontal_face and (i == i_start or j == j_start))																					
+								{																	
+									phi = abs(pi_half - theta);
+									
+									intersection_data.distance = (mu > 0) ? abs(Z_down / sin(phi)) : abs(Z_top / sin(phi));
+									
+									R = intersection_data.distance * cos(phi);
 
-								// check if an vertical face is intersected
-								if (not (intersection_data.iz[0] == intersection_data.iz[1] and 
-									     intersection_data.iz[0] == intersection_data.iz[2] and 
-									     intersection_data.iz[0] == intersection_data.iz[3]))													
-								{									
-									if (i > i_start or j > j_start) // use long ray
-									{
-										// cout << "use long ray" << endl;
+									tmp_coeff = R / L;									
+									tmp_coeff2 = cos_chi * tmp_coeff;
+									tmp_coeff3 = sin_chi * tmp_coeff;
 
-										phi     = abs(pi_half - theta);
-										sin_phi = sin(pi_half - theta);
-										cos_phi = cos(pi_half - theta);
-										
-										intersection_data.distance = (mu > 0) ? abs(Z_down / sin_phi) : abs(Z_top / sin_phi);
-										
-										R = (mu > 0) ? intersection_data.distance * cos_phi : intersection_data.distance * cos_phi;
+									intersection_data.ix[0] = floor(tmp_coeff2);
+									intersection_data.ix[1] = ceil( tmp_coeff2);
+									intersection_data.ix[2] = floor(tmp_coeff2);
+									intersection_data.ix[3] = ceil( tmp_coeff2);
 
-										tmp_coeff = R / L;									
-										tmp_coeff2 = cos_chi * tmp_coeff;
-										tmp_coeff2 = sin_chi * tmp_coeff;
+									intersection_data.iy[0] = floor(tmp_coeff3);
+									intersection_data.iy[1] = floor(tmp_coeff3);
+									intersection_data.iy[2] = ceil( tmp_coeff3);
+									intersection_data.iy[3] = ceil( tmp_coeff3);										
+									
+									for (int face_vertices = 0; face_vertices < 4; ++face_vertices)
+									{											
+										intersection_data.iz[face_vertices] = (mu > 0) ? -1 : 1;
+									
+										const double x = abs(tmp_coeff2) - floor(abs(tmp_coeff2));
+										const double y = abs(tmp_coeff3) - floor(abs(tmp_coeff3));
 
-										intersection_data.ix[0] = floor(tmp_coeff2);
-										intersection_data.ix[1] = ceil( tmp_coeff2);
-										intersection_data.ix[2] = floor(tmp_coeff2);
-										intersection_data.ix[3] = ceil( tmp_coeff2);
-
-										intersection_data.iy[0] = floor(tmp_coeff3);
-										intersection_data.iy[1] = floor(tmp_coeff3);
-										intersection_data.iy[2] = ceil( tmp_coeff3);
-										intersection_data.iy[3] = ceil( tmp_coeff3);
-
-										intersection_data.iz[0] = (mu > 0) ? -1 : 1;
-										intersection_data.iz[1] = (mu > 0) ? -1 : 1;
-										intersection_data.iz[2] = (mu > 0) ? -1 : 1;
-										intersection_data.iz[3] = (mu > 0) ? -1 : 1;
-
-										// TODO
-										for (int face_vertices = 0; face_vertices < 4; ++face_vertices)
-										{																														
-											intersection_data.w[face_vertices] = 0.25;
-										}										
-
-										// cout << "intersection_data.distance = " << intersection_data.distance << endl;
-									}							
-								}	
-								else
-								{
-									// cout << "use short ray" << endl;
-								}	
+										get_2D_weigths(x, y, intersection_data.w);		
+									}																			
+								}									
 
 								// loop on freqs
 								for (int n = 0; n < (int)N_nu; ++n) 
@@ -558,16 +571,26 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 									// for optical depth conversion
 									eta_I_1 = etas[0];		
 								
-									K2 = assemble_propagation_matrix_scaled(etas, rhos);
+									K2 = assemble_propagation_matrix_scaled(etas, rhos);								
 																									
-									// set etas, rhos and S1 and I1 to zero
+									// set etas, rhos and S1 and I1 to zero									
 									for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
-									{
-										etas[i_stokes] = 0;
-										rhos[i_stokes] = 0;
-										S1[i_stokes]   = 0;
-										I1[i_stokes]   = 0;
-									}																
+									{									
+										if (use_log_interpolation_)
+										{
+											etas[i_stokes] = 1;
+											rhos[i_stokes] = 1;
+											S1[i_stokes]   = 1;
+											I1[i_stokes]   = 1;											
+										}
+										else // linear
+										{
+											etas[i_stokes] = 0;
+											rhos[i_stokes] = 0;
+											S1[i_stokes]   = 0;
+											I1[i_stokes]   = 0;
+										}																	
+									}
 
 									// loop over the four vertex of the intersection face
 									for (int face_vertices = 0; face_vertices < 4; ++face_vertices)
@@ -583,25 +606,38 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 										if (j_intersect == 0) j_intersect = N_y;										
 
 										weight = intersection_data.w[face_vertices];
-										
+									
 										for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
 										{
 											b_index = b_start + i_stokes;										
 
-											// get eta and rho
-											etas[i_stokes] += weight * eta_dev.block(i_intersect,j_intersect,k_intersect)[b_index];						
-											rhos[i_stokes] += weight * rho_dev.block(i_intersect,j_intersect,k_intersect)[b_index];
+											if (use_log_interpolation_)
+											{
+												// get eta and rho
+												etas[i_stokes] *= pow(eta_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight); 
+												rhos[i_stokes] *= pow(rho_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight);
 
-											// set S1 and I1
-											S1[i_stokes] += weight * S_dev.block(i_intersect,j_intersect,k_intersect)[b_index];												
-											I1[i_stokes] += weight * I_dev.block(i_intersect,j_intersect,k_intersect)[b_index];																			
-										}
-									}											
+												// set S1 and I1
+												S1[i_stokes] *= pow(S_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight);												
+												I1[i_stokes] *= pow(I_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight);																														
+											}
+											else
+											{
+												// get eta and rho
+												etas[i_stokes] += weight * eta_dev.block(i_intersect,j_intersect,k_intersect)[b_index]; 
+												rhos[i_stokes] += weight * rho_dev.block(i_intersect,j_intersect,k_intersect)[b_index];
+
+												// set S1 and I1
+												S1[i_stokes] += weight * S_dev.block(i_intersect,j_intersect,k_intersect)[b_index];												
+												I1[i_stokes] += weight * I_dev.block(i_intersect,j_intersect,k_intersect)[b_index];	
+											}									
+										}											
+									}										
 																	
-									K1 = assemble_propagation_matrix_scaled(etas, rhos);
+									K1 = assemble_propagation_matrix_scaled(etas, rhos);									
 									
 									// optical depth step								
-									dtau = coeff * (eta_I_1 + etas[0]) * intersection_data.distance;
+									dtau = coeff * (eta_I_1 + etas[0]) * intersection_data.distance;									
 
 									if (dtau > 0 ) std::cout << "ERROR in dtau sign" << std::endl;										
 
@@ -639,7 +675,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 											// std::cout << "K2 = " << std::endl;
 											// for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K2[i_stokes] << std::endl;												
 										} 									
-									}
+									}									
 
 									// write result
 									for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
