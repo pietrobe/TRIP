@@ -20,6 +20,8 @@ public:
 	// constructor
 	RT_problem(input_string input_path, const size_t N_theta, const size_t N_chi)			   
 	{
+		Real start_total = MPI_Wtime();
+
 		// assign MPI varaibles 
     	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank_);
     	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size_);
@@ -30,12 +32,13 @@ public:
     	Real start = MPI_Wtime();
 
     	// TODO: now hardcoded
-    	L_   = 10.0;
+    	L_   = 1000.0;
     	// L_   = 1.0;
     	N_x_ = 10;
     	N_y_ = 10;
 
     	// reading some input
+    	read_atom(     input_path + "/atom.dat");
     	read_depth(    input_path + "/atmosphere.dat");	
     	read_frequency(input_path + "/frequency.dat");	
     	    	
@@ -104,6 +107,11 @@ public:
 	    if (mpi_rank_ == 0) printf("Exchange:\t\t%g (seconds)\n", user_time);	      
 
 	    print_info();
+
+	   	MPI_Barrier(space_grid_->raw_comm());
+	    end = MPI_Wtime();
+	    user_time = end - start_total;
+	    if (mpi_rank_ == 0) printf("Total set up:\t\t%g (seconds)\n", user_time);	      
 
 		// start = MPI_Wtime();
 
@@ -222,17 +230,16 @@ private:
 	const Real h_   = 6.62607e-27;
 
 	// 2-level atom constants
-	const Real mass_ = 40.078;
-	const Real El_   = 0.0;
-	const Real Eu_   = 23652.304;
-	const int Jl_    = 0.0;
-	const int Ju_    = 1.0;
-	const int gl_    = 0.0;
-	const int gu_    = 1.0;
-	const Real Aul_  = 2.18e+8;	// Einstein coefficients for spontaneous emission
-
-	const int Jl2_ = 2 * Jl_;
-	const int Ju2_ = 2 * Ju_;		
+	double mass_;
+	double El_;
+	double Eu_;
+	int Jl_;
+	int Ju_;
+	int Jl2_;
+	int Ju2_;
+	int gl_;
+	int gu_;
+	double Aul_;	// Einstein coefficients for spontaneous emission
 
 	// reference frame
 	const Real gamma_ = 0.5 * PI;	  
@@ -259,6 +266,7 @@ private:
 	void set_sizes();
 
 	// read inputs
+	void read_atom(             input_string filename);
 	void read_depth(            input_string filename);
 	void read_frequency(        input_string filename);
 	void read_atmosphere_1D(    input_string filename);

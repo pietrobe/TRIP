@@ -144,15 +144,15 @@ public:
 
 	// solve linear system
 	inline void solve()
-	{						
+	{	
+		Real start = MPI_Wtime();							
+		
 		mf_ctx_.apply_bc(RT_problem_->I_field_, 1.0);	
 
 		// RT_problem_->I_field_->write("I_in.raw");		
 
 		const int n_iter = 1;		
-
-		Real start = MPI_Wtime();		
-		
+				
 		for (int i = 0; i < n_iter; ++i)
 		{
 			// if (mpi_rank_ == 0) cout << "Local formal solve " << i << endl;
@@ -161,6 +161,8 @@ public:
 			if (mpi_rank_ == 0) cout << "Global formal solve " << i << endl;
 			mf_ctx_.formal_solve_global(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);	
 		}	
+
+		MPI_Barrier(MPI_COMM_WORLD); 
 
 		Real end = MPI_Wtime();
 

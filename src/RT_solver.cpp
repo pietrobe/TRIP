@@ -1,4 +1,5 @@
 #include "RT_solver.hpp"
+#include "sgrid_SliceHalo.hpp"
 
 
 void MF_context::apply_bc(Field_ptr_t I_field, const Real I0){
@@ -156,7 +157,7 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
 	const auto N_z     = RT_problem_->N_z_;
 	const auto N_s     = RT_problem_->N_s_;
 
-	const auto vertical_decompostion = RT_problem_->only_vertical_decomposition_;
+	const auto vertical_decomposition = RT_problem_->only_vertical_decomposition_;
 
 	const auto block_size = RT_problem_->block_size_;
 	const auto tot_size   = RT_problem_->tot_size_;
@@ -205,13 +206,20 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
 
 	const int block_size_half = block_size/2;
 
+	// Initialize slice halo handler
+    sgrid::SliceHalo<Field_t> halos_xy(*I_field, 2);        
+
 	for (int rank = 0; rank < mpi_size_; ++rank)
 	{			
 		// loop over spatial points
 		for (int k = k_start; k < k_end; ++k)					
 		{													
-			// exchange (i,j)-plane boundary info ---------------------> TODO speed up
-			if (not vertical_decompostion) I_field->exchange_halos(); 	
+			// exchange (i,j)-plane boundary info 
+			if (not vertical_decomposition) 
+			{
+				halos_xy.exchange(k);
+				halos_xy.exchange(k_end - k); 	
+			}			
 			
 			for (int j = j_start; j < j_end; ++j)
 			{
@@ -299,7 +307,7 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
 										k_intersect = k_aux - intersection_data.iz[face_vertices]; // minus because k increases going downwards		
 																				
 										// correct for periodic boundary
-										if (vertical_decompostion)
+										if (vertical_decomposition)
 										{
 											if (i_intersect == 0)            i_intersect = N_x; 
 											if (j_intersect == 0)            j_intersect = N_y;
@@ -346,7 +354,7 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
 									formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);	
 									
 									// test
-									if (j_theta == 1 and k_chi == 0 and n == 0 and rank == mpi_size_ - 1)
+									if (j_theta == N_theta/2 and k_chi == 0 and n == 0 and rank == mpi_size_ - 1)
 									{									
 										// std::cout << "I1 = " << I1[0] << std::endl;		
 										if (i == 1 and j == 1 and k == k_end - 1)
@@ -393,10 +401,11 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
 		}
 		
 		// communication
-		if (mpi_size_ > 1) I_field->exchange_halos(); 			
+		if (mpi_size_ > 1) I_field->exchange_halos(); 					
 	}
 }
  				
+
 void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0)
 {
 
@@ -414,8 +423,6 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 	const auto N_s     = RT_problem_->N_s_;
 
 	const auto vertical_decomposition = RT_problem_->only_vertical_decomposition_;
-
-	if (not vertical_decomposition) std::cout << "\nWARNING: global formal solver only for vertically decomposed domains!" << std::endl;
 
 	const auto block_size = RT_problem_->block_size_;
 	const auto tot_size   = RT_problem_->tot_size_;
@@ -452,7 +459,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 	double theta, chi, mu, weight, dtau, eta_I_1, Z_down, Z_top, cos_chi, sin_chi;	
 
 	// coeffs for lon ray 
-	double phi, R, tmp_coeff, tmp_coeff2, tmp_coeff3;
+	double phi, R, tmp_coeff2, tmp_coeff3;
 
 	bool boundary, horizontal_face;
 
@@ -467,13 +474,23 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 
 	const double pi_half = 0.5 * PI;
 
-	const int block_size_half = block_size/2;
+	const int block_size_half = 0.5 * block_size;
+
+	// Initialize slice halo handler
+    sgrid::SliceHalo<Field_t> halos_xy(*I_field, 2);        
 
 	for (int rank = 0; rank < mpi_size_; ++rank)
 	{			
 		// loop over spatial points
 		for (int k = k_start; k < k_end; ++k)					
-		{																
+		{						
+			// exchange (i,j)-plane boundary info 
+			if (not vertical_decomposition) 
+			{
+				halos_xy.exchange(k);
+				halos_xy.exchange(k_end - k); 	
+			}			
+
 			for (int j = j_start; j < j_end; ++j)
 			{
 				for (int i = i_start; i < i_end; ++i)
@@ -511,40 +528,58 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 
 								horizontal_face = intersection_data.iz[0] == intersection_data.iz[1] and 
 									     		  intersection_data.iz[0] == intersection_data.iz[2] and 
-									     		  intersection_data.iz[0] == intersection_data.iz[3];	
+									     		  intersection_data.iz[0] == intersection_data.iz[3];
+
+								const bool long_ray = not horizontal_face and (i == i_start or j == j_start);								     		  	
+								
+								// r = how many blocks are traversed by the current ray								
+								double r = 1.0;
 
 								// check if a vertical face is intersected and use long ray
-								if (not horizontal_face and (i == i_start or j == j_start))																					
+								if (long_ray)																																															
 								{																	
 									phi = abs(pi_half - theta);
-									
-									intersection_data.distance = (mu > 0) ? abs(Z_down / sin(phi)) : abs(Z_top / sin(phi));
-									
-									R = intersection_data.distance * cos(phi);
 
-									tmp_coeff = R / L;									
-									tmp_coeff2 = cos_chi * tmp_coeff;
-									tmp_coeff3 = sin_chi * tmp_coeff;
-
-									intersection_data.ix[0] = floor(tmp_coeff2);
-									intersection_data.ix[1] = ceil( tmp_coeff2);
-									intersection_data.ix[2] = floor(tmp_coeff2);
-									intersection_data.ix[3] = ceil( tmp_coeff2);
-
-									intersection_data.iy[0] = floor(tmp_coeff3);
-									intersection_data.iy[1] = floor(tmp_coeff3);
-									intersection_data.iy[2] = ceil( tmp_coeff3);
-									intersection_data.iy[3] = ceil( tmp_coeff3);										
+									const double distance = (mu > 0) ? abs(Z_down / sin(phi)) : abs(Z_top / sin(phi));																	
 									
-									for (int face_vertices = 0; face_vertices < 4; ++face_vertices)
-									{											
-										intersection_data.iz[face_vertices] = (mu > 0) ? -1 : 1;
-									
-										const double x = abs(tmp_coeff2) - floor(abs(tmp_coeff2));
-										const double y = abs(tmp_coeff3) - floor(abs(tmp_coeff3));
+									R = distance * cos(phi);
 
-										get_2D_weigths(x, y, intersection_data.w);		
-									}																			
+									r = R / L;									
+									tmp_coeff2 = cos_chi * r;
+									tmp_coeff3 = sin_chi * r;
+
+									// check if long ray goes to an other processor
+									const bool i_in_other_proc = (i + floor(tmp_coeff2) < i_start) or (i + ceil( tmp_coeff2) >= i_end);
+									const bool j_in_other_proc = (j + floor(tmp_coeff3) < j_start) or (j + ceil( tmp_coeff3) >= j_end);
+
+									if (i_in_other_proc or j_in_other_proc)									
+									{
+										// nothing: use short ray	
+									}
+									else // rewrite t_intersect data
+									{
+										intersection_data.distance = distance;
+
+										intersection_data.ix[0] = floor(tmp_coeff2);
+										intersection_data.ix[1] = ceil( tmp_coeff2);
+										intersection_data.ix[2] = floor(tmp_coeff2);
+										intersection_data.ix[3] = ceil( tmp_coeff2);
+
+										intersection_data.iy[0] = floor(tmp_coeff3);
+										intersection_data.iy[1] = floor(tmp_coeff3);
+										intersection_data.iy[2] = ceil( tmp_coeff3);
+										intersection_data.iy[3] = ceil( tmp_coeff3);										
+
+										for (int face_vertices = 0; face_vertices < 4; ++face_vertices)
+										{											
+											intersection_data.iz[face_vertices] = (mu > 0) ? -1 : 1;
+										
+											const double x = abs(tmp_coeff2) - floor(abs(tmp_coeff2));
+											const double y = abs(tmp_coeff3) - floor(abs(tmp_coeff3));
+
+											get_2D_weigths(x, y, intersection_data.w);		
+										}																			
+									}																	
 								}									
 
 								// loop on freqs
@@ -591,7 +626,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 											I1[i_stokes]   = 0;
 										}																	
 									}
-
+									
 									// loop over the four vertex of the intersection face
 									for (int face_vertices = 0; face_vertices < 4; ++face_vertices)
 									{
@@ -599,11 +634,14 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 										j_intersect = j_aux + intersection_data.iy[face_vertices];
 										k_intersect = k_aux - intersection_data.iz[face_vertices]; // minus because k increases going downwards		
 																			
-										// correct for periodic boundary									
-										i_intersect = i_intersect % N_x;
-										j_intersect = j_intersect % N_y;
-										if (i_intersect == 0) i_intersect = N_x;
-										if (j_intersect == 0) j_intersect = N_y;										
+										// correct for periodic boundary
+										if (vertical_decomposition)
+										{
+											i_intersect = i_intersect % N_x; 
+											j_intersect = j_intersect % N_y;
+											if (i_intersect == 0) i_intersect = N_x;
+											if (j_intersect == 0) j_intersect = N_y;										
+										}	 																		
 
 										weight = intersection_data.w[face_vertices];
 									
@@ -643,39 +681,39 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 
 									formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);	
 									
-									// test
-									if (j_theta == 1 and k_chi == 0 and n == 0 and rank == mpi_size_ - 1)
-									{									
-										// std::cout << "I1 = " << I1[0] << std::endl;		
-										if (i == 1 and j == 1 and k == k_end - 1)
-										{
-											// std::cout << intersection_data.distance << std::endl;	
-											// std::cout << "coeff = " << coeff << std::endl;	
-											// std::cout << "eta_I_1 = " << eta_I_1 << std::endl;	
-											// std::cout << "etas[0] = " << etas[0] << std::endl;	
-											// std::cout << "intersection_data.distance = " << intersection_data.distance << std::endl;					
+									// // test
+									// if (j_theta == N_theta/2 and k_chi == 0 and n == 0 and rank == mpi_size_ - 1)
+									// {									
+									// 	// std::cout << "I1 = " << I1[0] << std::endl;		
+									// 	if (i == 1 and j == 1 and k == k_end - 1)
+									// 	{
+									// 		// std::cout << intersection_data.distance << std::endl;	
+									// 		// std::cout << "coeff = " << coeff << std::endl;	
+									// 		// std::cout << "eta_I_1 = " << eta_I_1 << std::endl;	
+									// 		// std::cout << "etas[0] = " << etas[0] << std::endl;	
+									// 		// std::cout << "intersection_data.distance = " << intersection_data.distance << std::endl;					
 											
-											std::cout << "I1 = " << I1[0] << std::endl;	
-											std::cout << "I2 = " << I2[0] << std::endl;		
-											// std::cout << "Z_down = " << Z_down << std::endl;					
-											// std::cout << "Z_top = "  << Z_top  << std::endl;					
-											// std::cout << "L = "  << L  << std::endl;					
-											// std::cout << "theta = "  << theta  << std::endl;	
-											// std::cout << "chi = "  << chi  << std::endl;	
+									// 		std::cout << "I1 = " << I1[0] << std::endl;	
+									// 		std::cout << "I2 = " << I2[0] << std::endl;		
+									// 		// std::cout << "Z_down = " << Z_down << std::endl;					
+									// 		// std::cout << "Z_top = "  << Z_top  << std::endl;					
+									// 		// std::cout << "L = "  << L  << std::endl;					
+									// 		// std::cout << "theta = "  << theta  << std::endl;	
+									// 		// std::cout << "chi = "  << chi  << std::endl;	
 											
-											// std::cout << "S1 = " << std::endl;
-											// for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S1[i_stokes] << std::endl;
+									// 		// std::cout << "S1 = " << std::endl;
+									// 		// for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S1[i_stokes] << std::endl;
 
-											// std::cout << "S2 = " << std::endl;
-											// for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S2[i_stokes] << std::endl;
+									// 		// std::cout << "S2 = " << std::endl;
+									// 		// for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S2[i_stokes] << std::endl;
 																		
-											// std::cout << "K1 = " << std::endl;
-											// for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K1[i_stokes] << std::endl;
+									// 		// std::cout << "K1 = " << std::endl;
+									// 		// for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K1[i_stokes] << std::endl;
 
-											// std::cout << "K2 = " << std::endl;
-											// for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K2[i_stokes] << std::endl;												
-										} 									
-									}									
+									// 		// std::cout << "K2 = " << std::endl;
+									// 		// for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K2[i_stokes] << std::endl;												
+									// 	} 									
+									// }									
 
 									// write result
 									for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
@@ -691,9 +729,8 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 		}
 		
 		// communication
-		if (mpi_size_ > 1) I_field->exchange_halos(); 			
+		if (mpi_size_ > 1) I_field->exchange_halos(); // --------> TODO	better
 	}
-	
 }
 
 

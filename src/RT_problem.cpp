@@ -1,5 +1,57 @@
 #include "RT_problem.hpp"
 
+
+void RT_problem::read_atom(input_string filename){
+
+	if (mpi_rank_ == 0) std::cout << "Reading atom data from " << filename << std::endl;
+
+	std::ifstream myFile(filename);
+	std::string line;	
+
+	if (not myFile.good()) std::cerr << "\nERROR: File " << filename << " does not exist!\n" << std::endl;
+
+	int counter = 0;
+
+	while(getline(myFile, line))
+	{
+		std::istringstream lineStream(line);
+		
+		std::string line_entry;
+
+		switch(counter) {
+    		case 0 : lineStream >> mass_; 
+    			     lineStream >> line_entry;
+    			     if (line_entry.compare("!Atomic") != 0) std::cout << "WARNING: " << line_entry << " is not !Atomic" << '\n';
+            	break;      
+    		
+    		case 1 : lineStream >> El_;
+    				 lineStream >> Jl2_;
+    				 lineStream >> gl_;
+    				 lineStream >> line_entry;
+    				 // if (line_entry.compare("!El[cm-1]") != 0) std::cout << "WARNING: " << line_entry << " is not !El[cm-1]" << '\n';
+             	break;
+            
+            case 2 : lineStream >> Eu_;
+    				 lineStream >> Ju2_;
+    				 lineStream >> gu_;
+    				 lineStream >> line_entry;
+    				 // if (line_entry.compare("!Eu[cm-1]") != 0) std::cout << "WARNING: " << line_entry << " is not !Eu[cm-1]" << '\n';
+             	break;
+            
+            case 3 : lineStream >> Aul_;
+            		 lineStream >> line_entry;
+            		 if (line_entry.compare("!Aul[s-1]") != 0) std::cout << "WARNING: " << line_entry << " is not !Aul[s-1]" << '\n';
+             	break;
+		}
+
+		counter++;
+	}
+
+	Jl_ = Jl2_/2;
+	Ju_ = Ju2_/2;
+}
+
+
 void RT_problem::read_continumm_1D(input_string filename_sigma, input_string filename_k_c, input_string filename_eps_c_th){
 
 	if (mpi_rank_ == 0) std::cout << "Reading sigma from "    << filename_sigma    << std::endl;
