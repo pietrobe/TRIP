@@ -5,8 +5,9 @@
 
 int main(int argc, char *argv[])
 {    	
-    MPI_Init(&argc, &argv);
-    Kokkos::initialize(argc, argv);
+    // MPI_Init(&argc, &argv);
+    PetscInitialize(&argc,&argv,(char*)0, NULL);
+    Kokkos::initialize(argc, argv);    
 
     {	    
     	// const size_t N_theta = 2;
@@ -23,9 +24,9 @@ int main(int argc, char *argv[])
 	    
 	    rt_solver.solve();
 	}
-    
+        
 	Kokkos::finalize();
-    return MPI_Finalize();
+    return PetscFinalize();
 }
 
 // TODO use Real insted of double

@@ -447,7 +447,7 @@ void RT_problem::set_sizes(){
 	N_s_ = N_x_ * N_y_ * N_z_;
 
 	block_size_ = 4 * N_nu_ * N_theta_ * N_chi_;
-	tot_size_   = N_s_ * block_size_;
+	tot_size_   = N_s_ * block_size_;	
 
 	if (mpi_rank_ == 0 and mpi_size_ > (int) N_s_) std::cerr << "\n========= WARNING: mpi_size > N_s! =========\n" << std::endl;
 }
@@ -495,6 +495,25 @@ void const RT_problem::print_info(){
 
 		if (only_vertical_decomposition_) cout << "\nDomain decompostion only in the z direction (Jiri method)" << endl;		
 	}
+}
+
+void RT_problem::create_I_S_vecs()
+{
+	if (mpi_rank_ == 0) std::cout << "\nCreating PETSc vectors..." << std::endl;
+
+	PetscErrorCode ierr; 
+	
+	auto g_dev = space_grid_->view_device();
+
+	local_size_ = block_size_ * g_dev.dim[0] * g_dev.dim[1] * g_dev.dim[2];
+		
+	ierr = VecCreate(PETSC_COMM_WORLD, &I_vec_);CHKERRV(ierr);	
+	ierr = VecSetSizes(I_vec_, local_size_, tot_size_);CHKERRV(ierr);			
+	ierr = VecSetFromOptions(I_vec_);CHKERRV(ierr);	
+
+	ierr = VecCreate(PETSC_COMM_WORLD, &S_vec_);CHKERRV(ierr);	
+	ierr = VecSetSizes(S_vec_, local_size_, tot_size_);CHKERRV(ierr);			
+	ierr = VecSetFromOptions(S_vec_);CHKERRV(ierr);	
 }
 
 

@@ -67,7 +67,10 @@ public:
 	    start = MPI_Wtime();
 
 		// init fields
-		allocate_fields();					
+		allocate_fields();				
+
+		// create petsc vectors
+		create_I_S_vecs();	
 
 		// init atmospheric quantities 
 		allocate_atmosphere();	
@@ -186,11 +189,16 @@ public:
 	
 	size_t block_size_; // 4 * N_nu_ * N_theta_ * N_chi_;
 	size_t tot_size_;   // N_s_ * block_size;
+	size_t local_size_; // == tot_size_ con mpi_size_ = 1
 
 	// unknown quantities 
 	Field_ptr_t I_field_; // intensity 
 	Field_ptr_t S_field_; // source function
-	
+
+	// PETSc data structures 
+	Vec I_vec_;
+	Vec S_vec_;
+		
 	// propagation matrix entries 
 	Field_ptr_t eta_field_; 
 	Field_ptr_t rho_field_;
@@ -258,6 +266,9 @@ private:
 	void allocate_fields();
 	void allocate_atmosphere();
 
+	// create petsc Vecs
+	void create_I_S_vecs();
+	
 	// init fields 
 	void init_field(Field_ptr_t input_field, const Real input_value); // TODO remove?
 	
