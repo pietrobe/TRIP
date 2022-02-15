@@ -597,7 +597,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 	// Initialize slice halo handler
     sgrid::SliceHalo<Field_t> halos_xy(*I_field, 2);    
 
-    // impose boundary conditions
+    // impose boundary conditions 
     apply_bc(I_field, I0);     
     
 	for (int rank = 0; rank < mpi_size_; ++rank)
@@ -1000,105 +1000,96 @@ void MF_context::update_emission(const Vec &I_field, const bool approx){
 }
 
 
-void RT_solver::assemble_rhs(){ // TODO
+void RT_solver::assemble_rhs(){ 
 
-  	if (mpi_rank_ == 0) std::cout << "\nAssembling right hand side..."; 
-
+  	if (mpi_rank_ == 0) std::cout << "\n++++++ Assembling right hand side...+++++++++";
+ 
 	PetscErrorCode ierr;
 
+	const auto space_grid = RT_problem_->space_grid_;	
+
+	// get sizes
 	const auto N_nu       = RT_problem_->N_nu_;
 	const auto tot_size   = RT_problem_->tot_size_;
 	const auto block_size = RT_problem_->block_size_;	
 	const auto local_size = RT_problem_->local_size_;
+
+	// get fields
+	const auto eta_dev =      RT_problem_->eta_field_->view_device();	
+	const auto eps_c_th_dev = RT_problem_->eps_c_th_ ->view_device();	
+	const auto epsilon_dev  = RT_problem_->epsilon_  ->view_device();	
+	const auto W_T_dev      = RT_problem_->W_T_      ->view_device();	
+	const auto k_c_dev      = RT_problem_->k_c_      ->view_device();	
 
 	// allocate rhs vector 
 	ierr = VecCreate(PETSC_COMM_WORLD, &rhs_);CHKERRV(ierr);    
 	ierr = VecSetSizes(rhs_,local_size,tot_size);CHKERRV(ierr);   	
 	ierr = VecSetFromOptions(rhs_);CHKERRV(ierr);
 
-	ierr = VecSet(rhs_, 1.0);CHKERRV(ierr);		
-
-	// // fill it
-	// const auto N_nu       = RT_problem_->N_nu_;
-	// // const auto eta_field  = RT_problem_->eta_field_;
-
-	// Vec eps_th; // TODO use directly rhs_
-	// double eta_i, eta_I, value;
-	// size_t i_space;
-	// int index_I, index_s_nu;
-
-	// ierr = VecCreate(PETSC_COMM_WORLD, &eps_th);CHKERRV(ierr);    
-	// ierr = VecSetSizes(eps_th,local_size,tot_size);CHKERRV(ierr);   	
-	// ierr = VecSetFromOptions(eps_th);CHKERRV(ierr);
-
-	// int istart, iend;
-	// ierr = VecGetOwnershipRange(eps_th, &istart, &iend);CHKERRV(ierr);
-
-	// // fill eps_th =  eps_c_th +  eps_l_th
-	// for (int i = istart; i < iend; ++i)
-	// {	
-	// 	value = 0.0;
-
-	// 	std::vector<size_t> local_idx = RT_problem_->local_to_global(i);
-	// 	i_space = local_idx[0];
-
-	// 	if (LTE_) // eps = W_T
-	// 	{
-	// 		if (local_idx[4] == 0) value = RT_problem_->W_T_[i_space]; // TODO divide by eta_I?
-	// 	}
-	// 	else // eps = (eps_c_th + eps_l_th_) / eta_I
-	// 	{
-	// 		// get eta_i		
-	// 		ierr = VecGetValues(eta_field, 1, &i, &eta_i);
-			
-	// 		// first Stokes parameter
-	// 		if (local_idx[4] == 0)				
-	// 		{	
-	// 			index_s_nu = N_nu * i_space + local_idx[3];
-				
-	// 			if (RT_problem_->enable_continuum_) 
-	// 			{
-	// 				// eps_c_th
-	// 				value = (RT_problem_->eps_c_th_[index_s_nu]);	
-
-	// 				// eps_l_th		
-	// 				value += (RT_problem_->epsilon_[i_space]) * (RT_problem_->W_T_[i_space]) * (eta_i - RT_problem_->k_c_[index_s_nu]);				
-	// 			}
-	// 			else
-	// 			{
-	// 				// eps_l_th
-	// 				value += (RT_problem_->epsilon_[i_space]) * (RT_problem_->W_T_[i_space]) * eta_i;				
-	// 			}
-
-	// 			// (eps_c_th + eps_l_th_) / eta_I
-	// 			value /= eta_i;
-	// 		} 
-	// 		else
-	// 		{
-	// 			// get eta_I (!= eta_i)
-	// 			index_I = i - local_idx[4];
-	// 			ierr = VecGetValues(eta_field, 1, &index_I, &eta_I);
-
-	// 			// eps_l_th / eta_i_l
-	// 			value = eta_i * (RT_problem_->epsilon_[i_space]) * (RT_problem_->W_T_[i_space]) / eta_I;				
-	// 		}			
-	// 	}
-		
-	// 	ierr = VecSetValue(eps_th,i,value,INSERT_VALUES);CHKERRV(ierr);   
-	// }
-
-	// ierr = VecAssemblyBegin(eps_th);CHKERRV(ierr); 
-	// ierr = VecAssemblyEnd(eps_th);CHKERRV(ierr);
-
-	// // save_vec(eps_th, "../output/epsth.m" ,"eps_th"); 
-		
-	// // fill rhs_ from formal solve with bc
-	// mf_ctx_.formal_solve(rhs_, eps_th, 1.0); 	
+	// create rhs field (temporary)
+	auto rhs_field = std::make_shared<Field_t>("EPS_TH", space_grid, block_size, sgrid::STAR_STENCIL);
+	rhs_field->allocate_on_device(); 	
 	
-	// // clean
-	// ierr = VecDestroy(&eps_th);CHKERRV(ierr);
+	// create eps_th field (temporary)
+	auto eps_th_field = std::make_shared<Field_t>("EPS_TH", space_grid, block_size, sgrid::STAR_STENCIL);
+	eps_th_field->allocate_on_device(); 
+	const auto eps_th_dev = eps_th_field->view_device();	
 
-	if (mpi_rank_ == 0) std::cout << "done" << std::endl;	
+	
+	// fill it eps_th =  eps_c_th +  eps_l_th
+	sgrid::parallel_for("ASSEMBLE RHS", space_grid->md_range(), SGRID_LAMBDA(int i, int j, int k) {
+		
+		double value;
+
+		std::vector<size_t> local_idx;
+
+		for (int b = 0; b < (int)block_size; b++) 
+		{		
+			local_idx = RT_problem_->block_to_local(b);
+
+			double eta_i = eta_dev.block(i,j,k)[b];
+
+			// first Stokes parameter
+			if (local_idx[3] == 0)
+			{				
+				auto index_nu = local_idx[2];
+				
+				if (RT_problem_->enable_continuum_) 
+				{
+					// eps_c_th
+					value = eps_c_th_dev.block(i,j,k)[index_nu];	
+
+					// eps_l_th		
+					value += epsilon_dev.ref(i,j,k) * W_T_dev.ref(i,j,k) * (eta_i - k_c_dev.block(i,j,k)[index_nu]);				
+				}
+				else
+				{
+					// eps_l_th
+					value = epsilon_dev.ref(i,j,k) * W_T_dev.ref(i,j,k) * eta_i;				
+				}
+
+				// (eps_c_th + eps_l_th_) / eta_I
+				value /= eta_i;			
+			}
+			else
+			{
+				// get eta_I (!= eta_i)
+				double eta_I = eta_dev.block(i,j,k)[b - local_idx[3]];
+
+				// eps_l_th / eta_i_l
+				value = eta_i * epsilon_dev.ref(i,j,k) * W_T_dev.ref(i,j,k) / eta_I;	
+			}	
+
+			// finally se eps_th
+			eps_th_dev.block(i,j,k)[b] = value;	
+		}	
+	});
+
+	// fill rhs_ from formal solve with bc
+	mf_ctx_.formal_solve_global(rhs_field, eps_th_field, 1.0); 	
+	mf_ctx_.field_to_vec(rhs_field, rhs_);
+
+	if (mpi_rank_ == 0) std::cout <<   "+++++++++++++++++++++++++++++++++++++++++++++\n"; 	
 }
 
 
