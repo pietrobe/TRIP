@@ -32,7 +32,7 @@ public:
     	Real start = MPI_Wtime();
 
     	// TODO: now hardcoded
-    	L_   = 1000.0;
+    	L_ = 1000.0;
     	// L_   = 1.0;
     	N_x_ = 10;
     	N_y_ = 10;
@@ -229,6 +229,18 @@ public:
 	Field_ptr_t sigma_;  // continuum coeffs
 	Field_ptr_t k_c_;
 	Field_ptr_t eps_c_th_;
+
+	// Access to the atomic model parameters
+	inline double atomic_mass() const { return this->mass_;}
+	inline double atomic_El()   const { return this->El_;  }
+	inline double atomic_Eu()   const { return this->Eu_;  }
+	inline int atomic_Jl()      const { return this->Jl_;  }
+	inline int atomic_Ju()      const { return this->Ju_;  }
+	inline int atomic_Jl2()     const { return this->Jl2_; }
+	inline int atomic_Ju2()     const { return this->Ju2_; }
+	inline int atomic_gl()      const { return this->gl_;  }
+	inline int atomic_gu()      const { return this->gu_;  }
+	inline double atomic_Aul()  const { return this->Aul_; }
 
 private:
 

@@ -5,14 +5,11 @@
 
 int main(int argc, char *argv[])
 {    	
-    // MPI_Init(&argc, &argv);
+    MPI_CHECK(MPI_Init(&argc, &argv));
     PetscInitialize(&argc,&argv,(char*)0, NULL);
     Kokkos::initialize(argc, argv);    
 
-    {	    
-    	// const size_t N_theta = 2;
-	    // const size_t N_chi   = 2;
-	    
+    {	        	
 	    const size_t N_theta = atoi(argv[1]);
     	const size_t N_chi   = atoi(argv[2]);
 
@@ -26,7 +23,10 @@ int main(int argc, char *argv[])
 	}
         
 	Kokkos::finalize();
-    return PetscFinalize();
+	PetscFinalize();
+	MPI_CHECK(MPI_Finalize());
+
+    return EXIT_SUCCESS;
 }
 
 // TODO use Real insted of double

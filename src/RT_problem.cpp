@@ -654,6 +654,7 @@ void RT_problem::set_theta_chi_grids(const size_t N_theta, const size_t N_chi, c
     // init equidistant chi grid in [0, 2pi] and trap weights
 
     if (N_chi % 2 != 0) std::cout << "WARNING: chi grid is not even!" << std::endl;
+    if (N_chi % 4 != 0) std::cout << "WARNING: chi grid is not the same for each quadrant!" << std::endl;
     
     const Real delta_chi = 2.0 * PI / N_chi;
 
