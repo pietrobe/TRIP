@@ -17,8 +17,8 @@ RII_DIR=/users/pietrob/rii/rii-c
 INCLUDE_SIMONE=$(foreach d, $(INCLUDE_DIRS_SIMONE), -I$d)
 
 SGRID_DIR=/users/pietrob/sgrid
-KOKKOS_INCLUDE=/apps/daint/UES/anfink/cpu_20210510_Release/trilinos/include
-KOKKOS_LIBS=-L/apps/daint/UES/anfink/cpu_20210510_Release/trilinos/lib -l kokkoscore -l kokkoskernels
+KOKKOS_INCLUDE=/apps/daint/UES/anfink/cpu_2022-02-19_Release/trilinos/include
+KOKKOS_LIBS=-L/apps/daint/UES/anfink/cpu_2022-02-19_Release/trilinos/lib -l kokkoscore -l kokkoskernels
 
 FLAGS= -std=c++14 -Wsign-compare $(INCLUDE_SIMONE) -I/$(RII_DIR)/src -I/$(KOKKOS_INCLUDE) -I/$(SGRID_DIR)/include -I/opt/local/include 
 OBJS=$(subst $(SOURCE_DIR), $(BUILD_DIR), $(CPP_FILES:.cpp=.o))
