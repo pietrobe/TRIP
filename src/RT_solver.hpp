@@ -3,7 +3,7 @@
 
 #include "Formal_solver.hpp"
 #include "RT_problem.hpp"
-// #include <rii_emission_coefficient.h>
+#include <rii_emission_coefficient_3D.h>
 // #include <thread>
 
 extern PetscErrorCode UserMult(Mat mat,Vec x,Vec y);
@@ -147,7 +147,7 @@ public:
 		ierr = KSPSolve(ksp_solver_, rhs_, RT_problem_->I_vec_);CHKERRV(ierr);
 
 		MPI_Barrier(MPI_COMM_WORLD); end = MPI_Wtime();
-		if (mpi_rank_ == 0) cout << "Solve time (s) = " << end - start << endl;
+		if (mpi_rank_ == 0) std::cout << "Solve time (s) = " << end - start << std::endl;
 
 		
 		// mf_ctx_.apply_bc(RT_problem_->I_field_, 1.0);	
@@ -158,15 +158,15 @@ public:
 				
 		// for (int i = 0; i < n_iter; ++i)
 		// {
-		// 	// if (mpi_rank_ == 0) cout << "Local formal solve " << i << endl;
+		// 	// if (mpi_rank_ == 0) std::cout << "Local formal solve " << i << std::endl;
 		// 	// mf_ctx_.formal_solve_local(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);	
 
-		// 	if (mpi_rank_ == 0) cout << "Global formal solve " << i << endl;
+		// 	if (mpi_rank_ == 0) std::cout << "Global formal solve " << i << std::endl;
 		// 	mf_ctx_.formal_solve_global(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);	
 		// }	
 
 		// MPI_Barrier(MPI_COMM_WORLD); end = MPI_Wtime();
-		// if (mpi_rank_ == 0) cout << "Solve time (s) = " << end - start << endl;
+		// if (mpi_rank_ == 0) std::cout << "Solve time (s) = " << end - start << std::endl;
 
 		// start = MPI_Wtime();							
 
@@ -174,7 +174,7 @@ public:
 		// // vec_to_field(RT_problem_->I_field_, RT_problem_->I_vec_);
 
 		// MPI_Barrier(MPI_COMM_WORLD); end = MPI_Wtime(); 		
-		// if (mpi_rank_ == 0) cout << "Copy data time (s) = " << end - start << endl;
+		// if (mpi_rank_ == 0) std::cout << "Copy data time (s) = " << end - start << std::endl;
 
 		// // RT_problem_->I_field_->write("I_out.raw");			
 	}

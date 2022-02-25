@@ -51,4 +51,6 @@ Thumbs.db
 *.flv
 *.mov
 *.wmv
+build
+bld
 

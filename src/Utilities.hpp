@@ -37,6 +37,7 @@ using Real = double;
     while(0)
 #endif
 
+// usa std::min , std::max
 #define MIN(a,b) ((a)<(b) ? (a) : (b))
 #define MAX(a,b) ((a)>(b) ? (a) : (b))
 

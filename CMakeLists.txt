@@ -1,0 +1,129 @@
+cmake_minimum_required(VERSION 3.5...3.19)
+
+set(SOLAR_3D_ROOT_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${SOLAR_3D_ROOT_PATH}/cmake")
+
+
+
+project(par_moonolith_usage)
+
+include(CMakeFindDependencyMacro)
+
+find_package(sgrid 0 REQUIRED)
+find_package(Boost 1.61 COMPONENTS program_options regex serialization filesystem system atomic  REQUIRED)
+
+list(APPEND SOURCES_FILES 
+	src/Faddeeva.cpp 
+	src/Formal_solver.cpp 
+	src/Legendre_rule.cpp 
+	src/main.cpp 
+	src/Rotation_matrix.cpp
+	src/RT_problem.cpp
+	src/RT_solver.cpp
+	src/Utilities.cpp
+)
+
+list(APPEND HEADERS_FILES 
+	src/Faddeeva.hpp
+    src/Formal_solver.hpp
+    src/Legendre_rule.hpp
+    src/Rotation_matrix.hpp
+    src/RT_problem.hpp
+    src/RT_solver.hpp
+    src/Utilities.hpp
+)
+
+set(RII_INCLUDES "${RII_ROOT_PATH}")
+message(${RII_INCLUDES})
+
+include_directories(${RII_INCLUDES}/src)
+include_directories(${RII_INCLUDES}/src/app)
+include_directories(${RII_INCLUDES}/src/bench)
+include_directories(${RII_INCLUDES}/src/faddeeva)
+include_directories(${RII_INCLUDES}/src/utils)
+include_directories(${RII_INCLUDES}/src/rii_base)
+include_directories(${RII_INCLUDES}/src/math)
+include_directories(${RII_INCLUDES}/src/rii_algo)
+include_directories(${RII_INCLUDES}/src/rii_algo_norm)
+include_directories(${RII_INCLUDES}/src/md_matrix)
+include_directories(${RII_INCLUDES}/src/fastgl)
+include_directories(${RII_INCLUDES}/src/tk_spline)
+include_directories(${RII_INCLUDES}/src/rii_algo_emission_coefficient)
+include_directories(${RII_INCLUDES}/src/rii_algo_emission_coefficient_fg)
+include_directories(${RII_INCLUDES}/src/rii_algo_ad_grid)
+include_directories(${RII_INCLUDES}/src/rii_frequencies_grid)
+include_directories(${RII_INCLUDES}/src/rii_include)
+include_directories(${RII_INCLUDES}/src/rii_maps)
+include_directories(${RII_INCLUDES}/src/factory)
+include_directories(${RII_INCLUDES}/src/gauss_kronrod_adaptive)
+include_directories(${RII_INCLUDES}/src/formal_solver)
+include_directories(${RII_INCLUDES}/src/atmosphere_models)
+include_directories(${RII_INCLUDES}/src/sphere_lebedev_rule)
+include_directories(${RII_INCLUDES}/src/riii_exact_emission_coeffcient)
+include_directories(${RII_INCLUDES}/src/riii_approx_emission_coeffcient)
+include_directories(${RII_INCLUDES}/src/doppler_shift)
+include_directories(${RII_INCLUDES}/src/rii_RII_KKpQ)
+
+# we use one of our examples here
+add_executable(solar_3D ${CMAKE_SOURCE_DIR}/src/main.cpp)
+set(CMAKE_CXX_FLAGS  " -fopenmp -std=c++17 ")
+
+add_library(rii SHARED IMPORTED)
+set_property(TARGET rii PROPERTY IMPORTED_LOCATION "${RII_ROOT_PATH}/build/librii.so")
+
+# import all the dependencies and targets
+target_link_libraries(solar_3D PUBLIC  sgrid::sgrid rii)
+
+target_sources(solar_3D PUBLIC ${SOURCES_FILES})
+target_include_directories(solar_3D PUBLIC  src)
+
+
+# find dependencies
+set(PETSC_TEST_RUNS TRUE)
+find_package(Petsc)
+
+if(PETSC_FOUND)
+    list(APPEND UTOPIA_THIRDPARTY_INCLUDES ${PETSC_INCLUDES})
+    list(APPEND UTOPIA_THIRDPARTY_LIBRARIES ${PETSC_LIBRARIES})
+
+    set(CMAKE_C_COMPILER ${PETSC_COMPILER})
+
+    if(NOT MPI_CXX_COMPILER)
+        set(MPI_CXX_COMPILER $ENV{MPI_CXX_COMPILER})
+        message(STATUS "compiler ${MPI_CXX_COMPILER}")
+    endif()
+
+    if(MPI_CXX_COMPILER)
+        set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
+        set(CMAKE_CXX_COMPILER_DEBUG ${MPI_CXX_COMPILER})
+    else()
+        execute_process(COMMAND mpicxx -v RESULT_VARIABLE MPICXX_FAILED)
+
+        if(MPICXX_FAILED)
+            message(
+                STATUS
+                    "Using CMAKE compiler, you can define MPI_CXX_COMPILER=<alias_or_path_to_your_compiler>"
+            )
+        else()
+            message(STATUS "-----------------------------------------------")
+            message(
+                STATUS
+                    "\n[MPI] using mpicxx for compiling c++ files.\nIf you want to use your own compiler define MPI_CXX_COMPILER=<alias_or_path_to_your_compiler>"
+            )
+            message(STATUS "-----------------------------------------------")
+            set(CMAKE_CXX_COMPILER mpicxx)
+            set(CMAKE_CXX_COMPILER_DEBUG mpicxx)
+        endif()
+    endif()
+
+    set(UTOPIA_WITH_PETSC TRUE)
+else()
+    message(WARNING "[Warning] Petsc not found")
+    set(UTOPIA_WITH_PETSC FALSE)
+endif()
+
+target_include_directories(solar_3D SYSTEM PUBLIC ${PETSC_INCLUDES})
+target_link_libraries(solar_3D PUBLIC ${PETSC_LIBRARIES})
+target_compile_definitions(solar_3D PUBLIC ${PETSC_DEFINITIONS})
+
+

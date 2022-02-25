@@ -93,9 +93,9 @@ void Rotation_matrix::build_matrix(double alpha, double beta, double gamma) {
 ////////////////////////////////////////////////////////////////
 std::complex<double> Rotation_matrix::operator()(int J, int M, int N) const {
 
-  complex<double> D(0.0, 0.0);  // the resulting value of the rotation matrix.
+ std::complex<double> D(0.0, 0.0);  // the resulting value of the rotation matrix.
 
-  const complex<double> I(0.0, 1.0);  // imag unit.
+  const std::complex<double> I(0.0, 1.0);  // imag unit.
 
   D = std::exp((-1.0) * I * (p_alpha * double(M) + p_gamma * double(N)));
 
@@ -104,7 +104,7 @@ std::complex<double> Rotation_matrix::operator()(int J, int M, int N) const {
   } else if (J == 2) {
     D = D * p_d_mn_2[M + 2][N + 2];
   } else {
-    D = D * complex<double>(1.0, 0.0);
+    D = D * std::complex<double>(1.0, 0.0);
   }
   
   return D;

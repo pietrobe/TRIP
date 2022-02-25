@@ -493,7 +493,7 @@ void const RT_problem::print_info(){
 
 		std::cout << "] " << std::endl;		
 
-		if (only_vertical_decomposition_) cout << "\nDomain decompostion only in the z direction (Jiri method)" << endl;		
+		if (only_vertical_decomposition_) std::cout << "\nDomain decompostion only in the z direction (Jiri method)" << std::endl;		
 	}
 }
 
@@ -677,7 +677,7 @@ std::vector<std::complex<Real> > RT_problem::compute_T_KQ(const size_t stokes_i,
 	std::complex<Real> e2ix = std::polar(1.0, 2.0 * chi);  // exp(2 * i * chi)
 
 	// various coeffs
-	complex<Real> fa, fb;
+ std::complex<Real> fa, fb;
 
 	Real c2g = std::cos(2.0 * gamma_);
     Real ct  = std::cos(theta);

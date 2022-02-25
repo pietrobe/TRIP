@@ -246,8 +246,8 @@ void MF_context::find_intersection(double theta, double chi, const double Z_down
 void MF_context::get_2D_weigths(const double x, const double y, double *w)
 {
 	// get weigths in the unit square
-	if (x >= 1 or x <= 0) cout << "Problem in x input "<< endl;
-	if (y >= 1 or y <= 0) cout << "Problem in y input "<< endl;
+	if (x >= 1 or x <= 0) std::cout << "Problem in x input "<< std::endl;
+	if (y >= 1 or y <= 0) std::cout << "Problem in y input "<< std::endl;
 
 	const double xy = x * y;
 
@@ -297,7 +297,7 @@ void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_fie
 	const int j_start = g_dev.margin[1];
 	const int k_start = g_dev.margin[2];
 
-	if (i_start > 1 or j_start > 1 or k_start > 1) cout << "WARNING: tested only for margin = 1!"<< endl;
+	if (i_start > 1 or j_start > 1 or k_start > 1) std::cout << "WARNING: tested only for margin = 1!"<< std::endl;
 
 	const int i_end = i_start + g_dev.dim[0];
 	const int j_end = j_start + g_dev.dim[1];
@@ -565,7 +565,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 	const int j_start = g_dev.margin[1];
 	const int k_start = g_dev.margin[2];
 
-	if (i_start > 1 or j_start > 1 or k_start > 1) cout << "WARNING: tested only for margin = 1!"<< endl;
+	if (i_start > 1 or j_start > 1 or k_start > 1) std::cout << "WARNING: tested only for margin = 1!"<< std::endl;
 
 	const int i_end = i_start + g_dev.dim[0];
 	const int j_end = j_start + g_dev.dim[1];

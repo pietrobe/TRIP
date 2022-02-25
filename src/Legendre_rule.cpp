@@ -1,6 +1,6 @@
 #include "Legendre_rule.hpp"
 
-void legendre_rule(int order, double a, double b, vector<double> &nodes, vector<double> &weights)
+void legendre_rule(int order, double a, double b, std::vector<double> &nodes, std::vector<double> &weights)
 //****************************************************************************80
 //
 //  Purpose:
@@ -39,7 +39,7 @@ void legendre_rule(int order, double a, double b, vector<double> &nodes, vector<
   double alpha = 0.0;
   // double b;
   double beta = 0.0;
-  // string filename;
+  // std::string filename;
   int kind;            // TODO other kinds...
   // int order;
   // double *r;
@@ -47,23 +47,23 @@ void legendre_rule(int order, double a, double b, vector<double> &nodes, vector<
   double *x;
 
   // timestamp ( );
-  // cout << "\n";
-  // cout << "LEGENDRE_RULE\n";
-  // cout << "  C++ version\n";
-  // cout << "\n";
-  // cout << "  Compute a Gauss-Legendre rule for approximating\n";
-  // cout << "    Integral ( A <= x <= B ) f(x) dx\n";
-  // cout << "  of order ORDER.\n";
-  // cout << "\n";
-  // cout << "  The user specifies ORDER, A, B and FILENAME.\n";
-  // cout << "\n";
-  // cout << "  ORDER is the number of points.\n";
-  // cout << "  A is the left endpoint.\n";
-  // cout << "  B is the right endpoint.\n";
-  // cout << "  FILENAME is used to generate 3 files:\n";
-  // cout << "    filename_w.txt - the weight file\n";
-  // cout << "    filename_x.txt - the abscissa file.\n";
-  // cout << "    filename_r.txt - the region file.\n";  
+  // std::cout << "\n";
+  // std::cout << "LEGENDRE_RULE\n";
+  // std::cout << "  C++ version\n";
+  // std::cout << "\n";
+  // std::cout << "  Compute a Gauss-Legendre rule for approximating\n";
+  // std::cout << "    Integral ( A <= x <= B ) f(x) dx\n";
+  // std::cout << "  of order ORDER.\n";
+  // std::cout << "\n";
+  // std::cout << "  The user specifies ORDER, A, B and FILENAME.\n";
+  // std::cout << "\n";
+  // std::cout << "  ORDER is the number of points.\n";
+  // std::cout << "  A is the left endpoint.\n";
+  // std::cout << "  B is the right endpoint.\n";
+  // std::cout << "  FILENAME is used to generate 3 files:\n";
+  // std::cout << "    filename_w.txt - the weight file\n";
+  // std::cout << "    filename_x.txt - the abscissa file.\n";
+  // std::cout << "    filename_r.txt - the region file.\n";  
 //
 //  Get ORDER.
 //
@@ -73,8 +73,8 @@ void legendre_rule(int order, double a, double b, vector<double> &nodes, vector<
   // }
   // else
   // {
-  //   cout << "\n";
-  //   cout << "  Enter the value of ORDER (1 or greater)\n";
+  // std::cout << "\n";
+  // std::cout << "  Enter the value of ORDER (1 or greater)\n";
   //   cin >> order;
   // }
 //
@@ -86,8 +86,8 @@ void legendre_rule(int order, double a, double b, vector<double> &nodes, vector<
   // }
   // else
   // {
-  //   cout << "\n";
-  //   cout << "  Enter the value of A:\n";
+  // std::cout << "\n";
+  // std::cout << "  Enter the value of A:\n";
   //   cin >> a;
   // }
 //
@@ -99,8 +99,8 @@ void legendre_rule(int order, double a, double b, vector<double> &nodes, vector<
   // }
   // else
   // {
-  //   cout << "\n";
-  //   cout << "  Enter the value of B:\n";
+  // std::cout << "\n";
+  // std::cout << "  Enter the value of B:\n";
   //   cin >> b;
   // }
 //
@@ -112,18 +112,18 @@ void legendre_rule(int order, double a, double b, vector<double> &nodes, vector<
   // }
   // else
   // {
-  //   cout << "\n";
-  //   cout << "  Enter FILENAME, the \"root name\" of the quadrature files).\n";
+  // std::cout << "\n";
+  // std::cout << "  Enter FILENAME, the \"root name\" of the quadrature files).\n";
   //   cin >> filename;
   // }
 //
 //  Input summary.
 //
-  // cout << "Computing Legendre nodes and weigths:\n";
-  // cout << "  N = " << order << "\n";
-  // cout << "  a = " << a << "\n";
-  // cout << "  b = " << b << "\n";
-  // cout << "  FILENAME = \"" << filename << "\".\n";
+  // std::cout << "Computing Legendre nodes and weigths:\n";
+  // std::cout << "  N = " << order << "\n";
+  // std::cout << "  a = " << a << "\n";
+  // std::cout << "  b = " << b << "\n";
+  // std::cout << "  FILENAME = \"" << filename << "\".\n";
 //
 //  Construct the rule.
 //
@@ -158,10 +158,10 @@ void legendre_rule(int order, double a, double b, vector<double> &nodes, vector<
 //
 //  Terminate.
 //
-  // cout << "\n";
-  // cout << "LEGENDRE_RULE:\n";
-  // cout << "  Normal end of execution.\n";
-  // cout << "\n";
+  // std::cout << "\n";
+  // std::cout << "LEGENDRE_RULE:\n";
+  // std::cout << "  Normal end of execution.\n";
+  // std::cout << "\n";
   // timestamp ( );      
 }
 //****************************************************************************80
@@ -436,9 +436,9 @@ double class_matrix ( int kind, int m, double alpha, double beta, double aj[],
 
   if ( 500.0 * temp < fabs ( pow ( tgamma ( temp2 ), 2 ) - pi ) )
   {
-    cerr << "\n";
-    cerr << "CLASS_MATRIX - Fatal error!\n";
-    cerr << "  Gamma function does not match machine parameters.\n";
+std::cerr << "\n";
+std::cerr << "CLASS_MATRIX - Fatal error!\n";
+std::cerr << "  Gamma function does not match machine parameters.\n";
     exit ( 1 );
   }
 
@@ -699,9 +699,9 @@ void imtqlx ( int n, double d[], double e[], double z[] )
       }
       if ( itn <= j )
       {
-        cerr << "\n";
-        cerr << "IMTQLX - Fatal error!\n";
-        cerr << "  Iteration limit exceeded\n";
+std::cerr << "\n";
+std::cerr << "IMTQLX - Fatal error!\n";
+std::cerr << "  Iteration limit exceeded\n";
         exit ( 1 );
       }
       j = j + 1;
@@ -832,9 +832,9 @@ void parchk ( int kind, int m, double alpha, double beta )
 
   if ( kind <= 0 )
   {
-    cerr << "\n";
-    cerr << "PARCHK - Fatal error!\n";
-    cerr << "  KIND <= 0.\n";
+std::cerr << "\n";
+std::cerr << "PARCHK - Fatal error!\n";
+std::cerr << "  KIND <= 0.\n";
     exit ( 1 );
   }
 //
@@ -842,9 +842,9 @@ void parchk ( int kind, int m, double alpha, double beta )
 //
   if ( 3 <= kind && alpha <= -1.0 )
   {
-    cerr << "\n";
-    cerr << "PARCHK - Fatal error!\n";
-    cerr << "  3 <= KIND and ALPHA <= -1.\n";
+std::cerr << "\n";
+std::cerr << "PARCHK - Fatal error!\n";
+std::cerr << "  3 <= KIND and ALPHA <= -1.\n";
     exit ( 1 );
   }
 //
@@ -852,9 +852,9 @@ void parchk ( int kind, int m, double alpha, double beta )
 //
   if ( kind == 4 && beta <= -1.0 )
   {
-    cerr << "\n";
-    cerr << "PARCHK - Fatal error!\n";
-    cerr << "  KIND == 4 and BETA <= -1.0.\n";
+std::cerr << "\n";
+std::cerr << "PARCHK - Fatal error!\n";
+std::cerr << "  KIND == 4 and BETA <= -1.0.\n";
     exit ( 1 );
   }
 //
@@ -865,9 +865,9 @@ void parchk ( int kind, int m, double alpha, double beta )
     tmp = alpha + beta + m + 1.0;
     if ( 0.0 <= tmp || tmp <= beta )
     {
-      cerr << "\n";
-      cerr << "PARCHK - Fatal error!\n";
-      cerr << "  KIND == 8 but condition on ALPHA and BETA fails.\n";
+std::cerr << "\n";
+std::cerr << "PARCHK - Fatal error!\n";
+std::cerr << "  KIND == 8 but condition on ALPHA and BETA fails.\n";
       exit ( 1 );
     }
   }
@@ -955,7 +955,7 @@ double r8_sign ( double x )
 }
 //****************************************************************************80
 
-void r8mat_write ( string output_filename, int m, int n, double table[] )
+void r8mat_write ( std::string output_filename, int m, int n, double table[] )
 
 //****************************************************************************80
 //
@@ -977,7 +977,7 @@ void r8mat_write ( string output_filename, int m, int n, double table[] )
 //
 //  Parameters:
 //
-//    Input, string OUTPUT_FILENAME, the output filename.
+//    Input, std::string OUTPUT_FILENAME, the output filename.
 //
 //    Input, int M, the spatial dimension.
 //
@@ -988,7 +988,7 @@ void r8mat_write ( string output_filename, int m, int n, double table[] )
 {
   int i;
   int j;
-  ofstream output;
+  std::ofstream output;
 //
 //  Open the file.
 //
@@ -996,9 +996,9 @@ void r8mat_write ( string output_filename, int m, int n, double table[] )
 
   if ( !output )
   {
-    cerr << "\n";
-    cerr << "R8MAT_WRITE - Fatal error!\n";
-    cerr << "  Could not open the output file.\n";
+std::cerr << "\n";
+std::cerr << "R8MAT_WRITE - Fatal error!\n";
+std::cerr << "  Could not open the output file.\n";
     return;
   }
 //
@@ -1008,7 +1008,7 @@ void r8mat_write ( string output_filename, int m, int n, double table[] )
   {
     for ( i = 0; i < m; i++ )
     {
-      output << "  " << setw(24) << setprecision(16) << table[i+j*m];
+      output << "  " << std::setw(24) << std::setprecision(16) << table[i+j*m];
     }
     output << "\n";
   }
@@ -1021,7 +1021,7 @@ void r8mat_write ( string output_filename, int m, int n, double table[] )
 }
 //****************************************************************************80
 
-void rule_write ( int order, string filename, double x[], double w[], 
+void rule_write ( int order, std::string filename, double x[], double w[], 
   double r[] )
 
 //****************************************************************************80
@@ -1050,27 +1050,27 @@ void rule_write ( int order, string filename, double x[], double w[],
 //
 //    Input, double B, the right endpoint.
 //
-//    Input, string FILENAME, specifies the output filenames.
+//    Input, std::string FILENAME, specifies the output filenames.
 //    "filename_w.txt", "filename_x.txt", "filename_r.txt" 
 //    defining weights, abscissas, and region.
 // 
 {
-  string filename_r;
-  string filename_w;
-  string filename_x;
+ std::string filename_r;
+ std::string filename_w;
+ std::string filename_x;
 
   filename_w = filename + "_w.txt";
   filename_x = filename + "_x.txt";
   filename_r = filename + "_r.txt";
 
-  cout << "\n";
-  cout << "  Creating quadrature files.\n";
-  cout << "\n";
-  cout << "  Root file name is     \"" << filename   << "\".\n";
-  cout << "\n";
-  cout << "  Weight file will be   \"" << filename_w << "\".\n";
-  cout << "  Abscissa file will be \"" << filename_x << "\".\n";
-  cout << "  Region file will be   \"" << filename_r << "\".\n";
+ std::cout << "\n";
+ std::cout << "  Creating quadrature files.\n";
+ std::cout << "\n";
+ std::cout << "  Root file name is     \"" << filename   << "\".\n";
+ std::cout << "\n";
+ std::cout << "  Weight file will be   \"" << filename_w << "\".\n";
+ std::cout << "  Abscissa file will be \"" << filename_x << "\".\n";
+ std::cout << "  Region file will be   \"" << filename_r << "\".\n";
             
   r8mat_write ( filename_w, 1, order, w );
   r8mat_write ( filename_x, 1, order, x );
@@ -1175,9 +1175,9 @@ void scqf ( int nt, double t[], int mlt[], double wts[], int nwts, int ndx[],
     be = 0.0;
     if ( fabs ( b - a ) <= temp )
     {
-      cerr << "\n";
-      cerr << "SCQF - Fatal error!\n";
-      cerr << "  |B - A| too small.\n";
+std::cerr << "\n";
+std::cerr << "SCQF - Fatal error!\n";
+std::cerr << "  |B - A| too small.\n";
       exit ( 1 );
     }
     shft = ( a + b ) / 2.0;
@@ -1189,9 +1189,9 @@ void scqf ( int nt, double t[], int mlt[], double wts[], int nwts, int ndx[],
     be = -0.5;
     if ( fabs ( b - a ) <= temp )
     {
-      cerr << "\n";
-      cerr << "SCQF - Fatal error!\n";
-      cerr << "  |B - A| too small.\n";
+std::cerr << "\n";
+std::cerr << "SCQF - Fatal error!\n";
+std::cerr << "  |B - A| too small.\n";
       exit ( 1 );
     }
     shft = ( a + b ) / 2.0;
@@ -1203,9 +1203,9 @@ void scqf ( int nt, double t[], int mlt[], double wts[], int nwts, int ndx[],
     be = alpha;
     if ( fabs ( b - a ) <= temp )
     {
-      cerr << "\n";
-      cerr << "SCQF - Fatal error!\n";
-      cerr << "  |B - A| too small.\n";
+std::cerr << "\n";
+std::cerr << "SCQF - Fatal error!\n";
+std::cerr << "  |B - A| too small.\n";
       exit ( 1 );
     }
     shft = ( a + b ) / 2.0;
@@ -1218,9 +1218,9 @@ void scqf ( int nt, double t[], int mlt[], double wts[], int nwts, int ndx[],
 
     if ( fabs ( b - a ) <= temp )
     {
-      cerr << "\n";
-      cerr << "SCQF - Fatal error!\n";
-      cerr << "  |B - A| too small.\n";
+std::cerr << "\n";
+std::cerr << "SCQF - Fatal error!\n";
+std::cerr << "  |B - A| too small.\n";
       exit ( 1 );
     }
     shft = ( a + b ) / 2.0;
@@ -1230,9 +1230,9 @@ void scqf ( int nt, double t[], int mlt[], double wts[], int nwts, int ndx[],
   {
     if ( b <= 0.0 )
     {
-      cerr << "\n";
-      cerr << "SCQF - Fatal error!\n";
-      cerr << "  B <= 0\n";
+std::cerr << "\n";
+std::cerr << "SCQF - Fatal error!\n";
+std::cerr << "  B <= 0\n";
       exit ( 1 );
     }
     shft = a;
@@ -1244,9 +1244,9 @@ void scqf ( int nt, double t[], int mlt[], double wts[], int nwts, int ndx[],
   {
     if ( b <= 0.0 )
     {
-      cerr << "\n";
-      cerr << "SCQF - Fatal error!\n";
-      cerr << "  B <= 0.\n";
+std::cerr << "\n";
+std::cerr << "SCQF - Fatal error!\n";
+std::cerr << "  B <= 0.\n";
       exit ( 1 );
     }
     shft = a;
@@ -1260,9 +1260,9 @@ void scqf ( int nt, double t[], int mlt[], double wts[], int nwts, int ndx[],
     be = 0.0;
     if ( fabs ( b - a ) <= temp )
     {
-      cerr << "\n";
-      cerr << "SCQF - Fatal error!\n";
-      cerr << "  |B - A| too small.\n";
+std::cerr << "\n";
+std::cerr << "SCQF - Fatal error!\n";
+std::cerr << "  |B - A| too small.\n";
       exit ( 1 );
     }
     shft = ( a + b ) / 2.0;
@@ -1272,9 +1272,9 @@ void scqf ( int nt, double t[], int mlt[], double wts[], int nwts, int ndx[],
   {
     if ( a + b <= 0.0 )
     {
-      cerr << "\n";
-      cerr << "SCQF - Fatal error!\n";
-      cerr << "  A + B <= 0.\n";
+std::cerr << "\n";
+std::cerr << "SCQF - Fatal error!\n";
+std::cerr << "  A + B <= 0.\n";
       exit ( 1 );
     }
     shft = a;
@@ -1288,9 +1288,9 @@ void scqf ( int nt, double t[], int mlt[], double wts[], int nwts, int ndx[],
     be = 0.5;
     if ( fabs ( b - a ) <= temp )
     {
-      cerr << "\n";
-      cerr << "SCQF - Fatal error!\n";
-      cerr << "  |B - A| too small.\n";
+std::cerr << "\n";
+std::cerr << "SCQF - Fatal error!\n";
+std::cerr << "  |B - A| too small.\n";
       exit ( 1 );
     }
     shft = ( a + b ) / 2.0;
@@ -1376,9 +1376,9 @@ void sgqf ( int nt, double aj[], double bj[], double zemu, double t[],
 //
   if ( zemu <= 0.0 )
   {
-    cerr << "\n";
-    cerr << "SGQF - Fatal error!\n";
-    cerr << "  ZEMU <= 0.\n";
+std::cerr << "\n";
+std::cerr << "SGQF - Fatal error!\n";
+std::cerr << "  ZEMU <= 0.\n";
     exit ( 1 );
   }
 //
