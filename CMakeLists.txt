@@ -66,7 +66,7 @@ include_directories(${RII_INCLUDES}/src/rii_RII_KKpQ)
 
 # we use one of our examples here
 add_executable(solar_3D ${CMAKE_SOURCE_DIR}/src/main.cpp)
-set(CMAKE_CXX_FLAGS  " -fopenmp -std=c++17 ")
+set(CMAKE_CXX_FLAGS  " -Ofast -fopenmp -std=c++17 ")
 
 add_library(rii SHARED IMPORTED)
 set_property(TARGET rii PROPERTY IMPORTED_LOCATION "${RII_ROOT_PATH}/build/librii.so")
