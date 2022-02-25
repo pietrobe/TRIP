@@ -13,8 +13,8 @@ Parallel implementation for PRD radiative transfer in 3D
 * input files encoding the atmospheric model 
 
 ### Compile ###
-cd bin  
-cmake .. -Dsgrid_DIR=/path_to_sgrid/sgrid_installation/lib/cmake/ -DRII_ROOT_PATH=/path_to_rii/rii/rii-c/  
+cd bin \ 
+cmake .. -Dsgrid_DIR=/path_to_sgrid/sgrid_installation/lib/cmake/ -DRII_ROOT_PATH=/path_to_rii/rii/rii-c/ \ 
 make 
 
 ### Run ###
