@@ -1,16 +1,13 @@
 #!/bin/bash -l
 
-#SBATCH --ntasks=1
-#SBATCH --nodes=1
+#SBATCH --ntasks=140
+#SBATCH --nodes=10
 #SBATCH --cpus-per-task=1
 #SBATCH --constraint=mc
 #SBATCH --time=01:10:00
 #SBATCH --account=u2
+#SBATCH --job-name="PRD_3D"
 
-export LD_LIBRARY_PATH=/users/pietrob/rii/rii-c/build/
-export LD_LIBRARY_PATH=$TRILINOS_DIR/lib:$LD_LIBRARY_PATH
-
-srun ./main 2 4 
-
+srun ./solar_3D 4 4
 
 

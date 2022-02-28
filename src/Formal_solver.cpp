@@ -76,17 +76,18 @@ void Formal_solver::one_step(const Real dt, input_vec &K1, input_vec &K2, input_
 				index_ij = 4 * i + j;
 
 				Id = (i == j);
-
+			
 				A[index_ij] = Id + (F - G) * (K2[index_ij] - Id);
 
 				// K * I_in
-				K_times_I_in[i] += (K1[index_ij] - Id) * I_in[j]; 
+				K_times_I_in[i] += (K1[index_ij] - Id) * I_in[j]; 								
 			}			
 
 			b[i] = E * I_in[i] - G * K_times_I_in[i] + G * S1[i] + (F - G) * S2[i];
 		}
 
-		I_out = solve_4_by_4_system(A, b);		
+		I_out = solve_4_by_4_system(A, b);	
+		// I_out = solve_4_by_4_system_optimized(A,b);
 	}
 	else	
 	{

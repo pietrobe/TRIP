@@ -34,8 +34,8 @@ public:
     	// TODO: now hardcoded
     	L_ = 1000.0;
     	// L_   = 1.0;
-    	N_x_ = 10;
-    	N_y_ = 10;
+    	N_x_ = 60;
+    	N_y_ = 60;
 
     	// reading some input
     	read_atom(     input_path + "/atom.dat");

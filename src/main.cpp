@@ -1,7 +1,8 @@
 #include "RT_solver.hpp"
 #include <chrono>  
 
-//  make -j4 && mpirun -n 4 ./main
+// compile and run with:
+// make -j 32 && srun -n 4 ./main 2 4
 
 int main(int argc, char *argv[])
 {    	
@@ -20,7 +21,7 @@ int main(int argc, char *argv[])
 	    RT_solver rt_solver(rt_problem_ptr, "DELO_linear");
 	    
 	    rt_solver.solve();
-	}
+	}	
         
 	Kokkos::finalize();
 	PetscFinalize();

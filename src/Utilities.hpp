@@ -41,6 +41,11 @@ using Real = double;
 #define MIN(a,b) ((a)<(b) ? (a) : (b))
 #define MAX(a,b) ((a)>(b) ? (a) : (b))
 
+#define MAX3(a, b, c) MAX(MAX(a, b), c)
+#define MIN3(a, b, c) MIN(MIN(a, b), c)
+
+#define COU_IS_ODD(n) ((n)&1)
+
 #define PI 3.1415926535897932384626
 
 void save_vec(Vec &m, const char * filename, const char * name);
@@ -64,6 +69,7 @@ std::vector<double> assemble_propagation_matrix_scaled(const std::vector<double>
 void print_propagation_matrix(const std::vector<double> &K);
 void print_Stokes(const std::vector<double> &I);
 std::vector<double> solve_4_by_4_system(const std::vector<double> &K, const std::vector<double> &rhs);
+std::vector<double> solve_4_by_4_system_optimized(const std::vector<double> &K, const std::vector<double> &rhs);
 
 // Wigner3j symbols, use int multiples for not int inputs 
 double W3JS(int J1, int J2, int J3, int M1, int M2, int M3);

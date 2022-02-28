@@ -1,18 +1,12 @@
 #include "Utilities.hpp"
 
+int Mod(int a, int b) 
+{
+  int r = a % b;
+  return r < 0 ? r + b : r;
+}
+
 //////////////////////////////// used in W3JS 
-#define COU_IS_ODD(n) ((n)&1)
-
-#define COU_MAX(a, b) ((a) > (b) ? (a) : (b))
-#define COU_MIN(a, b) ((a) < (b) ? (a) : (b))
-
-#define COU_MAX3(a, b, c) COU_MAX(COU_MAX(a, b), c)
-#define COU_MIN3(a, b, c) COU_MIN(COU_MIN(a, b), c)
-
-int Mod(int a, int b) {
-    int r = a % b;
-    return r < 0 ? r + b : r;
-  }
 
 static double g_fact[171] = {
   1.000000000000000e+00,  1.000000000000000e+00,  2.000000000000000e+00,  6.000000000000000e+00,
@@ -356,10 +350,10 @@ double W3JS(int J1, int J2, int J3, int M1, int M2, int M3) {
 
   IE   = J3 - J2 + M1;
   IF   = J3 - J1 - M2;
-  ZMIN = COU_MAX3(0, -IE, -IF);
+  ZMIN = MAX3(0, -IE, -IF);
   IG   = IA - J3;
   IH   = J2 + M2;
-  ZMAX = COU_MIN3(IG, IH, IC);
+  ZMAX = MIN3(IG, IH, IC);
   CC   = 0.0;
 
   for (Z = ZMIN; Z <= ZMAX; Z += 2) {
@@ -383,9 +377,7 @@ double W3JS(int J1, int J2, int J3, int M1, int M2, int M3) {
     return CC;
 }
 
-
-
-// TODO: this function could be but faster using the information about K 
+ 
 std::vector<double> solve_4_by_4_system(const std::vector<double>  &K, const std::vector<double> &rhs)
 {
   // check input sizes
@@ -507,6 +499,156 @@ std::vector<double> solve_4_by_4_system(const std::vector<double>  &K, const std
             K[8] * K[2] * K[5];
 
   double det = K[0] * inv[0] + K[1] * inv[4] + K[2] * inv[8] + K[3] * inv[12];
+
+  if (det == 0) std::cout << "\nERROR: K matrix not invertible!\n" << std::endl;    
+
+  // if (std::abs(det) < 1e-5) std::cout << "\nWARNING: K matrix is ill conditioned! det(K) = " << std::abs(det)  << "\n" << std::endl;    
+
+  det = 1.0 / det;
+
+  double sum;
+
+  // compute inv(A) * rhs
+  for (int i = 0; i < 4; ++i)
+  {
+      sum = 0;
+
+      for (int j = 0; j < 4; ++j)
+      {
+          sum += inv[4 * i + j] * rhs[j];
+      }
+
+      sol[i] = det * sum;
+  }
+  
+  return sol;
+}
+
+
+// for matrix K having identity diagonal
+std::vector<double> solve_4_by_4_system_optimized(const std::vector<double>  &K, const std::vector<double> &rhs)
+{
+  // check input sizes
+  if (K.size() != 16 || rhs.size() != 4 ) std::cout << "\nERROR in solve_4_by_4_system()\n" << std::endl;
+              
+  std::vector<double> sol(4);
+  std::vector<double> inv(16);
+
+  if (K[0] != 1.0 or K[5] != 1.0 or K[10] != 1.0 or K[15] != 1.0)  std::cout << "\nERROR can not use solve_4_by_4_system_optimized()!\n" << std::endl;
+
+  inv[0] = 1.0 - 
+           K[11] * K[14] - 
+           K[9]  * K[6]  + 
+           K[9]  * K[7]  * K[14] +
+           K[13] * K[6]  * K[11] - 
+           K[13] * K[7] ;
+
+  inv[4] = -K[4] + 
+            K[4]  * K[11] * K[14] + 
+            K[8]  * K[6]  - 
+            K[8]  * K[7]  * K[14] - 
+            K[12] * K[6]  * K[11] + 
+            K[12] * K[7];
+
+  inv[8] = K[4]  * K[9] - 
+           K[4]  * K[11] * K[13] - 
+           K[8]  + 
+           K[8]  * K[7] * K[13] + 
+           K[12] * K[11] - 
+           K[12] * K[7] * K[9];
+
+  inv[12] = -K[4]  * K[9] * K[14] + 
+             K[4]  * K[13] +
+             K[8]  * K[14] - 
+             K[8]  * K[6] * K[13] - 
+             K[12] + 
+             K[12] * K[6] * K[9];
+
+  inv[1] = -K[1] + 
+            K[1]  * K[11] * K[14] + 
+            K[9]  * K[2] - 
+            K[9]  * K[3] * K[14] - 
+            K[13] * K[2] * K[11] + 
+            K[13] * K[3];
+
+  inv[5] = 1.0 - 
+           K[11] * K[14] - 
+           K[8]  * K[2] + 
+           K[8]  * K[3] * K[14] + 
+           K[12] * K[2] * K[11] - 
+           K[12] * K[3];
+
+  inv[9] = - K[9] + 
+            K[11] * K[13] + 
+            K[8]  * K[1] - 
+            K[8]  * K[3] * K[13] - 
+            K[12] * K[1] * K[11] + 
+            K[12] * K[3] * K[9];
+
+  inv[13] = K[9] * K[14] - 
+            K[13] - 
+            K[8]  * K[1] * K[14] + 
+            K[8]  * K[2] * K[13] + 
+            K[12] * K[1] - 
+            K[12] * K[2] * K[9];
+
+  inv[2] = K[1] * K[6] - 
+           K[1] * K[7] * K[14] - 
+           K[2] + 
+           K[3] * K[14] + 
+           K[13] * K[2] * K[7] - 
+           K[13] * K[3] * K[6];
+
+  inv[6] = -K[6] + 
+            K[7] * K[14] + 
+            K[4]  * K[2] - 
+            K[4]  * K[3] * K[14] - 
+            K[12] * K[2] * K[7] + 
+            K[12] * K[3] * K[6];
+
+  inv[10] = 1.0 - 
+            K[7] * K[13] - 
+            K[4]  * K[1] + 
+            K[4]  * K[3] * K[13] + 
+            K[12] * K[1] * K[7] - 
+            K[12] * K[3];
+
+  inv[14] = - K[14] + 
+             K[6] * K[13] + 
+             K[4]  * K[1] * K[14] - 
+             K[4]  * K[2] * K[13] - 
+             K[12] * K[1] * K[6] + 
+             K[12] * K[2];
+
+  inv[3] = -K[1] * K[6] * K[11] + 
+            K[1] * K[7] + 
+            K[2] * K[11] - 
+            K[3] - 
+            K[9] * K[2] * K[7] + 
+            K[9] * K[3] * K[6];
+
+  inv[7] = K[6] * K[11] - 
+           K[7]- 
+           K[4] * K[2] * K[11] + 
+           K[4] * K[3] + 
+           K[8] * K[2] * K[7] - 
+           K[8] * K[3] * K[6];
+
+  inv[11] = -K[11] + 
+             K[7] * K[9] + 
+             K[4] * K[1] * K[11] - 
+             K[4] * K[3] * K[9] - 
+             K[8] * K[1] * K[7] + 
+             K[8] * K[3];
+
+  inv[15] = 1.0 - 
+            K[6] * K[9] - 
+            K[4] * K[1] + 
+            K[4] * K[2] * K[9] + 
+            K[8] * K[1] * K[6] - 
+            K[8] * K[2] ;
+
+  double det = inv[0] + K[1] * inv[4] + K[2] * inv[8] + K[3] * inv[12];
 
   if (det == 0) std::cout << "\nERROR: K matrix not invertible!\n" << std::endl;    
 
