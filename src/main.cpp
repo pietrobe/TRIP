@@ -6,8 +6,7 @@
 
 int main(int argc, char *argv[]) {
 
-  // return test_solar_3D::test_rii_3D_include(argc, argv);
-  
+  return test_solar_3D::test_rii_3D_include(argc, argv);
 
   MPI_CHECK(MPI_Init(&argc, &argv));
   PetscInitialize(&argc, &argv, (char *)0, NULL);

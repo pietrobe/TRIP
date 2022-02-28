@@ -41,8 +41,15 @@ int test_rii_3D_include(int argc, char *argv[]) {
     std::cout.flush();
 
     in_RT_problem_3D::add_models(rt_problem_ptr, ecc_sh_ptr, fsf_sh_ptr, true);
-
     std::cout << "End add models 3D\n";
+    std::cout.flush();
+
+    std::cout << "Start make FS 3D\n";
+    std::cout.flush();
+
+    fsf_sh_ptr->make_formal_solver();
+
+    std::cout << "End make FS 3D\n";
     std::cout.flush();
 
     using emission_coefficient_components = rii_include::
@@ -51,10 +58,37 @@ int test_rii_3D_include(int argc, char *argv[]) {
     std::cout << "Start make_computation_function\n";
     std::cout.flush();
 
-    const auto epsilon_fun = ecc_sh_ptr->make_computation_function(
-        {emission_coefficient_components::epsilon_R_II,
-         emission_coefficient_components::epsilon_R_III_GL,
-         emission_coefficient_components::epsilon_csc});
+    std::list<emission_coefficient_components> components{
+        emission_coefficient_components::epsilon_R_II,
+        emission_coefficient_components::epsilon_R_III_GL,
+        emission_coefficient_components::epsilon_csc};
+
+    std::cout << fsf_sh_ptr->get_formal_solver_shared_ptr()
+                     ->print_emission_model(components);
+
+    const auto epsilon_fun = ecc_sh_ptr->make_computation_function(components);
+
+    const auto offset_fun = rii_include::make_default_offset_function(
+        N_theta, N_chi,
+        ecc_sh_ptr->get_formal_solver()
+            ->get_solar_atmosphere_model()
+            ->get_frequencies_grid_size());
+
+    std::vector<double> input_array(90000);
+
+    const auto in_field = ecc_sh_ptr->update_incoming_field(2, 2, 3, offset_fun,
+                                                            input_array.data());
+
+    const auto out_field = epsilon_fun(2, 2, 3);
+
+    if (not out_field) {
+      std::cout << "if (not out_field) { \n";
+      exit(0);
+    }
+
+    std::vector<double> out_array(90000);
+    rii_include::make_indices_convertion_function<double>(
+        out_field, offset_fun)(out_array.data());
 
     std::cout << "End make_computation_function\n";
     std::cout.flush();
