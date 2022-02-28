@@ -54,3 +54,4 @@ Thumbs.db
 build
 bld
 
+.vscode/settings.json

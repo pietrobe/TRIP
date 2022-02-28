@@ -21,6 +21,7 @@ list(APPEND SOURCES_FILES
 	src/RT_problem.cpp
 	src/RT_solver.cpp
 	src/Utilities.cpp
+    src/Test_rii_include.cpp
 )
 
 list(APPEND HEADERS_FILES 
@@ -31,6 +32,7 @@ list(APPEND HEADERS_FILES
     src/RT_problem.hpp
     src/RT_solver.hpp
     src/Utilities.hpp
+    src/Test_rii_include.hpp
 )
 
 set(RII_INCLUDES "${RII_ROOT_PATH}")

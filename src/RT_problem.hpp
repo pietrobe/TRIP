@@ -242,6 +242,8 @@ public:
 	inline int atomic_gu()      const { return this->gu_;  }
 	inline double atomic_Aul()  const { return this->Aul_; }
 
+	inline Field_ptr_t get_D2() const { return this->D2_; }
+
 private:
 
 	// physical constants 
