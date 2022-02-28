@@ -1,36 +1,40 @@
 #include "RT_solver.hpp"
-#include <chrono>  
+#include "Test_rii_include.hpp"
+#include <chrono>
 
 // compile and run with:
 // make -j 32 && srun -n 4 ./main 2 4
 
-int main(int argc, char *argv[])
-{    	
-    MPI_CHECK(MPI_Init(&argc, &argv));
-    PetscInitialize(&argc,&argv,(char*)0, NULL);
-    Kokkos::initialize(argc, argv);    
+int main(int argc, char *argv[]) {
 
-    {	        	
-	    const size_t N_theta = atoi(argv[1]);
-    	const size_t N_chi   = atoi(argv[2]);
+  // return test_solar_3D::test_rii_3D_include(argc, argv);
 
-	    RT_problem rt_problem("../input/FAL-C/1_B0_V0_12T_8C_99F", N_theta, N_chi);	
+  MPI_CHECK(MPI_Init(&argc, &argv));
+  PetscInitialize(&argc, &argv, (char *)0, NULL);
+  Kokkos::initialize(argc, argv);
 
-	    auto rt_problem_ptr = std::make_shared<RT_problem>(rt_problem);
+  {
+    const size_t N_theta = atoi(argv[1]);
+    const size_t N_chi = atoi(argv[2]);
 
-	    RT_solver rt_solver(rt_problem_ptr, "DELO_linear");
-	    
-	    rt_solver.solve();
-	}	
-        
-	Kokkos::finalize();
-	PetscFinalize();
-	MPI_CHECK(MPI_Finalize());
+    RT_problem rt_problem("../input/FAL-C/1_B0_V0_12T_8C_99F", N_theta, N_chi);
 
-    return EXIT_SUCCESS;
+    auto rt_problem_ptr = std::make_shared<RT_problem>(rt_problem);
+
+    RT_solver rt_solver(rt_problem_ptr, "DELO_linear");
+
+    rt_solver.solve();
+  }
+
+  Kokkos::finalize();
+  PetscFinalize();
+  MPI_CHECK(MPI_Finalize());
+
+  return EXIT_SUCCESS;
 }
 
 // TODO use Real insted of double
 
-// output 
-// python ../../sgrid/scripts/transpose_data.py -x 4 -y 4 -z 70 -b 99 -p sigma.raw 
+// output
+// python ../../sgrid/scripts/transpose_data.py -x 4 -y 4 -z 70 -b 99 -p
+// sigma.raw

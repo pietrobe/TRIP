@@ -21,6 +21,7 @@ list(APPEND SOURCES_FILES
 	src/RT_problem.cpp
 	src/RT_solver.cpp
 	src/Utilities.cpp
+    src/Test_rii_include.cpp
 )
 
 list(APPEND HEADERS_FILES 
@@ -31,6 +32,7 @@ list(APPEND HEADERS_FILES
     src/RT_problem.hpp
     src/RT_solver.hpp
     src/Utilities.hpp
+    src/Test_rii_include.hpp
 )
 
 set(RII_INCLUDES "${RII_ROOT_PATH}")
@@ -66,7 +68,7 @@ include_directories(${RII_INCLUDES}/src/rii_RII_KKpQ)
 
 # we use one of our examples here
 add_executable(solar_3D ${CMAKE_SOURCE_DIR}/src/main.cpp)
-set(CMAKE_CXX_FLAGS  " -Ofast -fopenmp -std=c++17 ")
+set(CMAKE_CXX_FLAGS  " -Ofast -fopenmp -std=c++17 -Wno-deprecated-declarations ")
 
 add_library(rii SHARED IMPORTED)
 set_property(TARGET rii PROPERTY IMPORTED_LOCATION "${RII_ROOT_PATH}/build/librii.so")
