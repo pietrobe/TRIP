@@ -239,18 +239,13 @@ void MF_context::find_intersection(double theta, double chi, const double Z_down
 }
 
 
-std::vector<t_intersect> MF_context::find_prolongation(double theta, double chi, const double dz, const double L) 
-{
-    //// some modifications by Pietro ////////
-    
+std::vector<t_intersect> MF_context::find_prolongation(double theta, double chi, const double dz, const double L) {
+
+    //// some modifications 
+
     // check theta
-    if (theta == 0 or chi == 0 or theta == PI/2 or chi == PI/2) 
+    if (theta == 0 or chi == 0 or theta == PI/2 or chi == PI/2) std::cout << "WARNING: ray direction not supported!" << std::endl;       
     {        
-        std::cout << "WARNING: ray direction not supported in find_prolongation!" << std::endl;       
-
- std::cout << "theta = " << theta << std::endl;
- std::cout << "chi = "   << chi   << std::endl;
-
         theta += 1e-16;
         chi   += 1e-16;                 
     }
@@ -268,64 +263,88 @@ std::vector<t_intersect> MF_context::find_prolongation(double theta, double chi,
     //////
 
     static int nmax = -1;
-
+    
     std::vector<t_intersect> is;
     std::vector<t_xyinters> xyi;
-    
-    const int dix = (x > 0. ? 1 : -1);
-    const int diy = (y > 0. ? 1 : -1);
-    const int diz = (z > 0. ? 1 : -1);
 
-    const double x1 = x/sqrt(x*x + y*y);
-    const double y1 = y/sqrt(x*x + y*y);
-    const double z_inters = diz > 0 ? dz : -dz;
+    int dix = (x > 0. ? 1 : -1);
+    int diy = (y > 0. ? 1 : -1);
+    int diz = (z > 0. ? 1 : -1);
 
-    const double T = fabs(dz/z);
+    double x1 = x/sqrt(x*x+y*y), y1 = y/sqrt(x*x+y*y);
+    double z_inters = diz > 0 ? dz : -dz;
+
+    double T = fabs(dz/z);
 
     // (1) if necessary, allocate sufficient memory for the intersections:
-    const int nmax1 = MAX(fabs(L/x1), fabs(L/y1)) + 1;
+    int nmax1 = MAX(fabs(L/x1), fabs(L/y1)) + 1;
 
-    if (nmax1 > nmax) nmax = nmax1;
-    
+    if (nmax1 > nmax) 
+    {
+        nmax = nmax1;
+
+        // is.reserve(nmax);
+        // xyi.reserve(nmax);
+    }
+
     // (2) find all the intersections
     double t = 0;
     double xg = 0, yg = 0;
     int i = 0;
+    int ix=(dix>0 ? 0 : -1), iy=(diy>0 ? 0 : -1);
     do {
+        double tx, ty, txy;
 
         t_xyinters xyi_tmp;
 
-        double tx = L*dix/x1, ty = L*diy/y1, txy;
+        if (dix<0) {
+            tx = (L*ix-xg)/x1;
+        }
+        else {
+            tx = (L*(ix+dix)-xg)/x1;
+        }
+        if (diy<0) {
+            ty = (L*iy-yg)/y1;
+        }
+        else {
+            ty = (L*(iy+diy)-yg)/y1;
+        }
+        
         if (tx<=ty) {
             txy = tx;
             xyi_tmp.plane = 0;
+            ix += dix;
         }
         else {
             txy = ty;
             xyi_tmp.plane = 1;
+            iy += diy;
         }
         xg += txy * x1;
         yg += txy * y1;
         t = fabs(sqrt(xg*xg+yg*yg)/st);
-        xyi_tmp.x = xg;
-        xyi_tmp.y = yg;
-        xyi_tmp.z = t*z;
         if (t > T) { //last point in the xy plane?
-            xyi_tmp.x = x*T;
-            xyi_tmp.y = y*T;
+            xg = xyi_tmp.x = x*T;
+            yg = xyi_tmp.y = y*T;
             xyi_tmp.z = dz*diz;
             xyi_tmp.plane = 2;
             t = T;
+        }
+        else {
+            xyi_tmp.x = xg;
+            xyi_tmp.y = yg;
+            xyi_tmp.z = t*z;
+            if (xg<L*ix) ix--;
+            if (yg<L*iy) iy--;
         }
 
         xyi.push_back(xyi_tmp);
 
         i++;
     } while(t != T);
-    
+
     const int N = i;  
 
-    
     // (3) set ix, iy, iz indices
     xyi[0].ix = xyi[0].iy = xyi[0].iz = 0;
     for (i=0; i<N; i++) {
@@ -346,7 +365,7 @@ std::vector<t_intersect> MF_context::find_prolongation(double theta, double chi,
                 xyi[i].iz = (i>0 ? xyi[i-1].iz+diz : diz);
                 break;
         }
-    } 
+    }
 
     // (4) first N-1 points
     double u1=0, u2=0, v1=0, v2=0, u=0, v=0, norm;
@@ -354,17 +373,15 @@ std::vector<t_intersect> MF_context::find_prolongation(double theta, double chi,
 
     t_intersect is_tmp;
 
-    for (i=0; i<N-1; i++) 
-    {        
+    for (i=0; i<N-1; i++) {
         is_tmp.distance = sqrt((xyi[i].x-x_last)*(xyi[i].x-x_last) + (xyi[i].y-y_last)*(xyi[i].y-y_last) + (xyi[i].z-z_last)*(xyi[i].z-z_last));
-
         switch (xyi[i].plane) {
             case 0:
                 for (int j=0; j<4; j++) is_tmp.ix[j] = xyi[i].ix;
                 is_tmp.iy[0] = MIN(xyi[i].iy, xyi[i].iy+diy); is_tmp.iz[0] = MIN(0,diz);
                 is_tmp.iy[1] = MAX(xyi[i].iy, xyi[i].iy+diy); is_tmp.iz[1] = is_tmp.iz[0];
-                is_tmp.iy[2] = is_tmp.iy[1]; is_tmp.iz[2] = 0; is_tmp.iz[2] = MAX(0,diz);
-                is_tmp.iy[3] = is_tmp.iy[0]; is_tmp.iz[3] = 0; is_tmp.iz[3] = is_tmp.iz[2];
+                is_tmp.iy[2] = is_tmp.iy[1]; is_tmp.iz[2] = 0;  is_tmp.iz[2] = MAX(0,diz);
+                is_tmp.iy[3] = is_tmp.iy[0]; is_tmp.iz[3] = 0;  is_tmp.iz[3] = is_tmp.iz[2];
                 u1 = L * is_tmp.iy[0]; u2 = L * is_tmp.iy[1];
                 v1 = MIN(0., z_inters); v2 = MAX(0., z_inters);
                 u = xyi[i].y; v = xyi[i].z;
@@ -372,9 +389,9 @@ std::vector<t_intersect> MF_context::find_prolongation(double theta, double chi,
             case 1:
                 for (int j=0; j<4; j++) is_tmp.iy[j] = xyi[i].iy;
                 is_tmp.ix[0] = MIN(xyi[i].ix, xyi[i].ix+dix); is_tmp.iz[0] = MIN(0,diz);
-                is_tmp.ix[1] = MAX(xyi[i].ix, xyi[i].iz+diz); is_tmp.iz[1] = is_tmp.iz[0];
-                is_tmp.ix[2] = is_tmp.ix[1]; is_tmp.iz[2] = 0; is_tmp.iz[2] = MAX(0,diz);
-                is_tmp.ix[3] = is_tmp.ix[0]; is_tmp.iz[3] = 0; is_tmp.iz[3] = is_tmp.iz[2];
+                is_tmp.ix[1] = MAX(xyi[i].ix, xyi[i].ix+dix); is_tmp.iz[1] = is_tmp.iz[0];
+                is_tmp.ix[2] = is_tmp.ix[1]; is_tmp.iz[2] = 0;  is_tmp.iz[2] = MAX(0,diz);
+                is_tmp.ix[3] = is_tmp.ix[0]; is_tmp.iz[3] = 0;  is_tmp.iz[3] = is_tmp.iz[2];
                 u1 = L * is_tmp.ix[0]; u2 = L * is_tmp.ix[1];
                 v1 = MIN(0., z_inters); v2 = MAX(0., z_inters);
                 u = xyi[i].x; v = xyi[i].z;
@@ -391,7 +408,6 @@ std::vector<t_intersect> MF_context::find_prolongation(double theta, double chi,
 
         is.push_back(is_tmp);
     }
-
     // the last point in the XY plane
     is_tmp.distance = sqrt((xyi[i].x-x_last)*(xyi[i].x-x_last) + (xyi[i].y-y_last)*(xyi[i].y-y_last) + (xyi[i].z-z_last)*(xyi[i].z-z_last));
     for (int j=0; j<4; j++) is_tmp.iz[j] = diz;
@@ -410,9 +426,6 @@ std::vector<t_intersect> MF_context::find_prolongation(double theta, double chi,
 
     is.push_back(is_tmp);
 
-    // put initial condition in the first cell         
-    std::reverse(is.begin(),is.end()); 
-     
     return is;
 }
 
@@ -1154,152 +1167,150 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 	
 void MF_context::set_up_emission_module(){
 
-	// // Build module
- //    auto fsf_in_sh_ptr =
- //    rii_include::formal_solver_factory_from_in_struct::make_formal_solver_factory_from_in_struct_shared_ptr();
+    if (mpi_rank_ == 0) std::cout << "\nSetting up emission module...";
+    
+    // set some aliases 
+    using rii_eps_comp_3D                 = rii_include::emission_coefficient_computation_3D;
+    using rii_formal_solver_factory       = rii_include::formal_solver_factory_from_3D_RT_problem;
+    using in_RT_problem_3D                = rii_include::in_RT_problem_3D_interface<RT_problem>;
+    using emission_coefficient_components = rii_include::emission_coefficient_computation::emission_coefficient_components;
 
- //    // interface
- //    rii_include::in_RT_problem_interface<RT_problem> RT_interface;
- //    RT_interface.add_models(RT_problem_, fsf_in_sh_ptr);
+    // Build module
+    ecc_sh_ptr_ = rii_eps_comp_3D::make_emission_coefficient_computation_3D_shared_ptr();
 
- //    ecc_sh_ptr_ = rii_include::emission_coefficient_computation::make_emission_coefficient_computation_shared_ptr();
+    auto fsf_sh_ptr = rii_formal_solver_factory::make_formal_solver_factory_from_3D_RT_problem_shared_ptr();
 
- //    bool flag = ecc_sh_ptr_->build_problem(fsf_in_sh_ptr);
+    in_RT_problem_3D::add_models(RT_problem_, ecc_sh_ptr_, fsf_sh_ptr, true);
 
- //    if (not flag) std::cerr << "Error in set_up_emission_module()!" << std::endl;
+    fsf_sh_ptr->make_formal_solver();
 
- //    epsilon_computation_function_ = ecc_sh_ptr_->make_computation_function(
-	// 	{
-	// 		rii_include::emission_coefficient_computation::emission_coefficient_components::epsilon_R_II,
-	// 	 	rii_include::emission_coefficient_computation::emission_coefficient_components::epsilon_R_III,
-	// 	 	rii_include::emission_coefficient_computation::emission_coefficient_components::epsilon_csc
-	// 	},  
-	// 	rii_consts::rii_units::kilometer);
+    std::list<emission_coefficient_components> components{
+        emission_coefficient_components::epsilon_R_II,
+        emission_coefficient_components::epsilon_R_III_GL,
+        emission_coefficient_components::epsilon_csc};
 
+    epsilon_fun_ = ecc_sh_ptr_->make_computation_function(components);
+
+    offset_fun_ = rii_include::make_default_offset_function(RT_problem_->N_theta_, RT_problem_->N_chi_, RT_problem_->N_nu_);
+        	
  //    epsilon_computation_function_approx_ = ecc_sh_ptr_->make_computation_function(
 	// {
 	// 	// rii_include::emission_coefficient_computation::emission_coefficient_components::epsilon_R_II,
 	//  	rii_include::emission_coefficient_computation::emission_coefficient_components::epsilon_R_III_CRD_limit,
 	//  	// rii_include::emission_coefficient_computation::emission_coefficient_components::epsilon_csc
 	// },  
-	// rii_consts::rii_units::kilometer);
-		 
- //    offset_f_ = rii_include::make_default_offset_function(RT_problem_->N_theta_, RT_problem_->N_chi_, RT_problem_->N_nu_);
+	// rii_consts::rii_units::kilometer);		  
+
+    if (mpi_rank_ == 0) std::cout << "done" << std::endl;
 }
 
 
 // emissivity from scattering (line + continuum)
 void MF_context::update_emission(const Vec &I_field, const bool approx){ 	
-	
+
 	PetscErrorCode ierr; 
-		
-	// // test Simone module
- //    const auto block_size = RT_problem_->block_size_;     
+	       
+    const auto g_dev   = RT_problem_->space_grid_->view_device();  
+    const auto eta_dev = RT_problem_->eta_field_->view_device();
+    const auto S_dev   = RT_problem_->S_field_->view_device(); 
 
- //    std::vector<double>  input(block_size);        
- //    std::vector<double> output(block_size); 
+    // field range indeces 
+    const int i_start = g_dev.margin[0]; 
+    const int j_start = g_dev.margin[1];
+    const int k_start = g_dev.margin[2];
 
- //    double height;
- //    int ix[block_size];
+    const int i_end = i_start + g_dev.dim[0];
+    const int j_end = j_start + g_dev.dim[1];
+    const int k_end = k_start + g_dev.dim[2];   
 
- //    int istart, iend; 
- //    ierr = VecGetOwnershipRange(I_field, &istart, &iend);CHKERRV(ierr);	
+    const auto block_size = RT_problem_->block_size_;   
 	
-	// const int istart_local = istart / block_size;
-	// const int iend_local   = iend   / block_size;
+    std::vector<double>  input(block_size);        
+    std::vector<double> output(block_size); 
 
- //    for (int i = istart_local; i < iend_local; ++i)
- //    {
- //    	// set indeces
- //    	std::iota(ix, ix + block_size, i * block_size);
+    int ix[block_size];
 
- //    	// call Simone module
- //    	height = RT_problem_->depth_grid_[i];
+    int istart, iend; 
+    ierr = VecGetOwnershipRange(I_field, &istart, &iend);CHKERRV(ierr);	
+	
+	const int istart_local = istart / block_size;
+	const int iend_local   = iend   / block_size;
 
- //    	// get I field at ith height
- //    	ierr = VecGetValues(I_field, block_size, ix, &input[0]);CHKERRV(ierr);	
+    // grid indeces
+    int i, j, k;    
 
- //    	// set input field
-	// 	ecc_sh_ptr_->update_incoming_field<double>(height, offset_f_, input.data());
-
- //    	ecc_sh_ptr_->set_threads_number(1);
-    	
- //    	if (approx)
- //    	{
- //    		auto epsilon_grid = epsilon_computation_function_approx_(height);
-	//     	rii_include::make_indices_convertion_function<double>(epsilon_grid, offset_f_)(output.data());    
- //    	}
- //    	else
- //    	{
- //    		auto epsilon_grid = epsilon_computation_function_(height);
-	//     	rii_include::make_indices_convertion_function<double>(epsilon_grid, offset_f_)(output.data());    
- //    	}
-    	
- //    	// set S_vec_ accordingly        	
- //    	ierr = VecSetValues(S_vec_, block_size, ix, &output[0], INSERT_VALUES);CHKERRV(ierr);		
- //    }
+    int counter_i = 0;
+    int counter_j = 0;
+    int counter_k = 0;
     
+    for (int i_vec = istart_local; i_vec < iend_local; ++i_vec)
+    {
+    	// set indeces
+    	std::iota(ix, ix + block_size, i_vec * block_size);
+
+        // compute grid indeces from Vec index i_vec
+        i = i_start + counter_i;
+        j = j_start + counter_j;
+        k = k_start + counter_k;
+
+        if (i >= i_end or j >= j_end or k >= k_end) std::cout << "ERROR with counters in update_emission()!" << std::endl;
+                
+    	// get I field 
+    	ierr = VecGetValues(I_field, block_size, ix, &input[0]);CHKERRV(ierr);	
+
+    	// set input field
+        ecc_sh_ptr_->update_incoming_field(i, j, k, offset_fun_, input.data());
+       	
+    	if (approx)
+    	{
+    		// auto epsilon_grid = epsilon_computation_function_approx_(height);
+	    	// rii_include::make_indices_convertion_function<double>(epsilon_grid, offset_f_)(output.data());    
+    	}
+    	else
+    	{
+    		const auto out_field = epsilon_fun_(i,j,k);	    	
+            rii_include::make_indices_convertion_function<double>(out_field, offset_fun_)(output.data());  
+    	}
+    	    	
+        // update S_field_ from output scaling by eta_I
+        double eta_I_inv; 
+
+        for (int b = 0; b < block_size; b = b + 4)
+        {
+            eta_I_inv = 1.0 / (eta_dev.block(i,j,k)[b]);
+            
+            S_dev.block(i,j,k)[b]     = eta_I_inv * output[b];                                                         
+            S_dev.block(i,j,k)[b + 1] = eta_I_inv * output[b + 1];
+            S_dev.block(i,j,k)[b + 2] = eta_I_inv * output[b + 2];
+            S_dev.block(i,j,k)[b + 3] = eta_I_inv * output[b + 3];                                                       
+        }
+
+        // update counters
+        counter_i++;
+
+        if (counter_i == i_end - 1)
+        {
+            counter_i = 0;
+            counter_j++;
+        }
+
+        if (counter_j == j_end - 1)
+        {
+            counter_j = 0;
+            counter_k++;
+        }
+    }
+
+    // TODOs tetst
 	// test S = I;
-	// ierr = VecCopy(I_field, S_vec_);CHKERRV(ierr);		
-
 	// test S = 1
-	ierr = VecSet(RT_problem_->S_vec_, 1.0);CHKERRV(ierr);		
-
 	// test S = 0;
-	// ierr = VecZeroEntries(S_vec_);CHKERRV(ierr);		
-
-	// // LTE S = W_T;
-	// const auto block_size = RT_problem_->block_size_;
- 		
-	// int istart, iend; 
-	// ierr = VecGetOwnershipRange(RT_problem_->I_field_, &istart, &iend);CHKERRV(ierr);	
-
-	// size_t i_space;
-	// double value;
-
-	// for (int i = istart; i < iend; ++i)
-	// {
-	// 	i_space = i / block_size;
-
-	// 	value = RT_problem_->W_T_[i_space];
-
-	// 	ierr = VecSetValues(S_vec_, 1, &i, &value, INSERT_VALUES);CHKERRV(ierr); 							
-	// }
-
-	// ierr = VecAssemblyBegin(S_vec_);CHKERRV(ierr); 
- 	// ierr = VecAssemblyEnd(S_vec_);CHKERRV(ierr); 
-    
- // 	// scale emission by eta_I ----------------> TODO
-	// int ixx[4];
-	// double eta_I, eta_I_inv;	
-	// double S[4];
-		
-	// for (int i = istart; i < iend; i = i + 4)
-	// {
-	// 	ierr = VecGetValues(RT_problem_->eta_field_, 1, &i, &eta_I);CHKERRV(ierr);	
-
-	// 	eta_I_inv = 1.0 / eta_I;
-
-	// 	std::iota(ixx, ixx + 4, i);
-
-	// 	ierr = VecGetValues(S_vec_, 4, ixx, S);CHKERRV(ierr);	
-
-	// 	S[0] = eta_I_inv * S[0];
-	// 	S[1] = eta_I_inv * S[1];
-	// 	S[2] = eta_I_inv * S[2];
-	// 	S[3] = eta_I_inv * S[3];
-
-	// 	ierr = VecSetValues(S_vec_, 4, ixx, S, INSERT_VALUES);CHKERRV(ierr); 									
-	// }
-
-	// ierr = VecAssemblyBegin(S_vec_);CHKERRV(ierr); 
- // 	ierr = VecAssemblyEnd(S_vec_);CHKERRV(ierr);  
 }
 
 
 void RT_solver::assemble_rhs(){ 
 
-  	if (mpi_rank_ == 0) std::cout << "\n++++++ Assembling right hand side...+++++++++ TODO";
+  	if (mpi_rank_ == 0) std::cout << "\n++++++ Assembling right hand side...+++++++++";
  
 	PetscErrorCode ierr;
 
@@ -1323,67 +1334,67 @@ void RT_solver::assemble_rhs(){
 	ierr = VecSetSizes(rhs_,local_size,tot_size);CHKERRV(ierr);   	
 	ierr = VecSetFromOptions(rhs_);CHKERRV(ierr);
 
-	// // create rhs field (temporary)
-	// auto rhs_field = std::make_shared<Field_t>("EPS_TH", space_grid, block_size, sgrid::STAR_STENCIL);
-	// rhs_field->allocate_on_device(); 	
+	// create rhs field (temporary)
+	auto rhs_field = std::make_shared<Field_t>("EPS_TH", space_grid, block_size, sgrid::STAR_STENCIL);
+	rhs_field->allocate_on_device(); 	
 	
-	// // create eps_th field (temporary)
-	// auto eps_th_field = std::make_shared<Field_t>("EPS_TH", space_grid, block_size, sgrid::STAR_STENCIL);
-	// eps_th_field->allocate_on_device(); 
-	// const auto eps_th_dev = eps_th_field->view_device();	 
+	// create eps_th field (temporary)
+	auto eps_th_field = std::make_shared<Field_t>("EPS_TH", space_grid, block_size, sgrid::STAR_STENCIL);
+	eps_th_field->allocate_on_device(); 
+	const auto eps_th_dev = eps_th_field->view_device();	 
 	
-	// // fill it eps_th =  eps_c_th +  eps_l_th
-	// sgrid::parallel_for("ASSEMBLE RHS", space_grid->md_range(), SGRID_LAMBDA(int i, int j, int k) {
+	// fill it eps_th =  eps_c_th +  eps_l_th
+	sgrid::parallel_for("ASSEMBLE RHS", space_grid->md_range(), SGRID_LAMBDA(int i, int j, int k) {
 		
-	// 	double value;
+		double value;
 
-	// 	std::vector<size_t> local_idx;
+		std::vector<size_t> local_idx;
 
-	// 	for (int b = 0; b < (int)block_size; b++) 
-	// 	{		
-	// 		local_idx = RT_problem_->block_to_local(b);
+		for (int b = 0; b < (int)block_size; b++) 
+		{		
+			local_idx = RT_problem_->block_to_local(b);
 
-	// 		double eta_i = eta_dev.block(i,j,k)[b];
+			double eta_i = eta_dev.block(i,j,k)[b];
 
-	// 		// first Stokes parameter
-	// 		if (local_idx[3] == 0)
-	// 		{				
-	// 			auto index_nu = local_idx[2];
+			// first Stokes parameter
+			if (local_idx[3] == 0)
+			{				
+				auto index_nu = local_idx[2];
 				
-	// 			if (RT_problem_->enable_continuum_) 
-	// 			{
-	// 				// eps_c_th
-	// 				value = eps_c_th_dev.block(i,j,k)[index_nu];	
+				if (RT_problem_->enable_continuum_) 
+				{
+					// eps_c_th
+					value = eps_c_th_dev.block(i,j,k)[index_nu];	
 
-	// 				// eps_l_th		
-	// 				value += epsilon_dev.ref(i,j,k) * W_T_dev.ref(i,j,k) * (eta_i - k_c_dev.block(i,j,k)[index_nu]);				
-	// 			}
-	// 			else
-	// 			{
-	// 				// eps_l_th
-	// 				value = epsilon_dev.ref(i,j,k) * W_T_dev.ref(i,j,k) * eta_i;				
-	// 			}
+					// eps_l_th		
+					value += epsilon_dev.ref(i,j,k) * W_T_dev.ref(i,j,k) * (eta_i - k_c_dev.block(i,j,k)[index_nu]);				
+				}
+				else
+				{
+					// eps_l_th
+					value = epsilon_dev.ref(i,j,k) * W_T_dev.ref(i,j,k) * eta_i;				
+				}
 
-	// 			// (eps_c_th + eps_l_th_) / eta_I
-	// 			value /= eta_i;			
-	// 		}
-	// 		else
-	// 		{
-	// 			// get eta_I (!= eta_i)
-	// 			double eta_I = eta_dev.block(i,j,k)[b - local_idx[3]];
+				// (eps_c_th + eps_l_th_) / eta_I
+				value /= eta_i;			
+			}
+			else
+			{
+				// get eta_I (!= eta_i)
+				double eta_I = eta_dev.block(i,j,k)[b - local_idx[3]];
 
-	// 			// eps_l_th / eta_i_l
-	// 			value = eta_i * epsilon_dev.ref(i,j,k) * W_T_dev.ref(i,j,k) / eta_I;	
-	// 		}	
+				// eps_l_th / eta_i_l
+				value = eta_i * epsilon_dev.ref(i,j,k) * W_T_dev.ref(i,j,k) / eta_I;	
+			}	
 
-	// 		// finally se eps_th
-	// 		eps_th_dev.block(i,j,k)[b] = value;	            
-	// 	}	
-	// });
+			// finally se eps_th
+			eps_th_dev.block(i,j,k)[b] = value;	            
+		}	
+	});
 
-	// // fill rhs_ from formal solve with bc
-	// mf_ctx_.formal_solve_global(rhs_field, eps_th_field, 1.0); 	
-	// mf_ctx_.field_to_vec(rhs_field, rhs_);
+	// fill rhs_ from formal solve with bc
+	mf_ctx_.formal_solve_global(rhs_field, eps_th_field, 1.0); 	
+	mf_ctx_.field_to_vec(rhs_field, rhs_);
 
 	if (mpi_rank_ == 0) std::cout << "\n+++++++++++++++++++++++++++++++++++++++++++++\n"; 	
 }
@@ -1400,12 +1411,9 @@ PetscErrorCode UserMult(Mat mat,Vec x,Vec y){
 
   	auto RT_problem = mf_ctx_->RT_problem_;
 
-  	// compute new emission in S_field_ (or first S_vec_?)
+  	// compute new emission in S_field_ 
   	mf_ctx_->update_emission(x);   
-
-  	// copy to field type 
-  	mf_ctx_->vec_to_field(RT_problem->S_field_, RT_problem->S_vec_); 
-
+  	
   	// fill rhs_ from formal solve with zero bc  	
 	mf_ctx_->formal_solve_global(RT_problem->I_field_, RT_problem->S_field_, 0.0);	
 

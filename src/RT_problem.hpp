@@ -34,8 +34,8 @@ public:
     	// TODO: now hardcoded
     	L_ = 1000.0;
     	// L_   = 1.0;
-    	N_x_ = 60;
-    	N_y_ = 60;
+    	N_x_ = 3;
+    	N_y_ = 3;
 
     	// reading some input
     	read_atom(     input_path + "/atom.dat");
@@ -68,9 +68,6 @@ public:
 
 		// init fields
 		allocate_fields();				
-
-		// create petsc vectors
-		create_I_S_vecs();	
 
 		// init atmospheric quantities 
 		allocate_atmosphere();	
@@ -192,12 +189,11 @@ public:
 	size_t local_size_; // == tot_size_ con mpi_size_ = 1
 
 	// unknown quantities 
-	Field_ptr_t I_field_; // intensity 
+	Field_ptr_t I_field_; // intensity     ----------> TODO: this could be removed
 	Field_ptr_t S_field_; // source function
 
-	// PETSc data structures 
+	// PETSc data structure for intensity	
 	Vec I_vec_;
-	Vec S_vec_;
 		
 	// propagation matrix entries 
 	Field_ptr_t eta_field_; 
@@ -280,9 +276,6 @@ private:
 	void allocate_fields();
 	void allocate_atmosphere();
 
-	// create petsc Vecs
-	void create_I_S_vecs();
-	
 	// init fields 
 	void init_field(Field_ptr_t input_field, const Real input_value); // TODO remove?
 	

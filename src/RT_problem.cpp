@@ -497,25 +497,6 @@ void const RT_problem::print_info(){
 	}
 }
 
-void RT_problem::create_I_S_vecs()
-{
-	if (mpi_rank_ == 0) std::cout << "\nCreating PETSc vectors..." << std::endl;
-
-	PetscErrorCode ierr; 
-	
-	auto g_dev = space_grid_->view_device();
-
-	local_size_ = block_size_ * g_dev.dim[0] * g_dev.dim[1] * g_dev.dim[2];
-		
-	ierr = VecCreate(PETSC_COMM_WORLD, &I_vec_);CHKERRV(ierr);	
-	ierr = VecSetSizes(I_vec_, local_size_, tot_size_);CHKERRV(ierr);			
-	ierr = VecSetFromOptions(I_vec_);CHKERRV(ierr);	
-
-	ierr = VecCreate(PETSC_COMM_WORLD, &S_vec_);CHKERRV(ierr);	
-	ierr = VecSetSizes(S_vec_, local_size_, tot_size_);CHKERRV(ierr);			
-	ierr = VecSetFromOptions(S_vec_);CHKERRV(ierr);	
-}
-
 
 void RT_problem::allocate_fields(){
 
@@ -531,6 +512,20 @@ void RT_problem::allocate_fields(){
 		S_field_->  allocate_on_device(); 
 		eta_field_->allocate_on_device(); 
 		rho_field_->allocate_on_device(); 		
+
+		///////////////////////
+
+		if (mpi_rank_ == 0) std::cout << "\nCreating PETSc vector..." << std::endl;
+
+		PetscErrorCode ierr; 
+	
+		auto g_dev = space_grid_->view_device();
+
+		local_size_ = block_size_ * g_dev.dim[0] * g_dev.dim[1] * g_dev.dim[2];
+		
+		ierr = VecCreate(PETSC_COMM_WORLD, &I_vec_);CHKERRV(ierr);	
+		ierr = VecSetSizes(I_vec_, local_size_, tot_size_);CHKERRV(ierr);			
+		ierr = VecSetFromOptions(I_vec_);CHKERRV(ierr);		
 }
 
 void RT_problem::allocate_atmosphere(){

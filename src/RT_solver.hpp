@@ -42,12 +42,11 @@ struct MF_context {
 	// if false linear interpolation is used
 	bool use_log_interpolation_ = false;
 	
-	// // pointer for emission module and offset
-	// std::shared_ptr<rii_include::emission_coefficient_computation> ecc_sh_ptr_;
-	// rii_include::offset_function_cartesian offset_f_;	
-	// rii_include::emission_coefficient_computation::compute_height_function_type epsilon_computation_function_;
-	// rii_include::emission_coefficient_computation::compute_height_function_type epsilon_computation_function_approx_;
-
+	// pointer for emission module and offset
+	std::shared_ptr<rii_include::emission_coefficient_computation_3D> ecc_sh_ptr_;
+	rii_include::emission_coefficient_computation_3D::compute_node_3D_function_type epsilon_fun_; 
+	rii_include::offset_function_cartesian offset_fun_;	
+	
 	// change data format
 	void field_to_vec(const Field_ptr_t field, Vec &v);
 	void vec_to_field(Field_ptr_t field, const Vec &v);
@@ -151,29 +150,29 @@ public:
 		
 		start = MPI_Wtime();							
 
-		// if (mpi_rank_ == 0) std::cout << "\nStart linear solve..." << std::endl;	
-		// // ierr = KSPSetInitialGuessNonzero(ksp_solver_, PETSC_TRUE);CHKERRV(ierr);	/// -------> TODO check
-		// ierr = KSPSolve(ksp_solver_, rhs_, RT_problem_->I_vec_);CHKERRV(ierr);
+		if (mpi_rank_ == 0) std::cout << "\nStart linear solve..." << std::endl;	
+		// ierr = KSPSetInitialGuessNonzero(ksp_solver_, PETSC_TRUE);CHKERRV(ierr);	/// -------> TODO check
+		ierr = KSPSolve(ksp_solver_, rhs_, RT_problem_->I_vec_);CHKERRV(ierr);
 
-		// MPI_Barrier(MPI_COMM_WORLD); end = MPI_Wtime();
-		// if (mpi_rank_ == 0) std::cout << "Solve time (s) = " << end - start << std::endl;
-
-		/////////////////////////////////////////////////////////////
-		// test formal solver
-		mf_ctx_.apply_bc(RT_problem_->I_field_, 1.0);	
-
-		// RT_problem_->I_field_->write("I_in.raw");		
-
-		// ierr = VecSet(RT_problem_->S_vec_, 1.0);CHKERRV(ierr);
-		// mf_ctx_.vec_to_field(RT_problem_->S_field_, RT_problem_->S_vec_); 		
-				
-		if (mpi_rank_ == 0) std::cout << "Global formal solve " << std::endl;
-		mf_ctx_.formal_solve_global(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);		
-			
 		MPI_Barrier(MPI_COMM_WORLD); end = MPI_Wtime();
 		if (mpi_rank_ == 0) std::cout << "Solve time (s) = " << end - start << std::endl;
+
+		// /////////////////////////////////////////////////////////////
+		// // test formal solver
+		// mf_ctx_.apply_bc(RT_problem_->I_field_, 1.0);	
+
+		// // RT_problem_->I_field_->write("I_in.raw");		
+
+		// // ierr = VecSet(RT_problem_->S_vec_, 1.0);CHKERRV(ierr);
+		// // mf_ctx_.vec_to_field(RT_problem_->S_field_, RT_problem_->S_vec_); 		
+				
+		// if (mpi_rank_ == 0) std::cout << "Global formal solve " << std::endl;
+		// mf_ctx_.formal_solve_global(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);		
+			
+		// MPI_Barrier(MPI_COMM_WORLD); end = MPI_Wtime();
+		// if (mpi_rank_ == 0) std::cout << "Solve time (s) = " << end - start << std::endl;
 	
-		// // RT_problem_->I_field_->write("I_out.raw");			
+		// // // RT_problem_->I_field_->write("I_out.raw");			
 	}
 	
 private:	
