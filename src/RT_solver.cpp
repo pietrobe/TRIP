@@ -742,7 +742,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 {
 	if (mpi_rank_ == 0) std::cout << "\nStart global formal solution..." << std::endl;
 
-    // exchange S ---> TODO subset?
+    // exchange S ---------------------> TODO subset?
     S_field->exchange_halos(); 
     
 	// init some quantities 
@@ -804,12 +804,19 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 
 	// Initialize slice halo handler
     sgrid::SliceHalo<Field_t> halos_xy(*I_field, 2);    
+    sgrid::SideHalo<Field_t>  halos(*I_field);
+    halos.init(2);
 
     // impose boundary conditions 
     apply_bc(I_field, I0);     
 
 	for (int rank = 0; rank < mpi_size_; ++rank) 
-	{			        
+	{		
+        // communication in both directions    // TODO: can do less 
+        I_field->synch_device_to_host();    
+        halos.exchange();            
+        I_field->synch_host_to_device(); 
+        
 		// loop over spatial points
 		for (int k = k_start; k < k_end; ++k)					
 		{						
@@ -818,7 +825,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 			{
 				halos_xy.exchange(k);
 				halos_xy.exchange(k_end - k); 	
-			}			            
+			}	          
 
 			for (int j = j_start; j < j_end; ++j)
 			{
@@ -1052,11 +1059,8 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 						}
 					}
 				}
-			}		
-		}                    
-		
-		// communication
-		if (mpi_size_ > 1) I_field->exchange_halos(); // --------> TODO	only vertical
+			}	            
+		}                    			
 	}
 }
 
@@ -1341,30 +1345,26 @@ PetscErrorCode UserMult(Mat mat, Vec x, Vec y){
 
   	auto RT_problem = mf_ctx_->RT_problem_;
 
-    // Real start = MPI_Wtime();       
+    Real start = MPI_Wtime();       
 
     // compute new emission in S_field_ 
     mf_ctx_->update_emission(x);  
 
-    // MPI_Barrier(MPI_COMM_WORLD); Real end = MPI_Wtime();       
-    // if (RT_problem->mpi_rank_ == 0) printf("update_emission:\t\t%g (seconds)\n", end - start);              
-    // start = MPI_Wtime();       
+    MPI_Barrier(MPI_COMM_WORLD); Real end = MPI_Wtime();       
+    if (RT_problem->mpi_rank_ == 0) printf("update_emission:\t\t%g (seconds)\n", end - start);              
+    start = MPI_Wtime();       
   	    
   	// fill rhs_ from formal solve with zero bc  	
 	mf_ctx_->formal_solve_global(RT_problem->I_field_, RT_problem->S_field_, 0.0);	
 
-    // MPI_Barrier(MPI_COMM_WORLD); end = MPI_Wtime();       
-    // if (RT_problem->mpi_rank_ == 0) printf("formal_solve_global:\t\t%g (seconds)\n", end - start);              
-    // start = MPI_Wtime();       
+    MPI_Barrier(MPI_COMM_WORLD); end = MPI_Wtime();       
+    if (RT_problem->mpi_rank_ == 0) printf("formal_solve_global:\t\t%g (seconds)\n", end - start);              
     
 	// copy intensity into petscvec format
 	mf_ctx_->field_to_vec(RT_problem->I_field_, y);
 
 	// update I_out = I_in - I_fs (y = x - y)
 	ierr = VecAYPX(y, -1.0, x);CHKERRQ(ierr);
-
-    // MPI_Barrier(MPI_COMM_WORLD); end = MPI_Wtime();       
-    // if (RT_problem->mpi_rank_ == 0) printf("update:\t\t%g (seconds)\n", end - start);              
 
   	return ierr;
 }

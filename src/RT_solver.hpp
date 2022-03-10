@@ -174,18 +174,18 @@ public:
 	{		
 		Real start = MPI_Wtime();		
 
-		// set source fun
-		auto S_dev = RT_problem_->S_field_->view_device();
+		// // set source fun
+		// auto S_dev = RT_problem_->S_field_->view_device();
 
-	    sgrid::parallel_for("INIT S", RT_problem_->space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
-	    {         
-	        auto *block = S_dev.block(i, j, k);
+	 //    sgrid::parallel_for("INIT S", RT_problem_->space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
+	 //    {         
+	 //        auto *block = S_dev.block(i, j, k);
 	         
-	        for (int b = 0; b < (int)RT_problem_->block_size_; ++b) 
-	        {
-	        	block[b] = 1.0;        	
-	        }
-	    });
+	 //        for (int b = 0; b < (int)RT_problem_->block_size_; ++b) 
+	 //        {
+	 //        	block[b] = 1.0;        	
+	 //        }
+	 //    });
 
 		if (mpi_rank_ == 0) std::cout << "Start formal solve..." << std::endl;
 		mf_ctx_.formal_solve_global(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);		
