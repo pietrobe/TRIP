@@ -79,4 +79,6 @@ std::vector<double> refine_vector(const std::vector<double> &v);
 std::vector<double> refine_vector_blocked(const std::vector<double> &v, const size_t block_size);
 std::vector<double> refine_vector_blocked2(const std::vector<double> &v, const size_t block_size_fn);
 
+double pow_gen(const double x, const double exponent);
+
 #endif 

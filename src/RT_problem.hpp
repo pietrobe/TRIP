@@ -20,7 +20,7 @@ public:
 	// constructor
 	RT_problem(input_string input_path, const size_t N_theta, const size_t N_chi)			   
 	{
-		Real start_total = MPI_Wtime();
+		Real start = MPI_Wtime();
 
 		// assign MPI varaibles 
     	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank_);
@@ -28,14 +28,12 @@ public:
 
     	if (mpi_rank_ == 0) std::cout << "\n~~~~~~ MPI size = " << mpi_size_ << " ~~~~~~" << std::endl;		
     	if (mpi_rank_ == 0) std::cout << "\n=========== Reading input files ===========\n" << std::endl;				
-
-    	Real start = MPI_Wtime();
-
+    
     	// TODO: now hardcoded
-    	L_ = 1000.0;
+    	L_ = 100.0;
     	// L_   = 1.0;
-    	N_x_ = 3;
-    	N_y_ = 3;
+    	N_x_ = 1;
+    	N_y_ = 1;
 
     	// reading some input
     	read_atom(     input_path + "/atom.dat");
@@ -49,22 +47,38 @@ public:
 		// init grid
 		space_grid_ = std::make_shared<Grid_t>();
 
-		if (only_vertical_decomposition_)
-		{
-			space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0}, {1, 1, mpi_size_});
-		}
-		else
-		{
-			space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0});
-		}
- 		
-		MPI_Barrier(space_grid_->raw_comm());
-		Real end = MPI_Wtime();
-	    Real user_time = end - start;
+		// menage grid distribution
+		only_vertical_decomposition_ = (mpi_size_ <= N_z_) ? true : false; 
 
-	    if (mpi_rank_ == 0) printf("Init grid:\t%g (seconds)\n", user_time);
+		int mpi_size_x = 1;
+		int mpi_size_y = 1;
+		int mpi_size_z = mpi_size_;
 
-	    start = MPI_Wtime();
+		if (not only_vertical_decomposition_)
+		{
+			const double mpi_size_xy = mpi_size_ / N_z_;
+
+			if (std::floor(mpi_size_xy) != mpi_size_xy) std::cout << "ERROR: problem with domain decomposition: mpi_size_ / N_z_ not integer!" << std::endl;
+
+			const double mpi_size_x_and_y = std::sqrt(mpi_size_xy);
+
+			if (std::floor(mpi_size_x_and_y) != mpi_size_x_and_y) std::cout << "ERROR: problem with domain decomposition: sqrt(mpi_size_xy) not integer!" << std::endl;
+
+			mpi_size_x = (int) mpi_size_x_and_y;
+			mpi_size_y = (int) mpi_size_x_and_y;
+
+			mpi_size_z = N_z_;	
+		}
+
+		// print some output
+		if (mpi_rank_ == 0) 
+		{
+			std::cout << "\nmpi_size_x = " << mpi_size_x << std::endl;
+			std::cout <<   "mpi_size_y = " << mpi_size_y << std::endl;
+			std::cout <<   "mpi_size_z = " << mpi_size_z << std::endl << std::endl;
+		}
+
+		space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0}, {mpi_size_x, mpi_size_y, mpi_size_z});		 
 
 		// init fields
 		allocate_fields();				
@@ -80,49 +94,14 @@ public:
 		read_continumm_1D(input_path + "/continuum/continuum_scat_opac.dat", 
 						  input_path + "/continuum/continuum_tot_opac.dat",
 						  input_path + "/continuum/continuum_therm_emiss.dat");
-
-		MPI_Barrier(space_grid_->raw_comm());
-	    end = MPI_Wtime();
-	    user_time = end - start;
-	    if (mpi_rank_ == 0) printf("Allocate:\t%g (seconds)\n", user_time);
-		start = MPI_Wtime();
-
+		
 		// precompute
 		set_up();
-
-		MPI_Barrier(space_grid_->raw_comm());
-	    end = MPI_Wtime();
-	    user_time = end - start;
-	    if (mpi_rank_ == 0) printf("Set up:\t%g (seconds)\n", user_time);
-    	start = MPI_Wtime();
-
-    	I_field_->exchange_halos();    	
-    	S_field_->exchange_halos();    	
-
-	    MPI_Barrier(space_grid_->raw_comm());
-
-	    end = MPI_Wtime();
-	    user_time = end - start;
-
-	    if (mpi_rank_ == 0) printf("Exchange:\t\t%g (seconds)\n", user_time);	      
-
+		
 	    print_info();
 
-	   	MPI_Barrier(space_grid_->raw_comm());
-	    end = MPI_Wtime();
-	    user_time = end - start_total;
-	    if (mpi_rank_ == 0) printf("Total set up:\t\t%g (seconds)\n", user_time);	      
-
-		// start = MPI_Wtime();
-
-		// eta_field_->write("eta.raw");		
-		// T_->write("T.raw");				
-
-		// MPI_Barrier(space_grid_->raw_comm());
-		// end = MPI_Wtime();
-		// user_time = end - start;
-
-		// if (mpi_rank_ == 0) printf("Output Time:\t\t%g (seconds)\n", user_time);		   
+	   	MPI_Barrier(space_grid_->raw_comm()); Real end = MPI_Wtime(); 	    
+	    if (mpi_rank_ == 0) printf("Set up time:\t\t%g (seconds)\n", end - start);	      		
 	}
 
 	// convert block index to to local ones = [j_theta, k_chi, n_nu, i_stokes]
@@ -145,13 +124,23 @@ public:
 
 	// convert local indeces to block one (of fields) for the first Stokes parameter and vice versa
 	inline size_t local_to_block(const size_t j, const size_t k, const size_t n) { return 4 * ( N_nu_ * ( N_chi_ * j + k ) + n); }
+
+	// print I_field on surface 
+	void const print_surface_profile(const Field_ptr_t field, 
+									 const int i_stoke = 0, const int i_space = 0, const int j_space = 0, 
+									 const int j_theta = 0, const int k_chi = 0);
+
+
+	void const print_profile(const Field_ptr_t field, 
+							 const int i_stoke = 0, const int i_space = 0, const int j_space = 0, const int k_space = 0,
+							 const int j_theta = 0, const int k_chi = 0);
 		
 	// MPI varables
 	int mpi_rank_;
 	int mpi_size_;	
 
 	// decompostion in planes (Jiri method)
-	bool only_vertical_decomposition_ = true;
+	bool only_vertical_decomposition_;
 
 	// flag to enable continuum 
 	bool enable_continuum_ = true;
@@ -189,7 +178,7 @@ public:
 	size_t local_size_; // == tot_size_ con mpi_size_ = 1
 
 	// unknown quantities 
-	Field_ptr_t I_field_; // intensity     ----------> TODO: this could be removed
+	Field_ptr_t I_field_; // intensity     
 	Field_ptr_t S_field_; // source function
 
 	// PETSc data structure for intensity	
@@ -239,6 +228,8 @@ public:
 	inline double atomic_Aul()  const { return this->Aul_; }
 
 	inline Field_ptr_t get_D2() const { return this->D2_; }
+
+	bool field_is_zero(const Field_ptr_t field);
 
 private:
 
@@ -306,7 +297,7 @@ private:
 	void set_up();
 	
 	// print infos on screen
-	void const print_info();
+	void const print_info();	
 };
 
 #endif 

@@ -23,11 +23,11 @@ void MF_context::field_to_vec(const Field_ptr_t field, Vec &v)
 	const int j_end = j_start + g_dev.dim[1];
 	const int k_end = k_start + g_dev.dim[2];	
 
-	int istart, iend, row;
+	int istart, row;
 
 	double value;
 	
-	ierr = VecGetOwnershipRange(v, &istart, &iend);CHKERRV(ierr);	
+	ierr = VecGetOwnershipRange(v, &istart, NULL);CHKERRV(ierr);	
 
 	int counter = 0;
 
@@ -37,14 +37,14 @@ void MF_context::field_to_vec(const Field_ptr_t field, Vec &v)
 		{
 			for (int i = i_start; i < i_end; ++i)				
 			{
-				for (int b = 0; b < (int)block_size; b = b + 4) 
+				for (int b = 0; b < (int)block_size; b++) 
 				{
 					// set row index and correposnding entry
 					row = istart + counter;
 
 					value = f_dev.block(i, j, k)[b];
 
-					ierr = VecSetValue(v, row, f_dev.block(i,j,k)[b], INSERT_VALUES);CHKERRV(ierr); 
+					ierr = VecSetValue(v, row, value, INSERT_VALUES);CHKERRV(ierr); 
 
 					counter++;
 				}							
@@ -80,11 +80,11 @@ void MF_context::vec_to_field(Field_ptr_t field, const Vec &v)
 	const int j_end = j_start + g_dev.dim[1];
 	const int k_end = k_start + g_dev.dim[2];	
 
-	int istart, iend, row;
+	int istart, row;
 
 	double value;
 	
-	ierr = VecGetOwnershipRange(v, &istart, &iend);CHKERRV(ierr);	
+	ierr = VecGetOwnershipRange(v, &istart, NULL);CHKERRV(ierr);	
 
 	int counter = 0;
 
@@ -94,7 +94,7 @@ void MF_context::vec_to_field(Field_ptr_t field, const Vec &v)
 		{
 			for (int i = i_start; i < i_end; ++i)				
 			{
-				for (int b = 0; b < (int)block_size; b = b + 4) 
+				for (int b = 0; b < (int)block_size; b++) 
 				{
 					// set row index and correposnding entry
 					row = istart + counter;					
@@ -113,17 +113,15 @@ void MF_context::vec_to_field(Field_ptr_t field, const Vec &v)
 
 void MF_context::apply_bc(Field_ptr_t I_field, const Real I0){
 
-	if (mpi_rank_ == 0) std::cout << "\nApplying BC...";
-
 	// init some quantities 
 	const auto N_z        = RT_problem_->N_z_;
 	const auto block_size = RT_problem_->block_size_;
 	const auto space_grid = RT_problem_->space_grid_;	
 
 	// apply BC
-	auto W_T_dev     = RT_problem_->W_T_->view_device();
-	auto I_field_dev =           I_field->view_device();
-	auto g_dev       =        space_grid->view_device();
+	const auto W_T_dev     = RT_problem_->W_T_->view_device();
+	const auto g_dev       =        space_grid->view_device();
+    auto I_field_dev       =           I_field->view_device();        
 
 	sgrid::parallel_for("APPLY BC", space_grid->md_range(), SGRID_LAMBDA(int i, int j, int k) {
 	
@@ -132,18 +130,16 @@ void MF_context::apply_bc(Field_ptr_t I_field, const Real I0){
 		Real W_T_deep; 
 
 		// just in max depth
-		if (k_global == N_z - 1) 
+		if (k_global == N_z - 1)         
 		{		
 			W_T_deep = I0 * W_T_dev.ref(i,j,k);
-
+            
 			for (int b = 0; b < (int)block_size; b = b + 4) 
 			{
 				I_field_dev.block(i,j,k)[b] = W_T_deep; 
 			}
 		}
 	});	
-
-    if (mpi_rank_ == 0) std::cout << "done" << std::endl;										
 }
 
 
@@ -221,6 +217,7 @@ void MF_context::find_intersection(double theta, double chi, const double Z_down
     T->w[2] = norm * (u-u1) * (v-v1);
     T->w[3] = norm * (u2-u) * (v-v1);
 
+    // sanity check
     for (int i = 0; i < 4; ++i)
     {
     	if (T->w[i] < 0 or T->w[i] > 1)
@@ -235,6 +232,10 @@ void MF_context::find_intersection(double theta, double chi, const double Z_down
     		std::cout << "i = " << i << std::endl;         	
     		std::cout << "w = " << T->w[i] << std::endl;         	
     	}  
+
+        const double w_sum = T->w[0] + T->w[1] + T->w[2] + T->w[3];
+
+        if (std::abs(w_sum - 1.0) > 1e-15) std::cout << "WARNING: w_sum - 1 = " << w_sum - 1.0 << ", it should be 0!" << std::endl;            
     }
 }
 
@@ -426,6 +427,9 @@ std::vector<t_intersect> MF_context::find_prolongation(double theta, double chi,
 
     is.push_back(is_tmp);
 
+    // put initial condition in the first cell         
+    std::reverse(is.begin(),is.end()); 
+
     return is;
 }
 
@@ -447,7 +451,10 @@ void MF_context::get_2D_weigths(const double x, const double y, double *w)
 std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T, 
                                                const Field_ptr_t I_field, const Field_ptr_t S_field, 
                                                const int i, const int j, const int k, const int block_index)
-{     
+{             
+
+    if (use_log_interpolation_) std::cout << "WARNING: log_interpolation not suppoerted for long_ray_steps()!" << std::endl;
+
     const auto N_x = RT_problem_->N_x_;
     const auto N_y = RT_problem_->N_y_;
 
@@ -562,7 +569,7 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
 
     				// get eta and rho
     				etas[i_stokes] += weight * eta_dev.block(i_intersect,j_intersect,k_intersect)[b_index]; 
-    				rhos[i_stokes] += weight * rho_dev.block(i_intersect,j_intersect,k_intersect)[b_index];
+    				rhos[i_stokes] += weight * rho_dev.block(i_intersect,j_intersect,k_intersect)[b_index];                    
 
     				// set S2
     				S2[i_stokes] += weight * S_dev.block(i_intersect,j_intersect,k_intersect)[b_index];															
@@ -593,287 +600,151 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
 
 		if (dtau > 0 ) std::cout << "ERROR in dtau sign" << std::endl;		
         
-		formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);	
+		formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);	                                                           
 	}	
                                                                                                                     
     return I2;
 }
 
-void MF_context::formal_solve_local(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0)
-{
 
-	// S_field->exchange_halos(); to include in update S 			
+// given a intersection type with N cells and grid indeces ijk, get I1, S1, K1 i.e. quantities needed for the last step of formal solution
+std::vector<double> MF_context::single_long_ray_step(const std::vector<t_intersect> T, 
+                                               const Field_ptr_t I_field, const Field_ptr_t S_field, 
+                                               const int i, const int j, const int k, const int block_index)
+{             
+    const auto N_x = RT_problem_->N_x_;
+    const auto N_y = RT_problem_->N_y_;
 
-	if (mpi_rank_ == 0) std::cout << "\nStart local formal solution..." << std::endl;
+    const auto eta_dev = RT_problem_->eta_field_->view_device();
+    const auto rho_dev = RT_problem_->rho_field_->view_device();
 
-	// init some quantities 
-	const auto N_theta = RT_problem_->N_theta_;
-	const auto N_chi   = RT_problem_->N_chi_;
-	const auto N_nu    = RT_problem_->N_nu_;
-	const auto N_x     = RT_problem_->N_x_;
-	const auto N_y     = RT_problem_->N_y_;
-	const auto N_z     = RT_problem_->N_z_;
-	const auto N_s     = RT_problem_->N_s_;
+    const auto I_dev = I_field->view_device();     
+    const auto S_dev = S_field->view_device(); 
 
-	const auto vertical_decomposition = RT_problem_->only_vertical_decomposition_;
+    const auto vertical_decomposition = RT_problem_->only_vertical_decomposition_;
+    
+    // coeff trap + cm conversion = - 0.5 * 1e5;
+    const double coeff = -50000;
+    
+    int i_intersect, j_intersect, k_intersect, b_index;
 
-	const auto block_size = RT_problem_->block_size_;
-	const auto tot_size   = RT_problem_->tot_size_;
-	
-	const auto mu_grid    = RT_problem_->mu_grid_;
-	const auto theta_grid = RT_problem_->theta_grid_;	
-	const auto chi_grid   = RT_problem_->chi_grid_;	
-	const auto depth_grid = RT_problem_->depth_grid_;	
+    double eta_I_1, weight;
+    double total_distance = 0;
 
-	const auto L = RT_problem_->L_;	
-	const auto space_grid = RT_problem_->space_grid_;	
+    std::vector<double> I1(4), I2(4), S1(4), S2(4), etas(4), rhos(4), K1(16), K2(16);
+   
+    // compute total distance 
+    for (int cell = 0; cell < T.size(); ++cell)
+    {                           
+       total_distance += T[cell].distance;
+    }   
 
-	const auto eta_dev = RT_problem_->eta_field_->view_device();
-	const auto rho_dev = RT_problem_->rho_field_->view_device();
+    // quantities in (1)  
+    for (int i_stokes = 0; i_stokes < 4; ++i_stokes) 
+    {
+        if (use_log_interpolation_)
+        {
+            etas[i_stokes] = 1.0;
+            rhos[i_stokes] = 1.0;
+            S1[i_stokes]   = 1.0;
+            I1[i_stokes]   = 1.0;                                           
+        }
+        else // linear
+        {
+            etas[i_stokes] = 0;
+            rhos[i_stokes] = 0;
+            S1[i_stokes]   = 0;
+            I1[i_stokes]   = 0;
+        }
+    }
 
-	auto I_dev = 	I_field->view_device();		
-	auto S_dev = 	S_field->view_device();	
-	auto g_dev = space_grid->view_device();
+    const double debug_value = std::abs(T[0].iz[0] + T[0].iz[1] + T[0].iz[2] + T[0].iz[3]);
 
-	// indeces
-	const int i_start = g_dev.margin[0]; 
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+    if (debug_value != 4) std::cout << "ERROR in single_long_ray_step()" << std::endl;
 
-	if (i_start > 1 or j_start > 1 or k_start > 1) std::cout << "WARNING: tested only for margin = 1!"<< std::endl;
+    for (int face_vertices = 0; face_vertices < 4; ++face_vertices)
+    {
+        i_intersect = i + T[0].ix[face_vertices];
+        j_intersect = j + T[0].iy[face_vertices];
+        k_intersect = k - T[0].iz[face_vertices]; 
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
-	const int k_end = k_start + g_dev.dim[2];	
+        // correct for periodic boundary
+        if (vertical_decomposition)
+        {
+            i_intersect = i_intersect % N_x; 
+            j_intersect = j_intersect % N_y;
+            if (i_intersect == 0) i_intersect = N_x;
+            if (j_intersect == 0) j_intersect = N_y;                                        
+        }                                                                           
 
-	int i_aux, j_aux, k_aux, k_global, i_intersect, j_intersect, k_intersect, b_start, b_index;
+        weight = T[0].w[face_vertices];  
+        
+        for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+        {
+            b_index = block_index + i_stokes;                                       
 
-	// misc coeffs
-	double theta, chi, mu, weight, dtau, eta_I_1, Z_down, Z_top;	
+            if (use_log_interpolation_)
+            {
+                // get eta and rho                                                                                                    
+                etas[i_stokes] *= pow_gen(eta_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight);                                                     
+                rhos[i_stokes] *= pow_gen(rho_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight);
+                
+                // set S1 and I1
+                S1[i_stokes] *= pow_gen(S_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight);
+                I1[i_stokes] *= pow_gen(I_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight);
+                
+            }
+            else
+            {
+                // get eta and rho
+                etas[i_stokes] += weight * eta_dev.block(i_intersect,j_intersect,k_intersect)[b_index]; 
+                rhos[i_stokes] += weight * rho_dev.block(i_intersect,j_intersect,k_intersect)[b_index];
 
-	bool boundary;
+                // set S1 and I1
+                S1[i_stokes] += weight * S_dev.block(i_intersect,j_intersect,k_intersect)[b_index];                                             
+                I1[i_stokes] += weight * I_dev.block(i_intersect,j_intersect,k_intersect)[b_index];                                                     
+            }                                   
+        }   
+    }
 
-	// quantities depending on spatial point i
-	std::vector<double> I1(4), I2(4), S1(4), S2(4), etas(4), rhos(4), K1(16), K2(16);
+    K1 = assemble_propagation_matrix_scaled(etas, rhos);
 
-	// intersection object
-	t_intersect intersection_data;
+    // save for later use
+    eta_I_1 = etas[0];
 
-	// minus for optical depth conversion, trap rule and conversion to cm
-	const double coeff = - 0.5 * 1e5;
+    // quantities in (2)
+    for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+    {
+        b_index = block_index + i_stokes;                                       
 
-	const int block_size_half = block_size/2;
+        // get eta and rho
+        etas[i_stokes] = eta_dev.block(i,j,k)[b_index]; 
+        rhos[i_stokes] = rho_dev.block(i,j,k)[b_index];
 
-	// Initialize slice halo handler
-    sgrid::SliceHalo<Field_t> halos_xy(*I_field, 2);   
+        // set S2
+        S2[i_stokes] = S_dev.block(i,j,k)[b_index];                                                         
+    }               
 
-    // impose boundary conditions
-    apply_bc(I_field, I0);     
+    K2 = assemble_propagation_matrix_scaled(etas, rhos);    
 
-	for (int rank = 0; rank < mpi_size_; ++rank)
-	{			
-		// loop over spatial points
-		for (int k = k_start; k < k_end; ++k)					
-		{													
-			// exchange (i,j)-plane boundary info 
-			if (not vertical_decomposition) 
-			{
-				halos_xy.exchange(k);
-				halos_xy.exchange(k_end - k); 	
-			}			
-			
-			for (int j = j_start; j < j_end; ++j)
-			{
-				for (int i = i_start; i < i_end; ++i)
-				{
-					// loop over directions (TODO could be parallel)
-					for (int j_theta = 0; j_theta < (int)N_theta; ++j_theta)
-					{
-						theta = theta_grid[j_theta];
-						mu    = mu_grid[j_theta];						
+    // optical depth step                               
+    const double dtau = coeff * (eta_I_1 + etas[0]) * total_distance;                                  
 
-						k_aux = (mu > 0.0) ? k_end - k : k; 
-
-						// depth index
-						k_global = g_dev.global_coord(2, k_aux);	
-
-						boundary = (k_global == 0 and mu < 0) or (k_global == (int)N_z - 1 and mu > 0);
-						
-						if (not boundary)
-						{						
-							// set vertical box size
-							Z_down = (mu > 0) ? depth_grid[k_global] -  depth_grid[k_global + 1] : 1.0;
-							Z_top  = (mu < 0) ? depth_grid[k_global - 1] - depth_grid[k_global]  : 1.0;						
-
-							for (int k_chi = 0; k_chi < (int)N_chi; ++k_chi)
-							{			
-								chi = chi_grid[k_chi];
-							
-								i_aux = (cos(chi) < 0.0) ? i_end - i : i;	
-								j_aux = (sin(chi) < 0.0) ? j_end - j : j;
-
-								// compute interesection point and init weights
-								find_intersection(theta, chi, Z_down, Z_top, L, &intersection_data);	
-					
-								// loop on freqs
-								for (int n = 0; n < (int)N_nu; ++n)
-								{
-									// block index
-									b_start = RT_problem_->local_to_block(j_theta, k_chi, n); 
-
-									// solve ODE
-									
-									// set S2
-									for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
-									{				
-										b_index = b_start + i_stokes;
-
-										// get eta and rho
-										etas[i_stokes] = eta_dev.block(i_aux,j_aux,k_aux)[b_index];						
-										rhos[i_stokes] = rho_dev.block(i_aux,j_aux,k_aux)[b_index];		
-										
-										// set S2 with values in the current grid nodes 							
-										S2[i_stokes] = S_dev.block(i_aux,j_aux,k_aux)[b_index];									
-									}
-
-									// for optical depth conversion
-									eta_I_1 = etas[0];		
-								
-									K2 = assemble_propagation_matrix_scaled(etas, rhos);
-																		
-									// set etas, rhos and S1 and I1 to zero
-									for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
-									{									
-										if (use_log_interpolation_)
-										{
-											etas[i_stokes] = 1;
-											rhos[i_stokes] = 1;
-											S1[i_stokes]   = 1;
-											I1[i_stokes]   = 1;											
-										}
-										else // linear
-										{
-											etas[i_stokes] = 0;
-											rhos[i_stokes] = 0;
-											S1[i_stokes]   = 0;
-											I1[i_stokes]   = 0;
-										}																	
-									}
-
-									// loop over the four vertex of the intersection face
-									for (int face_vertices = 0; face_vertices < 4; ++face_vertices)
-									{
-										i_intersect = i_aux + intersection_data.ix[face_vertices];
-										j_intersect = j_aux + intersection_data.iy[face_vertices];
-										k_intersect = k_aux - intersection_data.iz[face_vertices]; // minus because k increases going downwards		
-																				
-										// correct for periodic boundary
-										if (vertical_decomposition)
-										{
-											if (i_intersect == 0)            i_intersect = N_x; 
-											if (j_intersect == 0)            j_intersect = N_y;
-											if (i_intersect == (int)N_x + 1) i_intersect = 1;
-											if (j_intersect == (int)N_y + 1) j_intersect = 1;	
-										}										
-
-										weight = intersection_data.w[face_vertices];
-										
-										for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
-										{
-											b_index = b_start + i_stokes;	
-
-											if (use_log_interpolation_)
-											{
-												// get eta and rho
-												etas[i_stokes] *= pow(eta_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight); 
-												rhos[i_stokes] *= pow(rho_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight);
-
-												// set S1 and I1
-												S1[i_stokes] *= pow(S_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight);												
-												I1[i_stokes] *= pow(I_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight);																														
-											}
-											else
-											{
-												// get eta and rho
-												etas[i_stokes] += weight * eta_dev.block(i_intersect,j_intersect,k_intersect)[b_index]; 
-												rhos[i_stokes] += weight * rho_dev.block(i_intersect,j_intersect,k_intersect)[b_index];
-
-												// set S1 and I1
-												S1[i_stokes] += weight * S_dev.block(i_intersect,j_intersect,k_intersect)[b_index];												
-												I1[i_stokes] += weight * I_dev.block(i_intersect,j_intersect,k_intersect)[b_index];																														
-											}									
-										}
-									}								
-																	
-									K1 = assemble_propagation_matrix_scaled(etas, rhos);
-									
-									// optical depth step								
-									dtau = coeff * (eta_I_1 + etas[0]) * intersection_data.distance;
-
-									if (dtau > 0 ) std::cout << "ERROR in dtau sign" << std::endl;							
-
-									formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);	
-									
-									// // test
-									// if (j_theta == N_theta/2 and k_chi == 0 and n == 0 and rank == mpi_size_ - 1)
-									// {									
-									// 	// std::cout << "I1 = " << I1[0] << std::endl;		
-									// 	if (i == 1 and j == 1 and k == k_end - 1)
-									// 	{
-									// 		// std::cout << intersection_data.distance << std::endl;	
-									// 		// std::cout << "coeff = " << coeff << std::endl;	
-									// 		// std::cout << "eta_I_1 = " << eta_I_1 << std::endl;	
-									// 		// std::cout << "etas[0] = " << etas[0] << std::endl;	
-									// 		// std::cout << "intersection_data.distance = " << intersection_data.distance << std::endl;					
-											
-									// 		std::cout << "I1 = " << I1[0] << std::endl;	
-									// 		std::cout << "I2 = " << I2[0] << std::endl;		
-									// 		// std::cout << "Z_down = " << Z_down << std::endl;					
-									// 		// std::cout << "Z_top = "  << Z_top  << std::endl;					
-									// 		// std::cout << "L = "  << L  << std::endl;					
-									// 		// std::cout << "theta = "  << theta  << std::endl;	
-									// 		// std::cout << "chi = "  << chi  << std::endl;	
-											
-									// 		// std::cout << "S1 = " << std::endl;
-									// 		// for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S1[i_stokes] << std::endl;
-
-									// 		// std::cout << "S2 = " << std::endl;
-									// 		// for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S2[i_stokes] << std::endl;
-																		
-									// 		// std::cout << "K1 = " << std::endl;
-									// 		// for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K1[i_stokes] << std::endl;
-
-									// 		// std::cout << "K2 = " << std::endl;
-									// 		// for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K2[i_stokes] << std::endl;												
-									// 	} 									
-									// }
-
-									// write result
-									for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
-									{							
-										I_dev.block(i_aux,j_aux,k_aux)[b_start + i_stokes] = I2[i_stokes];										
-									}
-								}						
-							}
-						}
-					}
-				}
-			}		
-		}
-		
-		// communication
-		if (mpi_size_ > 1) I_field->exchange_halos(); 					
-	}
+    if (dtau > 0 ) std::cout << "ERROR in dtau sign" << std::endl;          
+    
+    formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);
+                                                                                                                            
+    return I2;
 }
- 				
+
 
 void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0)
 {
-
-	// S_field->exchange_halos(); to include in update S 			
-
 	if (mpi_rank_ == 0) std::cout << "\nStart global formal solution..." << std::endl;
 
+    // exchange S ---> TODO subset?
+    S_field->exchange_halos(); 
+    
 	// init some quantities 
 	const auto N_theta = RT_problem_->N_theta_;
 	const auto N_chi   = RT_problem_->N_chi_;
@@ -926,7 +797,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 
 	// intersection object
 	t_intersect intersection_data;        
- std::vector<t_intersect> intersection_data_long_ray;
+    std::vector<t_intersect> intersection_data_long_ray;
 
 	// minus for optical depth conversion, trap rule and conversion to cm (- 0.5 * 1e5)
 	const double coeff = -50000;
@@ -936,9 +807,9 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 
     // impose boundary conditions 
     apply_bc(I_field, I0);     
-    
-	for (int rank = 0; rank < mpi_size_; ++rank)
-	{			
+
+	for (int rank = 0; rank < mpi_size_; ++rank) 
+	{			        
 		// loop over spatial points
 		for (int k = k_start; k < k_end; ++k)					
 		{						
@@ -947,7 +818,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 			{
 				halos_xy.exchange(k);
 				halos_xy.exchange(k_end - k); 	
-			}			
+			}			            
 
 			for (int j = j_start; j < j_end; ++j)
 			{
@@ -988,18 +859,23 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 									     		  intersection_data.iz[0] == intersection_data.iz[3];
 
                                 // if long ray start in a different processor use short ray
-								long_ray = (not horizontal_face) and (i == i_start or j == j_start) and (vertical_decomposition);								     		  	                                
+                                if (use_always_long_ray_)
+                                {
+                                    long_ray = (not horizontal_face) and vertical_decomposition;
+                                }
+                                else
+                                {
+                                    long_ray = (not horizontal_face) and (vertical_decomposition) and (i == i_start or j == j_start);     
+                                }							                                	  	                     
                                 								
 								// check if a vertical face is intersected and use long ray
 								if (long_ray)																																															
-								{				                                        
-                                    // intersection_data_long_ray = find_prolongation(theta, chi, dz, L);                                     
+								{				                                                                                        
                                     intersection_data_long_ray = find_prolongation(theta, chi, dz, L);  
                                     
                                     // check number of cells traversed by the long ray
 									if (intersection_data_long_ray.size() < 2) std::cout << "WARNING: number of traversed cells < 2 for long ray!"<< std::endl;
 								}	
-
 
                                 // set intersecion indeces
                                 for (int face_vertices = 0; face_vertices < 4; ++face_vertices)
@@ -1026,8 +902,16 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 
 									// solve ODE
 									if (long_ray)
-									{                                    										
-                                        I2 = long_ray_steps(intersection_data_long_ray, I_field, S_field, i_aux, j_aux, k_aux, b_start);
+									{                                    				
+                                        // TODO add if and print output						
+                                        if (use_single_long_step_)
+                                        {
+                                            I2 = single_long_ray_step(intersection_data_long_ray, I_field, S_field, i_aux, j_aux, k_aux, b_start);
+                                        }
+                                        else
+                                        {
+                                            I2 = long_ray_steps(intersection_data_long_ray, I_field, S_field, i_aux, j_aux, k_aux, b_start);
+                                        }                                                                                
 									}
 									else // short ray
 									{								
@@ -1056,10 +940,10 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 										{									
 											if (use_log_interpolation_)
 											{
-												etas[i_stokes] = 1;
-												rhos[i_stokes] = 1;
-												S1[i_stokes]   = 1;
-												I1[i_stokes]   = 1;											
+												etas[i_stokes] = 1.0;
+												rhos[i_stokes] = 1.0;
+												S1[i_stokes]   = 1.0;
+												I1[i_stokes]   = 1.0;											
 											}
 											else // linear
 											{
@@ -1081,13 +965,14 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 
 												if (use_log_interpolation_)
 												{
-													// get eta and rho
-													etas[i_stokes] *= pow(eta_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight); 
-													rhos[i_stokes] *= pow(rho_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight);
-
-													// set S1 and I1
-													S1[i_stokes] *= pow(S_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight);												
-													I1[i_stokes] *= pow(I_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight);																														
+                                                    // get eta and rho                                                                                                    
+                                                    etas[i_stokes] *= pow_gen(eta_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight);                                                     
+                                                    rhos[i_stokes] *= pow_gen(rho_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight);
+                                                    
+                                                    // set S1 and I1
+                                                    S1[i_stokes] *= pow_gen(S_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight);
+                                                    I1[i_stokes] *= pow_gen(I_dev.block(i_intersect,j_intersect,k_intersect)[b_index], weight);
+                                                    
 												}
 												else
 												{
@@ -1097,7 +982,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 
 													// set S1 and I1
 													S1[i_stokes] += weight * S_dev.block(i_intersect,j_intersect,k_intersect)[b_index];												
-													I1[i_stokes] += weight * I_dev.block(i_intersect,j_intersect,k_intersect)[b_index];	
+													I1[i_stokes] += weight * I_dev.block(i_intersect,j_intersect,k_intersect)[b_index];	                                                    
 												}									
 											}											
 										}										
@@ -1112,39 +997,50 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 										formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);	
 									}
 									
-									// test
-									if (j_theta == N_theta/2 and k_chi == 0 and n == 0 and rank == mpi_size_ - 1)
-									{									
-										// std::cout << "I1 = " << I1[0] << std::endl;		
-										if (i == 1 and j == 1 and k == k_end - 1)
-										{
-											// std::cout << intersection_data.distance << std::endl;	
-											// std::cout << "coeff = " << coeff << std::endl;	
-											// std::cout << "eta_I_1 = " << eta_I_1 << std::endl;	
-											// std::cout << "etas[0] = " << etas[0] << std::endl;	
-											// std::cout << "intersection_data.distance = " << intersection_data.distance << std::endl;					
-											
-											std::cout << "I1 = " << I1[0] << std::endl;	
-											std::cout << "I2 = " << I2[0] << std::endl;		
-											// std::cout << "Z_down = " << Z_down << std::endl;					
-											// std::cout << "Z_top = "  << Z_top  << std::endl;					
-											// std::cout << "L = "  << L  << std::endl;					
-											// std::cout << "theta = "  << theta  << std::endl;	
-											// std::cout << "chi = "  << chi  << std::endl;	
-											
-											// std::cout << "S1 = " << std::endl;
-											// for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S1[i_stokes] << std::endl;
+									// // test
+									// if (j_theta == N_theta/2 and k_chi == 0 and n == 30 and rank == mpi_size_ - 1)
+									// {									                                        
 
-											// std::cout << "S2 = " << std::endl;
-											// for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S2[i_stokes] << std::endl;
+         //                                // std::cout << "theta = " << theta << std::endl;
+         //                                // std::cout << "chi = "<< chi << std::endl;
+                                         
+									// 	// std::cout << "I1 = " << I1[0] << std::endl;		
+									// 	// if (i == 1 and j == 1 and k == k_end - 1)
+         //                                if (i == 1 and j == 1)
+									// 	{											
+         //                                    // std::cout << "dz = "<< dz << std::endl;
+
+									// 		// std::cout << "coeff = " << coeff << std::endl;	
+									// 		// std::cout << "eta_I_1 = " << eta_I_1 << std::endl;	
+									// 		// std::cout << "etas[0] = " << etas[0] << std::endl;	
+									// 		// std::cout << "intersection_data.distance = " << intersection_data.distance << std::endl;																                                            
+
+         //                                    // std::cout << "mpi_rank_ = " << mpi_rank_ << std::endl;   
+         //                                    std::cout << "k_global = " << g_dev.global_coord(2, k_aux) << std::endl;                                              
+         //                                    // std::cout << "k = " << k << std::endl;                                              
+
+									// 		std::cout << "I1 = "   << I1[0] << std::endl;	
+									// 		std::cout << "I2 = "   << I2[0] << std::endl;	
+         //                                    // std::cout << "dtau = " << dtau  << std::endl; 	
+									// 		// std::cout << "Z_down = " << Z_down << std::endl;					
+									// 		// std::cout << "Z_top = "  << Z_top  << std::endl;					
+									// 		// std::cout << "L = "  << L  << std::endl;					
+									// 		// std::cout << "theta = "  << theta  << std::endl;	
+									// 		// std::cout << "chi = "  << chi  << std::endl;	
+											
+									// 		std::cout << "S1 = " << std::endl;
+									// 		for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S1[i_stokes] << std::endl;
+
+									// 		std::cout << "S2 = " << std::endl;
+									// 		for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S2[i_stokes] << std::endl;
 																		
-											// std::cout << "K1 = " << std::endl;
-											// for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K1[i_stokes] << std::endl;
+									// 		// std::cout << "K1 = " << std::endl;
+									// 		// for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K1[i_stokes] << std::endl;
 
-											// std::cout << "K2 = " << std::endl;
-											// for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K2[i_stokes] << std::endl;												
-										} 									
-									}									
+									// 		// std::cout << "K2 = " << std::endl;
+									// 		// for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K2[i_stokes] << std::endl;												
+									// 	} 									
+									// }									
 
 									// write result
 									for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
@@ -1160,7 +1056,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 		}                    
 		
 		// communication
-		if (mpi_size_ > 1) I_field->exchange_halos(); // --------> TODO	better
+		if (mpi_size_ > 1) I_field->exchange_halos(); // --------> TODO	only vertical
 	}
 }
 
@@ -1189,17 +1085,19 @@ void MF_context::set_up_emission_module(){
         emission_coefficient_components::epsilon_R_III_GL,
         emission_coefficient_components::epsilon_csc};
 
-    epsilon_fun_ = ecc_sh_ptr_->make_computation_function(components);
+    std::list<emission_coefficient_components> components_approx{
+        // emission_coefficient_components::epsilon_R_II,
+        emission_coefficient_components::epsilon_R_III_CRD_limit,
+        emission_coefficient_components::epsilon_csc
+    };
+
+    epsilon_fun_        = ecc_sh_ptr_->make_computation_function(components);
+    // epsilon_fun_        = ecc_sh_ptr_->make_computation_function(components_approx); // test
+    epsilon_fun_approx_ = ecc_sh_ptr_->make_computation_function(components_approx);
 
     offset_fun_ = rii_include::make_default_offset_function(RT_problem_->N_theta_, RT_problem_->N_chi_, RT_problem_->N_nu_);
         	
- //    epsilon_computation_function_approx_ = ecc_sh_ptr_->make_computation_function(
-	// {
-	// 	// rii_include::emission_coefficient_computation::emission_coefficient_components::epsilon_R_II,
-	//  	rii_include::emission_coefficient_computation::emission_coefficient_components::epsilon_R_III_CRD_limit,
-	//  	// rii_include::emission_coefficient_computation::emission_coefficient_components::epsilon_csc
-	// },  
-	// rii_consts::rii_units::kilometer);		  
+	// rii_consts::rii_units::kilometer);		  //
 
     if (mpi_rank_ == 0) std::cout << "done" << std::endl;
 }
@@ -1263,8 +1161,8 @@ void MF_context::update_emission(const Vec &I_field, const bool approx){
        	
     	if (approx)
     	{
-    		// auto epsilon_grid = epsilon_computation_function_approx_(height);
-	    	// rii_include::make_indices_convertion_function<double>(epsilon_grid, offset_f_)(output.data());    
+    		const auto out_field = epsilon_fun_approx_(i,j,k);       
+	    	rii_include::make_indices_convertion_function<double>(out_field, offset_fun_)(output.data());    
     	}
     	else
     	{
@@ -1299,18 +1197,47 @@ void MF_context::update_emission(const Vec &I_field, const bool approx){
             counter_j = 0;
             counter_k++;
         }
-    }
+    }    
+}
 
-    // TODOs tetst
-	// test S = I;
-	// test S = 1
-	// test S = 0;
+
+void RT_solver::print_info(){
+
+    const auto vertical_decomposition = RT_problem_->only_vertical_decomposition_;
+
+    // print some output
+    if (mpi_rank_ == 0)
+    {
+        if (mf_ctx_.use_log_interpolation_)
+        {
+            std::cout << "Using logarithmic interpolation and ";
+        }
+        else
+        {
+            std::cout << "Using linear interpolation and ";
+        }
+
+        if (mf_ctx_.use_single_long_step_)
+        {
+            std::cout << "a single step for long rays." << std::endl;
+        }
+        else
+        {
+            std::cout << "multiple steps for long rays." << std::endl;
+        }
+
+        if (mf_ctx_.use_always_long_ray_ and vertical_decomposition) std::cout << "Only long rays are used." << std::endl;        
+    } 
 }
 
 
 void RT_solver::assemble_rhs(){ 
 
-  	if (mpi_rank_ == 0) std::cout << "\n++++++ Assembling right hand side...+++++++++";
+    // with test = true data structures are created but not filled
+    const bool test = false;
+
+  	if (mpi_rank_ == 0) std::cout           << "\n++++++ Assembling right hand side...+++++++++";
+    if (mpi_rank_ == 0 and test ) std::cout << "\n+++++++++++ RHS TEST RHS TEST +++++++++++++";
  
 	PetscErrorCode ierr;
 
@@ -1334,74 +1261,77 @@ void RT_solver::assemble_rhs(){
 	ierr = VecSetSizes(rhs_,local_size,tot_size);CHKERRV(ierr);   	
 	ierr = VecSetFromOptions(rhs_);CHKERRV(ierr);
 
-	// create rhs field (temporary)
-	auto rhs_field = std::make_shared<Field_t>("EPS_TH", space_grid, block_size, sgrid::STAR_STENCIL);
-	rhs_field->allocate_on_device(); 	
-	
-	// create eps_th field (temporary)
-	auto eps_th_field = std::make_shared<Field_t>("EPS_TH", space_grid, block_size, sgrid::STAR_STENCIL);
-	eps_th_field->allocate_on_device(); 
-	const auto eps_th_dev = eps_th_field->view_device();	 
-	
-	// fill it eps_th =  eps_c_th +  eps_l_th
-	sgrid::parallel_for("ASSEMBLE RHS", space_grid->md_range(), SGRID_LAMBDA(int i, int j, int k) {
-		
-		double value;
+    if (not test)
+    {     
+    	// create rhs field (temporary)
+    	auto rhs_field    = std::make_shared<Field_t>("RHS", space_grid, block_size, sgrid::STAR_STENCIL);
+    	rhs_field->allocate_on_device(); 	
+    	
+    	// create eps_th field (temporary)
+    	auto eps_th_field = std::make_shared<Field_t>("EPS_TH", space_grid, block_size, sgrid::STAR_STENCIL);
+    	eps_th_field->allocate_on_device(); 
+    	const auto eps_th_dev = eps_th_field->view_device();	 
+    	
+    	// fill eps_th =  eps_c_th +  eps_l_th
+    	sgrid::parallel_for("ASSEMBLE RHS", space_grid->md_range(), SGRID_LAMBDA(int i, int j, int k) {
+    		
+    		double value;
 
-		std::vector<size_t> local_idx;
+    		std::vector<size_t> local_idx;
 
-		for (int b = 0; b < (int)block_size; b++) 
-		{		
-			local_idx = RT_problem_->block_to_local(b);
+    		for (int b = 0; b < (int)block_size; b++) 
+    		{		
+    			local_idx = RT_problem_->block_to_local(b);
 
-			double eta_i = eta_dev.block(i,j,k)[b];
+    			double eta_i = eta_dev.block(i,j,k)[b];
 
-			// first Stokes parameter
-			if (local_idx[3] == 0)
-			{				
-				auto index_nu = local_idx[2];
-				
-				if (RT_problem_->enable_continuum_) 
-				{
-					// eps_c_th
-					value = eps_c_th_dev.block(i,j,k)[index_nu];	
+    			// first Stokes parameter
+    			if (local_idx[3] == 0)
+    			{				
+    				auto index_nu = local_idx[2];
+    				
+    				if (RT_problem_->enable_continuum_) 
+    				{
+    					// eps_c_th
+    					value = eps_c_th_dev.block(i,j,k)[index_nu];
 
-					// eps_l_th		
-					value += epsilon_dev.ref(i,j,k) * W_T_dev.ref(i,j,k) * (eta_i - k_c_dev.block(i,j,k)[index_nu]);				
-				}
-				else
-				{
-					// eps_l_th
-					value = epsilon_dev.ref(i,j,k) * W_T_dev.ref(i,j,k) * eta_i;				
-				}
+    					// eps_l_th		
+    					value += epsilon_dev.ref(i,j,k) * W_T_dev.ref(i,j,k) * (eta_i - k_c_dev.block(i,j,k)[index_nu]);				
+    				}
+    				else
+    				{
+    					// eps_l_th
+    					value = epsilon_dev.ref(i,j,k) * W_T_dev.ref(i,j,k) * eta_i;				
+    				}
 
-				// (eps_c_th + eps_l_th_) / eta_I
-				value /= eta_i;			
-			}
-			else
-			{
-				// get eta_I (!= eta_i)
-				double eta_I = eta_dev.block(i,j,k)[b - local_idx[3]];
+    				// (eps_c_th + eps_l_th_) / eta_I
+    				value /= eta_i;			
+    			}
+    			else
+    			{
+    				// get eta_I (!= eta_i)
+    				double eta_I = eta_dev.block(i,j,k)[b - local_idx[3]];
 
-				// eps_l_th / eta_i_l
-				value = eta_i * epsilon_dev.ref(i,j,k) * W_T_dev.ref(i,j,k) / eta_I;	
-			}	
+    				// eps_l_th / eta_i_l
+    				value = eta_i * epsilon_dev.ref(i,j,k) * W_T_dev.ref(i,j,k) / eta_I;	
+    			}	
 
-			// finally se eps_th
-			eps_th_dev.block(i,j,k)[b] = value;	            
-		}	
-	});
+    			// finally se eps_th
+    			eps_th_dev.block(i,j,k)[b] = value;	                            
+    		}	
+    	});
 
-	// fill rhs_ from formal solve with bc
-	mf_ctx_.formal_solve_global(rhs_field, eps_th_field, 1.0); 	
-	mf_ctx_.field_to_vec(rhs_field, rhs_);
+    	// fill rhs_ from formal solve with bc
+    	mf_ctx_.formal_solve_global(rhs_field, eps_th_field, 1.0); 	
+    	mf_ctx_.field_to_vec(rhs_field, rhs_);     
+    }
 
-	if (mpi_rank_ == 0) std::cout << "\n+++++++++++++++++++++++++++++++++++++++++++++\n"; 	
+	if (mpi_rank_ == 0) std::cout << "+++++++++++++++++++++++++++++++++++++++++++++\n"; 	
 }
 
 
 // matrix-free matrix vector multiplication y = (Id - LJ)x
-PetscErrorCode UserMult(Mat mat,Vec x,Vec y){
+PetscErrorCode UserMult(Mat mat, Vec x, Vec y){
 
 	PetscErrorCode ierr; 
 
@@ -1411,69 +1341,87 @@ PetscErrorCode UserMult(Mat mat,Vec x,Vec y){
 
   	auto RT_problem = mf_ctx_->RT_problem_;
 
-  	// compute new emission in S_field_ 
-  	mf_ctx_->update_emission(x);   
-  	
+    // Real start = MPI_Wtime();       
+
+    // compute new emission in S_field_ 
+    mf_ctx_->update_emission(x);  
+
+    // MPI_Barrier(MPI_COMM_WORLD); Real end = MPI_Wtime();       
+    // if (RT_problem->mpi_rank_ == 0) printf("update_emission:\t\t%g (seconds)\n", end - start);              
+    // start = MPI_Wtime();       
+  	    
   	// fill rhs_ from formal solve with zero bc  	
 	mf_ctx_->formal_solve_global(RT_problem->I_field_, RT_problem->S_field_, 0.0);	
 
+    // MPI_Barrier(MPI_COMM_WORLD); end = MPI_Wtime();       
+    // if (RT_problem->mpi_rank_ == 0) printf("formal_solve_global:\t\t%g (seconds)\n", end - start);              
+    // start = MPI_Wtime();       
+    
 	// copy intensity into petscvec format
 	mf_ctx_->field_to_vec(RT_problem->I_field_, y);
-  	
+
 	// update I_out = I_in - I_fs (y = x - y)
 	ierr = VecAYPX(y, -1.0, x);CHKERRQ(ierr);
+
+    // MPI_Barrier(MPI_COMM_WORLD); end = MPI_Wtime();       
+    // if (RT_problem->mpi_rank_ == 0) printf("update:\t\t%g (seconds)\n", end - start);              
 
   	return ierr;
 }
 
 
-// // matrix-free matrix vector multiplication y = (Id - LJ)x
-// PetscErrorCode UserMult_approx(Mat mat,Vec x,Vec y){
+// matrix-free matrix vector multiplication y = (Id - LJ)x
+PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
 
-// 	PetscErrorCode ierr; 
+	PetscErrorCode ierr; 
 
-// 	void *ptr;
-//    	MatShellGetContext(mat,&ptr);
-//   	MF_context *mf_ctx_ = (MF_context *)ptr;
+	void *ptr;
+   	MatShellGetContext(mat,&ptr);
+  	MF_context *mf_ctx_ = (MF_context *)ptr;
 
-//   	// compute new emission in S_field_
-//   	mf_ctx_->update_emission(x, true); 
-  	
-//   	// fill rhs_ from formal solve with zero bc
-// 	mf_ctx_->formal_solve(y, mf_ctx_->RT_problem_->S_field_, 0.0);
-	
-// 	// update I_out = I_in - I_fs (y = x - y)
-// 	ierr = VecAYPX(y, -1.0, x);CHKERRQ(ierr);
+    auto RT_problem = mf_ctx_->RT_problem_;    
 
-//   	return ierr;
-// }
+    // compute new emission in S_field_ 
+    mf_ctx_->update_emission(x, true);  
+
+    // fill rhs_ from formal solve with zero bc     
+    mf_ctx_->formal_solve_global(RT_problem->I_field_, RT_problem->S_field_, 0.0);  
+    
+    // copy intensity into petscvec format
+    mf_ctx_->field_to_vec(RT_problem->I_field_, y);
+    
+    // update I_out = I_in - I_fs (y = x - y)
+    ierr = VecAYPX(y, -1.0, x);CHKERRQ(ierr);
+
+  	return ierr;
+}
 
 
-// PetscErrorCode MF_pc_Destroy(PC pc){
+PetscErrorCode MF_pc_Destroy(PC pc){
 
-// 	PetscErrorCode ierr;
+	PetscErrorCode ierr;
 
-// 	MF_context *mf_ctx;
+	MF_context *mf_ctx;
 
-// 	ierr = PCShellGetContext(pc,(void**)&mf_ctx); CHKERRQ(ierr);   
-//     ierr = PetscFree(mf_ctx);
+	ierr = PCShellGetContext(pc,(void**)&mf_ctx); CHKERRQ(ierr);   
+    ierr = PetscFree(mf_ctx);
 
-//     // TODO destroy?
+    // TODO destroy?
 
-// 	return ierr;
+	return ierr;
 
-// }
+}
 
-// PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y){
+PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y){
 
-// 	PetscErrorCode ierr;
+	PetscErrorCode ierr;
 
-// 	MF_context *mf_ctx;
+	MF_context *mf_ctx;
 
-// 	ierr = PCShellGetContext(pc,(void**)&mf_ctx);CHKERRQ(ierr);   
+	ierr = PCShellGetContext(pc,(void**)&mf_ctx);CHKERRQ(ierr);   
 
-// 	// apply	
-// 	ierr = KSPSolve(mf_ctx->pc_solver_, x, y);CHKERRQ(ierr);
+	// apply	
+	ierr = KSPSolve(mf_ctx->pc_solver_, x, y);CHKERRQ(ierr);
 
-// 	return ierr;
-// }
+	return ierr;
+}

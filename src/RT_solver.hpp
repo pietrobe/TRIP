@@ -4,12 +4,11 @@
 #include "Formal_solver.hpp"
 #include "RT_problem.hpp"
 #include <rii_emission_coefficient_3D.h>
-// #include <thread>
 
 extern PetscErrorCode UserMult(Mat mat,Vec x,Vec y);
 extern PetscErrorCode UserMult_approx(Mat mat,Vec x,Vec y);
-// extern PetscErrorCode MF_pc_Destroy(PC pc);
-// extern PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y);
+extern PetscErrorCode MF_pc_Destroy(PC pc);
+extern PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y);
 
 // struct for ray - grid intersection 
 typedef struct t_intersect {
@@ -41,10 +40,13 @@ struct MF_context {
 
 	// if false linear interpolation is used
 	bool use_log_interpolation_ = false;
+	bool use_single_long_step_  = true;
+	bool use_always_long_ray_   = true;
 	
 	// pointer for emission module and offset
 	std::shared_ptr<rii_include::emission_coefficient_computation_3D> ecc_sh_ptr_;
 	rii_include::emission_coefficient_computation_3D::compute_node_3D_function_type epsilon_fun_; 
+	rii_include::emission_coefficient_computation_3D::compute_node_3D_function_type epsilon_fun_approx_; 
 	rii_include::offset_function_cartesian offset_fun_;	
 	
 	// change data format
@@ -55,11 +57,11 @@ struct MF_context {
 	void find_intersection(double theta, double chi, const double Z_down, const double Z_top, const double L, t_intersect *T);
 	std::vector<t_intersect> find_prolongation(double theta, double chi, const double dz, const double L);
 	std::vector<double> long_ray_steps(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index);
+	std::vector<double> single_long_ray_step(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index);
 
 	void get_2D_weigths(const double x, const double y, double *w);
 
-	// formal solvers methods 	
-	void formal_solve_local( Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);
+	// formal solver	
 	void formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
 	
 	void apply_bc(Field_ptr_t I_field, const Real I0);	
@@ -74,8 +76,10 @@ struct MF_context {
 class RT_solver
 {
 public:
-	RT_solver(const std::shared_ptr<RT_problem> RT_problem, input_string formal_solver = "implicit_Euler", const bool using_prec = true, const bool threaded = false) 
+	RT_solver(const std::shared_ptr<RT_problem> RT_problem, input_string formal_solver = "implicit_Euler", const bool using_prec = true) 
 	{		
+		PetscErrorCode ierr;
+
 		// assign MPI varaibles and init mf_ctx_
     	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank_);
     	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size_);  
@@ -87,15 +91,17 @@ public:
     	mf_ctx_.mpi_rank_      = mpi_rank_;
     	mf_ctx_.mpi_size_      = mpi_size_;    	
     	mf_ctx_.formal_solver_ = Formal_solver(formal_solver);     
-    	mf_ctx_.set_up_emission_module();  	    		
+
+    	// print some output
+    	print_info();
+
+    	mf_ctx_.set_up_emission_module();  	  
 
     	// assemble rhs
     	assemble_rhs();
-    	// VecView(rhs_, PETSC_VIEWER_STDOUT_SELF);
+    	// save_vec(rhs_, "../output/rhs.m" ,"rhs_3d");          	
   
     	// set linear system
-    	PetscErrorCode ierr;
-
 		int local_size = RT_problem_->local_size_;
 		ierr = VecGetLocalSize(rhs_, &local_size);CHKERRV(ierr); 		
 
@@ -113,32 +119,38 @@ public:
 
     	if (using_prec_)
     	{    	    		
-			// // set MF_operator_approx_		
-			// ierr = MatCreateShell(PETSC_COMM_WORLD,local_size,local_size,RT_problem_->tot_size_,RT_problem_->tot_size_,(void*)&mf_ctx_,&MF_operator_approx_);CHKERRV(ierr); 
-			// ierr = MatShellSetOperation(MF_operator_approx_,MATOP_MULT,(void(*)(void))UserMult_approx);CHKERRV(ierr);		
+			// set MF_operator_approx_		
+			ierr = MatCreateShell(PETSC_COMM_WORLD,local_size,local_size,RT_problem_->tot_size_,RT_problem_->tot_size_,(void*)&mf_ctx_,&MF_operator_approx_);CHKERRV(ierr); 
+			ierr = MatShellSetOperation(MF_operator_approx_,MATOP_MULT,(void(*)(void))UserMult_approx);CHKERRV(ierr);		
 
-			// // set PC solver 
-			// ierr = KSPCreate(PETSC_COMM_WORLD,&mf_ctx_.pc_solver_);CHKERRV(ierr);
-   //  		ierr = KSPSetOperators(mf_ctx_.pc_solver_,MF_operator_approx_,MF_operator_approx_);CHKERRV(ierr);	    		
-   //  		ierr = KSPSetType(mf_ctx_.pc_solver_,KSPGMRES);CHKERRV(ierr); 
+			// set PC solver 
+			ierr = KSPCreate(PETSC_COMM_WORLD,&mf_ctx_.pc_solver_);CHKERRV(ierr);
+    		ierr = KSPSetOperators(mf_ctx_.pc_solver_,MF_operator_approx_,MF_operator_approx_);CHKERRV(ierr);	    		
+    		ierr = KSPSetType(mf_ctx_.pc_solver_,KSPGMRES);CHKERRV(ierr); 
 
-   //  		// ierr = KSPSetFromOptions(mf_ctx_.pc_solver_);CHKERRV(ierr);
-   //  		// ierr = KSPSetTolerances(mf_ctx_.pc_solver_,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRV(ierr);
+    		// ierr = KSPSetFromOptions(mf_ctx_.pc_solver_);CHKERRV(ierr);
+    		// ierr = KSPSetTolerances(mf_ctx_.pc_solver_,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRV(ierr);
 
-   //  		// set PC
-   //  		ierr = PCSetType(pc_,PCSHELL);CHKERRV(ierr);
-			// ierr = PCShellSetContext(pc_, &mf_ctx_);CHKERRV(ierr);		
-			// ierr = PCShellSetApply(pc_,MF_pc_Apply);CHKERRV(ierr);				
-			// ierr = PCShellSetDestroy(pc_,MF_pc_Destroy);CHKERRV(ierr);	
+    		// set PC
+    		ierr = PCSetType(pc_,PCSHELL);CHKERRV(ierr);
+			ierr = PCShellSetContext(pc_, &mf_ctx_);CHKERRV(ierr);		
+			ierr = PCShellSetApply(pc_,MF_pc_Apply);CHKERRV(ierr);				
+			ierr = PCShellSetDestroy(pc_,MF_pc_Destroy);CHKERRV(ierr);	
     	}
     	else
     	{
     		ierr = PCSetType(pc_,PCNONE);CHKERRV(ierr);
     	}
-    	
+
     	// extra options from command line   	
     	ierr = KSPSetFromOptions(ksp_solver_);CHKERRV(ierr);
-    	ierr = PCSetFromOptions(pc_);CHKERRV(ierr);	    		    
+    	ierr = PCSetFromOptions(pc_);CHKERRV(ierr);	     
+
+		// test
+		// ierr = MatMult(MF_operator_, rhs_, RT_problem_->I_vec_);CHKERRV(ierr);	        				
+		// const std::string filename =  "../output/rhs_" + std::to_string(mpi_size_) + ".m";
+  //   	const std::string varible  =  "rhs" + std::to_string(mpi_size_);
+  //   	save_vec(rhs_, filename.c_str(), varible.c_str());                 	  		
 	}
 
 	// solve linear system
@@ -146,35 +158,112 @@ public:
 	{	
 		PetscErrorCode ierr;
 
-		Real start, end;
-		
-		start = MPI_Wtime();							
-
-		if (mpi_rank_ == 0) std::cout << "\nStart linear solve..." << std::endl;	
-		// ierr = KSPSetInitialGuessNonzero(ksp_solver_, PETSC_TRUE);CHKERRV(ierr);	/// -------> TODO check
+		Real start = MPI_Wtime();	
+				
+		if (mpi_rank_ == 0) std::cout << "\nStart linear solve..." << std::endl;			
 		ierr = KSPSolve(ksp_solver_, rhs_, RT_problem_->I_vec_);CHKERRV(ierr);
 
-		MPI_Barrier(MPI_COMM_WORLD); end = MPI_Wtime();
-		if (mpi_rank_ == 0) std::cout << "Solve time (s) = " << end - start << std::endl;
+		MPI_Barrier(MPI_COMM_WORLD); Real end = MPI_Wtime();
+		if (mpi_rank_ == 0) std::cout << "Solve time (s) = " << end - start << std::endl;	
 
-		// /////////////////////////////////////////////////////////////
-		// // test formal solver
-		// mf_ctx_.apply_bc(RT_problem_->I_field_, 1.0);	
+		// update I_field for later use
+		mf_ctx_.vec_to_field(RT_problem_->I_field_, RT_problem_->I_vec_);
+	}
 
-		// // RT_problem_->I_field_->write("I_in.raw");		
+	inline void apply_formal_solver()
+	{		
+		Real start = MPI_Wtime();		
 
-		// // ierr = VecSet(RT_problem_->S_vec_, 1.0);CHKERRV(ierr);
-		// // mf_ctx_.vec_to_field(RT_problem_->S_field_, RT_problem_->S_vec_); 		
-				
-		// if (mpi_rank_ == 0) std::cout << "Global formal solve " << std::endl;
-		// mf_ctx_.formal_solve_global(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);		
+		// set source fun
+		auto S_dev = RT_problem_->S_field_->view_device();
+
+	    sgrid::parallel_for("INIT S", RT_problem_->space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
+	    {         
+	        auto *block = S_dev.block(i, j, k);
+	         
+	        for (int b = 0; b < (int)RT_problem_->block_size_; ++b) 
+	        {
+	        	block[b] = 1.0;        	
+	        }
+	    });
+
+		if (mpi_rank_ == 0) std::cout << "Start formal solve..." << std::endl;
+		mf_ctx_.formal_solve_global(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);		
 			
-		// MPI_Barrier(MPI_COMM_WORLD); end = MPI_Wtime();
-		// if (mpi_rank_ == 0) std::cout << "Solve time (s) = " << end - start << std::endl;
-	
-		// // // RT_problem_->I_field_->write("I_out.raw");			
+		MPI_Barrier(MPI_COMM_WORLD); Real end = MPI_Wtime();
+		if (mpi_rank_ == 0) std::cout << "Formal solve time (s) = " << end - start << std::endl;	
+
+		// update I_vec for later use
+		mf_ctx_.field_to_vec(RT_problem_->I_field_, RT_problem_->I_vec_);
+	}	
+
+	inline void compute_emission()
+	{
+		Real start = MPI_Wtime();		
+
+		if (mpi_rank_ == 0) std::cout << "Computing emission..." << std::endl;
+
+		// mf_ctx_.field_to_vec(RT_problem_->I_field_, RT_problem_->I_vec_);
+		
+		// compute new emission in S_field_ 
+  		mf_ctx_.update_emission(RT_problem_->I_vec_);   
+
+    	// exchange updated S_field_             
+    	RT_problem_->S_field_->exchange_halos();   	
+			
+		MPI_Barrier(MPI_COMM_WORLD); Real end = MPI_Wtime();
+		if (mpi_rank_ == 0) std::cout << "Computing emission took (s) = " << end - start << std::endl;	
 	}
 	
+
+	inline void test_transfer()
+	{			
+		PetscErrorCode ierr; 
+
+		const auto g_dev      = RT_problem_->space_grid_->view_device();
+		const auto field_dev  = RT_problem_->I_field_->view_device();	
+		const auto block_size = RT_problem_->block_size_;
+
+		// indeces
+		const int i_start = g_dev.margin[0]; 
+		const int j_start = g_dev.margin[1];
+		const int k_start = g_dev.margin[2];
+
+		const int i_end = i_start + g_dev.dim[0];
+		const int j_end = j_start + g_dev.dim[1];
+		const int k_end = k_start + g_dev.dim[2];
+
+		int counter = 0;
+
+		int istart;	
+		ierr = VecGetOwnershipRange(RT_problem_->I_vec_, &istart, NULL);CHKERRV(ierr);	
+
+		// init
+		for (int k = k_start; k < k_end; ++k)					
+		{															
+			for (int j = j_start; j < j_end; ++j)
+			{
+				for (int i = i_start; i < i_end; ++i)				
+				{
+					for (int b = 0; b < (int)block_size; b++) 
+					{			
+						field_dev.block(i, j, k)[b] = istart + counter;							
+
+						counter++;
+					}							
+				}
+			}
+		}
+
+		mf_ctx_.field_to_vec(RT_problem_->I_field_, RT_problem_->I_vec_);
+
+		const std::string filename =  "../output/I_" + std::to_string(mpi_size_) + ".m";
+    	const std::string varible  =  "I" + std::to_string(mpi_size_);
+    	save_vec(RT_problem_->I_vec_, filename.c_str(), varible.c_str());                 	  		
+
+    	// vec to field TODO
+	}
+
 private:	
 
 	// MPI varables
@@ -188,18 +277,19 @@ private:
 	
 	// linear system quantities
 	Mat MF_operator_;
-	// Mat MF_operator_approx_;
+	Mat MF_operator_approx_;
 	Vec rhs_;
 	
 	KSP ksp_solver_;
 	KSPType ksp_type_ = KSPGMRES;
 	PC pc_;
-
-	bool LTE_        = false;
-	bool using_prec_ = false;
+	
+	bool using_prec_;
 			
 	// assemble Lam[eps_th] + t
-	void assemble_rhs();		
+	void assemble_rhs();	
+
+	void print_info();	
 };
 
 

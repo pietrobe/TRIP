@@ -474,7 +474,8 @@ void const RT_problem::print_info(){
 		std::cout << "N_theta = " << N_theta_ << std::endl;	
 		std::cout << "N_chi = "   << N_chi_   << std::endl;	
 		std::cout << "N_dirs = "  << N_dirs_  << std::endl;	
-		std::cout << "N_nu = "    << N_nu_    << std::endl;			
+		std::cout << "N_nu = "    << N_nu_    << std::endl;	
+		std::cout << "L = "       << L_       << std::endl;			
 		
 		std::cout << "\ntotal size = " << tot_size_   << std::endl;			
 		std::cout << "block size = "   << block_size_ << std::endl;		
@@ -588,7 +589,7 @@ void RT_problem::init_field(Field_ptr_t input_field, const Real input_value){
 
 	auto field_dev = input_field->view_device();
 
-    Kokkos::parallel_for("INIT I", space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
+    sgrid::parallel_for("INIT I", space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
     {         
         auto *block = field_dev.block(i, j, k);
          
@@ -982,7 +983,7 @@ void RT_problem::set_up(){
 	auto W_T_dev           = W_T_->view_device();
 
 	// compute atmospheric quantities 
-    Kokkos::parallel_for("INIT-ATM", space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
+    sgrid::parallel_for("INIT-ATM", space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
     {       	
     	auto *u = u_dev.block(i, j, k);
 
@@ -1031,6 +1032,191 @@ void RT_problem::set_up(){
 	// delete stuff that is not needed -----------------------------------> TODO?
 	
 	if (mpi_rank_ == 0) std::cout << "done" << std::endl;	
+}
+
+void const RT_problem::print_surface_profile(const Field_ptr_t field, const int i_stoke, const int i_space, const int j_space, const int j_theta, const int k_chi){
+
+	if (mpi_rank_ == 0)
+	{
+		switch (i_stoke)
+		{
+			case (0): 
+				std::cout << "\nSurface radiation, Stoke parameter I, ";
+				break;
+			case (1): 
+				std::cout << "\nSurface radiation, Stoke parameter Q, ";
+				break;
+			case (2): 
+				std::cout << "\nSurface radiation, Stoke parameter U, ";
+				break;
+			case (3): 
+				std::cout << "\nSurface radiation, Stoke parameter V, ";
+				break;
+			default:
+				std::cout << "\nERROR: i_stoke should be smaller then 4!" << std::endl;
+		}
+
+		std::cout << "mu =  "    << mu_grid_[j_theta];
+		std::cout << ", chi =  " << chi_grid_[k_chi] << std::endl;				
+	}
+
+	const auto f_dev = field->view_device();	
+	const auto g_dev = space_grid_->view_device();
+
+	// indeces
+	const int i_start = g_dev.margin[0]; 
+	const int j_start = g_dev.margin[1];
+	const int k_start = g_dev.margin[2];
+
+	const int i_end = i_start + g_dev.dim[0];
+	const int j_end = j_start + g_dev.dim[1];
+		
+	int i_global, j_global;
+	
+	if (g_dev.global_coord(2, k_start) == 0)
+	{
+		for (int i = i_start; i < i_end; ++i)
+		{
+			i_global = g_dev.global_coord(0, i);
+
+			if (i_global == i_space)
+			{
+				for (int j = j_start; i < j_end; ++j)
+				{
+					j_global = g_dev.global_coord(1, j);
+
+					if (j_global == j_space)
+					{
+						const int b_start = i_stoke + local_to_block(j_theta, k_chi, 0);
+
+						for (int b = 0; b < 4 * N_nu_; b = b + 4) 
+						{	
+							std::cout << f_dev.block(i,j,k_start)[b_start + b] << std::endl; 							
+						}
+
+						return;
+					}
+				}
+			}
+		}
+	}
+}
+
+
+void const RT_problem::print_profile(const Field_ptr_t field, const int i_stoke, 
+									 const int i_space, const int j_space, const int k_space, 
+									 const int j_theta, const int k_chi)
+{
+
+	if (mpi_rank_ == 0)
+	{
+		switch (i_stoke)
+		{
+			case (0): 
+				std::cout << "\nSurface radiation, Stoke parameter I, ";
+				break;
+			case (1): 
+				std::cout << "\nSurface radiation, Stoke parameter Q, ";
+				break;
+			case (2): 
+				std::cout << "\nSurface radiation, Stoke parameter U, ";
+				break;
+			case (3): 
+				std::cout << "\nSurface radiation, Stoke parameter V, ";
+				break;
+			default:
+				std::cout << "\nERROR: i_stoke should be smaller then 4!" << std::endl;
+		}
+
+		std::cout << "mu =  "       << mu_grid_[j_theta];
+		std::cout << ", chi =  "    << chi_grid_[k_chi];		
+		std::cout << ", height =  " << depth_grid_[k_space] << " km" << std::endl;				
+	}
+
+	const auto f_dev = field->view_device();	
+	const auto g_dev = space_grid_->view_device();
+
+	// indeces
+	const int i_start = g_dev.margin[0]; 
+	const int j_start = g_dev.margin[1];
+	const int k_start = g_dev.margin[2];
+
+	const int i_end = i_start + g_dev.dim[0];
+	const int j_end = j_start + g_dev.dim[1];
+	const int k_end = k_start + g_dev.dim[2];
+		
+	int i_global, j_global, k_global;
+
+	for (int i = i_start; i < i_end; ++i)
+	{
+		i_global = g_dev.global_coord(0, i);
+
+		if (i_global == i_space)
+		{
+			for (int j = j_start; i < j_end; ++j)
+			{
+				j_global = g_dev.global_coord(1, j);
+
+				if (j_global == j_space)
+				{
+					for (int k = k_start; k < k_end; ++k)
+					{
+						k_global = g_dev.global_coord(2, k);
+
+						if (k_global == k_space)
+						{
+							const int b_start = i_stoke + local_to_block(j_theta, k_chi, 0);
+
+							for (int b = 0; b < 4 * N_nu_; b = b + 4) 
+							{	
+								std::cout << f_dev.block(i,j,k)[b_start + b] << std::endl; 							
+							}					
+						}
+					}					
+
+					return;
+				}
+			}
+		}
+	}	
+}
+
+
+bool RT_problem::field_is_zero(const Field_ptr_t field)
+{
+	bool field_is_zero = true;
+
+	auto g_dev = space_grid_->view_device();
+	auto f_dev =       field->view_device();	
+
+	// indeces
+	const int i_start = g_dev.margin[0]; 
+	const int j_start = g_dev.margin[1];
+	const int k_start = g_dev.margin[2];
+
+	const int i_end = i_start + g_dev.dim[0];
+	const int j_end = j_start + g_dev.dim[1];
+	const int k_end = k_start + g_dev.dim[2];	
+	
+	for (int k = k_start; k < k_end; ++k)					
+	{															
+		for (int j = j_start; j < j_end; ++j)
+		{
+			for (int i = i_start; i < i_end; ++i)				
+			{
+				for (int b = 0; b < block_size_; b++) 
+				{
+					if (f_dev.block(i,j,k)[b] != 0)
+					{
+						field_is_zero = false;
+						break;
+					}
+				}							
+			}
+		}
+	}
+
+    return field_is_zero;
 }
 
 

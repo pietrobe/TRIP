@@ -788,7 +788,17 @@ std::vector<double> refine_vector_blocked2(const std::vector<double> &v, const s
 }
 
 
+double pow_gen(const double x, const double exponent){
 
+  if (x >= 0)
+  {
+    return std::pow(x,exponent);
+  }
+  else
+  {
+    return -std::pow(-x,exponent);
+  }
+}
 
 
 
