@@ -124,20 +124,16 @@ void MF_context::apply_bc(Field_ptr_t I_field, const Real I0){
     auto I_field_dev       =           I_field->view_device();        
 
 	sgrid::parallel_for("APPLY BC", space_grid->md_range(), SGRID_LAMBDA(int i, int j, int k) {
-	
-		const size_t k_global = g_dev.global_coord(2, k);					
-
-		Real W_T_deep; 
-
+									
 		// just in max depth
-		if (k_global == N_z - 1)         
+		if (g_dev.global_coord(2, k) == (N_z - 1))         
 		{		
-			W_T_deep = I0 * W_T_dev.ref(i,j,k);
+			const Real W_T_deep = I0 * W_T_dev.ref(i,j,k);
             
 			for (int b = 0; b < (int)block_size; b = b + 4) 
 			{
 				I_field_dev.block(i,j,k)[b] = W_T_deep; 
-			}
+			}            
 		}
 	});	
 }
@@ -733,6 +729,28 @@ std::vector<double> MF_context::single_long_ray_step(const std::vector<t_interse
     if (dtau > 0 ) std::cout << "ERROR in dtau sign" << std::endl;          
     
     formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);
+    
+    // // test
+    // // std::cout << "k_global = " << g_dev.global_coord(2, k_aux) << std::endl;                                              
+    // std::cout << "block_index = " << block_index << std::endl;                                              
+
+    // std::cout << "I1 = "   << I1[0] << std::endl;   
+    // std::cout << "Q1 = "   << I1[1] << std::endl;   
+    // // std::cout << "U1 = "   << I1[2] << std::endl;   
+    // // std::cout << "V1 = "   << I1[3] << std::endl;   
+
+    // std::cout << "I2 = "   << I2[0] << std::endl;    
+    // std::cout << "Q2 = "   << I2[1] << std::endl;   
+    // // std::cout << "U2 = "   << I2[2] << std::endl;   
+
+    // std::cout << "S1 = " << std::endl;
+    // for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S1[i_stokes] << std::endl;
+
+    // std::cout << "S2 = " << std::endl;
+    // for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S2[i_stokes] << std::endl;
+                                
+    // std::cout << "K1 = " << std::endl;
+    // for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K1[i_stokes] << std::endl;                                        
                                                                                                                             
     return I2;
 }
@@ -754,7 +772,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 	const auto N_z     = RT_problem_->N_z_;
 	const auto N_s     = RT_problem_->N_s_;
 
-	const auto vertical_decomposition = RT_problem_->only_vertical_decomposition_;
+	const auto only_vertical_decomposition = RT_problem_->only_vertical_decomposition_;
 
 	const auto block_size = RT_problem_->block_size_;
 	const auto tot_size   = RT_problem_->tot_size_;
@@ -812,7 +830,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 
 	for (int rank = 0; rank < mpi_size_; ++rank) 
 	{		
-        // communication in both directions    // TODO: can do less 
+        // communication in both directions 
         I_field->synch_device_to_host();    
         halos.exchange();            
         I_field->synch_host_to_device(); 
@@ -821,7 +839,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 		for (int k = k_start; k < k_end; ++k)					
 		{						
 			// exchange (i,j)-plane boundary info 
-			if (not vertical_decomposition) 
+			if (not only_vertical_decomposition) 
 			{
 				halos_xy.exchange(k);
 				halos_xy.exchange(k_end - k); 	
@@ -868,11 +886,11 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
                                 // if long ray start in a different processor use short ray
                                 if (use_always_long_ray_)
                                 {
-                                    long_ray = (not horizontal_face) and vertical_decomposition;
+                                    long_ray = (not horizontal_face) and only_vertical_decomposition;
                                 }
                                 else
                                 {
-                                    long_ray = (not horizontal_face) and (vertical_decomposition) and (i == i_start or j == j_start);     
+                                    long_ray = (not horizontal_face) and (only_vertical_decomposition) and (i == i_start or j == j_start);     
                                 }							                                	  	                     
                                 								
 								// check if a vertical face is intersected and use long ray
@@ -892,7 +910,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
                                     k_intersect = k_aux - intersection_data.iz[face_vertices]; // minus because k increases going downwards     
                                                                         
                                     // correct for periodic boundary
-                                    if (vertical_decomposition)
+                                    if (only_vertical_decomposition)
                                     {
                                         i_intersect = i_intersect % N_x; 
                                         j_intersect = j_intersect % N_y;
@@ -1005,11 +1023,12 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 									}
 									
 									// // test
-									// if (j_theta == N_theta/2 and k_chi == 0 and n == 30 and rank == mpi_size_ - 1)
+									// if (j_theta == N_theta/2  and k_chi == 0 and n == 0 and rank == mpi_size_ - 1)
 									// {									                                        
 
          //                                // std::cout << "theta = " << theta << std::endl;
          //                                // std::cout << "chi = "<< chi << std::endl;
+         //                                std::cout << "mu = " << mu << std::endl;
                                          
 									// 	// std::cout << "I1 = " << I1[0] << std::endl;		
 									// 	// if (i == 1 and j == 1 and k == k_end - 1)
@@ -1027,7 +1046,15 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
          //                                    // std::cout << "k = " << k << std::endl;                                              
 
 									// 		std::cout << "I1 = "   << I1[0] << std::endl;	
-									// 		std::cout << "I2 = "   << I2[0] << std::endl;	
+         //                                    std::cout << "Q1 = "   << I1[1] << std::endl;   
+         //                                    // std::cout << "U1 = "   << I1[2] << std::endl;   
+         //                                    // std::cout << "V1 = "   << I1[3] << std::endl;   
+
+									// 		std::cout << "I2 = "   << I2[0] << std::endl;    
+         //                                    std::cout << "Q2 = "   << I2[1] << std::endl;   
+         //                                    // std::cout << "U2 = "   << I2[2] << std::endl;   
+         //                                    // std::cout << "V2 = "   << I2[3] << std::endl;   
+
          //                                    // std::cout << "dtau = " << dtau  << std::endl; 	
 									// 		// std::cout << "Z_down = " << Z_down << std::endl;					
 									// 		// std::cout << "Z_top = "  << Z_top  << std::endl;					
@@ -1041,11 +1068,11 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 									// 		std::cout << "S2 = " << std::endl;
 									// 		for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S2[i_stokes] << std::endl;
 																		
-									// 		// std::cout << "K1 = " << std::endl;
-									// 		// for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K1[i_stokes] << std::endl;
+									// 		std::cout << "K1 = " << std::endl;
+									// 		for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K1[i_stokes] << std::endl;
 
-									// 		// std::cout << "K2 = " << std::endl;
-									// 		// for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K2[i_stokes] << std::endl;												
+									// 		std::cout << "K2 = " << std::endl;
+									// 		for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K2[i_stokes] << std::endl;												
 									// 	} 									
 									// }									
 
@@ -1060,7 +1087,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 					}
 				}
 			}	            
-		}                    			
+		}              
 	}
 }
 
@@ -1086,13 +1113,14 @@ void MF_context::set_up_emission_module(){
 
     std::list<emission_coefficient_components> components{
         emission_coefficient_components::epsilon_R_II,
-        emission_coefficient_components::epsilon_R_III_GL,
+        emission_coefficient_components::epsilon_R_III,
+        // emission_coefficient_components::epsilon_R_III_GL,
         emission_coefficient_components::epsilon_csc};
 
     std::list<emission_coefficient_components> components_approx{
         // emission_coefficient_components::epsilon_R_II,
-        emission_coefficient_components::epsilon_R_III_CRD_limit,
-        emission_coefficient_components::epsilon_csc
+        emission_coefficient_components::epsilon_R_III_CRD_limit
+        // ,emission_coefficient_components::epsilon_csc
     };
 
     epsilon_fun_        = ecc_sh_ptr_->make_computation_function(components);
@@ -1377,15 +1405,24 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
 
 	void *ptr;
    	MatShellGetContext(mat,&ptr);
-  	MF_context *mf_ctx_ = (MF_context *)ptr;
+  	MF_context *mf_ctx_ = (MF_context *)ptr; 
 
-    auto RT_problem = mf_ctx_->RT_problem_;    
+    auto RT_problem = mf_ctx_->RT_problem_; 
+
+    // Real start = MPI_Wtime();          
 
     // compute new emission in S_field_ 
     mf_ctx_->update_emission(x, true);  
 
+    // MPI_Barrier(MPI_COMM_WORLD); Real end = MPI_Wtime();       
+    // if (RT_problem->mpi_rank_ == 0) printf("update_emission approx:\t\t%g (seconds)\n", end - start);              
+    // start = MPI_Wtime();       
+
     // fill rhs_ from formal solve with zero bc     
     mf_ctx_->formal_solve_global(RT_problem->I_field_, RT_problem->S_field_, 0.0);  
+
+    // MPI_Barrier(MPI_COMM_WORLD); end = MPI_Wtime();       
+    // if (RT_problem->mpi_rank_ == 0) printf("formal_solve_global:\t\t%g (seconds)\n", end - start);              
     
     // copy intensity into petscvec format
     mf_ctx_->field_to_vec(RT_problem->I_field_, y);

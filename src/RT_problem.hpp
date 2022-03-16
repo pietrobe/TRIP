@@ -30,8 +30,7 @@ public:
     	if (mpi_rank_ == 0) std::cout << "\n=========== Reading input files ===========\n" << std::endl;				
     
     	// TODO: now hardcoded
-    	L_ = 100.0;
-    	// L_   = 1.0;
+    	L_   = 100.0;    	
     	N_x_ = 1;
     	N_y_ = 1;
 
@@ -295,7 +294,10 @@ private:
 	
 	// precompute quantities
 	void set_up();
-	
+
+	// free memory when not needed anymore ----> TODO? ask Simone
+	void clean();
+
 	// print infos on screen
 	void const print_info();	
 };

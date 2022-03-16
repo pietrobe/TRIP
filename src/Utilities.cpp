@@ -106,8 +106,8 @@ void read_vec(std::string filename, std::vector<double> &vec)
 	} 
 }
 
-void print_vec(const std::vector<double> &vec){
-
+void print_vec(const std::vector<double> &vec)
+{
   for (auto x : vec) std::cout << x << std::endl;
 }
 

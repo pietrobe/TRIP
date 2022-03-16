@@ -169,7 +169,7 @@ using namespace std;
 #  define Inf numeric_limits<double>::infinity()
 #  define NaN numeric_limits<double>::quiet_NaN()
 
-typedef std::complex<double> cmplx;
+typedef complex<double> cmplx;
 
 // Use C-like complex syntax, since the C syntax is more restrictive
 #  define cexp(z) exp(z)

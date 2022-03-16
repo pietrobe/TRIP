@@ -825,7 +825,7 @@ void RT_problem::set_eta_and_rhos(){
         auto *u   =   u_dev.block(i, j, k);		
 		auto *k_c = k_c_dev.block(i, j, k);		
 		auto *B   =   B_dev.block(i, j, k);       
-        auto *v_b = v_b_dev.block(i, j, k);
+        auto *v_b = v_b_dev.block(i, j, k);                        
                         
         // assign some variables for readability
         Real theta_v_b = v_b[1];
@@ -854,7 +854,9 @@ void RT_problem::set_eta_and_rhos(){
 		std::complex<Real> D_KQQ, faddeva, fact_re, fact_im;
          
         for (size_t b = 0; b < block_size_; b = b + 4) 
-        {        	
+        {        	        	
+        	block_rho[b + 1] = 0;
+
 			local_idx = block_to_local(b);
 
         	j_theta = local_idx[0];
@@ -893,7 +895,7 @@ void RT_problem::set_eta_and_rhos(){
 							W3J1 = W3JS(Ju2_, Jl2_, 2, -Mu2, Ml2, -2*q);
 							W3J2 = W3JS(2, 2, 2*K, 2*q, -2*q, 0);
 
-							fact = coeff_K * std::pow(-1,q + 1) * std::pow(W3J1,2) * W3J2;
+							fact = coeff_K * std::pow(-1, q + 1) * std::pow(W3J1,2) * W3J2;
 
 							um = coeff2 * (gu_ * Mu - gl_ * Ml) + u_red;
 					
@@ -904,13 +906,13 @@ void RT_problem::set_eta_and_rhos(){
 
 								fact_re = fact * std::real(faddeva) * D_KQQ;
 								fact_im = fact * std::imag(faddeva) * D_KQQ;
-
+					
 								// etas							
 								block_eta[b    ] += std::real(fact_re * get_TKQi(0, K, Q, j_theta, k_chi)); 
 								block_eta[b + 1] += std::real(fact_re * get_TKQi(1, K, Q, j_theta, k_chi));
 								block_eta[b + 2] += std::real(fact_re * get_TKQi(2, K, Q, j_theta, k_chi));
-								block_eta[b + 3] += std::real(fact_re * get_TKQi(3, K, Q, j_theta, k_chi));						
-								
+								block_eta[b + 3] += std::real(fact_re * get_TKQi(3, K, Q, j_theta, k_chi));														
+															
 								// rhos
 								block_rho[b + 1] += std::real(fact_im * get_TKQi(1, K, Q, j_theta, k_chi));
 								block_rho[b + 2] += std::real(fact_im * get_TKQi(2, K, Q, j_theta, k_chi));
@@ -921,8 +923,8 @@ void RT_problem::set_eta_and_rhos(){
 				}
         	}
 
-        	if (enable_continuum_) block_eta[b] += k_c[n_nu];         	
-
+        	if (enable_continuum_) block_eta[b] += k_c[n_nu];             	
+        	
         	// checks
         	if (block_eta[b] == 0) std::cerr << "\nWARNING: zero eta_I!"     << std::endl; 
         	if (block_eta[b] < 0)  std::cerr << "\nWARNING: negative eta_I!" << std::endl; 		

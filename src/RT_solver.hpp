@@ -10,12 +10,14 @@ extern PetscErrorCode UserMult_approx(Mat mat,Vec x,Vec y);
 extern PetscErrorCode MF_pc_Destroy(PC pc);
 extern PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y);
 
+
 // struct for ray - grid intersection 
 typedef struct t_intersect {
     int ix[4], iy[4], iz[4];
     double w[4];
     double distance;
 } t_intersect;
+
 
 typedef struct t_xyinters {
     int plane; // 0 = const x, 1 = const y, 2 = const z
@@ -128,8 +130,10 @@ public:
     		ierr = KSPSetOperators(mf_ctx_.pc_solver_,MF_operator_approx_,MF_operator_approx_);CHKERRV(ierr);	    		
     		ierr = KSPSetType(mf_ctx_.pc_solver_,KSPGMRES);CHKERRV(ierr); 
 
-    		// ierr = KSPSetFromOptions(mf_ctx_.pc_solver_);CHKERRV(ierr);
-    		// ierr = KSPSetTolerances(mf_ctx_.pc_solver_,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRV(ierr);
+    		// // const int max_its = 5;
+    		// const double r_tol = 1e-3;
+    		// ierr = KSPSetFromOptions(mf_ctx_.pc_solver_);CHKERRV(ierr);    		
+    		// ierr = KSPSetTolerances(mf_ctx_.pc_solver_,r_tol,PETSC_DEFAULT,PETSC_DEFAULT, PETSC_DEFAULT);CHKERRV(ierr);
 
     		// set PC
     		ierr = PCSetType(pc_,PCSHELL);CHKERRV(ierr);
@@ -144,7 +148,7 @@ public:
 
     	// extra options from command line   	
     	ierr = KSPSetFromOptions(ksp_solver_);CHKERRV(ierr);
-    	ierr = PCSetFromOptions(pc_);CHKERRV(ierr);	     
+    	// ierr = PCSetFromOptions(pc_);CHKERRV(ierr);	     
 
 		// test
 		// ierr = MatMult(MF_operator_, rhs_, RT_problem_->I_vec_);CHKERRV(ierr);	        				
@@ -183,7 +187,7 @@ public:
 	         
 	 //        for (int b = 0; b < (int)RT_problem_->block_size_; ++b) 
 	 //        {
-	 //        	block[b] = 1.0;        	
+	 //        	block[b] = 1e-20;        	
 	 //        }
 	 //    });
 
@@ -202,8 +206,6 @@ public:
 		Real start = MPI_Wtime();		
 
 		if (mpi_rank_ == 0) std::cout << "Computing emission..." << std::endl;
-
-		// mf_ctx_.field_to_vec(RT_problem_->I_field_, RT_problem_->I_vec_);
 		
 		// compute new emission in S_field_ 
   		mf_ctx_.update_emission(RT_problem_->I_vec_);   
@@ -213,6 +215,8 @@ public:
 			
 		MPI_Barrier(MPI_COMM_WORLD); Real end = MPI_Wtime();
 		if (mpi_rank_ == 0) std::cout << "Computing emission took (s) = " << end - start << std::endl;	
+
+		mf_ctx_.field_to_vec(RT_problem_->S_field_, RT_problem_->I_vec_);
 	}
 	
 
@@ -255,11 +259,20 @@ public:
 			}
 		}
 
+		// test 1
 		mf_ctx_.field_to_vec(RT_problem_->I_field_, RT_problem_->I_vec_);
 
-		const std::string filename =  "../output/I_" + std::to_string(mpi_size_) + ".m";
-    	const std::string varible  =  "I" + std::to_string(mpi_size_);
-    	save_vec(RT_problem_->I_vec_, filename.c_str(), varible.c_str());                 	  		
+		save_vec(RT_problem_->I_vec_,  "../output/vec1.m" ,"vec_1");   
+
+		// test 2 
+		mf_ctx_.vec_to_field(RT_problem_->I_field_, RT_problem_->I_vec_);
+		mf_ctx_.field_to_vec(RT_problem_->I_field_, RT_problem_->I_vec_);
+
+		save_vec(RT_problem_->I_vec_,  "../output/vec2.m" ,"vec_2");   
+
+		// const std::string filename =  "../output/I_" + std::to_string(mpi_size_) + ".m";
+  //   	const std::string varible  =  "I" + std::to_string(mpi_size_);
+  //   	save_vec(RT_problem_->I_vec_, filename.c_str(), varible.c_str());                 	  		
 
     	// vec to field TODO
 	}

@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
   Kokkos::initialize(argc, argv);
 
   {
-    const bool using_prec  = false;
+    const bool using_prec  = true;
     const bool save_output = false;
 
     const size_t N_theta = atoi(argv[1]);
@@ -26,18 +26,10 @@ int main(int argc, char *argv[]) {
 
     RT_solver rt_solver(rt_problem_ptr, "DELO_linear", using_prec);    
     rt_solver.solve();  
-    // rt_solver.apply_formal_solver();    
-    // rt_solver.compute_emission();
-    // rt_solver.test_transfer();
 
-    // const std::string filename =  "../output/pp_" + std::to_string(rt_problem_ptr->mpi_size_) + ".m";
-    // const std::string varible  =  "pp" + std::to_string(rt_problem_ptr->mpi_size_);
-    // save_vec(rt_problem_ptr->I_vec_, filename.c_str(), varible.c_str());            
-    
-    rt_problem_ptr->print_surface_profile(rt_problem_ptr->I_field_, 0, 0, 0, N_theta/2, 0);
-    rt_problem_ptr->print_surface_profile(rt_problem_ptr->I_field_, 1, 0, 0, N_theta/2, 0);
-    // rt_problem_ptr->print_profile(rt_problem_ptr->I_field_, 0, 0, 0, 0, 1, 0);
-    
+    rt_problem_ptr->print_surface_profile(rt_problem_ptr->I_field_, 0, 0, 0, N_theta/2 + 1, 0);
+    rt_problem_ptr->print_surface_profile(rt_problem_ptr->I_field_, 1, 0, 0, N_theta/2 + 1, 0);     
+        
     if (save_output) rt_problem_ptr->I_field_->write("I_field.raw");          
   }
 
