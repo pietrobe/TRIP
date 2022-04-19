@@ -456,6 +456,10 @@ void const RT_problem::print_info(){
 	
 	if (mpi_rank_ == 0) 		
 	{		
+		std::cout << "\nmpi_size_x = " << mpi_size_x_ << std::endl;
+		std::cout <<   "mpi_size_y = " << mpi_size_y_ << std::endl;
+		std::cout <<   "mpi_size_z = " << mpi_size_z_ << std::endl << std::endl;
+
 		std::cout << "\n=========== 2-levels atom parameters ===========\n" << std::endl;		
 		std::cout << "Mass = " << mass_ << std::endl;
 		std::cout << "El = "   << El_   << std::endl;
@@ -494,7 +498,7 @@ void const RT_problem::print_info(){
 
 		std::cout << "] " << std::endl;		
 
-		if (only_vertical_decomposition_) std::cout << "\nDomain decompostion only in the z direction (Jiri method)" << std::endl;		
+		if (not vertical_decomposition_) std::cout << "\nDomain decompostion only in the z direction (PORTA method)" << std::endl;		
 	}
 }
 
@@ -1037,31 +1041,70 @@ void RT_problem::set_up(){
 }
 
 void const RT_problem::print_surface_profile(const Field_ptr_t field, const int i_stoke, const int i_space, const int j_space, const int j_theta, const int k_chi){
+		
+	const auto f_dev = field->view_device();	
+	const auto g_dev = space_grid_->view_device();
 
-	if (mpi_rank_ == 0)
+	// indeces
+	const int i_start = g_dev.margin[0]; 
+	const int j_start = g_dev.margin[1];
+	const int k_start = g_dev.margin[2];
+
+	const int i_end = i_start + g_dev.dim[0];
+	const int j_end = j_start + g_dev.dim[1];
+				
+	if (g_dev.global_coord(2, k_start) == 0)
 	{
-		switch (i_stoke)
-		{
-			case (0): 
-				std::cout << "\nSurface radiation, Stoke parameter I, ";
-				break;
-			case (1): 
-				std::cout << "\nSurface radiation, Stoke parameter Q, ";
-				break;
-			case (2): 
-				std::cout << "\nSurface radiation, Stoke parameter U, ";
-				break;
-			case (3): 
-				std::cout << "\nSurface radiation, Stoke parameter V, ";
-				break;
-			default:
-				std::cout << "\nERROR: i_stoke should be smaller then 4!" << std::endl;
+		for (int i = i_start; i < i_end; ++i)
+		{			
+			if (g_dev.global_coord(0, i) == i_space)
+			{
+				for (int j = j_start; j < j_end; ++j)
+				{										
+					if (g_dev.global_coord(1, j) == j_space)
+					{				
+						// print info	
+						switch (i_stoke)
+						{
+							case (0): 
+								std::cout << "\nSurface radiation, Stoke parameter I, ";
+								break;
+							case (1): 
+								std::cout << "\nSurface radiation, Stoke parameter Q, ";
+								break;
+							case (2): 
+								std::cout << "\nSurface radiation, Stoke parameter U, ";
+								break;
+							case (3): 
+								std::cout << "\nSurface radiation, Stoke parameter V, ";
+								break;
+							default:
+								std::cout << "\nERROR: i_stoke should be smaller then 4!" << std::endl;
+						}
+
+						// print info
+						std::cout << "i = " << i_space << ", j = " << j_space << ", mu =  " 
+								  << mu_grid_[j_theta] << ", chi =  " << chi_grid_[k_chi] 
+								  << ", mpi_rank = " << mpi_rank_ << std::endl;	
+						
+						const int b_start = i_stoke + local_to_block(j_theta, k_chi, 0);					
+
+						for (int b = 0; b < 4 * N_nu_; b = b + 4) 
+						{								
+							std::cout << f_dev.block(i,j,k_start)[b_start + b] << std::endl; 							
+						}
+					}
+				}
+			}
 		}
-
-		std::cout << "mu =  "    << mu_grid_[j_theta];
-		std::cout << ", chi =  " << chi_grid_[k_chi] << std::endl;				
 	}
+}
 
+
+void const RT_problem::print_surface_QI_profile(const Field_ptr_t field, const int i_space, const int j_space, const int j_theta, const int k_chi){
+
+	if (mpi_rank_ == 0) std::cout << "\nSurface Q/I, " << "mu =  " << mu_grid_[j_theta] << ", chi =  " << chi_grid_[k_chi] << std::endl;		
+	
 	const auto f_dev = field->view_device();	
 	const auto g_dev = space_grid_->view_device();
 
@@ -1083,17 +1126,20 @@ void const RT_problem::print_surface_profile(const Field_ptr_t field, const int 
 
 			if (i_global == i_space)
 			{
-				for (int j = j_start; i < j_end; ++j)
+				for (int j = j_start; j < j_end; ++j)
 				{
 					j_global = g_dev.global_coord(1, j);
 
 					if (j_global == j_space)
 					{
-						const int b_start = i_stoke + local_to_block(j_theta, k_chi, 0);
+						const int b_start = local_to_block(j_theta, k_chi, 0);
 
 						for (int b = 0; b < 4 * N_nu_; b = b + 4) 
 						{	
-							std::cout << f_dev.block(i,j,k_start)[b_start + b] << std::endl; 							
+							const double I = f_dev.block(i,j,k_start)[b_start + b];
+							const double Q = f_dev.block(i,j,k_start)[b_start + b + 1];
+
+							std::cout << Q/I << std::endl; 							
 						}
 
 						return;
@@ -1103,6 +1149,7 @@ void const RT_problem::print_surface_profile(const Field_ptr_t field, const int 
 		}
 	}
 }
+
 
 
 void const RT_problem::print_profile(const Field_ptr_t field, const int i_stoke, 
@@ -1155,7 +1202,7 @@ void const RT_problem::print_profile(const Field_ptr_t field, const int i_stoke,
 
 		if (i_global == i_space)
 		{
-			for (int j = j_start; i < j_end; ++j)
+			for (int j = j_start; j < j_end; ++j)
 			{
 				j_global = g_dev.global_coord(1, j);
 
@@ -1222,6 +1269,39 @@ bool RT_problem::field_is_zero(const Field_ptr_t field)
 }
 
 
+void RT_problem::set_grid_partition()
+{
+	vertical_decomposition_ = (mpi_size_ <= N_z_) ? false : true; 
+
+	mpi_size_x_ = 1;
+	mpi_size_y_ = 1;
+	mpi_size_z_ = mpi_size_;
+	
+	// TODO: allow the general case (procs grid not cartesian)
+	if (vertical_decomposition_)
+	{
+		const double mpi_size_xy = mpi_size_ / N_z_;
+
+		if (std::floor(mpi_size_xy) != mpi_size_xy) std::cout << "ERROR: problem with domain decomposition: mpi_size_ / N_z_ not integer!" << std::endl;
+
+		mpi_size_x_ = std::floor(std::sqrt(mpi_size_xy));
+
+		const double mpi_size_y = mpi_size_xy / mpi_size_x_;
+
+		if (std::floor(mpi_size_y) != mpi_size_y) std::cout << "ERROR: problem with domain decomposition: mpi_size_y not integer!" << std::endl;
+
+		mpi_size_y_ = (int) mpi_size_y;
+
+		mpi_size_z_ = N_z_;	
+	}
+
+	// // test
+	// std::cout << "set_grid_partition TEST !!!!!!!!!!!!!! " << std::endl;
+	// mpi_size_x_ = 1;
+	// mpi_size_y_ = 2;
+	// mpi_size_z_ = mpi_size_/2;
+	// vertical_decomposition_ = true;
+}
 
 
 

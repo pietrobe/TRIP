@@ -65,6 +65,7 @@ include_directories(${RII_INCLUDES}/src/riii_exact_emission_coeffcient)
 include_directories(${RII_INCLUDES}/src/riii_approx_emission_coeffcient)
 include_directories(${RII_INCLUDES}/src/doppler_shift)
 include_directories(${RII_INCLUDES}/src/rii_RII_KKpQ)
+include_directories(${RII_INCLUDES}/src/epsilon_alt)
 
 # we use one of our examples here
 add_executable(solar_3D ${CMAKE_SOURCE_DIR}/src/main.cpp)

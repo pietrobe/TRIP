@@ -31,8 +31,8 @@ public:
     
     	// TODO: now hardcoded
     	L_   = 100.0;    	
-    	N_x_ = 1;
-    	N_y_ = 1;
+    	N_x_ = 3;
+    	N_y_ = 3;
 
     	// reading some input
     	read_atom(     input_path + "/atom.dat");
@@ -47,37 +47,9 @@ public:
 		space_grid_ = std::make_shared<Grid_t>();
 
 		// menage grid distribution
-		only_vertical_decomposition_ = (mpi_size_ <= N_z_) ? true : false; 
+		set_grid_partition();
 
-		int mpi_size_x = 1;
-		int mpi_size_y = 1;
-		int mpi_size_z = mpi_size_;
-
-		if (not only_vertical_decomposition_)
-		{
-			const double mpi_size_xy = mpi_size_ / N_z_;
-
-			if (std::floor(mpi_size_xy) != mpi_size_xy) std::cout << "ERROR: problem with domain decomposition: mpi_size_ / N_z_ not integer!" << std::endl;
-
-			const double mpi_size_x_and_y = std::sqrt(mpi_size_xy);
-
-			if (std::floor(mpi_size_x_and_y) != mpi_size_x_and_y) std::cout << "ERROR: problem with domain decomposition: sqrt(mpi_size_xy) not integer!" << std::endl;
-
-			mpi_size_x = (int) mpi_size_x_and_y;
-			mpi_size_y = (int) mpi_size_x_and_y;
-
-			mpi_size_z = N_z_;	
-		}
-
-		// print some output
-		if (mpi_rank_ == 0) 
-		{
-			std::cout << "\nmpi_size_x = " << mpi_size_x << std::endl;
-			std::cout <<   "mpi_size_y = " << mpi_size_y << std::endl;
-			std::cout <<   "mpi_size_z = " << mpi_size_z << std::endl << std::endl;
-		}
-
-		space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0}, {mpi_size_x, mpi_size_y, mpi_size_z});		 
+		space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0}, {mpi_size_x_, mpi_size_y_, mpi_size_z_});		 
 
 		// init fields
 		allocate_fields();				
@@ -129,6 +101,10 @@ public:
 									 const int i_stoke = 0, const int i_space = 0, const int j_space = 0, 
 									 const int j_theta = 0, const int k_chi = 0);
 
+	void const print_surface_QI_profile(const Field_ptr_t field, 
+									 const int i_space = 0, const int j_space = 0, 
+									 const int j_theta = 0, const int k_chi = 0);
+
 
 	void const print_profile(const Field_ptr_t field, 
 							 const int i_stoke = 0, const int i_space = 0, const int j_space = 0, const int k_space = 0,
@@ -138,8 +114,13 @@ public:
 	int mpi_rank_;
 	int mpi_size_;	
 
-	// decompostion in planes (Jiri method)
-	bool only_vertical_decomposition_;
+	// procs in each dimension
+	int mpi_size_x_;
+	int mpi_size_y_;
+	int mpi_size_z_;
+
+	// decompostion in planes (PORTA method)
+	bool vertical_decomposition_;
 
 	// flag to enable continuum 
 	bool enable_continuum_ = true;
@@ -272,6 +253,9 @@ private:
 	// set grids and sizes
 	void set_theta_chi_grids(const size_t N_theta, const size_t N_chi, const bool double_GL = true);
 	void set_sizes();
+
+	// menage grid distribution
+	void set_grid_partition();
 
 	// read inputs
 	void read_atom(             input_string filename);

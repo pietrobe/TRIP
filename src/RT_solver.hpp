@@ -130,10 +130,13 @@ public:
     		ierr = KSPSetOperators(mf_ctx_.pc_solver_,MF_operator_approx_,MF_operator_approx_);CHKERRV(ierr);	    		
     		ierr = KSPSetType(mf_ctx_.pc_solver_,KSPGMRES);CHKERRV(ierr); 
 
-    		// // const int max_its = 5;
-    		// const double r_tol = 1e-3;
-    		// ierr = KSPSetFromOptions(mf_ctx_.pc_solver_);CHKERRV(ierr);    		
-    		// ierr = KSPSetTolerances(mf_ctx_.pc_solver_,r_tol,PETSC_DEFAULT,PETSC_DEFAULT, PETSC_DEFAULT);CHKERRV(ierr);
+    		// const int max_its = 10;
+    		// // const double r_tol = 1e-3;
+    		// // // ierr = KSPSetFromOptions(mf_ctx_.pc_solver_);CHKERRV(ierr);    		
+    		// // ierr = KSPSetTolerances(mf_ctx_.pc_solver_,r_tol,PETSC_DEFAULT,PETSC_DEFAULT, PETSC_DEFAULT);CHKERRV(ierr);
+    		// ierr = KSPSetTolerances(mf_ctx_.pc_solver_,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT, max_its);CHKERRV(ierr);
+    		// ierr = KSPSetNormType(mf_ctx_.pc_solver_, KSP_NORM_NONE);CHKERRV(ierr);
+
 
     		// set PC
     		ierr = PCSetType(pc_,PCSHELL);CHKERRV(ierr);
@@ -192,13 +195,18 @@ public:
 	 //    });
 
 		if (mpi_rank_ == 0) std::cout << "Start formal solve..." << std::endl;
-		mf_ctx_.formal_solve_global(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);		
-			
+
+		// const int its = 100;
+		// for (int i = 0; i < its; ++i)
+		// {
+			mf_ctx_.formal_solve_global(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);		
+		// }
+				
 		MPI_Barrier(MPI_COMM_WORLD); Real end = MPI_Wtime();
 		if (mpi_rank_ == 0) std::cout << "Formal solve time (s) = " << end - start << std::endl;	
 
-		// update I_vec for later use
-		mf_ctx_.field_to_vec(RT_problem_->I_field_, RT_problem_->I_vec_);
+		// // update I_vec for later use
+		// mf_ctx_.field_to_vec(RT_problem_->I_field_, RT_problem_->I_vec_);
 	}	
 
 	inline void compute_emission()
