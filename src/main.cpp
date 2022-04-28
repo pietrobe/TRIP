@@ -44,9 +44,7 @@ int main(int argc, char *argv[]) {
     if (rt_problem_ptr->mpi_rank_ == 0) std::cout << "Total memory usage (vm_usage) = "     <<  byte_to_GB * vm_usage     << " GB" << std::endl;
     if (rt_problem_ptr->mpi_rank_ == 0) std::cout << "Total memory usage (resident_set) = " <<  byte_to_GB * resident_set << " GB" << std::endl;
     
-    PetscLogDouble space;
-    PetscMemoryGetCurrentUsage(&space);      
-    if (rt_problem_ptr->mpi_rank_ == 0) std::cout << "Memory used by PETSc = " << (rt_problem_ptr->mpi_size_) * byte_to_GB * space << " GB" <<  std::endl;
+    rt_problem_ptr->print_PETSc_mem();
         
     if (save_output) rt_problem_ptr->I_field_->write("I_field.raw");          
   }

@@ -450,6 +450,13 @@ void RT_problem::set_sizes(){
 	tot_size_   = N_s_ * block_size_;	
 
 	if (mpi_rank_ == 0 and mpi_size_ > (int) N_s_) std::cerr << "\n========= WARNING: mpi_size > N_s! =========\n" << std::endl;
+
+	if ((block_size_ / mpi_size_) % 4 != 0)
+	{
+		if (mpi_rank_ == 0) std::cerr << "\n========= ERROR: block_size_ / mpi_size_ should be a divisible by 4! =========\n" << std::endl;
+
+		throw "block_size_ / mpi_size_ should be a divisible by 4!";
+	}	
 }
 
 void const RT_problem::print_info(){
@@ -496,9 +503,7 @@ void const RT_problem::print_info(){
 
 		for (int i = 0; i < (int)N_chi_; ++i) std::cout   << chi_grid_[i] << " ";
 
-		std::cout << "] " << std::endl;		
-
-		if (not vertical_decomposition_) std::cout << "\nDomain decompostion only in the z direction (PORTA method)" << std::endl;		
+		std::cout << "] " << std::endl;			
 	}
 }
 
@@ -1271,36 +1276,27 @@ bool RT_problem::field_is_zero(const Field_ptr_t field)
 
 void RT_problem::set_grid_partition()
 {
-	vertical_decomposition_ = (mpi_size_ <= N_z_) ? false : true; 
+	// TODO: now hardcoded	
 
-	mpi_size_x_ = 1;
-	mpi_size_y_ = 1;
-	mpi_size_z_ = mpi_size_;
-	
-	// TODO: allow the general case (procs grid not cartesian)
-	if (vertical_decomposition_)
-	{
-		const double mpi_size_xy = mpi_size_ / N_z_;
+	const double mpi_size_z = mpi_size_ / N_x_ / N_y_;
 
-		if (std::floor(mpi_size_xy) != mpi_size_xy) std::cout << "ERROR: problem with domain decomposition: mpi_size_ / N_z_ not integer!" << std::endl;
+	if (std::floor(mpi_size_z) != mpi_size_z) std::cout << "ERROR: problem with domain decomposition: mpi_size_ / N_x_ / N_y_ not integer!" << std::endl;
 
-		mpi_size_x_ = std::floor(std::sqrt(mpi_size_xy));
+	mpi_size_z_ = mpi_size_z;
+	mpi_size_x_ = N_x_;
+	mpi_size_y_ = N_y_;
 
-		const double mpi_size_y = mpi_size_xy / mpi_size_x_;
+	// const double mpi_size_xy = mpi_size_ / mpi_size_z_;
 
-		if (std::floor(mpi_size_y) != mpi_size_y) std::cout << "ERROR: problem with domain decomposition: mpi_size_y not integer!" << std::endl;
+	// if (std::floor(mpi_size_xy) != mpi_size_xy) std::cout << "ERROR: problem with domain decomposition: mpi_size_ / mpi_size_z_ not integer!" << std::endl;
 
-		mpi_size_y_ = (int) mpi_size_y;
+	// mpi_size_x_ = std::floor(std::sqrt(mpi_size_xy));
 
-		mpi_size_z_ = N_z_;	
-	}
+	// const double mpi_size_y = mpi_size_xy / mpi_size_x_;
 
-	// // test
-	// std::cout << "set_grid_partition TEST !!!!!!!!!!!!!! " << std::endl;
-	// mpi_size_x_ = 1;
-	// mpi_size_y_ = 2;
-	// mpi_size_z_ = mpi_size_/2;
-	// vertical_decomposition_ = true;
+	// if (std::floor(mpi_size_y) != mpi_size_y) std::cout << "ERROR: problem with domain decomposition: mpi_size_y not integer!" << std::endl;
+
+	// mpi_size_y_ = (int) mpi_size_y;		
 }
 
 

@@ -4,6 +4,7 @@
 #include "Formal_solver.hpp"
 #include "RT_problem.hpp"
 #include <rii_emission_coefficient_3D.h>
+#include "sgrid_ReMap.hpp"
 
 extern PetscErrorCode UserMult(Mat mat,Vec x,Vec y);
 extern PetscErrorCode UserMult_approx(Mat mat,Vec x,Vec y);
@@ -39,11 +40,31 @@ struct MF_context {
 	// MPI varables
 	int mpi_rank_;
 	int mpi_size_;
-
+	
 	// if false linear interpolation is used
 	bool use_log_interpolation_ = false;
 	bool use_single_long_step_  = true;
 	bool use_always_long_ray_   = true;
+
+	// serial objects for formal solution
+	Grid_ptr_t  space_grid_serial_;	
+
+	sgrid::ReMap<Field_t> I_remap_;
+	sgrid::ReMap<Field_t> S_remap_;
+	
+	Field_ptr_t I_field_serial_;
+	Field_ptr_t S_field_serial_;
+	Field_ptr_t eta_field_serial_;
+	Field_ptr_t rho_field_serial_;
+
+	// total number of rays a single processor will handle, n_local_rays_ = block_size/mpi_size
+	int n_local_rays_;
+
+	// number of tiles each processor will handle, n_tiles_ = 1 default, to be increased to reduce memmory usage
+    int n_tiles_;   
+		
+	// number of rays a single processor will handle at one time, tile_size_ = n_local_rays_/n_tiles_
+	int tile_size_;	
 	
 	// pointer for emission module and offset
 	std::shared_ptr<rii_include::emission_coefficient_computation_3D> ecc_sh_ptr_;
@@ -64,7 +85,7 @@ struct MF_context {
 	void get_2D_weigths(const double x, const double y, double *w);
 
 	// formal solver	
-	void formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
+	void formal_solve_global(Field_ptr_t I_field, Field_ptr_t I_field_serial, const Field_ptr_t S_field, const Field_ptr_t S_field_serial, const Real I0);		
 	
 	void apply_bc(Field_ptr_t I_field, const Real I0);	
 		
@@ -73,6 +94,9 @@ struct MF_context {
 		
 	// update emission in all spatial points (given the current I_field_, update S_field_)
 	void update_emission(const Vec &I_field, const bool approx = false);
+
+	// init serial fields (serial eta and rho are filled)
+	void init_serial_fields(const size_t n_tiles);	
 };
 
 class RT_solver
@@ -91,13 +115,17 @@ public:
 
     	mf_ctx_.RT_problem_    = RT_problem;  
     	mf_ctx_.mpi_rank_      = mpi_rank_;
-    	mf_ctx_.mpi_size_      = mpi_size_;    	
-    	mf_ctx_.formal_solver_ = Formal_solver(formal_solver);     
+    	mf_ctx_.mpi_size_      = mpi_size_;   
+    	mf_ctx_.formal_solver_ = Formal_solver(formal_solver);    
 
-    	// print some output
-    	print_info();
-
+    	// init serial grids for formal solution
+    	const size_t n_tiles = 1; // TODO: now fixed
+    	mf_ctx_.init_serial_fields(n_tiles);	
+    	    	
     	mf_ctx_.set_up_emission_module();  	  
+
+    	// print some output 
+    	print_info();
 
     	// assemble rhs
     	assemble_rhs();
@@ -196,12 +224,8 @@ public:
 
 		if (mpi_rank_ == 0) std::cout << "Start formal solve..." << std::endl;
 
-		// const int its = 100;
-		// for (int i = 0; i < its; ++i)
-		// {
-			mf_ctx_.formal_solve_global(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);		
-		// }
-				
+		mf_ctx_.formal_solve_global(RT_problem_->I_field_, mf_ctx_.I_field_serial_, RT_problem_->S_field_, mf_ctx_.S_field_serial_, 1.0);		
+						
 		MPI_Barrier(MPI_COMM_WORLD); Real end = MPI_Wtime();
 		if (mpi_rank_ == 0) std::cout << "Formal solve time (s) = " << end - start << std::endl;	
 
@@ -279,10 +303,6 @@ public:
 		save_vec(RT_problem_->I_vec_,  "../output/vec2.m" ,"vec_2");   
 
 		// const std::string filename =  "../output/I_" + std::to_string(mpi_size_) + ".m";
-  //   	const std::string varible  =  "I" + std::to_string(mpi_size_);
-  //   	save_vec(RT_problem_->I_vec_, filename.c_str(), varible.c_str());                 	  		
-
-    	// vec to field TODO
 	}
 
 private:	
@@ -291,8 +311,9 @@ private:
 	int mpi_rank_;
 	int mpi_size_;
 
+	// for astmospheric data and parallel fields
 	std::shared_ptr<RT_problem> RT_problem_;	
-
+	
 	// MF context
 	MF_context mf_ctx_;
 	
@@ -308,7 +329,7 @@ private:
 	bool using_prec_;
 			
 	// assemble Lam[eps_th] + t
-	void assemble_rhs();	
+	void assemble_rhs();		
 
 	void print_info();	
 };

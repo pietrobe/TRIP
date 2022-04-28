@@ -31,8 +31,8 @@ public:
     
     	// TODO: now hardcoded
     	L_   = 100.0;    	
-    	N_x_ = 3;
-    	N_y_ = 3;
+    	N_x_ = 4;
+    	N_y_ = 4;
 
     	// reading some input
     	read_atom(     input_path + "/atom.dat");
@@ -46,10 +46,9 @@ public:
 		// init grid
 		space_grid_ = std::make_shared<Grid_t>();
 
-		// menage grid distribution
+		// menage grid distribution // TODO: now hardcoded
 		set_grid_partition();
-
-		space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0}, {mpi_size_x_, mpi_size_y_, mpi_size_z_});		 
+		space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0}, {mpi_size_x_, mpi_size_y_, mpi_size_z_}); 
 
 		// init fields
 		allocate_fields();				
@@ -69,7 +68,7 @@ public:
 		// precompute
 		set_up();
 		
-	    print_info();
+	    print_info();	    
 
 	   	MPI_Barrier(space_grid_->raw_comm()); Real end = MPI_Wtime(); 	    
 	    if (mpi_rank_ == 0) printf("Set up time:\t\t%g (seconds)\n", end - start);	      		
@@ -96,6 +95,16 @@ public:
 	// convert local indeces to block one (of fields) for the first Stokes parameter and vice versa
 	inline size_t local_to_block(const size_t j, const size_t k, const size_t n) { return 4 * ( N_nu_ * ( N_chi_ * j + k ) + n); }
 
+	inline void print_PETSc_mem()
+	{
+		PetscLogDouble space;
+   		PetscMemoryGetCurrentUsage(&space);   
+
+   		const double byte_to_GB = 1.0 / (1000 * 1024 * 1024);
+
+    	if (mpi_rank_ == 0) std::cout << "Memory used by PETSc = " << mpi_size_ * byte_to_GB * space << " GB" <<  std::endl;   
+	}
+
 	// print I_field on surface 
 	void const print_surface_profile(const Field_ptr_t field, 
 									 const int i_stoke = 0, const int i_space = 0, const int j_space = 0, 
@@ -118,10 +127,7 @@ public:
 	int mpi_size_x_;
 	int mpi_size_y_;
 	int mpi_size_z_;
-
-	// decompostion in planes (PORTA method)
-	bool vertical_decomposition_;
-
+	
 	// flag to enable continuum 
 	bool enable_continuum_ = true;
 	
