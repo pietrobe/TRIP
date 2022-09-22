@@ -12,19 +12,25 @@ extern PetscErrorCode MF_pc_Destroy(PC pc);
 extern PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y);
 
 
-// struct for ray - grid intersection 
+// structs for ray - grid intersection 
 typedef struct t_intersect {
     int ix[4], iy[4], iz[4];
     double w[4];
     double distance;
 } t_intersect;
 
+enum t_plane {
+    I_YZ = 0,
+    I_XZ,
+    I_XY
+};
 
-typedef struct t_xyinters {
-    int plane; // 0 = const x, 1 = const y, 2 = const z
-    int ix, iy, iz;
-    double x, y, z;
-} t_xyinters;
+typedef struct t_xyzinters {
+    t_plane plane;
+    double x, y, z; // point of intersection
+    int ix, iy, iz; // left-back-from index of the intersected segment
+    double t; // distance from the origin
+} t_xyzinters;
 
 
 // matrix-free (MF) structure
@@ -129,7 +135,11 @@ public:
 
     	// assemble rhs
     	assemble_rhs();
-    	// save_vec(rhs_, "../output/rhs.m" ,"rhs_3d");          	
+    	// save_vec(rhs_, "../output/rhs.m" ,"rhs_3d");  
+
+    	// //test
+    	// mf_ctx_.field_to_vec(RT_problem_->eta_field_, RT_problem_->I_vec_);     
+    	// save_vec(RT_problem_->I_vec_, "../output/eta_t.m" ,"etat");     	
   
     	// set linear system
 		int local_size = RT_problem_->local_size_;
@@ -229,8 +239,8 @@ public:
 		MPI_Barrier(MPI_COMM_WORLD); Real end = MPI_Wtime();
 		if (mpi_rank_ == 0) std::cout << "Formal solve time (s) = " << end - start << std::endl;	
 
-		// // update I_vec for later use
-		// mf_ctx_.field_to_vec(RT_problem_->I_field_, RT_problem_->I_vec_);
+		// update I_vec for later use
+		mf_ctx_.field_to_vec(RT_problem_->I_field_, RT_problem_->I_vec_);
 	}	
 
 	inline void compute_emission()
@@ -238,17 +248,25 @@ public:
 		Real start = MPI_Wtime();		
 
 		if (mpi_rank_ == 0) std::cout << "Computing emission..." << std::endl;
+
+		// // test
+  		// VecSet(RT_problem_->I_vec_,0.0);
 		
 		// compute new emission in S_field_ 
   		mf_ctx_.update_emission(RT_problem_->I_vec_);   
+    		
+		MPI_Barrier(MPI_COMM_WORLD);
+		if (mpi_rank_ == 0) std::cout << "Computing PRD emission took (s) = " << MPI_Wtime() - start << std::endl;	
 
-    	// exchange updated S_field_             
-    	RT_problem_->S_field_->exchange_halos();   	
-			
-		MPI_Barrier(MPI_COMM_WORLD); Real end = MPI_Wtime();
-		if (mpi_rank_ == 0) std::cout << "Computing emission took (s) = " << end - start << std::endl;	
+		start = MPI_Wtime();		
 
-		mf_ctx_.field_to_vec(RT_problem_->S_field_, RT_problem_->I_vec_);
+		mf_ctx_.update_emission(RT_problem_->I_vec_, true); 
+
+		MPI_Barrier(MPI_COMM_WORLD);
+		if (mpi_rank_ == 0) std::cout << "Computing CRD emission took (s) = " << MPI_Wtime() - start << std::endl;	
+
+		// // use I_vec to store S for later use
+		// mf_ctx_.field_to_vec(RT_problem_->S_field_, RT_problem_->I_vec_);
 	}
 	
 

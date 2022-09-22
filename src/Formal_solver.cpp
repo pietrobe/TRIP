@@ -94,8 +94,8 @@ void Formal_solver::one_step(const Real dt, input_vec &K1, input_vec &K2, input_
 		if (mpi_rank_ == 0) std::cerr << "\nERROR: " << type_ << " is not supported as formal solver!\n";
 	}
 
-	// check valore negativo
-	if (debug_mode_ and I_out[0] < 0 and I_in[0] >= 0 and S1[0] > 0  and S2[0] > 0) std::cout << "\nWARNING: negative intensity detected!\n";	
+	// // check valore negativo
+	// if (debug_mode_ and I_out[0] < 0 and I_in[0] >= 0 and S1[0] > 0  and S2[0] > 0) std::cout << "\nWARNING: negative intensity detected!\n";	
 
 	// if (I_out[0] < 0) I_out[0] = 0;		
 }

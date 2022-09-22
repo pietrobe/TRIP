@@ -246,12 +246,17 @@ std::vector<double> assemble_propagation_matrix(const std::vector<double> &etas,
 
 }
 
+
+// This one is used 
 std::vector<double> assemble_propagation_matrix_scaled(const std::vector<double> &etas, const std::vector<double> &rhos)
 {
   // check input sizes
   if (etas.size() != 4 or rhos.size() != 4) std::cout << "\nERROR in assemble_propagation_matrix()\n" << std::endl;
 
-  if ( etas[0] == 0) std::cout << "\n WARNING: eta_I = 0!\n" << std::endl;
+    int mpi_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+
+  if ( etas[0] == 0) std::cout << "mpi_rank = " << mpi_rank << std::endl;
 
   std::vector<double> K(16);
   

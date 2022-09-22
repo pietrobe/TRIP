@@ -45,10 +45,7 @@ void RT_problem::read_atom(input_string filename){
 		}
 
 		counter++;
-	}
-
-	Jl_ = Jl2_/2;
-	Ju_ = Ju2_/2;
+	}	
 }
 
 
@@ -192,14 +189,34 @@ void RT_problem::read_magnetic_field_1D(input_string filename){
 	
 	auto g_dev = space_grid_->view_device();
 
+	const bool B_etero = false;
+
+	if (mpi_rank_ == 0 and B_etero) std::cout << "\nWARNING: adding perturbation to magnetic field!" << std::endl;
+
 	// fill field
 	sgrid::parallel_for("READ B", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
 				
+		const int i_global = g_dev.start[0] + i - g_dev.margin[0];
+		const int j_global = g_dev.start[1] + j - g_dev.margin[1];
 		const int k_global = g_dev.start[2] + k - g_dev.margin[2];
 
-		B_dev.block(i, j, k)[0] =    nu_L_vec[k_global];					
-		B_dev.block(i, j, k)[1] = theta_B_vec[k_global];					
-		B_dev.block(i, j, k)[2] =   chi_B_vec[k_global];													
+		if (B_etero)
+		{
+			const double x = 2.0 * PI * i_global / (N_x_ - 1.0);
+			const double y = 2.0 * PI * j_global / (N_y_ - 1.0);		
+
+			const double B_max = 30.0;	
+
+			B_dev.block(i,j,k)[0] = 1399600 * B_max * (1 + cos(x) * cos(y)/2.0);	
+			B_dev.block(i,j,k)[1] =     PI * abs(cos(x) * cos(y));
+			B_dev.block(i,j,k)[2] = 2 * PI * abs(cos(x) * cos(y));
+		}
+		else
+		{
+			B_dev.block(i, j, k)[0] =    nu_L_vec[k_global];					
+			B_dev.block(i, j, k)[1] = theta_B_vec[k_global];					
+			B_dev.block(i, j, k)[2] =   chi_B_vec[k_global];
+		}
 	});		
 }
 
@@ -357,18 +374,40 @@ void RT_problem::read_atmosphere_1D(input_string filename){
 
 	auto g_dev = space_grid_->view_device();
 
+	const bool test_etero = false;
+
+	if (mpi_rank_ == 0 and test_etero) std::cout << "WARNING: adding temperature perturbation!" << std::endl;
+
 	// fill field 
 	sgrid::parallel_for("READ-ATM1D", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
 
 		const int k_global = g_dev.start[2] + k - g_dev.margin[2];
-								
-		T_dev.ref(  i, j, k) =   T_vec[k_global];
+
+		if (N_x_ > 1 and test_etero)
+		{
+			const int i_global = g_dev.start[0] + i - g_dev.margin[0];
+			const int j_global = g_dev.start[1] + j - g_dev.margin[1];
+
+			const double x = i_global / (N_x_ - 1.0);
+			const double y = j_global / (N_y_ - 1.0);
+
+			const double T_ijk = T_vec[k_global] * cos(2.0 * PI * x) * cos(2.0 * PI * y) / 2.0;
+
+			T_dev.ref(  i, j, k) =   T_vec[k_global] + T_ijk;
+		}
+		else
+		{
+			T_dev.ref(  i, j, k) =   T_vec[k_global];
+		}		
+
 		xi_dev.ref( i, j, k) =  xi_vec[k_global];		
 		a_dev.ref(  i, j, k) =   a_vec[k_global];		
 		Nl_dev.ref( i, j, k) =  Nl_vec[k_global];		
 		Cul_dev.ref(i, j, k) = Cul_vec[k_global];		
 		Qel_dev.ref(i, j, k) = Qel_vec[k_global];						
 	});
+
+	// T_->write("T32.raw");          
 }
 
 
@@ -451,7 +490,11 @@ void RT_problem::set_sizes(){
 
 	if (mpi_rank_ == 0 and mpi_size_ > (int) N_s_) std::cerr << "\n========= WARNING: mpi_size > N_s! =========\n" << std::endl;
 
-	if ((block_size_ / mpi_size_) % 4 != 0)
+	if (mpi_size_ > block_size_/4)
+	{
+		if (mpi_rank_ == 0) std::cout << "\nUsing mpi_size > block_size/4" << std::endl;
+	}
+	else if ((block_size_ / mpi_size_) % 4 != 0)
 	{
 		if (mpi_rank_ == 0) std::cerr << "\n========= ERROR: block_size_ / mpi_size_ should be a divisible by 4! =========\n" << std::endl;
 
@@ -471,8 +514,8 @@ void const RT_problem::print_info(){
 		std::cout << "Mass = " << mass_ << std::endl;
 		std::cout << "El = "   << El_   << std::endl;
 		std::cout << "Eu = "   << Eu_   << std::endl;		
-		std::cout << "Jl = "   << Jl_   << std::endl;
-		std::cout << "Ju = "   << Ju_   << std::endl;
+		std::cout << "2Jl = "  << Jl2_   << std::endl;
+		std::cout << "2Ju = "  << Ju2_   << std::endl;
 		std::cout << "gl = "   << gl_   << std::endl;		
 		std::cout << "gu = "   << gu_   << std::endl;
 		std::cout << "Aul = "  << Aul_  << std::endl;
@@ -511,11 +554,11 @@ void const RT_problem::print_info(){
 void RT_problem::allocate_fields(){
 
 		// create fields 
-		I_field_ = std::make_shared<Field_t>("I", space_grid_, block_size_, sgrid::BOX_STENCIL);
-		S_field_ = std::make_shared<Field_t>("S", space_grid_, block_size_, sgrid::BOX_STENCIL);
+		I_field_ = std::make_shared<Field_t>("I", space_grid_, block_size_); 
+		S_field_ = std::make_shared<Field_t>("S", space_grid_, block_size_);
 
-		eta_field_ = std::make_shared<Field_t>("eta", space_grid_, block_size_, sgrid::BOX_STENCIL);
-		rho_field_ = std::make_shared<Field_t>("rho", space_grid_, block_size_, sgrid::BOX_STENCIL);
+		eta_field_ = std::make_shared<Field_t>("eta", space_grid_, block_size_);
+		rho_field_ = std::make_shared<Field_t>("rho", space_grid_, block_size_);
 
 		// necessary?
 		I_field_->  allocate_on_device(); 
@@ -553,10 +596,10 @@ void RT_problem::allocate_atmosphere(){
 	W_T_ = std::make_shared<Field_t>("W_T",  space_grid_);
 
 	// magnetic field 
-	B_ = std::make_shared<Field_t>("B", space_grid_, 3, sgrid::STAR_STENCIL); 	
+	B_ = std::make_shared<Field_t>("B", space_grid_, 3); 	
 
 	// bulk velocities, in polar coordinates
-	v_b_ = std::make_shared<Field_t>("v_b", space_grid_, 3, sgrid::STAR_STENCIL);    
+	v_b_ = std::make_shared<Field_t>("v_b", space_grid_, 3);    
 	
 	// quantities depending on position that can be precomputed
 	Doppler_width_ = std::make_shared<Field_t>("Doppler_width", space_grid_);
@@ -564,10 +607,10 @@ void RT_problem::allocate_atmosphere(){
 	epsilon_       = std::make_shared<Field_t>("epsilon_", 		space_grid_);
 
 	// input quantities depending on position and frequency 
-	u_        = std::make_shared<Field_t>("u",        space_grid_, N_nu_, sgrid::STAR_STENCIL);  
-	sigma_    = std::make_shared<Field_t>("sigma",    space_grid_, N_nu_, sgrid::STAR_STENCIL);
-	k_c_      = std::make_shared<Field_t>("k_c",      space_grid_, N_nu_, sgrid::STAR_STENCIL);
-	eps_c_th_ = std::make_shared<Field_t>("eps_c_th", space_grid_, N_nu_, sgrid::STAR_STENCIL);
+	u_        = std::make_shared<Field_t>("u",        space_grid_, N_nu_);  
+	sigma_    = std::make_shared<Field_t>("sigma",    space_grid_, N_nu_);
+	k_c_      = std::make_shared<Field_t>("k_c",      space_grid_, N_nu_);
+	eps_c_th_ = std::make_shared<Field_t>("eps_c_th", space_grid_, N_nu_);
 	
 	// allocate
 	D1_  -> allocate_on_device(); 
@@ -826,7 +869,7 @@ void RT_problem::set_eta_and_rhos(){
 	
 	auto Doppler_width_dev = Doppler_width_->view_device();
 
-    Kokkos::parallel_for("INIT ETA-RHO", space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
+    sgrid::parallel_for("INIT ETA-RHO", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) 
     {         
         auto *block_eta = eta_dev.block(i, j, k);
         auto *block_rho = rho_dev.block(i, j, k);
@@ -855,12 +898,12 @@ void RT_problem::set_eta_and_rhos(){
         std::vector<size_t> local_idx;
         size_t j_theta, k_chi, n_nu;
 
-		// coeffs
-		int q;
-		Real fact, coeff_K, W3J1, W3J2, um, v_dot_Omega;
-		Real u_red, u_b;
+		// // coeffs
+		// int q;
+		// Real fact, coeff_K, W3J1, W3J2, um, v_dot_Omega;
+		// Real u_red, u_b;
 
-		std::complex<Real> D_KQQ, faddeva, fact_re, fact_im;
+		// std::complex<Real> D_KQQ, faddeva, fact_re, fact_im;
          
         for (size_t b = 0; b < block_size_; b = b + 4) 
         {        	        	
@@ -881,40 +924,37 @@ void RT_problem::set_eta_and_rhos(){
 			const std::complex<Real> a_damp(0.0, a);
 
 			// for reduced frequency
-			v_dot_Omega = v_b[0] * ( cos(theta_v_b) * cos(theta) + sin(theta_v_b) * sin(theta) * cos(chi - chi_v_b));
-			u_b = nu_0_ * v_dot_Omega / (c_ * Doppler_width);
+			const Real v_dot_Omega = v_b[0] * ( cos(theta_v_b) * cos(theta) + sin(theta_v_b) * sin(theta) * cos(chi - chi_v_b));
+			const Real u_b = nu_0_ * v_dot_Omega / (c_ * Doppler_width);
 
-			u_red = u[n_nu] + u_b;			
+			const Real u_red = u[n_nu] + u_b;			
 
 			for (int K = 0; K < 3; ++K)
 			{
-				coeff_K = coeff * std::sqrt(3 * ( 2 * K + 1));
+				const double coeff_K = coeff * std::sqrt(3.0 * (2.0 * double(K) + 1.0));
 	
 				for (int Mu2 = - Ju2_; Mu2 < Ju2_ + 1; Mu2 += 2)
 				{
 					for (int Ml2 = - Jl2_; Ml2 < Jl2_ + 1; Ml2 += 2)
-					{				
-						const int Mu  = Mu2/2;
-						const int Ml  = Ml2/2;
-
-						if (std::abs(Mu - Ml) <= 1)
+					{										
+						if (std::abs(Mu2 - Ml2) <= 2) 
 						{
-							q = Ml - Mu;
+							const int q2 = Ml2 - Mu2;
 
-							W3J1 = W3JS(Ju2_, Jl2_, 2, -Mu2, Ml2, -2*q);
-							W3J2 = W3JS(2, 2, 2*K, 2*q, -2*q, 0);
+				      		const double W3J1 = W3JS(Ju2_, Jl2_, 2,-Mu2, Ml2, -q2);  
+				      		const double W3J2 = W3JS(2, 2, 2 * K, q2, -q2, 0); 
 
-							fact = coeff_K * std::pow(-1, q + 1) * std::pow(W3J1,2) * W3J2;
+							const double fact = coeff_K * std::pow(-1.0, double(q2) / 2.0 + 1.0) * std::pow(W3J1, 2) * W3J2;
 
-							um = coeff2 * (gu_ * Mu - gl_ * Ml) + u_red;
+		      				const double um = coeff2 * (gu_ * (double(Mu2) / 2.0) - gl_ * (double(Ml2) / 2.0)) + u_red;
 					
 							for (int Q = -K; Q < K + 1; ++Q)
 							{			
-								faddeva = Faddeeva::w(um + a_damp);								
-								D_KQQ   = std::conj(R(K, 0, Q));
+								const std::complex<double> faddeva = Faddeeva::w(um + a_damp);
+				        		const auto D_KQQ                   = std::conj(R(K, 0, Q));
 
-								fact_re = fact * std::real(faddeva) * D_KQQ;
-								fact_im = fact * std::imag(faddeva) * D_KQQ;
+				        		const auto fact_re = fact * std::real(faddeva) * D_KQQ;
+				        		const auto fact_im = fact * std::imag(faddeva) * D_KQQ;
 					
 								// etas							
 								block_eta[b    ] += std::real(fact_re * get_TKQi(0, K, Q, j_theta, k_chi)); 
@@ -941,19 +981,245 @@ void RT_problem::set_eta_and_rhos(){
         } 	
     });	
 
-	// exchange ghost layers (for periodic boundary)
-	eta_field_->exchange_halos(); 
-	rho_field_->exchange_halos(); 	
-
 	// debug			
-
-	// const Real dichroism_module = std::sqrt(etas_and_rhos[1] * etas_and_rhos[1] + etas_and_rhos[2] * etas_and_rhos[2] + etas_and_rhos[3] * etas_and_rhos[3]);
-	
-	// if (etas_and_rhos[0] < dichroism_module) dichroism_warning = true;
-				
-	// if (dichroism_warning) std::cout << "\nWARNING: eta_I < eta! (Eq. (7) Gioele Paganini 2018, Part III)" << std::endl; 	
+	// const Real dichroism_module = std::sqrt(etas_and_rhos[1] * etas_and_rhos[1] + etas_and_rhos[2] * etas_and_rhos[2] + etas_and_rhos[3] * etas_and_rhos[3]);	
+	// if (etas_and_rhos[0] < dichroism_module) dichroism_warning = true;				
+	// if (dichroism_warning) std::cout << "\nWARNING: eta_I < eta! (Eq. (7) Gioele Paganini 2018, Part III)" << std::endl; 		
 }
 
+// void RT_problem::set_eta_and_rhos(){
+
+// 	auto eta_dev = eta_field_->view_device();
+// 	auto rho_dev = rho_field_->view_device();
+
+// 	auto a_dev   = a_    ->view_device();
+// 	auto u_dev   = u_    ->view_device();
+// 	auto k_L_dev = k_L_  ->view_device();
+// 	auto k_c_dev = k_c_  ->view_device();	
+// 	auto B_dev   = B_    ->view_device();	
+// 	auto v_b_dev = v_b_  ->view_device();
+	
+// 	auto Doppler_width_dev = Doppler_width_->view_device();
+
+//     Kokkos::parallel_for("INIT ETA-RHO", space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
+//     {         
+//         auto *block_eta = eta_dev.block(i, j, k);
+//         auto *block_rho = rho_dev.block(i, j, k);
+        
+//         auto *u   =   u_dev.block(i, j, k);		
+// 		auto *k_c = k_c_dev.block(i, j, k);		
+// 		auto *B   =   B_dev.block(i, j, k);       
+//         auto *v_b = v_b_dev.block(i, j, k);                        
+                        
+//         // assign some variables for readability
+//         Real theta_v_b = v_b[1];
+//         Real chi_v_b   = v_b[2];
+
+//         Real nu_L    = B[0];
+//         Real theta_B = B[1];
+//         Real chi_B   = B[2];
+
+//         Real Doppler_width = Doppler_width_dev.ref(i,j,k);
+//     	Real k_L           = k_L_dev.ref(i,j,k);
+// 		Real a             = a_dev.ref(i,j,k);
+
+// 		// init rotation matrix
+//         Rotation_matrix R(0.0, -theta_B, -chi_B);
+        
+//         // indeces
+//         std::vector<size_t> local_idx;
+//         size_t j_theta, k_chi, n_nu;
+
+// 		// coeffs
+// 		int q;
+// 		Real fact, coeff_K, W3J1, W3J2, um, v_dot_Omega;
+// 		Real u_red, u_b;
+
+// 		std::complex<Real> D_KQQ, faddeva, fact_re, fact_im;
+         
+//         for (size_t b = 0; b < block_size_; b = b + 4) 
+//         {        	        	
+//         	block_rho[b + 1] = 0;
+
+// 			local_idx = block_to_local(b);
+
+//         	j_theta = local_idx[0];
+//         	k_chi   = local_idx[1];
+//         	n_nu    = local_idx[2];
+
+//         	const Real theta = theta_grid_[j_theta];
+// 			const Real chi   = chi_grid_[k_chi];	
+
+// 			const Real coeff  =  k_L / (std::sqrt(PI) * Doppler_width);
+// 			const Real coeff2 = nu_L / Doppler_width; 
+
+// 			const std::complex<Real> a_damp(0.0, a);
+
+// 			// for reduced frequency
+// 			v_dot_Omega = v_b[0] * ( cos(theta_v_b) * cos(theta) + sin(theta_v_b) * sin(theta) * cos(chi - chi_v_b));
+// 			u_b = nu_0_ * v_dot_Omega / (c_ * Doppler_width);
+
+// 			u_red = u[n_nu] + u_b;			
+
+// 			for (int K = 0; K < 3; ++K)
+// 			{
+// 				coeff_K = coeff * std::sqrt(3 * ( 2 * K + 1));
+	
+// 				for (int Mu2 = - Ju2_; Mu2 < Ju2_ + 1; Mu2 += 2)
+// 				{
+// 					for (int Ml2 = - Jl2_; Ml2 < Jl2_ + 1; Ml2 += 2)
+// 					{				
+// 						const int Mu  = Mu2/2;
+// 						const int Ml  = Ml2/2;
+
+// 						if (std::abs(Mu - Ml) <= 1)
+// 						{
+// 							q = Ml - Mu;
+
+// 							W3J1 = W3JS(Ju2_, Jl2_, 2, -Mu2, Ml2, -2*q);
+// 							W3J2 = W3JS(2, 2, 2*K, 2*q, -2*q, 0);
+
+// 							fact = coeff_K * std::pow(-1, q + 1) * std::pow(W3J1,2) * W3J2;
+
+// 							um = coeff2 * (gu_ * Mu - gl_ * Ml) + u_red;
+					
+// 							for (int Q = -K; Q < K + 1; ++Q)
+// 							{			
+// 								faddeva = Faddeeva::w(um + a_damp);								
+// 								D_KQQ   = std::conj(R(K, 0, Q));
+
+// 								fact_re = fact * std::real(faddeva) * D_KQQ;
+// 								fact_im = fact * std::imag(faddeva) * D_KQQ;
+					
+// 								// etas							
+// 								block_eta[b    ] += std::real(fact_re * get_TKQi(0, K, Q, j_theta, k_chi)); 
+// 								block_eta[b + 1] += std::real(fact_re * get_TKQi(1, K, Q, j_theta, k_chi));
+// 								block_eta[b + 2] += std::real(fact_re * get_TKQi(2, K, Q, j_theta, k_chi));
+// 								block_eta[b + 3] += std::real(fact_re * get_TKQi(3, K, Q, j_theta, k_chi));														
+															
+// 								// rhos
+// 								block_rho[b + 1] += std::real(fact_im * get_TKQi(1, K, Q, j_theta, k_chi));
+// 								block_rho[b + 2] += std::real(fact_im * get_TKQi(2, K, Q, j_theta, k_chi));
+// 								block_rho[b + 3] += std::real(fact_im * get_TKQi(3, K, Q, j_theta, k_chi));						
+// 							}
+// 						}
+// 					}		
+// 				}
+//         	}
+
+//         	if (enable_continuum_) block_eta[b] += k_c[n_nu];             	
+        	
+//         	// checks
+//         	if (block_eta[b] == 0) std::cerr << "\nWARNING: zero eta_I!"     << std::endl; 
+//         	if (block_eta[b] < 0)  std::cerr << "\nWARNING: negative eta_I!" << std::endl; 		
+//         	if (block_rho[b] < 0)  std::cerr << "\nWARNING: negative rho_I!" << std::endl; 	      
+
+//         	// std::cout << "k = " << k << std::endl;      	        			
+//         	// std::cout << "b = " << b << std::endl;      	        		
+//         	// std::cout << "block_eta[b] = " << block_eta[b] << std::endl;      	        	
+//         } 	
+//     });	
+
+// 	// // exchange ghost layers (for periodic boundary)
+// 	// eta_field_->exchange_halos(); 
+// 	// rho_field_->exchange_halos(); 	
+
+// 	// debug			
+// 	// const Real dichroism_module = std::sqrt(etas_and_rhos[1] * etas_and_rhos[1] + etas_and_rhos[2] * etas_and_rhos[2] + etas_and_rhos[3] * etas_and_rhos[3]);	
+// 	// if (etas_and_rhos[0] < dichroism_module) dichroism_warning = true;				
+// 	// if (dichroism_warning) std::cout << "\nWARNING: eta_I < eta! (Eq. (7) Gioele Paganini 2018, Part III)" << std::endl; 	
+// }
+
+
+// void RT_problem::set_up(){
+ 
+//     if (mpi_rank_ == 0) std::cout << "\nPrecomputing quantities...";				
+
+//     // temporary constants
+//     Real tmp_const, tmp_const2, tmp_const3;
+    
+// 	// compute line-center frequency
+// 	const Real dE = Eu_ - El_;
+// 	nu_0_ = dE * c_;
+
+// 	// compute coefficients depending on the spatial point 
+	
+// 	// const for k_L
+// 	tmp_const = c_ * c_* (2 * Ju_ + 1) * Aul_ / (8 * PI * nu_0_ * nu_0_ * (2 * Jl_ + 1));
+
+// 	// const for Wien 
+// 	tmp_const2 = 2 * h_ * nu_0_ * nu_0_ * nu_0_ / (c_ * c_);
+	
+// 	// const for D1
+// 	tmp_const3 = (4 * Ju_ * Ju_ + 4 * Ju_ - 3) / ( 3 * (4 * Ju_ * Ju_ + 4 * Ju_ - 7));
+
+// 	const Real mass_real = mass_ * 1.6605e-24;
+
+// 	auto xi_dev   = xi_  ->view_device();
+// 	auto T_dev    = T_   ->view_device();
+// 	auto Nl_dev   = Nl_  ->view_device();
+// 	auto Cul_dev  = Cul_ ->view_device();
+// 	auto Qel_dev  = Qel_ ->view_device();
+// 	auto D2_dev   = D2_  ->view_device();
+// 	auto D1_dev   = D1_  ->view_device();
+// 	auto k_L_dev  = k_L_ ->view_device();
+// 	auto u_dev    = u_   ->view_device();
+
+// 	auto Doppler_width_dev = Doppler_width_->view_device();
+// 	auto epsilon_dev       = epsilon_ ->view_device();
+// 	auto W_T_dev           = W_T_->view_device();
+
+// 	// compute atmospheric quantities 
+//     sgrid::parallel_for("INIT-ATM", space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
+//     {       	
+//     	auto *u = u_dev.block(i, j, k);
+
+//     	// assign some variables for readability
+//     	Real T   =   T_dev.ref(i,j,k);    	    	
+//     	Real xi  =  xi_dev.ref(i,j,k);
+//     	Real Cul = Cul_dev.ref(i,j,k);
+    	
+//         // precompute quantities depening only on position
+//         D2_dev.ref(i,j,k)  = 0.5 * Qel_dev.ref(i,j,k); 
+
+// 		D1_dev.ref(i,j,k)  = tmp_const3 * D2_dev.ref(i,j,k);
+
+// 		k_L_dev.ref(i,j,k) = tmp_const * Nl_dev.ref(i,j,k);
+		
+// 		Doppler_width_dev.ref(i,j,k) = dE * std::sqrt(2 * k_B_ * T / mass_real + xi * xi);
+
+// 		epsilon_dev.ref(i,j,k) = Cul/(Cul + Aul_);	
+
+// 		W_T_dev.ref(i,j,k) = tmp_const2 * std::exp(- h_ * nu_0_ / (k_B_ * T));		
+
+// 		// on position and frequency
+// 		for (size_t n = 0; n < N_nu_; ++n)
+// 		{
+// 			u[n] = (nu_0_ - nu_grid_[n]) / Doppler_width_dev.ref(i,j,k);			
+// 		}	
+//     });	
+		    
+// 	// precompute polarization tensors T_KQ
+// 	for (int i = 0; i < 4; ++i)
+// 	{
+// 		for (size_t j = 0; j < N_theta_; ++j)
+// 		{
+// 			for (size_t k = 0; k < N_chi_; ++k)
+// 			{
+// 				auto T_KQ = compute_T_KQ(i, theta_grid_[j], chi_grid_[k]);
+			
+// 				T_KQ_.push_back(T_KQ);							
+// 			}
+// 		}
+// 	}
+	   	
+// 	// compute etas and rhos
+// 	set_eta_and_rhos();
+
+// 	// delete stuff that is not needed -----------------------------------> TODO?
+	
+// 	if (mpi_rank_ == 0) std::cout << "done" << std::endl;	
+// }
 
 void RT_problem::set_up(){
  
@@ -969,13 +1235,13 @@ void RT_problem::set_up(){
 	// compute coefficients depending on the spatial point 
 	
 	// const for k_L
-	tmp_const = c_ * c_* (2 * Ju_ + 1) * Aul_ / (8 * PI * nu_0_ * nu_0_ * (2 * Jl_ + 1));
+	tmp_const = c_ * c_* (Ju2_ + 1) * Aul_ / (8 * PI * nu_0_ * nu_0_ * (Jl2_ + 1));
 
 	// const for Wien 
 	tmp_const2 = 2 * h_ * nu_0_ * nu_0_ * nu_0_ / (c_ * c_);
 	
 	// const for D1
-	tmp_const3 = (4 * Ju_ * Ju_ + 4 * Ju_ - 3) / ( 3 * (4 * Ju_ * Ju_ + 4 * Ju_ - 7));
+	tmp_const3 = (Ju2_ * Ju2_ + 2 * Ju2_ - 3) / ( 3 * (Ju2_ * Ju2_ + Ju2_ - 7));
 
 	const Real mass_real = mass_ * 1.6605e-24;
 
@@ -1106,9 +1372,16 @@ void const RT_problem::print_surface_profile(const Field_ptr_t field, const int 
 }
 
 
-void const RT_problem::print_surface_QI_profile(const Field_ptr_t field, const int i_space, const int j_space, const int j_theta, const int k_chi){
+void const RT_problem::print_surface_QI_profile(const Field_ptr_t field, const int i_space, const int j_space, 
+	 const int j_theta, const int k_chi, const int i_stokes){
 
-	if (mpi_rank_ == 0) std::cout << "\nSurface Q/I, " << "mu =  " << mu_grid_[j_theta] << ", chi =  " << chi_grid_[k_chi] << std::endl;		
+	if (i_stokes > 3 or i_stokes < 1) std::cout << "ERROR in print_surface_QI_profile input!" << std::endl; 
+
+	if (mpi_rank_ == 0 and i_stokes == 1) std::cout << "\nSurface Q/I, ";
+	if (mpi_rank_ == 0 and i_stokes == 2) std::cout << "\nSurface U/I, ";
+	if (mpi_rank_ == 0 and i_stokes == 3) std::cout << "\nSurface V/I, ";
+
+	if (mpi_rank_ == 0) std::cout << "mu =  " << mu_grid_[j_theta] << ", chi =  " << chi_grid_[k_chi] << std::endl;		
 	
 	const auto f_dev = field->view_device();	
 	const auto g_dev = space_grid_->view_device();
@@ -1142,9 +1415,9 @@ void const RT_problem::print_surface_QI_profile(const Field_ptr_t field, const i
 						for (int b = 0; b < 4 * N_nu_; b = b + 4) 
 						{	
 							const double I = f_dev.block(i,j,k_start)[b_start + b];
-							const double Q = f_dev.block(i,j,k_start)[b_start + b + 1];
+							const double QUV = f_dev.block(i,j,k_start)[b_start + b + i_stokes];							
 
-							std::cout << Q/I << std::endl; 							
+							std::cout << QUV/I << std::endl; 							
 						}
 
 						return;
@@ -1154,7 +1427,6 @@ void const RT_problem::print_surface_QI_profile(const Field_ptr_t field, const i
 		}
 	}
 }
-
 
 
 void const RT_problem::print_profile(const Field_ptr_t field, const int i_stoke, 
@@ -1278,25 +1550,33 @@ void RT_problem::set_grid_partition()
 {
 	// TODO: now hardcoded	
 
-	const double mpi_size_z = mpi_size_ / N_x_ / N_y_;
+	if (mpi_size_ <= N_z_)
+	{		
+		mpi_size_z_ = mpi_size_;
+		mpi_size_x_ = 1;
+		mpi_size_y_ = 1;
+	}
+	else
+	{
+		// // HARDCODED
+		// mpi_size_z_ = 64;
+		// mpi_size_x_ = 16;
+		// mpi_size_y_ = 24;		
 
-	if (std::floor(mpi_size_z) != mpi_size_z) std::cout << "ERROR: problem with domain decomposition: mpi_size_ / N_x_ / N_y_ not integer!" << std::endl;
+		mpi_size_z_ = N_z_;
 
-	mpi_size_z_ = mpi_size_z;
-	mpi_size_x_ = N_x_;
-	mpi_size_y_ = N_y_;
+		const double mpi_size_xy = mpi_size_ / mpi_size_z_;
 
-	// const double mpi_size_xy = mpi_size_ / mpi_size_z_;
+		if (std::floor(mpi_size_xy) != mpi_size_xy) std::cout << "ERROR: problem with domain decomposition: mpi_size_ / mpi_size_z_ not integer!" << std::endl;
 
-	// if (std::floor(mpi_size_xy) != mpi_size_xy) std::cout << "ERROR: problem with domain decomposition: mpi_size_ / mpi_size_z_ not integer!" << std::endl;
+		mpi_size_x_ = std::floor(std::sqrt(mpi_size_xy));
 
-	// mpi_size_x_ = std::floor(std::sqrt(mpi_size_xy));
+		const double mpi_size_y = mpi_size_xy / mpi_size_x_;
 
-	// const double mpi_size_y = mpi_size_xy / mpi_size_x_;
+		if (std::floor(mpi_size_y) != mpi_size_y) std::cout << "ERROR: problem with domain decomposition: mpi_size_y not integer!" << std::endl;
 
-	// if (std::floor(mpi_size_y) != mpi_size_y) std::cout << "ERROR: problem with domain decomposition: mpi_size_y not integer!" << std::endl;
-
-	// mpi_size_y_ = (int) mpi_size_y;		
+		mpi_size_y_ = (int) mpi_size_y;		
+	}
 }
 
 

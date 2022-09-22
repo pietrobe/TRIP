@@ -8,30 +8,44 @@
 
 int main(int argc, char *argv[]) {
 
-  // return test_solar_3D::test_rii_3D_include(argc, argv);
-
   MPI_CHECK(MPI_Init(&argc, &argv));
   PetscInitialize(&argc, &argv, (char *)0, NULL);
   Kokkos::initialize(argc, argv);
 
   {
-    const bool using_prec  = true;
     const bool save_output = false;
+
+    if (argc < 2) std::cout << "Missing arguments, usage: srun -n 1 ./solar_3D N_theta N_chi" << std::endl;
 
     const size_t N_theta = atoi(argv[1]);
     const size_t N_chi   = atoi(argv[2]);
 
     const std::string input_path  = "../input/FAL-C/1_B0_V0_12T_8C_99F";
+    // const std::string input_path  = "../input/FAL-C/1_B0_V0_12T_8C_64F_64";
+    // const std::string input_path  = "../input/FAL-C/1_B0_V0_12T_8C_4F_64";
 
     auto rt_problem_ptr = std::make_shared<RT_problem>(input_path, N_theta, N_chi);
 
-    RT_solver rt_solver(rt_problem_ptr, "DELO_linear", using_prec);    
-    
-    rt_solver.solve();  
-    rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, 0); 
+    RT_solver rt_solver(rt_problem_ptr, "DELO_linear");    
 
-    // rt_solver.apply_formal_solver();
-    // rt_problem_ptr->print_surface_profile(rt_problem_ptr->I_field_, 0, 0, 0, N_theta/2, 0);     
+    // rt_solver.solve();  
+
+    // rt_problem_ptr->print_surface_profile(rt_problem_ptr->I_field_, 0, 0, 0, N_theta/2 + 1, 0);  
+    // // rt_problem_ptr->print_surface_profile(rt_problem_ptr->I_field_, 0, 2, 2, N_theta/2 + 1, 0);     
+
+    // rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, 0, 1); 
+    // rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, 0, 2);
+    // rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, 0, 3); 
+
+    // rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 2, 2, N_theta/2 + 1, 0, 1); 
+    // rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 2, 2, N_theta/2 + 1, 0, 2);
+    // rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 2, 2, N_theta/2 + 1, 0, 3); 
+
+    rt_solver.apply_formal_solver();
+    rt_problem_ptr->print_surface_profile(rt_problem_ptr->I_field_, 0, 0, 0, N_theta/2, 0);     
+
+    // rt_solver.compute_emission();
+    // rt_problem_ptr->print_profile(rt_problem_ptr->S_field_, 0, 0, 0, 0, N_theta/2, 0);  
   
     // print memory usage 
     const double byte_to_GB = 1.0 / (1000 * 1024 * 1024);

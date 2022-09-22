@@ -29,10 +29,14 @@ public:
     	if (mpi_rank_ == 0) std::cout << "\n~~~~~~ MPI size = " << mpi_size_ << " ~~~~~~" << std::endl;		
     	if (mpi_rank_ == 0) std::cout << "\n=========== Reading input files ===========\n" << std::endl;				
     
-    	// TODO: now hardcoded
-    	L_   = 100.0;    	
+    	// TODO: now hardcoded (put everything in input_path file)    	
+    	// N_x_ = std::sqrt(mpi_size_)/2;
     	N_x_ = 4;
-    	N_y_ = 4;
+    	N_y_ = N_x_;
+    	
+    	L_   = 100.0;
+    	// const double L_tot = 1000.0;
+    	// L_ = L_tot/N_x_;
 
     	// reading some input
     	read_atom(     input_path + "/atom.dat");
@@ -46,9 +50,14 @@ public:
 		// init grid
 		space_grid_ = std::make_shared<Grid_t>();
 
-		// menage grid distribution // TODO: now hardcoded
+		const bool use_ghost_layers = false;
+
+		// menage grid distribution // TODO: now bit hardcoded
 		set_grid_partition();
-		space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0}, {mpi_size_x_, mpi_size_y_, mpi_size_z_}); 
+		space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0},
+									 {mpi_size_x_, mpi_size_y_, mpi_size_z_}, use_ghost_layers); 
+		
+		// space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0}, {}, use_ghost_layers); 
 
 		// init fields
 		allocate_fields();				
@@ -112,7 +121,7 @@ public:
 
 	void const print_surface_QI_profile(const Field_ptr_t field, 
 									 const int i_space = 0, const int j_space = 0, 
-									 const int j_theta = 0, const int k_chi = 0);
+									 const int j_theta = 0, const int k_chi = 0, const int i_stokes = 1);
 
 
 	void const print_profile(const Field_ptr_t field, 
@@ -202,18 +211,15 @@ public:
 	Field_ptr_t eps_c_th_;
 
 	// Access to the atomic model parameters
-	inline double atomic_mass() const { return this->mass_;}
-	inline double atomic_El()   const { return this->El_;  }
-	inline double atomic_Eu()   const { return this->Eu_;  }
-	inline int atomic_Jl()      const { return this->Jl_;  }
-	inline int atomic_Ju()      const { return this->Ju_;  }
-	inline int atomic_Jl2()     const { return this->Jl2_; }
-	inline int atomic_Ju2()     const { return this->Ju2_; }
-	inline int atomic_gl()      const { return this->gl_;  }
-	inline int atomic_gu()      const { return this->gu_;  }
-	inline double atomic_Aul()  const { return this->Aul_; }
-
-	inline Field_ptr_t get_D2() const { return this->D2_; }
+	inline double atomic_mass() const { return mass_;}
+	inline double atomic_El()   const { return El_;  }
+	inline double atomic_Eu()   const { return Eu_;  }
+	inline int    atomic_Jl2()  const { return Jl2_; }
+	inline int    atomic_Ju2()  const { return Ju2_; }
+	inline double atomic_gl()   const { return gl_;  }
+	inline double atomic_gu()   const { return gu_;  } 
+	inline double atomic_Aul()  const { return Aul_; }
+	inline Field_ptr_t get_D2() const { return D2_;  }
 
 	bool field_is_zero(const Field_ptr_t field);
 
@@ -228,14 +234,12 @@ private:
 	double mass_;
 	double El_;
 	double Eu_;
-	int Jl_;
-	int Ju_;
+	double gl_; 
+	double gu_;
+	double Aul_;	// Einstein coefficients for spontaneous emission
 	int Jl2_;
 	int Ju2_;
-	int gl_;
-	int gu_;
-	double Aul_;	// Einstein coefficients for spontaneous emission
-
+	
 	// reference frame
 	const Real gamma_ = 0.5 * PI;	  
 
