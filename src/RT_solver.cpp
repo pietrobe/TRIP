@@ -731,10 +731,7 @@ std::vector<double> MF_context::single_long_ray_step(const std::vector<t_interse
 }
 
 
-// TODO: Why do I need serial fields as input? Use only I_field_serial_??
-
-void MF_context::formal_solve_global(Field_ptr_t I_field, Field_ptr_t I_field_serial, 
-                                     const Field_ptr_t S_field, const Field_ptr_t S_field_serial, const Real I0)
+void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0)
 {
 	if (mpi_rank_ == 0) std::cout << "\nStart global formal solution..." << std::endl;
     
@@ -757,8 +754,8 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, Field_ptr_t I_field_se
     const auto eta_dev = eta_field_serial_->view_device(); 
     const auto rho_dev = rho_field_serial_->view_device(); 
 
-    const auto I_dev = I_field_serial->view_device();		
-	const auto S_dev = S_field_serial->view_device();	    
+    const auto I_dev = I_field_serial_->view_device();		
+	const auto S_dev = S_field_serial_->view_device();	    
 
 	const auto g_dev = space_grid_serial_->view_device();   
 
@@ -820,7 +817,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, Field_ptr_t I_field_se
         if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
         Real start_comm = MPI_Wtime();                                    
         
-        // write S to the serial grid and I to get initial condition              // TODO: why S_field_serial_?
+        // write S to the serial grid and I to get initial condition              
         S_remap_.from_pgrid_to_pblock(*S_field, *S_field_serial_, tile_number);                        
         I_remap_.from_pgrid_to_pblock(*I_field, *I_field_serial_, tile_number); // TODO: this is a bit redundant, only one xy plane is needed
                 
@@ -932,11 +929,11 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, Field_ptr_t I_field_se
     									{                                                     
                                             if (use_single_long_step_)
                                             {
-                                                I2 = single_long_ray_step(intersection_data_long_ray, I_field_serial, S_field_serial, i_aux, j_aux, k_aux, b_start);
+                                                I2 = single_long_ray_step(intersection_data_long_ray, I_field_serial_, S_field_serial_, i_aux, j_aux, k_aux, b_start);
                                             }
                                             else
                                             {
-                                                I2 = long_ray_steps(intersection_data_long_ray, I_field_serial, S_field_serial, i_aux, j_aux, k_aux, b_start);
+                                                I2 = long_ray_steps(intersection_data_long_ray, I_field_serial_, S_field_serial_, i_aux, j_aux, k_aux, b_start);
                                             }                                                                         
     									}
     									else // short ray
@@ -1098,7 +1095,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, Field_ptr_t I_field_se
         if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
         start_comm = MPI_Wtime();    
         
-        I_remap_.from_pblock_to_pgrid(*I_field_serial, *I_field, tile_number); 
+        I_remap_.from_pblock_to_pgrid(*I_field_serial_, *I_field, tile_number); 
 
         comm_timer += MPI_Wtime() - start_comm; 
     }
@@ -1463,8 +1460,8 @@ void RT_solver::assemble_rhs(){
     		}	
     	});
 
-    	// fill rhs_ from formal solve with bc (I_field_serial_ and S_field_serial_ are used as temporary containers here)           	
-        mf_ctx_.formal_solve_global(rhs_field, mf_ctx_.I_field_serial_, eps_th_field, mf_ctx_.S_field_serial_, 1.0);       
+    	// fill rhs_ from formal solve with bc
+        mf_ctx_.formal_solve_global(rhs_field, eps_th_field, 1.0);       
     	mf_ctx_.field_to_vec(rhs_field, rhs_);  
 
         // rhs_field->write("rhs_field.raw");   
@@ -1494,7 +1491,7 @@ PetscErrorCode UserMult(Mat mat, Vec x, Vec y){
     start = MPI_Wtime();      
   	    
   	// fill rhs_ from formal solve with zero bc  	
-	mf_ctx_->formal_solve_global(RT_problem->I_field_, mf_ctx_->I_field_serial_, RT_problem->S_field_, mf_ctx_->S_field_serial_, 0.0);
+    mf_ctx_->formal_solve_global(RT_problem->I_field_, RT_problem->S_field_, 0.0);
       
     if (RT_problem->mpi_rank_ == 0) printf("formal_solve_global:\t\t%g seconds\n", MPI_Wtime() - start);              
     
@@ -1527,7 +1524,7 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
     if (RT_problem->mpi_rank_ == 0) printf("update CRD emission:\t\t%g seconds\n", MPI_Wtime() - start);              
 
     // fill rhs_ from formal solve with zero bc     
-    mf_ctx_->formal_solve_global(RT_problem->I_field_, mf_ctx_->I_field_serial_, RT_problem->S_field_, mf_ctx_->S_field_serial_, 0.0);
+    mf_ctx_->formal_solve_global(RT_problem->I_field_, RT_problem->S_field_, 0.0);
     
     // copy intensity into petscvec format
     mf_ctx_->field_to_vec(RT_problem->I_field_, y);

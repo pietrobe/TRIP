@@ -91,7 +91,7 @@ struct MF_context {
 	void get_2D_weigths(const double x, const double y, double *w);
 
 	// formal solver	
-	void formal_solve_global(Field_ptr_t I_field, Field_ptr_t I_field_serial, const Field_ptr_t S_field, const Field_ptr_t S_field_serial, const Real I0);		
+	void formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
 	
 	void apply_bc(Field_ptr_t I_field, const Real I0);	
 		
@@ -234,7 +234,7 @@ public:
 
 		if (mpi_rank_ == 0) std::cout << "Start formal solve..." << std::endl;
 
-		mf_ctx_.formal_solve_global(RT_problem_->I_field_, mf_ctx_.I_field_serial_, RT_problem_->S_field_, mf_ctx_.S_field_serial_, 1.0);		
+		mf_ctx_.formal_solve_global(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);		
 						
 		MPI_Barrier(MPI_COMM_WORLD); Real end = MPI_Wtime();
 		if (mpi_rank_ == 0) std::cout << "Formal solve time (s) = " << end - start << std::endl;	
