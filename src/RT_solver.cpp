@@ -454,10 +454,7 @@ void MF_context::get_2D_weigths(const double x, const double y, double *w)
 std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T, 
                                                const Field_ptr_t I_field, const Field_ptr_t S_field, 
                                                const int i, const int j, const int k, const int block_index)
-{             
-
-    std::cout << "WARNING: update distances in find prolongation! now buggy!" << std::endl; // TODO
-
+{                 
     if (use_log_interpolation_) std::cout << "WARNING: log_interpolation not suppoerted for long_ray_steps()!" << std::endl;
 
     const auto N_x = RT_problem_->N_x_;
@@ -588,8 +585,11 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
             K2 = assemble_propagation_matrix_scaled(etas, rhos);
         }
 
-		// optical depth step								
-		dtau = coeff * (eta_I_1 + etas[0]) * T[cell].distance;									
+        // compute current interval distance
+        const double cell_distance = (cell < N - 1) ? T[cell].distance - T[cell + 1].distance : T[cell].distance;         
+
+		// optical depth step		        
+		dtau = coeff * (eta_I_1 + etas[0]) * cell_distance;									
 
 		if (dtau > 0 ) std::cout << "ERROR in dtau sign" << std::endl;		
         
@@ -624,14 +624,8 @@ std::vector<double> MF_context::single_long_ray_step(const std::vector<t_interse
 
     std::vector<double> I1(4), I2(4), S1(4), S2(4), etas(4), rhos(4), K1(16), K2(16);
    
-    // // compute total distance 
-    // for (int cell = 0; cell < T.size(); ++cell)
-    // {                           
-    //    total_distance += T[cell].distance;
-    // }   
-
-    // TODO
-    total_distance = T[0].distance;   // ----------------> FIXME in new version
+    // total distance 
+    total_distance = T[0].distance;  
 
     // quantities in (1)  
     for (int i_stokes = 0; i_stokes < 4; ++i_stokes) 

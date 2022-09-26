@@ -374,7 +374,7 @@ void RT_problem::read_atmosphere_1D(input_string filename){
 
 	auto g_dev = space_grid_->view_device();
 
-	const bool test_etero = false;
+	const bool test_etero = true;
 
 	if (mpi_rank_ == 0 and test_etero) std::cout << "WARNING: adding temperature perturbation!" << std::endl;
 
@@ -393,11 +393,11 @@ void RT_problem::read_atmosphere_1D(input_string filename){
 
 			const double T_ijk = T_vec[k_global] * cos(2.0 * PI * x) * cos(2.0 * PI * y) / 2.0;
 
-			T_dev.ref(  i, j, k) =   T_vec[k_global] + T_ijk;
+			T_dev.ref(i,j,k) = T_vec[k_global] + T_ijk;
 		}
 		else
 		{
-			T_dev.ref(  i, j, k) =   T_vec[k_global];
+			T_dev.ref(i,j,k) = T_vec[k_global];
 		}		
 
 		xi_dev.ref( i, j, k) =  xi_vec[k_global];		
@@ -1313,6 +1313,8 @@ void RT_problem::set_up(){
 
 void const RT_problem::print_surface_profile(const Field_ptr_t field, const int i_stoke, const int i_space, const int j_space, const int j_theta, const int k_chi){
 		
+	MPI_Barrier(MPI_COMM_WORLD);
+		
 	const auto f_dev = field->view_device();	
 	const auto g_dev = space_grid_->view_device();
 
@@ -1369,11 +1371,16 @@ void const RT_problem::print_surface_profile(const Field_ptr_t field, const int 
 			}
 		}
 	}
+
+	MPI_Barrier(MPI_COMM_WORLD);
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 
 
 void const RT_problem::print_surface_QI_profile(const Field_ptr_t field, const int i_space, const int j_space, 
 	 const int j_theta, const int k_chi, const int i_stokes){
+
+	MPI_Barrier(MPI_COMM_WORLD);
 
 	if (i_stokes > 3 or i_stokes < 1) std::cout << "ERROR in print_surface_QI_profile input!" << std::endl; 
 
@@ -1414,7 +1421,7 @@ void const RT_problem::print_surface_QI_profile(const Field_ptr_t field, const i
 
 						for (int b = 0; b < 4 * N_nu_; b = b + 4) 
 						{	
-							const double I = f_dev.block(i,j,k_start)[b_start + b];
+							const double I   = f_dev.block(i,j,k_start)[b_start + b];
 							const double QUV = f_dev.block(i,j,k_start)[b_start + b + i_stokes];							
 
 							std::cout << QUV/I << std::endl; 							
@@ -1426,6 +1433,9 @@ void const RT_problem::print_surface_QI_profile(const Field_ptr_t field, const i
 			}
 		}
 	}
+
+	MPI_Barrier(MPI_COMM_WORLD);
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 
 
@@ -1505,6 +1515,8 @@ void const RT_problem::print_profile(const Field_ptr_t field, const int i_stoke,
 			}
 		}
 	}	
+
+	MPI_Barrier(MPI_COMM_WORLD);
 }
 
 
