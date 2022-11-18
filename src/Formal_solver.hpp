@@ -20,29 +20,39 @@ public:
 	{				
 		MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank_);		
 		
-		// print type and check
-		if (mpi_rank_ == 0)
-		{
-			if (type_ == "implicit_Euler")
-			{
-				std::cout << "Formal solver: implicit Euler\n";	
-			}
-			else if (type_ == "trapezoidal" or type_ == "Crank–Nicolson")
-			{
-				std::cout << "Formal solver: Crank–Nicolson\n";	
-			}
-			else if (type_ == "DELO_linear")
-			{
-				std::cout << "Formal solver: DELO linear\n";	
-			}
-			else
-			{
-				std::cerr << "ERROR: " << type_ << " is not supported as formal solver.\n";
-			}
+		// print type and check		
+		stencil_size_ = 2;
 
-			if (debug_mode_) std::cout << "Formal solver bebug mode enabled.\n";	
-		}				
+		if (type_ == "implicit_Euler")
+		{
+			if (mpi_rank_ == 0) std::cout << "Formal solver: implicit Euler\n";	
+		}
+		else if (type_ == "trapezoidal" or type_ == "Crank–Nicolson")
+		{
+			if (mpi_rank_ == 0) std::cout << "Formal solver: Crank–Nicolson\n";	
+		}
+		else if (type_ == "DELO_linear")
+		{
+			if (mpi_rank_ == 0) std::cout << "Formal solver: DELO linear\n";	
+		}
+		else if (type_ == "BESSER")
+		{
+			if (mpi_rank_ == 0) std::cout << "Formal solver: BESSER\n";	
+
+			stencil_size_ = 3;
+		}
+		else
+		{
+			if (mpi_rank_ == 0) std::cerr << "ERROR: " << type_ << " is not supported as formal solver.\n";
+			if (mpi_rank_ == 0) std::cerr << "Supported inputs: implicit_Euler, Crank–Nicolson, DELO_linear, and BESSER.\n";
+		}
+
+		if (debug_mode_ and mpi_rank_ == 0) std::cout << "Formal solver bebug mode enabled.\n";				
 	}
+
+	// getters
+	inline int         get_stencil_size() const {return stencil_size_;}
+	inline std::string get_type()         const {return type_;        }
 
 	// solve on a ray
 	void solve(input_vec &dts, input_field &K, input_field &S, input_vec &I_in, output_field &I_out);
@@ -50,10 +60,18 @@ public:
 	// solve, for one step (dt), I' = K * I - S with initial condition I_in and K = [K1 K2] and S = [S1 S2]
 	void one_step(const Real dt, input_vec &K1, input_vec &K2, input_vec &S1, input_vec &S2, input_vec &I_in, output_vec &I_out);
 
+	// one step method for quadratic stencils
+	void one_step_quadratic(const Real dt_1, const Real dt_2, input_vec &K1, input_vec &K2, input_vec &K3,
+								 						      input_vec &S1, input_vec &S2, input_vec &S3,
+								 							  input_vec &I_in, output_vec &I_out);
+
 private:
 
 	// MPI variables
 	int mpi_rank_;
+
+	// stencil size: 2 for linear, 3 for quadratic
+	int stencil_size_;
 
 	// type of formal solver
 	std::string type_;

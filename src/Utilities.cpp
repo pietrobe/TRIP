@@ -256,7 +256,7 @@ std::vector<double> assemble_propagation_matrix_scaled(const std::vector<double>
     int mpi_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
-  if ( etas[0] == 0) std::cout << "mpi_rank = " << mpi_rank << std::endl;
+  if (etas[0] == 0) std::cout << "etas[0] == 0 in mpi_rank = " << mpi_rank << std::endl;
 
   std::vector<double> K(16);
   

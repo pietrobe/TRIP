@@ -374,7 +374,7 @@ void RT_problem::read_atmosphere_1D(input_string filename){
 
 	auto g_dev = space_grid_->view_device();
 
-	const bool test_etero = true;
+	const bool test_etero = false;
 
 	if (mpi_rank_ == 0 and test_etero) std::cout << "WARNING: adding temperature perturbation!" << std::endl;
 
@@ -1373,7 +1373,7 @@ void const RT_problem::print_surface_profile(const Field_ptr_t field, const int 
 	}
 
 	MPI_Barrier(MPI_COMM_WORLD);
-	std::this_thread::sleep_for(std::chrono::seconds(1));
+	std::this_thread::sleep_for(std::chrono::seconds(2));
 }
 
 
@@ -1435,7 +1435,7 @@ void const RT_problem::print_surface_QI_profile(const Field_ptr_t field, const i
 	}
 
 	MPI_Barrier(MPI_COMM_WORLD);
-	std::this_thread::sleep_for(std::chrono::seconds(1));
+	std::this_thread::sleep_for(std::chrono::seconds(2));
 }
 
 

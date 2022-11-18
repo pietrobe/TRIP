@@ -31,7 +31,7 @@ public:
     
     	// TODO: now hardcoded (put everything in input_path file)    	
     	// N_x_ = std::sqrt(mpi_size_)/2;
-    	N_x_ = 8;
+    	N_x_ = 1;
     	N_y_ = N_x_;
     	
     	L_   = 100.0;
