@@ -103,7 +103,7 @@ void Formal_solver::one_step(const Real dt, input_vec &K1, input_vec &K2, input_
 
 		for (int i = 0; i < 4; ++i) 
 		{
-			b[i] = I_in[i] - dt * S2[i];			
+			b[i] = I_in[i] - dt * S2[i];						
 
 			for (int j = 0; j < 4; ++j)
 			{
@@ -111,7 +111,7 @@ void Formal_solver::one_step(const Real dt, input_vec &K1, input_vec &K2, input_
 
 				A[index_ij] = (i == j) - dt * K2[index_ij];
 			}			
-		}
+		}		
 			
 		I_out = solve_4_by_4_system(A, b);			
 	}

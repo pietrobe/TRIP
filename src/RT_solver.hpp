@@ -220,23 +220,24 @@ public:
 	{		
 		Real start = MPI_Wtime();		
 
-		// // set source fun
+		// set source fun
 		// if (mpi_rank_ == 0) std::cout << "WARNING: setting source function in apply_formal_solver()" << std::endl;
+
 		auto S_dev = RT_problem_->S_field_->view_device();
 
-	     sgrid::parallel_for("INIT S", RT_problem_->space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) 
-	     {         
-	         auto *block = S_dev.block(i, j, k);
-	         
-	         for (int b = 0; b < (int)RT_problem_->block_size_; ++b) 
-	         {
-	         	// block[b] = 0.001;        	
-	         	if (block[b] != 0) std::cout << "S not zero!" << std::endl;
-	         }
-	     });
+		sgrid::parallel_for("INIT S", RT_problem_->space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) 
+		{         
+			auto *block = S_dev.block(i, j, k);
+
+			for (int b = 0; b < (int)RT_problem_->block_size_; ++b) 
+			{	    
+				// block[b] = 0.1;     	   	
+				if (block[b] != 0) std::cout << "S not zero!" << std::endl;
+			}
+		});
 
 		if (mpi_rank_ == 0) std::cout << "Start formal solve..." << std::endl;
-
+		
 		mf_ctx_.formal_solve_global(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);		
 						
 		MPI_Barrier(MPI_COMM_WORLD); Real end = MPI_Wtime();
@@ -347,7 +348,7 @@ private:
 	KSPType ksp_type_ = KSPGMRES;
 	PC pc_;
 	
-	bool using_prec_;
+	bool using_prec_;	
 			
 	// assemble Lam[eps_th] + t
 	void assemble_rhs();		

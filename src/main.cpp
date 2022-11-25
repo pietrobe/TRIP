@@ -26,40 +26,20 @@ int main(int argc, char *argv[]) {
 
     auto rt_problem_ptr = std::make_shared<RT_problem>(input_path, N_theta, N_chi);
 
-    RT_solver rt_solver(rt_problem_ptr, "DELO_linear");    
+    RT_solver rt_solver(rt_problem_ptr, "BESSER");
 
-    RT_solver rt_solver2(rt_problem_ptr, "BESSER");
+    rt_solver.solve();  // assemble RHS
 
-    // rt_solver.solve();  // assemble RHS
+    rt_problem_ptr->print_surface_profile(rt_problem_ptr->I_field_, 0, 0, 0, N_theta/2 + 1, 0);     
+    rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, 0, 1); 
+    rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, 0, 2);
+    rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, 0, 3); 
 
-
-    // rt_problem_ptr->print_surface_profile(rt_problem_ptr->I_field_, 0, 0, 0, N_theta/2 + 1, 0);     
-    // rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, 0, 1); 
-    // rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, 0, 2);
-    // rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, 0, 3); 
-
-	
-  const size_t N_z_out =     atoi(argv[3]);
-  const size_t N_theta_out = atoi(argv[4]);
-  const size_t N_chi_out   = atoi(argv[5]);
-
+    // rt_solver.apply_formal_solver();
+    // rt_problem_ptr->print_profile(rt_problem_ptr->I_field_, 0, 0, 0, 0, N_theta/2, 0);    
+    // save_vec(rt_problem_ptr->I_vec_, "../output/I_field_DELO.m" ,"I_DELO");  
+    // rt_problem_ptr->I_field_->write("I_field_DELO.raw");          
   
-
-    rt_solver.apply_formal_solver();
-    rt_problem_ptr->print_profile(rt_problem_ptr->I_field_, 0, 0, 0, N_z_out, N_theta_out, N_chi_out);
-    save_vec(rt_problem_ptr->I_vec_, "../output/I_field_DELO.m" ,"I_DELO");  
-  //   rt_problem_ptr->I_field_->write("I_field_DELO.raw");          
-  
-    // rt_problem_ptr->print_surface_profile(rt_problem_ptr->I_field_, 0, 0, 0, N_theta_out, 0);     
-    
-    rt_solver2.apply_formal_solver();
-    rt_problem_ptr->print_profile(rt_problem_ptr->I_field_, 0, 0, 0, N_z_out, N_theta_out, N_chi_out);
-    save_vec(rt_problem_ptr->I_vec_, "../output/I_field_BESSER.m" ,"I_BESSER");  
-    // rt_problem_ptr->I_field_->write("I_field_BESSER.raw");          
-    // rt_problem_ptr->print_surface_profile(rt_problem_ptr->I_field_, 0, 0, 0, N_theta_out, 0);
-
-    // rt_problem_ptr->print_surface_profile(rt_problem_ptr->I_field_, 0, 0, 0, N_theta/2 + 1, 0);     
-
     // rt_solver.compute_emission();
     // rt_problem_ptr->print_profile(rt_problem_ptr->S_field_, 0, 0, 0, 0, N_theta/2, 0);  
   
