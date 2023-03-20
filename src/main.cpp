@@ -24,7 +24,8 @@ int main(int argc, char *argv[]) {
     const std::string input_path  = "../input/FAL-C/1_B0_V0_12T_8C_64F_64";
     // const std::string input_path  = "../input/FAL-C/1_B0_V0_12T_8C_4F_64";
 
-    auto rt_problem_ptr = std::make_shared<RT_problem>(input_path, N_theta, N_chi);
+    // auto rt_problem_ptr = std::make_shared<RT_problem>(input_path, N_theta, N_chi);
+    auto rt_problem_ptr = std::make_shared<RT_problem>("../input/PORTA/cai_0B_1V_50x50x133_iter150.pmd");
 
     RT_solver rt_solver(rt_problem_ptr, "BESSER");
 

@@ -797,7 +797,8 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
             
             dtau_1 = coeff * (eta_I_1 + etas[0]) * cell_distance;      
             
-            if (dtau_1 >= 0 ) std::cout << "ERROR in dtau_1 sign, dtau_1 = " << dtau_1 << std::endl;                                    
+            if (dtau_1 > 0) std::cout << "ERROR in dtau_1 sign, dtau_1 = " << dtau_1 << std::endl;   
+            if (dtau_1 == 0)  std::cout << "WARNING: dtau_1 = 0, possible e.g. for N_chi = 4" << std::endl;                                 
         }
         else // reuse
         {
@@ -883,7 +884,8 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
         // optical depth step               
         dtau_2 = coeff * (eta_I_1 + etas[0]) * cell_distance; 
        
-        if (dtau_2 >= 0 ) std::cout << "ERROR in dtau_2 sign, dtau_2 = " << dtau_2 << std::endl;  
+        if (dtau_2 > 0)  std::cout << "ERROR in dtau_2 sign, dtau_2 = " << dtau_2 << std::endl;  
+        if (dtau_2 == 0) std::cout << "WARNING: dtau2 = 0, possible e.g. for N_chi = 4" << std::endl;
         
         formal_solver_.one_step_quadratic(dtau_1, dtau_2, K1, K2, K3, S1, S2, S3, I1, I2);       
 

@@ -48,6 +48,24 @@ using Real = double;
 
 #define PI 3.1415926535897932384626
 
+// for pmd input
+#define ERR  {fprintf(stderr,"ERROR reading PORTA input.\n"); exit(1);}
+
+inline double* convert_cartesian_to_spherical(const double x, const double y, const double z)
+{
+    static double spherical_coordinates[3]; 
+    
+    const double r     = sqrt(x*x + y*y + z*z);   
+    const double theta = acos(z/r);
+    const double chi   = atan(y/x);   
+    
+    spherical_coordinates[0] = r;
+    spherical_coordinates[1] = theta;
+    spherical_coordinates[2] = chi;
+
+    return spherical_coordinates;
+}
+
 void save_vec(Vec &m, const char * filename, const char * name);
 void save_mat(Mat &m, const char * filename, const char * name);
 

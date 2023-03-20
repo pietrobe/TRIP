@@ -17,6 +17,31 @@ class RT_problem
 
 public:
 
+	// constructor for PORTA input file
+	RT_problem(const char* filename)
+	{				
+		Real start = MPI_Wtime();
+
+		// assign MPI varaibles 
+    	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank_);
+    	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size_);
+
+    	if (mpi_rank_ == 0) std::cout << "\n~~~~~~ MPI size = " << mpi_size_ << " ~~~~~~" << std::endl;		
+    	if (mpi_rank_ == 0) std::cout << "\n=========== Reading input files ===========\n" << std::endl;				
+    
+    	read_3D(filename);
+
+		// // precompute
+		// set_up();
+		
+	    print_info();	    
+
+	   	MPI_Barrier(space_grid_->raw_comm()); Real end = MPI_Wtime(); 	    
+	    if (mpi_rank_ == 0) printf("Set up time:\t\t%g (seconds)\n", end - start);	      		
+
+	    exit(0);	
+	}
+
 	// constructor
 	RT_problem(input_string input_path, const size_t N_theta, const size_t N_chi)			   
 	{
@@ -50,12 +75,10 @@ public:
 		// init grid
 		space_grid_ = std::make_shared<Grid_t>();
 
-		const bool use_ghost_layers = false;
-
-		// menage grid distribution // TODO: now bit hardcoded
+		// menage grid distribution // TODO: now bit hardcoded // necessary?
 		set_grid_partition();
 		space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0},
-									 {mpi_size_x_, mpi_size_y_, mpi_size_z_}, use_ghost_layers); 
+									 {mpi_size_x_, mpi_size_y_, mpi_size_z_}, use_ghost_layers_); 
 		
 		// space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0}, {}, use_ghost_layers); 
 
@@ -72,8 +95,7 @@ public:
 		
 		read_continumm_1D(input_path + "/continuum/continuum_scat_opac.dat", 
 						  input_path + "/continuum/continuum_tot_opac.dat",
-						  input_path + "/continuum/continuum_therm_emiss.dat");
-		
+						  input_path + "/continuum/continuum_therm_emiss.dat");		
 		// precompute
 		set_up();
 		
@@ -189,7 +211,7 @@ public:
 	Field_ptr_t T_;    // temperature 
 	Field_ptr_t xi_;   // microturbulent velocity (a.k.a. non-thermal microscopic velocity)			
 	Field_ptr_t Cul_;  // rate of inelastic de-exciting collisions
-	Field_ptr_t Qel_;  // rate of elastic collisions 
+	Field_ptr_t Qel_;  // rate of elastic collisions // TODO: for memory, maybe this could be removed, leaving only D2_?
 	Field_ptr_t a_;    // damping constant 
 	Field_ptr_t W_T_;  // Wien function
 
@@ -225,6 +247,8 @@ public:
 
 private:
 
+	const bool use_ghost_layers_ = false;
+
 	// physical constants 
 	const Real c_   = 2.99792458e+10;
 	const Real k_B_ = 1.38065e-16;
@@ -232,11 +256,12 @@ private:
 
 	// 2-level atom constants
 	double mass_;
-	double El_;
+	double El_ = 0.0;
 	double Eu_;
 	double gl_; 
 	double gu_;
-	double Aul_;	// Einstein coefficients for spontaneous emission
+	double Aul_;   // Einstein coefficients for spontaneous emission
+	double T_ref_; // Reference temperature 
 	int Jl2_;
 	int Ju2_;
 	
@@ -248,7 +273,7 @@ private:
 
 	// depolarizing rate due to elastic collisions
 	Field_ptr_t	D1_; 
-	Field_ptr_t	D2_;
+	Field_ptr_t	D2_; 
 
 	// quantities depending on direction
 	std::vector<std::vector<std::complex<Real> > > T_KQ_; // polarization tensor 
@@ -278,6 +303,10 @@ private:
 	void read_continumm_1D(input_string filename_sigma, 
 						   input_string filename_k_c, 
 						   input_string filename_eps_c_th);
+
+	// read 3D input from pmd file 
+	void read_3D(const char* filename);
+	// void read_3D_fields(const char* filename);
 
 	// compute polarization tensors (vector of six components)
 	std::vector<std::complex<Real> > compute_T_KQ(const size_t stokes_i, const Real theta, const Real chi);

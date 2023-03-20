@@ -1,5 +1,233 @@
 #include "RT_problem.hpp"
 
+// some bounds for the pmd file
+#define PMD_MAIN_HEADER1    89
+#define PMD_MAIN_HEADER2    201743
+#define TWOLEVEL_HEADER1    4
+#define TWOLEVEL_HEADER2    32 
+
+// read atom and grid quantities 
+void RT_problem::read_3D(const char* filename){
+
+	// reading from file
+	FILE *f1;
+	if (!(f1 = fopen(filename, "r"))) ERR;
+
+	// buffers
+	Real entry;
+	char c;
+
+    // some irrelevant data
+	for (int i = 0; i < PMD_MAIN_HEADER1 - 48; i++) { if (!fread(&c, 1, 1, f1)) ERR;}
+
+	double Lx, Ly, Lz, x_origin, y_origin, z_origin; // 48 for these
+
+	if (!fread(&Lx, sizeof(double), 1, f1)) ERR;
+	if (!fread(&Ly, sizeof(double), 1, f1)) ERR;
+	if (!fread(&Lz, sizeof(double), 1, f1)) ERR;
+
+	if (Ly != Lx) std::cout << "WARNING: domain not squared!" << std::endl;
+
+	if (!fread(&x_origin, sizeof(double), 1, f1)) ERR;
+	if (!fread(&y_origin, sizeof(double), 1, f1)) ERR;
+	if (!fread(&z_origin, sizeof(double), 1, f1)) ERR;
+
+	// number of grid points per x, y, and z axis:
+	if (!fread(&N_x_, sizeof(int), 1, f1)) ERR;
+	if (!fread(&N_y_, sizeof(int), 1, f1)) ERR;
+	if (!fread(&N_z_, sizeof(int), 1, f1)) ERR;
+
+	// some irrelevant data
+	for (int i = 0; i < 196608; i++) { if (!fread(&c, 1, 1, f1)) ERR;}
+
+	// inlcination and azimuths per octant 
+	if (!fread(&N_theta_, sizeof(int), 1, f1)) ERR;
+	if (!fread(&N_chi_,   sizeof(int), 1, f1)) ERR;
+	
+	// some irrelevant data
+	for (int i = 0; i < PMD_MAIN_HEADER2 + TWOLEVEL_HEADER1 - 196608 - 8; i++) { if (!fread(&c, 1, 1, f1)) ERR;}		
+	
+	// reading atomic data
+    if (!fread(&mass_, sizeof(double), 1, f1)) ERR;
+    if (!fread(&Aul_,  sizeof(double), 1, f1)) ERR;
+    if (!fread(&Eu_,   sizeof(double), 1, f1)) ERR; // TOOD change unit?
+    if (!fread(&Jl2_,  sizeof(int),    1, f1)) ERR;
+    if (!fread(&Ju2_,  sizeof(int),    1, f1)) ERR;
+    if (!fread(&gl_,   sizeof(double), 1, f1)) ERR;
+    if (!fread(&gu_,   sizeof(double), 1, f1)) ERR;
+    if (!fread(&T_ref_,sizeof(double), 1, f1)) ERR;
+
+    // // some irrelevant data for (nx, ny):
+    // for (int i = 0; i < 8; i++) { if (!fread(&c, 1, 1, f1)) ERR;}		// TODO check with Jiri
+    
+    // double x[nx]      x, y axis
+  	// double y[ny]
+  	// double temp[ny][nx];    matrix of ground (iz=0) for Planckian boundary
+	for (int i = 0; i < N_x_ * N_y_; i++) {if (!fread(&entry, sizeof(double), 1, f1)) ERR;}		
+	
+    // set sizes
+	N_s_ = N_x_ * N_y_ * N_z_;
+	N_theta_ *= 4; // conversion to total angles // TODO CHECK
+	N_chi_   *= 2;
+	N_dirs_ = N_theta_ * N_chi_;
+	L_ = Lx;
+	
+	// TODO now hardcoded
+	N_nu_ = 10;
+	
+	block_size_ = 4 * N_nu_ * N_theta_ * N_chi_;
+	tot_size_   = N_s_ * block_size_;	
+
+	set_theta_chi_grids(N_theta_, N_chi_);
+
+	// sanity checks
+	if (mpi_rank_ == 0 and mpi_size_ > (int) N_s_) std::cerr << "\n========= WARNING: mpi_size > N_s! =========\n" << std::endl;
+
+	if (mpi_size_ > block_size_/4)
+	{
+		if (mpi_rank_ == 0) std::cout << "\nUsing mpi_size > block_size/4" << std::endl;
+	}
+	else if ((block_size_ / mpi_size_) % 4 != 0)
+	{
+		if (mpi_rank_ == 0) std::cerr << "\n========= ERROR: block_size_ / mpi_size_ should be a divisible by 4! =========\n" << std::endl;
+		throw "block_size_ / mpi_size_ should be a divisible by 4!";
+	}	
+
+	////////////////////  read fields  ////////////////////
+
+	const int L_LIMIT = (Jl2_+1)*(Jl2_+1);
+	const int U_LIMIT = (Ju2_+1)*(Ju2_+1);
+	const int NJKQ = 9;
+
+	std::vector<Real> epsilon_vec, T_vec, Nl_vec, Cul_vec;
+	std::vector<Real> Bx_vec, By_vec, Bz_vec; 
+	std::vector<Real> vx_vec, vy_vec, vz_vec;
+
+	std::vector<Real> a_vec, D2_vec, k_c_vec, eps_c_vec;
+
+	Real atomic_density, rho00l, Nl, Cul;
+
+	std::cout << "Reading..." << std::endl;
+
+	for (int i = 0; i < N_s_; i++) 
+	{			
+		if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // collisional epsilon
+		epsilon_vec.push_back(entry);		
+		
+		Cul = Aul_ * entry / (1.0 - entry); // get Cul from epsilon
+		Cul_vec.push_back(Cul);
+		
+		if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // temperature
+		T_vec.push_back(entry);
+		if (fread(&atomic_density, sizeof(double), 1, f1)!=1) ERR; // atomic density		
+		if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // Bx		
+		Bx_vec.push_back(entry);  // convert to Larmor frequency
+		if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // By
+		By_vec.push_back(entry);		
+		if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // Bz
+		Bz_vec.push_back(entry);		
+		if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // vx		
+		vx_vec.push_back(entry);		
+		if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // vy
+		vy_vec.push_back(entry);		
+		if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // vz
+		vz_vec.push_back(entry);		
+
+		// density matrix components of the lower level::
+		for (int j = 0; j < L_LIMIT; j++) {			
+			if (fread(&rho00l, sizeof(double), 1, f1)!=1) ERR; // real component						
+			if (fread(&entry,  sizeof(double), 1, f1)!=1) ERR; // im components						
+    	}
+
+    	// recover populations 
+    	Nl = atomic_density * sqrt(Jl2_ + 1)/rho00l;
+    	Nl_vec.push_back(Nl);	
+
+    	// density matrix components of the upper level:
+		for (int j = 0; j < U_LIMIT; j++) {
+			if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // real component						
+			if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // im components						
+    	}
+		
+		// components of the J^K_Q tensor:
+		for (int j = 0; j < NJKQ; j++) {
+			if (fread(&entry, sizeof(double), 1, f1)!=1) ERR;			
+		}
+
+		// rest of the MHD quantities (I have no idea why are they not together in the beginning):
+		if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // Voight parameter a
+		a_vec.push_back(entry);		
+		if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // delta2 (depolarizing collisional rate)
+		D2_vec.push_back(entry);		
+		if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // continuum opacity
+		k_c_vec.push_back(entry);		
+		if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // continuum emissivity
+		eps_c_vec.push_back(entry);		
+	}
+
+	fclose(f1);
+
+	// create space grid
+	space_grid_ = std::make_shared<Grid_t>();
+
+	// menage grid distribution // TODO: now bit hardcoded // necessary?
+	set_grid_partition();
+	space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0},
+								 {mpi_size_x_, mpi_size_y_, mpi_size_z_}, use_ghost_layers_); 				
+	// init fields
+	allocate_fields();				
+
+	// init atmospheric quantities 
+	allocate_atmosphere();	
+
+	// // write into corresponding data structures
+	// auto T_dev   = T_   ->view_device();
+	// auto B_dev   = B_   ->view_device();
+	// auto v_b_dev = v_b_ ->view_device();
+
+	// auto sigma_dev    = sigma_    ->view_device();
+	// auto k_c_dev      = k_c_      ->view_device();
+	// auto eps_c_th_dev = eps_c_th_ ->view_device();
+	// auto epsilon_dev  = epsilon_ ->view_device();
+
+
+	// auto g_dev = space_grid_->view_device();
+
+	// std::cout << "Devs created" << std::endl;
+
+	// // fill field 
+	// sgrid::parallel_for("READ-ATM1D", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
+
+	// 	const int global_i = k * N_x_ * N_y_ + j * N_x_ + i;
+
+	// 	epsilon_dev.ref(i,j,k) = epsilon_vec[global_i];		
+	// 	T_dev.ref(i,j,k) = T_vec[global_i];		
+		
+	// 	// convert to spherical coordinates
+	// 	auto B_spherical = convert_cartesian_to_spherical(Bx_vec[global_i], 
+	// 													  By_vec[global_i],
+	// 													  Bz_vec[global_i]);
+		
+	// 	B_dev.block(i, j, k)[0] = B_spherical[0] * 1399600; // converting to Larmor frequency					
+	// 	B_dev.block(i, j, k)[1] = B_spherical[1]; 					
+	// 	B_dev.block(i, j, k)[2] = B_spherical[2]; 
+
+	// 	// convert to spherical coordinates
+	// 	auto v_spherical = convert_cartesian_to_spherical(vx_vec[global_i], 
+	// 													  vy_vec[global_i], 
+	// 													  vz_vec[global_i]);
+		
+	// 	v_b_dev.block(i, j, k)[0] = v_spherical[0];					
+	// 	v_b_dev.block(i, j, k)[1] = v_spherical[1];					
+	// 	v_b_dev.block(i, j, k)[2] = v_spherical[2];	
+
+	// });
+
+	std::cout << "Exiting..." << std::endl;
+	
+	fclose(f1);
+}
+
 
 void RT_problem::read_atom(input_string filename){
 
@@ -442,7 +670,6 @@ void RT_problem::read_depth(input_string filename){
 		first_line = false;
 	} 		
 }
-
 
 void RT_problem::read_frequency(input_string filename){
 

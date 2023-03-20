@@ -223,6 +223,12 @@ void Formal_solver::one_step_quadratic(const Real dt_1, const Real dt_2, input_v
 	    c0[2] = mat_QBezierC0(tm, tp, S1[STOKES_U], S2[STOKES_U], S3[STOKES_U]);
 	    c0[3] = mat_QBezierC0(tm, tp, S1[STOKES_V], S2[STOKES_V], S3[STOKES_V]);
 
+	    // // test to recover DELO linear
+	    // c0[0] = 0.5 * (S1[STOKES_I] + S2[STOKES_I]);
+		// c0[1] = 0.5 * (S1[STOKES_Q] + S2[STOKES_Q]);
+	    // c0[2] = 0.5 * (S1[STOKES_U] + S2[STOKES_U]);
+	    // c0[3] = 0.5 * (S1[STOKES_V] + S2[STOKES_V]);
+
 	    vec[0] = ex * I_in[STOKES_I]    +                      a * I_in[STOKES_Q] + b * I_in[STOKES_U] + c * I_in[STOKES_V];
 	    vec[1] = ex * I_in[STOKES_Q]    + a * I_in[STOKES_I]                      + s * I_in[STOKES_U] - q * I_in[STOKES_V];
 	    vec[2] = ex * I_in[STOKES_U]    + b * I_in[STOKES_I] - s * I_in[STOKES_Q]                      + r * I_in[STOKES_V];
