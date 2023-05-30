@@ -54,11 +54,11 @@ using Real = double;
 inline double* convert_cartesian_to_spherical(const double x, const double y, const double z)
 {
     static double spherical_coordinates[3]; 
-    
-    const double r     = sqrt(x*x + y*y + z*z);   
-    const double theta = acos(z/r);
-    const double chi   = atan(y/x);   
-    
+
+    const double r = sqrt(x*x + y*y + z*z);   
+    const double theta = (r == 0) ? 0 : acos(z/r);
+    const double chi   = (r == 0) ? 0 : atan2(y, x);   
+
     spherical_coordinates[0] = r;
     spherical_coordinates[1] = theta;
     spherical_coordinates[2] = chi;

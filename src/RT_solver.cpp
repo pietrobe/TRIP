@@ -640,7 +640,7 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
         //     // std::cout << "U2 = "   << I2[2] << std::endl;   
         //     // std::cout << "V2 = "   << I2[3] << std::endl;   
 
-        //     std::cout << "dtau = " << dtau  << std::endl;    
+            // std::cout << "dtau = " << dtau  << std::endl;    
         //     std::cout << "etas[0] = " << etas[0] << std::endl;  
         //     std::cout << "eta_I_1 = " << eta_I_1 << std::endl;                     
         //     // std::cout << "distance = " << cell_distance << std::endl; 
@@ -797,8 +797,8 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
             
             dtau_1 = coeff * (eta_I_1 + etas[0]) * cell_distance;      
             
-            if (dtau_1 > 0) std::cout << "ERROR in dtau_1 sign, dtau_1 = " << dtau_1 << std::endl;   
-            if (dtau_1 == 0)  std::cout << "WARNING: dtau_1 = 0, possible e.g. for N_chi = 4" << std::endl;                                 
+            if (dtau_1 > 0)  std::cout << "ERROR in dtau_1 sign, dtau_1 = " << dtau_1 << std::endl;   
+            if (dtau_1 == 0) std::cout << "WARNING: dtau_1 = 0, possible e.g. for N_chi = 4" << std::endl;                                 
         }
         else // reuse
         {
@@ -889,27 +889,27 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
         
         formal_solver_.one_step_quadratic(dtau_1, dtau_2, K1, K2, K3, S1, S2, S3, I1, I2);       
 
-        // // test
-        // // get indeces
-        // std::vector<size_t> local_idx;
-        // local_idx = RT_problem_->block_to_local(block_index);
+        // test
+        // get indeces
+        std::vector<size_t> local_idx;
+        local_idx = RT_problem_->block_to_local(block_index);
         
-        // const int j_theta = local_idx[0];
-        // const int k_chi   = local_idx[1];
-        // const int n_nu    = local_idx[2];
+        const int j_theta = local_idx[0];
+        const int k_chi   = local_idx[1];
+        const int n_nu    = local_idx[2];
 
-        // const auto mu_grid    = RT_problem_->mu_grid_;
-        // const auto theta_grid = RT_problem_->theta_grid_;   
+        const auto mu_grid    = RT_problem_->mu_grid_;
+        const auto theta_grid = RT_problem_->theta_grid_;   
     
-        // const double theta = theta_grid[j_theta];
-        // const double mu    = mu_grid[j_theta];                       
+        const double theta = theta_grid[j_theta];
+        const double mu    = mu_grid[j_theta];                       
 
-        // // std::cout << "k = " << k << std::endl;    
-        // // std::cout << "j_theta = " << j_theta << std::endl;
-        // // std::cout << "k_chi = "   << k_chi << std::endl;
-        // // std::cout << "n_nu = "    << n_nu << std::endl;
+        // std::cout << "k = " << k << std::endl;    
+        // std::cout << "j_theta = " << j_theta << std::endl;
+        // std::cout << "k_chi = "   << k_chi << std::endl;
+        // std::cout << "n_nu = "    << n_nu << std::endl;
 
-        // if (j_theta == 1 and k_chi == 0 and n_nu == 0 and k == 62)
+        // if (j_theta == 1 and k_chi == 0 and n_nu == 0)
         // {                                                                            
         //     // if (long_ray) std::cout << "WARNING LONG RAY: look at long ray routines for data!" << std::endl;                                               
 
@@ -919,9 +919,9 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
         //     // std::cout << "n = "  << n << std::endl;                                            
         //     // std::cout << "dz = "<< dz << std::endl;           
            
-        //     // std::cout << "mpi_rank_ = " << mpi_rank_ << std::endl;   
+        //     std::cout << "mpi_rank_ = " << mpi_rank_ << std::endl;   
         //     // std::cout << "k_global = " << g_dev.global_coord(2, k_aux) << std::endl;                                              
-        //     // std::cout << "k = " << k << std::endl;                                              
+        //     std::cout << "k = " << k << std::endl;                                              
 
         //     std::cout << "I1 = "   << I1[0] << std::endl;   
         //     std::cout << "Q1 = "   << I1[1] << std::endl;   
@@ -1234,14 +1234,14 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     						k_aux = (mu > 0.0) ? k_end - 1 - k + g_dev.margin[2]: k; 
 
     						// depth index
-    						k_global = g_dev.global_coord(2, k_aux);	
+    						k_global = g_dev.global_coord(2, k_aux);	                         
 
     						boundary = (k_global == 0 and mu < 0) or (k_global == (int)N_z - 1 and mu > 0);
     						
     						if (not boundary)
     						{						
     							// set vertical box size
-    							dz = (mu > 0) ? depth_grid[k_global] -  depth_grid[k_global + 1] : depth_grid[k_global - 1] - depth_grid[k_global];							
+    							dz = (mu > 0) ? depth_grid[k_global] -  depth_grid[k_global + 1] : depth_grid[k_global - 1] - depth_grid[k_global];                                
 
     							for (int k_chi = k_chi_start; k_chi < (int)k_chi_end; ++k_chi)
     							{	                                
@@ -1425,23 +1425,25 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     										formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);
 
                                             // // test
-                                            // if (j_theta == 1 and k_chi == 0 and n == 0)
+                                            // if (j_theta ==  N_theta/2 + 1 and k_chi == 0 and n == 32 and i == i_start and j == j_start)
                                             // {                                                                           
                                             //     if (long_ray) std::cout << "WARNING LONG RAY: look at long ray routines for data!" << std::endl;                                       
                                                 
-                                            //     std::cout << "theta = " << theta << std::endl;
-                                            //     // std::cout << "chi = "<< chi << std::endl;
-                                            //     std::cout << "mu = " << mu << std::endl;
-                                            //     // std::cout << "n = "  << n << std::endl;
+                                            //     // std::cout << "theta = " << theta << std::endl;
+                                            // //     // // std::cout << "chi = "<< chi << std::endl;
+                                            //     std::cout << "mu = " << mu << std::endl;                                                
+                                            //     std::cout << "n = "  << n << std::endl;
+                                            //     // std::cout << "dtau = " << dtau << std::endl;
                                                 
-                                            //     // std::cout << "coeff = " << coeff << std::endl;   
-                                            //     // std::cout << "etas[0] = " << etas[0] << std::endl;  
-                                            //     // std::cout << "eta_I_1 = " << eta_I_1 << std::endl;                                                   
-                                            //     // std::cout << "distance = " << intersection_data.distance << std::endl;                                                                                                           
+                                            //     std::cout << "dtau = " << dtau  << std::endl;   
+                                            //     std::cout << "coeff = " << coeff << std::endl;   
+                                            //     std::cout << "etas[0] = " << etas[0] << std::endl;  
+                                            //     std::cout << "eta_I_1 = " << eta_I_1 << std::endl;                                                   
+                                            //     std::cout << "distance = " << intersection_data.distance << std::endl;                                                                                                           
 
-                                            //     // std::cout << "mpi_rank_ = " << mpi_rank_ << std::endl;   
+                                            //     std::cout << "mpi_rank_ = " << mpi_rank_ << std::endl;   
                                             //     std::cout << "k_global = " << g_dev.global_coord(2, k_aux) << std::endl;                                              
-                                            //     // std::cout << "k = " << k << std::endl;                                              
+                                            //     std::cout << "k = " << k << std::endl;                                              
 
                                             //     std::cout << "I1 = "   << I1[0] << std::endl;   
                                             //     std::cout << "Q1 = "   << I1[1] << std::endl;   
@@ -1451,21 +1453,19 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
                                             //     std::cout << "I2 = "   << I2[0] << std::endl;    
                                             //     std::cout << "Q2 = "   << I2[1] << std::endl;   
                                             //     std::cout << "U2 = "   << I2[2] << std::endl;   
-                                            //     std::cout << "V2 = "   << I2[3] << std::endl;   
-
-                                            //     std::cout << "dtau = " << dtau  << std::endl;   
+                                            //     std::cout << "V2 = "   << I2[3] << std::endl;                                                   
                                                 
-                                            //     std::cout << "S1 = " << std::endl;
-                                            //     for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S1[i_stokes] << std::endl;
+                                            //     // std::cout << "S1 = " << std::endl;
+                                            //     // for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S1[i_stokes] << std::endl;
 
-                                            //     std::cout << "S2 = " << std::endl;
-                                            //     for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S2[i_stokes] << std::endl;
+                                            //     // std::cout << "S2 = " << std::endl;
+                                            //     // for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S2[i_stokes] << std::endl;
                                                                             
-                                            //     std::cout << "K1 = " << std::endl;
-                                            //     for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K1[i_stokes] << std::endl;
+                                            //     // std::cout << "K1 = " << std::endl;
+                                            //     // for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K1[i_stokes] << std::endl;
 
-                                            //     std::cout << "K2 = " << std::endl;
-                                            //     for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K2[i_stokes] << std::endl;                                                                                                           
+                                            //     // std::cout << "K2 = " << std::endl;
+                                            //     // for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K2[i_stokes] << std::endl;                                                                                                           
         									// }
                                         
                                         one_step_timer += MPI_Wtime() - start_one;                       
@@ -1538,9 +1538,9 @@ void MF_context::set_up_emission_module(){
         emission_coefficient_components::epsilon_csc
     };
     
-    epsilon_fun_        = ecc_sh_ptr_->make_computation_function(components);    
-    // if (mpi_rank_ == 0) std::cout << "================ emission TEST: solo epsilon_R_III_CRD_limit! ================" << std::endl;
-    // epsilon_fun_        = ecc_sh_ptr_->make_computation_function(components_approx); // test
+    // epsilon_fun_  = ecc_sh_ptr_->make_computation_function(components);    
+    if (mpi_rank_ == 0) std::cout << "============= emission TEST: CRD limit! =============" << std::endl;
+    epsilon_fun_        = ecc_sh_ptr_->make_computation_function(components_approx); // test
     
     epsilon_fun_approx_ = ecc_sh_ptr_->make_computation_function(components_approx);
 

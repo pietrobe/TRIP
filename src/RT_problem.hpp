@@ -18,7 +18,7 @@ class RT_problem
 public:
 
 	// constructor for PORTA input file
-	RT_problem(const char* filename)
+	RT_problem(const char* PORTA_input, input_string input_path_frequency)
 	{				
 		Real start = MPI_Wtime();
 
@@ -27,19 +27,25 @@ public:
     	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size_);
 
     	if (mpi_rank_ == 0) std::cout << "\n~~~~~~ MPI size = " << mpi_size_ << " ~~~~~~" << std::endl;		
-    	if (mpi_rank_ == 0) std::cout << "\n=========== Reading input files ===========\n" << std::endl;				
-    
-    	read_3D(filename);
+    	
+    	use_PORTA_input_ = true;
 
-		// // precompute
-		// set_up();
+    	// frequency grid is not conteined in PORTA input (but can be computed from T_ref)
+    	read_frequency(input_path_frequency + "/frequency.dat");
+    	read_3D(PORTA_input);
+
+    	// timing
+    	MPI_Barrier(space_grid_->raw_comm()); Real end = MPI_Wtime(); 	    
+	    if (mpi_rank_ == 0) printf("Reading input time:\t\t%g (seconds)\n", end - start);	      		
+    	start = MPI_Wtime();
+
+		// precompute
+		set_up();
+
+		print_info();	    
 		
-	    print_info();	    
-
-	   	MPI_Barrier(space_grid_->raw_comm()); Real end = MPI_Wtime(); 	    
+	   	MPI_Barrier(space_grid_->raw_comm()); end = MPI_Wtime(); 	    
 	    if (mpi_rank_ == 0) printf("Set up time:\t\t%g (seconds)\n", end - start);	      		
-
-	    exit(0);	
 	}
 
 	// constructor
@@ -58,7 +64,6 @@ public:
     	// N_x_ = std::sqrt(mpi_size_)/2;
     	N_x_ = 1;
     	N_y_ = N_x_;
-    	
     	L_   = 100.0;
     	// const double L_tot = 1000.0;
     	// L_ = L_tot/N_x_;
@@ -248,6 +253,7 @@ public:
 private:
 
 	const bool use_ghost_layers_ = false;
+		  bool use_PORTA_input_  = false;
 
 	// physical constants 
 	const Real c_   = 2.99792458e+10;
@@ -267,6 +273,10 @@ private:
 	
 	// reference frame
 	const Real gamma_ = 0.5 * PI;	  
+
+	// quantities needed to read 3D PORTA input
+	int node_size_;
+	int header_size_;
 
 	// atom constant, to precompute
 	Real nu_0_;	
@@ -306,11 +316,13 @@ private:
 
 	// read 3D input from pmd file 
 	void read_3D(const char* filename);
-	// void read_3D_fields(const char* filename);
+	std::vector<Real> read_single_node(FILE *f1, const int i, const int j, const int k);
 
 	// compute polarization tensors (vector of six components)
 	std::vector<std::complex<Real> > compute_T_KQ(const size_t stokes_i, const Real theta, const Real chi);
 	std::complex<Real> get_TKQi(const size_t i_stokes, const int K, const int Q, const size_t j, const size_t k);
+
+	void set_TKQ_tensor();
 
 	// compute elements of the propagation matrix K
 	void set_eta_and_rhos();
