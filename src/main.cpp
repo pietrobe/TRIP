@@ -13,18 +13,18 @@ int main(int argc, char *argv[]) {
   Kokkos::initialize(argc, argv);
 
   {
-    const bool save_output     = false;
-    const bool use_prec        = false;
+    const bool save_output = false;
+    const bool use_prec    = false;
     
-    // const std::string input_path  = "../input/FAL-C/1_B0_V0_12T_8C_99F";
-    const std::string input_path  = "../input/FAL-C/1_B0_V0_12T_8C_64F_64";
+    const std::string input_path  = "../input/FAL-C/1_B0_V0_12T_8C_99F";
+    // const std::string input_path  = "../input/FAL-C/1_B0_V0_12T_8C_64F_64";
     // const std::string input_path  = "../input/FAL-C/1_B0_V0_12T_8C_4F_64";
 
     // PORTA input
-    auto rt_problem_ptr = std::make_shared<RT_problem>("../input/PORTA/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133.pmd", input_path);
-    const size_t N_theta = 16;
-    const size_t N_chi   = 8;
-    
+    auto rt_problem_ptr = std::make_shared<RT_problem>("../input/PORTA/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd", input_path);
+    const size_t N_theta = rt_problem_ptr->N_theta_;
+    const size_t N_chi   = rt_problem_ptr->N_chi_; 
+
     // //FAL-C input
     // const size_t N_theta = 8;
     // const size_t N_chi   = 8;
@@ -33,15 +33,21 @@ int main(int argc, char *argv[]) {
     RT_solver rt_solver(rt_problem_ptr, "BESSER", use_prec);
     // RT_solver rt_solver(rt_problem_ptr, "DELO_linear", use_prec);
 
+    // return EXIT_SUCCESS;
+
     rt_solver.solve(); 
 
-    rt_problem_ptr->print_surface_profile(rt_problem_ptr->I_field_, 0, 0, 0, N_theta/2 + 1, 0);     
-    rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, 0, 1); 
-    rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, 0, 2);
-    rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, 0, 3); 
-
+     for (int i_chi = 0; i_chi < 1; ++i_chi)
+     {
+       rt_problem_ptr->print_surface_profile(rt_problem_ptr->I_field_, 0, 0, 0, N_theta/2 + 1, i_chi);     
+       rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, i_chi, 1); 
+       rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, i_chi, 2);
+       // rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, i_chi, 3); 
+     }
+    
+    
     // rt_solver.apply_formal_solver();
-    // rt_problem_ptr->print_profile(rt_problem_ptr->I_field_, 0, 0, 0, 0, N_theta/2, 0);    
+    // // rt_problem_ptr->print_profile(rt_problem_ptr->I_field_, 0, 0, 0, 0, N_theta/2, 0);    
     // // save_vec(rt_problem_ptr->I_vec_, "../output/I_field_DELO.m" ,"I_DELO");  
     // rt_problem_ptr->I_field_->write("I_field_DELO.raw");          
   
@@ -77,7 +83,6 @@ int main(int argc, char *argv[]) {
 // output
 // python ../../sgrid/scripts/transpose_data.py -x 4 -y 4 -z 70 -b 99 -p
 // sigma.raw
-
 
 
 

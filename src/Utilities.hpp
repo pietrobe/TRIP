@@ -56,15 +56,25 @@ inline double* convert_cartesian_to_spherical(const double x, const double y, co
     static double spherical_coordinates[3]; 
 
     const double r = sqrt(x*x + y*y + z*z);   
-    const double theta = (r == 0) ? 0 : acos(z/r);
-    const double chi   = (r == 0) ? 0 : atan2(y, x);   
-
+    const double theta = atan2(sqrt(x * x + y * y), z);
+    const double chi   = atan2(y, x);   
+    
     spherical_coordinates[0] = r;
     spherical_coordinates[1] = theta;
     spherical_coordinates[2] = chi;
 
     return spherical_coordinates;
 }
+
+inline int apply_periodic_bc(const int i, const size_t N)
+{
+    const int i_new = (i < 0 ) ? i + N : i % N;
+
+    if (i_new < 0 ) std::cout << "WARNING: negative index in apply BC";                 
+                
+    return i_new;
+}
+
 
 void save_vec(Vec &m, const char * filename, const char * name);
 void save_mat(Mat &m, const char * filename, const char * name);

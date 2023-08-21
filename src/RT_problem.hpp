@@ -27,8 +27,10 @@ public:
     	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size_);
 
     	if (mpi_rank_ == 0) std::cout << "\n~~~~~~ MPI size = " << mpi_size_ << " ~~~~~~" << std::endl;		
-    	
+
+		// set flags    	
     	use_PORTA_input_ = true;
+    	use_CRD_limit_   = true;
 
     	// frequency grid is not conteined in PORTA input (but can be computed from T_ref)
     	read_frequency(input_path_frequency + "/frequency.dat");
@@ -43,7 +45,7 @@ public:
 		set_up();
 
 		print_info();	    
-		
+	
 	   	MPI_Barrier(space_grid_->raw_comm()); end = MPI_Wtime(); 	    
 	    if (mpi_rank_ == 0) printf("Set up time:\t\t%g (seconds)\n", end - start);	      		
 	}
@@ -146,9 +148,14 @@ public:
 									 const int i_stoke = 0, const int i_space = 0, const int j_space = 0, 
 									 const int j_theta = 0, const int k_chi = 0);
 
+
 	void const print_surface_QI_profile(const Field_ptr_t field, 
-									 const int i_space = 0, const int j_space = 0, 
-									 const int j_theta = 0, const int k_chi = 0, const int i_stokes = 1);
+									    const int i_space = 0, const int j_space = 0, 
+									    const int j_theta = 0, const int k_chi = 0, const int i_stokes = 1);
+
+
+	void const print_surface_QI_point(const int i_space = 0, const int j_space = 0, 
+								      const int j_theta = 0, const int k_chi = 0, const int n_nu = 0, const int i_stokes = 1);
 
 
 	void const print_profile(const Field_ptr_t field, 
@@ -167,6 +174,9 @@ public:
 	// flag to enable continuum 
 	bool enable_continuum_ = true;
 	
+	// flag to use CRD
+	bool use_CRD_limit_ = false;		  
+
 	// spatial grid
 	Grid_ptr_t space_grid_; 	
 

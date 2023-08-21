@@ -47,8 +47,6 @@ struct MF_context {
 	int mpi_rank_;
 	int mpi_size_;
 	
-	// if false linear interpolation is used
-	bool use_log_interpolation_ = false;
 	bool use_single_long_step_  = false;
 	bool use_always_long_ray_   = true;
 
@@ -86,7 +84,7 @@ struct MF_context {
 	void find_intersection(double theta, double chi, const double Z_down, const double Z_top, const double L, t_intersect *T);
 	std::vector<t_intersect> find_prolongation(double theta, double chi, const double dz, const double L);
 	std::vector<double> long_ray_steps(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index);
-	std::vector<double> long_ray_steps_quadratic(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index);
+	std::vector<double> long_ray_steps_quadratic(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index, bool print_flag);
 	std::vector<double> single_long_ray_step(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index);
 
 	void get_2D_weigths(const double x, const double y, double *w);
@@ -223,18 +221,18 @@ public:
 		// set source fun
 		// if (mpi_rank_ == 0) std::cout << "WARNING: setting source function in apply_formal_solver()" << std::endl;
 
-		auto S_dev = RT_problem_->S_field_->view_device();
+		// auto S_dev = RT_problem_->S_field_->view_device();
 
-		sgrid::parallel_for("INIT S", RT_problem_->space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) 
-		{         
-			auto *block = S_dev.block(i, j, k);
+		// sgrid::parallel_for("INIT S", RT_problem_->space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) 
+		// {         
+		// 	auto *block = S_dev.block(i, j, k);
 
-			for (int b = 0; b < (int)RT_problem_->block_size_; ++b) 
-			{	    
-				// block[b] = 0.1;     	   	
-				if (block[b] != 0) std::cout << "S not zero!" << std::endl;
-			}
-		});
+		// 	for (int b = 0; b < (int)RT_problem_->block_size_; ++b) 
+		// 	{	    
+		// 		// block[b] = 0.1;     	   	
+		// 		if (block[b] != 0) std::cout << "S not zero!" << std::endl;
+		// 	}
+		// });
 
 		if (mpi_rank_ == 0) std::cout << "Start formal solve..." << std::endl;
 		

@@ -66,9 +66,9 @@ void RT_problem::read_3D(const char* filename){
 	if (!fread(&N_theta_, sizeof(int), 1, f1)) ERR;
 	if (!fread(&N_chi_,   sizeof(int), 1, f1)) ERR;
 
-	// convert from octant to total TODO CHECK
-	N_theta_ *= 4;
-	N_chi_   *= 2;
+	// convert from octant to total 
+	N_theta_ *= 2;
+	N_chi_   *= 4;
 	
 	// some irrelevant data
 	if (fseek(f1, PMD_MAIN_HEADER2 - 196608 - 16, SEEK_CUR)) ERR;
@@ -147,7 +147,7 @@ void RT_problem::read_3D(const char* filename){
 	auto epsilon_dev  = epsilon_  ->view_device();
 
 	auto g_dev = space_grid_->view_device();
-
+	
 	// fill field 
 	sgrid::parallel_for("READ-ATM1D", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
 
@@ -155,19 +155,31 @@ void RT_problem::read_3D(const char* filename){
 		const int i_global  = g_dev.start[0] + i - g_dev.margin[0];
 		const int j_global  = g_dev.start[1] + j - g_dev.margin[1];
 		const int k_global  = g_dev.start[2] + k - g_dev.margin[2];
-
+		
 		// reversing z index because of input ordering 
 		const int k_reverse = (N_z_ - k_global - 1);  
 
-		auto tmp_vector = read_single_node(f1,i_global,j_global,k_reverse);
+		auto tmp_vector = read_single_node(f1,i_global,j_global,k_reverse);		
+
+		//if (i == 0 and j == 4)
+		//{
+		//	std::cout << "i_global = " << i_global << std::endl;
+		//	std::cout << "j_global = " << j_global << std::endl;
+		//	std::cout << "k_global = " << k_global << std::endl;
+		// 	std::cout << "k_reverse = " << k_reverse << std::endl;
+		//	std::cout << "i = " << i << std::endl;
+		//	std::cout << "j = " << j << std::endl;
+		//	std::cout << "k = " << k << std::endl;
+		//	std::cout << "T = " << tmp_vector[2] << std::endl;
+		//}
 
 		epsilon_dev.ref(i,j,k) = tmp_vector[0];		
-		Cul_dev.ref(i, j, k)   = tmp_vector[1];		
-		T_dev.ref(i,j,k)       = tmp_vector[2];	
-		Nl_dev.ref( i, j, k)   = tmp_vector[9];		
-		a_dev.ref(  i, j, k)   = tmp_vector[10];		
-		D2_dev.ref(i, j, k)    = tmp_vector[11];		
-
+		Cul_dev.ref(i,j,k)     = tmp_vector[1];		
+		T_dev.ref(i,j,k)       = tmp_vector[2];			
+		Nl_dev.ref(i,j,k)      = tmp_vector[9];		
+		a_dev.ref(i,j,k)       = tmp_vector[10];		
+		D2_dev.ref(i,j,k)      = tmp_vector[11];
+		
 		// hardcoding Qel_ and xi_ to zero
 		xi_dev.ref(i,j,k)  = 0.0;				
 		Qel_dev.ref(i,j,k) = 0.0;
@@ -189,7 +201,7 @@ void RT_problem::read_3D(const char* filename){
 		v_b_dev.block(i, j, k)[0] = v_spherical[0];					
 		v_b_dev.block(i, j, k)[1] = v_spherical[1];					
 		v_b_dev.block(i, j, k)[2] = v_spherical[2];	
-
+		
 		// continuum 
 		for (int n = 0; n < (int)N_nu_; ++n)
 		{			
@@ -259,12 +271,14 @@ std::vector<Real> RT_problem::read_single_node(FILE *f1, const int i, const int 
     if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // vz
     output.push_back(entry);		
 
-    // density matrix components of the lower level::
+    // density matrix components of the lower level:
+    if (L_LIMIT != 1) std::cout << "WARNING: reading 3D input L_LIMIT is not unity!" << std::endl;
+
     for (int j = 0; j < L_LIMIT; j++) {			
         if (fread(&rho00l, sizeof(double), 1, f1)!=1) ERR; // real component						
         if (fread(&entry,  sizeof(double), 1, f1)!=1) ERR; // im components						
-    }
-
+    }    
+    
     // recover populations 
     // 9
     Nl = atomic_density * sqrt(Jl2_ + 1) * rho00l;
@@ -1012,7 +1026,7 @@ void RT_problem::set_theta_chi_grids(const size_t N_theta, const size_t N_chi, c
     for (size_t i = 0; i < N_chi; ++i)
     {
     	chi_grid_.push_back((i + 0.5) * delta_chi);	 // avoiding grid axes   	
-    	w_chi_.push_back(delta_chi);
+    	w_chi_.push_back(delta_chi);    	
     }    
 }
 
@@ -1202,7 +1216,7 @@ void RT_problem::set_eta_and_rhos(){
         size_t j_theta, k_chi, n_nu;
 
 		// // coeffs
-		// int q;
+		// int q2;
 		// Real fact, coeff_K, W3J1, W3J2, um, v_dot_Omega;
 		// Real u_red, u_b;
 
@@ -1473,7 +1487,7 @@ void const RT_problem::print_surface_profile(const Field_ptr_t field, const int 
 								  << mu_grid_[j_theta] << ", chi =  " << chi_grid_[k_chi] 
 								  << ", mpi_rank = " << mpi_rank_ << std::endl;	
 						
-						const int b_start = i_stoke + local_to_block(j_theta, k_chi, 0);					
+						const int b_start = i_stoke + local_to_block(j_theta, k_chi, 0);						
 
 						for (int b = 0; b < 4 * N_nu_; b = b + 4) 
 						{								
@@ -1550,6 +1564,66 @@ void const RT_problem::print_surface_QI_profile(const Field_ptr_t field, const i
 	MPI_Barrier(MPI_COMM_WORLD);
 	std::this_thread::sleep_for(std::chrono::seconds(2));
 }
+
+
+
+void const RT_problem::print_surface_QI_point(const int i_space, const int j_space, const int j_theta, 
+											  const int k_chi, const int n_nu, const int i_stokes)
+{
+	MPI_Barrier(MPI_COMM_WORLD);
+
+	if (i_stokes > 3 or i_stokes < 1) std::cout << "ERROR in print_surface_QI_point input!" << std::endl; 
+
+	if (mpi_rank_ == 0 and i_stokes == 1) std::cout << "\nSurface Q/I, ";
+	if (mpi_rank_ == 0 and i_stokes == 2) std::cout << "\nSurface U/I, ";
+	if (mpi_rank_ == 0 and i_stokes == 3) std::cout << "\nSurface V/I, ";
+
+	if (mpi_rank_ == 0) std::cout << "mu =  " << mu_grid_[j_theta] << ", chi =  " << chi_grid_[k_chi] << ", nu =  " << nu_grid_[n_nu] << std::endl;		
+	
+	const auto f_dev = I_field_->view_device();	
+	const auto g_dev = space_grid_->view_device();
+
+	// indeces
+	const int i_start = g_dev.margin[0]; 
+	const int j_start = g_dev.margin[1];
+	const int k_start = g_dev.margin[2];
+
+	const int i_end = i_start + g_dev.dim[0];
+	const int j_end = j_start + g_dev.dim[1];
+		
+	int i_global, j_global;
+	
+	if (g_dev.global_coord(2, k_start) == 0)
+	{
+		for (int i = i_start; i < i_end; ++i)
+		{
+			i_global = g_dev.global_coord(0, i);
+
+			if (i_global == i_space)
+			{
+				for (int j = j_start; j < j_end; ++j)
+				{
+					j_global = g_dev.global_coord(1, j);
+
+					if (j_global == j_space)
+					{
+						const int b_start = local_to_block(j_theta, k_chi, n_nu);
+						const double I   = f_dev.block(i,j,k_start)[b_start];
+						const double QUV = f_dev.block(i,j,k_start)[b_start + i_stokes];							
+
+						std::cout << QUV/I << std::endl; 													
+
+						return;
+					}
+				}
+			}
+		}
+	}
+
+	MPI_Barrier(MPI_COMM_WORLD);
+	std::this_thread::sleep_for(std::chrono::seconds(2));
+}
+
 
 
 void const RT_problem::print_profile(const Field_ptr_t field, const int i_stoke, 
@@ -1683,10 +1757,11 @@ void RT_problem::set_grid_partition()
 	}
 	else
 	{
-		// // HARDCODED
-		// mpi_size_z_ = 64;
-		// mpi_size_x_ = 16;
-		// mpi_size_y_ = 24;		
+		// // HARDCODED		
+		// mpi_size_z_ = 128;
+		// mpi_size_x_ = 3;
+		// mpi_size_y_ = 3;
+		// if (mpi_rank_ == 0) std::cout << "WARNING: hardcoding grid partition for #procs = " << mpi_size_z_ * mpi_size_y_ * mpi_size_x_ << std::endl;				
 
 		mpi_size_z_ = N_z_;
 
