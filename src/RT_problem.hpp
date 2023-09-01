@@ -18,7 +18,7 @@ class RT_problem
 public:
 
 	// constructor for PORTA input file
-	RT_problem(const char* PORTA_input, input_string input_path_frequency)
+	RT_problem(const char* PORTA_input, input_string input_path_frequency, const bool use_CRD_limit = false)
 	{				
 		Real start = MPI_Wtime();
 
@@ -30,10 +30,11 @@ public:
 
 		// set flags    	
     	use_PORTA_input_ = true;
-    	use_CRD_limit_   = true;
+    	use_CRD_limit_   = use_CRD_limit;    	
 
-    	// frequency grid is not conteined in PORTA input (but can be computed from T_ref)
-    	read_frequency(input_path_frequency + "/frequency.dat");
+    	// frequency grid is not contained in PORTA input (but can be computed from T_ref)
+    	const bool use_wavelength = true;
+    	read_frequency(input_path_frequency + "/frequency.dat", use_wavelength);
     	read_3D(PORTA_input);
 
     	// timing
@@ -51,8 +52,11 @@ public:
 	}
 
 	// constructor
-	RT_problem(input_string input_path, const size_t N_theta, const size_t N_chi)			   
+	RT_problem(input_string input_path, const size_t N_theta, const size_t N_chi, const bool use_CRD_limit = false)			   
 	{
+		// set CRD flag
+		use_CRD_limit_ = use_CRD_limit;    	
+
 		Real start = MPI_Wtime();
 
 		// assign MPI varaibles 
@@ -151,7 +155,7 @@ public:
 
 	void const print_surface_QI_profile(const Field_ptr_t field, 
 									    const int i_space = 0, const int j_space = 0, 
-									    const int j_theta = 0, const int k_chi = 0, const int i_stokes = 1);
+									    const int j_theta = 0, const int k_chi = 0, const int i_stokes = 1, const bool center_line = false);
 
 
 	void const print_surface_QI_point(const int i_space = 0, const int j_space = 0, 
@@ -175,7 +179,7 @@ public:
 	bool enable_continuum_ = true;
 	
 	// flag to use CRD
-	bool use_CRD_limit_ = false;		  
+	bool use_CRD_limit_;		  
 
 	// spatial grid
 	Grid_ptr_t space_grid_; 	
@@ -315,7 +319,7 @@ private:
 	// read inputs
 	void read_atom(             input_string filename);
 	void read_depth(            input_string filename);
-	void read_frequency(        input_string filename);
+	void read_frequency(        input_string filename, const bool use_wavelength = false);
 	void read_atmosphere_1D(    input_string filename);
 	void read_bulk_velocity_1D( input_string filename);	
 	void read_magnetic_field_1D(input_string filename);
@@ -326,7 +330,7 @@ private:
 
 	// read 3D input from pmd file 
 	void read_3D(const char* filename);
-	std::vector<Real> read_single_node(FILE *f1, const int i, const int j, const int k);
+	std::vector<Real> read_single_node(MPI_File fh, const int i, const int j, const int k);
 
 	// compute polarization tensors (vector of six components)
 	std::vector<std::complex<Real> > compute_T_KQ(const size_t stokes_i, const Real theta, const Real chi);

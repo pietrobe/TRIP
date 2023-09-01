@@ -1756,9 +1756,7 @@ void RT_solver::assemble_rhs(){
     const bool test = false;
 
   	if (mpi_rank_ == 0 and (not test)) std::cout << "\n++++++ Assembling right hand side...+++++++++";
-    if (mpi_rank_ == 0 and test)      std::cout << "\n+++++++++++ RHS TEST RHS TEST +++++++++++++";
-
-    // if (mpi_rank_ == 0) std::cout << "\n+++++++++++ TEST: removing line contributions!!!! +++++++++++++";
+    if (mpi_rank_ == 0 and test)       std::cout << "\n+++++++++++ RHS TEST RHS TEST +++++++++++++";
  
 	PetscErrorCode ierr;
 

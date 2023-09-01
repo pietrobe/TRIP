@@ -49,7 +49,7 @@ using Real = double;
 #define PI 3.1415926535897932384626
 
 // for pmd input
-#define ERR  {fprintf(stderr,"ERROR reading PORTA input.\n"); exit(1);}
+#define ERR {fprintf(stderr,"ERROR reading PORTA input.\n"); exit(1);}
 
 inline double* convert_cartesian_to_spherical(const double x, const double y, const double z)
 {

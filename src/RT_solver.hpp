@@ -118,6 +118,8 @@ public:
     	RT_problem_ = RT_problem;  
     	using_prec_ = using_prec;    	
 
+    	if (using_prec_ and RT_problem_->use_CRD_limit_ and mpi_rank_ == 0) std::cout << "ERROR: CRD + preconditioning not supported." << std::endl;  	
+
     	mf_ctx_.RT_problem_    = RT_problem;  
     	mf_ctx_.mpi_rank_      = mpi_rank_;
     	mf_ctx_.mpi_size_      = mpi_size_;   

@@ -11,9 +11,14 @@ void RT_problem::read_3D(const char* filename){
 
 	if (mpi_rank_ == 0) std::cout << "Reading PORTA input from " << filename << std::endl;
 
-	// reading from file
-	FILE *f1;
-	if (!(f1 = fopen(filename, "r"))) ERR;
+	// reading atom and grids from file
+	MPI_File fh;
+	// MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_RDONLY | MPI_MODE_SEQUENTIAL, MPI_INFO_NULL, &fh));
+	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_RDONLY, MPI_INFO_NULL, &fh));
+
+	// // reading from file
+	// FILE *f1;
+	// if (!(f1 = fopen(filename, "r"))) ERR;
 
 	///// read atom and grids ////
 
@@ -22,90 +27,137 @@ void RT_problem::read_3D(const char* filename){
 	char c;
 
     // some irrelevant data
-	for (int i = 0; i < PMD_MAIN_HEADER1 - 48; i++) { if (!fread(&c, 1, 1, f1)) ERR;}
+	// for (int i = 0; i < PMD_MAIN_HEADER1 - 48; i++) { if (!fread(&c, 1, 1, f1)) ERR;}
+	for (int i = 0; i < PMD_MAIN_HEADER1 - 48; i++) { MPI_CHECK(MPI_File_read_all(fh, &c, 1, MPI_CHAR, MPI_STATUS_IGNORE)); }
 
 	// TODO there are not used 
 	double Lx, Ly, Lz, x_origin, y_origin, z_origin; // 48 in previuos line for these
 
-	if (!fread(&Lx, sizeof(double), 1, f1)) ERR;
-	if (!fread(&Ly, sizeof(double), 1, f1)) ERR;
-	if (!fread(&Lz, sizeof(double), 1, f1)) ERR;
+	// if (!fread(&Lx, sizeof(double), 1, f1)) ERR;
+	// if (!fread(&Ly, sizeof(double), 1, f1)) ERR;
+	// if (!fread(&Lz, sizeof(double), 1, f1)) ERR;
 
-	if (!fread(&x_origin, sizeof(double), 1, f1)) ERR;
-	if (!fread(&y_origin, sizeof(double), 1, f1)) ERR;
-	if (!fread(&z_origin, sizeof(double), 1, f1)) ERR;
+	// if (!fread(&x_origin, sizeof(double), 1, f1)) ERR;
+	// if (!fread(&y_origin, sizeof(double), 1, f1)) ERR;
+	// if (!fread(&z_origin, sizeof(double), 1, f1)) ERR;
+
+	MPI_CHECK(MPI_File_read_all(fh, &Lx, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &Ly, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &Lz, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+
+	MPI_CHECK(MPI_File_read_all(fh, &x_origin, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &y_origin, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &z_origin, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 
 	// number of grid points per x, y, and z axis:
-	if (!fread(&N_x_, sizeof(int), 1, f1)) ERR;
-	if (!fread(&N_y_, sizeof(int), 1, f1)) ERR;
-	if (!fread(&N_z_, sizeof(int), 1, f1)) ERR;
+	// if (!fread(&N_x_, sizeof(int), 1, f1)) ERR;
+	// if (!fread(&N_y_, sizeof(int), 1, f1)) ERR;
+	// if (!fread(&N_z_, sizeof(int), 1, f1)) ERR;
 
+	// need this for conversion
+	int N_x_int, N_y_int, N_z_int;
+
+	MPI_CHECK(MPI_File_read_all(fh, &N_x_int, 1, MPI_INT, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &N_y_int, 1, MPI_INT, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &N_z_int, 1, MPI_INT, MPI_STATUS_IGNORE));
+
+	N_x_ = (size_t)N_x_int;
+	N_y_ = (size_t)N_y_int;
+	N_z_ = (size_t)N_z_int;
+	
 	// WARNING: valid for Lx = Ly = constant 
 	L_ = 1e-5 * Lx/N_x_; // conversion from cm to km
 
 	// some irrelevant data (x,y coordinates)	
 	int skip_size = 16384 * sizeof(double);
-	if (fseek(f1, skip_size, SEEK_CUR)) ERR;			
+	// if (fseek(f1, skip_size, SEEK_CUR)) ERR;	
+	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));
 
 	// get z grid (depth)
 	for (int i = 0; i < N_z_; ++i)
 	{
-		if (!fread(&entry, sizeof(double), 1, f1)) ERR;
+		// if (!fread(&entry, sizeof(double), 1, f1)) ERR;	
+		MPI_CHECK(MPI_File_read_all(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+		 
 		entry *= 1e-5; // conversion from cm to km			
 		depth_grid_.push_back(entry);      		
 	}
-
+	
 	// reverse to get correct ordering
 	reverse(depth_grid_.begin(), depth_grid_.end());
 
 	// some irrelevant data (extra z coordinates)
 	skip_size = (8192 - N_z_) * sizeof(double);
-	if (fseek(f1, skip_size, SEEK_CUR)) ERR;			
+	// if (fseek(f1, skip_size, SEEK_CUR)) ERR;		
+	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));
 
 	// inlcination and azimuths per octant 
-	if (!fread(&N_theta_, sizeof(int), 1, f1)) ERR;
-	if (!fread(&N_chi_,   sizeof(int), 1, f1)) ERR;
+	// if (!fread(&N_theta_, sizeof(int), 1, f1)) ERR;
+	// if (!fread(&N_chi_,   sizeof(int), 1, f1)) ERR;
+
+	int N_theta_int, N_chi_int;
+
+	MPI_CHECK(MPI_File_read_all(fh, &N_theta_int, 1, MPI_INT , MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &N_chi_int  , 1, MPI_INT , MPI_STATUS_IGNORE));
+
+	N_theta_ = (size_t)N_theta_int;
+	N_chi_   = (size_t)N_chi_int;
 
 	// convert from octant to total 
 	N_theta_ *= 2;
 	N_chi_   *= 4;
-	
+		
 	// some irrelevant data
-	if (fseek(f1, PMD_MAIN_HEADER2 - 196608 - 16, SEEK_CUR)) ERR;
+	// if (fseek(f1, PMD_MAIN_HEADER2 - 196608 - 16, SEEK_CUR)) ERR;
+	skip_size = PMD_MAIN_HEADER2 - 196608 - 16;
+	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));
 
     int module_head_size;
 
 	// Size of each grid node
-	if (!fread(&module_head_size, sizeof(int), 1, f1)) ERR;
+	// if (!fread(&module_head_size, sizeof(int), 1, f1)) ERR;
+	MPI_CHECK(MPI_File_read_all(fh, &module_head_size, 1, MPI_INT, MPI_STATUS_IGNORE));
 
 	// Size of each grid node
-	if (!fread(&node_size_, sizeof(int), 1, f1)) ERR;
+	// if (!fread(&node_size_, sizeof(int), 1, f1)) ERR;
+	MPI_CHECK(MPI_File_read_all(fh, &node_size_, 1, MPI_INT, MPI_STATUS_IGNORE));
 
     // Jump to data
     header_size_ = PMD_MAIN_HEADER1 + PMD_MAIN_HEADER2 + 12 + module_head_size;
-		
+
 	// some irrelevant data
-    if (fseek(f1, TWOLEVEL_HEADER1, SEEK_CUR)) ERR;
+    // if (fseek(f1, TWOLEVEL_HEADER1, SEEK_CUR)) ERR;
+    MPI_CHECK(MPI_File_seek(fh, TWOLEVEL_HEADER1, MPI_SEEK_CUR));
 
 	// reading atomic data
-    if (!fread(&mass_, sizeof(double), 1, f1)) ERR;
-    if (!fread(&Aul_,  sizeof(double), 1, f1)) ERR;
-    if (!fread(&Eu_,   sizeof(double), 1, f1)) ERR;        
-    if (!fread(&Jl2_,  sizeof(int),    1, f1)) ERR;
-    if (!fread(&Ju2_,  sizeof(int),    1, f1)) ERR;
-    if (!fread(&gl_,   sizeof(double), 1, f1)) ERR;
-    if (!fread(&gu_,   sizeof(double), 1, f1)) ERR;
-    if (!fread(&T_ref_,sizeof(double), 1, f1)) ERR;
+    // if (!fread(&mass_, sizeof(double), 1, f1)) ERR;
+    // if (!fread(&Aul_,  sizeof(double), 1, f1)) ERR;
+    // if (!fread(&Eu_,   sizeof(double), 1, f1)) ERR;        
+    // if (!fread(&Jl2_,  sizeof(int),    1, f1)) ERR;
+    // if (!fread(&Ju2_,  sizeof(int),    1, f1)) ERR;
+    // if (!fread(&gl_,   sizeof(double), 1, f1)) ERR;
+    // if (!fread(&gu_,   sizeof(double), 1, f1)) ERR;
+    // if (!fread(&T_ref_,sizeof(double), 1, f1)) ERR;
 
-    // change Eu units to [cm-1] 
-    Eu_ /= (c_ * h_); 
+    MPI_CHECK(MPI_File_read_all(fh, &mass_,  1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+    MPI_CHECK(MPI_File_read_all(fh, &Aul_,   1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+    MPI_CHECK(MPI_File_read_all(fh, &Eu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+    MPI_CHECK(MPI_File_read_all(fh, &Jl2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
+    MPI_CHECK(MPI_File_read_all(fh, &Ju2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
+    MPI_CHECK(MPI_File_read_all(fh, &gl_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+    MPI_CHECK(MPI_File_read_all(fh, &gu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+    MPI_CHECK(MPI_File_read_all(fh, &T_ref_, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 
-    // FIXME: now this hardcoded from FAL-C since the frequency scale is read there
-    Eu_ = 23652.304;
+    // change Eu units to [cm-1]     
+    Eu_ /= c_ * h_; 
+    
+    // // hardcoded from FAL-C 
+    // Eu_ = 23652.304;
     
   	// some irrelevant data double temp[ny][nx];    matrix of ground (iz=0) for Planckian boundary
 	skip_size = (N_x_ * N_y_) * sizeof(double);
-	if (fseek(f1, skip_size, SEEK_CUR)) ERR;			
+	// if (fseek(f1, skip_size, SEEK_CUR)) ERR;
+	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));		
 
 	// set angualr grids and sizes and print
 	set_theta_chi_grids(N_theta_, N_chi_);
@@ -118,11 +170,14 @@ void RT_problem::read_3D(const char* filename){
 
 	// create space grid
 	space_grid_ = std::make_shared<Grid_t>();
-
+	
 	// menage grid distribution and init
 	set_grid_partition();	
 	space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0},
 									 {mpi_size_x_, mpi_size_y_, mpi_size_z_}, use_ghost_layers_); 
+
+	// // TEST
+	// space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0}, {}, use_ghost_layers_); 
 		
 	// init fields
 	allocate_fields();				
@@ -147,7 +202,7 @@ void RT_problem::read_3D(const char* filename){
 	auto epsilon_dev  = epsilon_  ->view_device();
 
 	auto g_dev = space_grid_->view_device();
-	
+
 	// fill field 
 	sgrid::parallel_for("READ-ATM1D", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
 
@@ -159,19 +214,7 @@ void RT_problem::read_3D(const char* filename){
 		// reversing z index because of input ordering 
 		const int k_reverse = (N_z_ - k_global - 1);  
 
-		auto tmp_vector = read_single_node(f1,i_global,j_global,k_reverse);		
-
-		//if (i == 0 and j == 4)
-		//{
-		//	std::cout << "i_global = " << i_global << std::endl;
-		//	std::cout << "j_global = " << j_global << std::endl;
-		//	std::cout << "k_global = " << k_global << std::endl;
-		// 	std::cout << "k_reverse = " << k_reverse << std::endl;
-		//	std::cout << "i = " << i << std::endl;
-		//	std::cout << "j = " << j << std::endl;
-		//	std::cout << "k = " << k << std::endl;
-		//	std::cout << "T = " << tmp_vector[2] << std::endl;
-		//}
+		auto tmp_vector = read_single_node(fh,i_global,j_global,k_reverse);			
 
 		epsilon_dev.ref(i,j,k) = tmp_vector[0];		
 		Cul_dev.ref(i,j,k)     = tmp_vector[1];		
@@ -213,13 +256,15 @@ void RT_problem::read_3D(const char* filename){
 	});
 
 	// close file
-	MPI_Barrier(MPI_COMM_WORLD);
-	fclose(f1);
+	MPI_CHECK(MPI_File_close(&fh));	
+
+	// MPI_Barrier(MPI_COMM_WORLD);
+	// fclose(f1);
 }
 
 
 // read single node from Tanausu
-std::vector<Real> RT_problem::read_single_node(FILE *f1, const int i, const int j, const int k){
+std::vector<Real> RT_problem::read_single_node(MPI_File fh, const int i, const int j, const int k){
 
     // Output
     std::vector<Real> output;
@@ -236,10 +281,12 @@ std::vector<Real> RT_problem::read_single_node(FILE *f1, const int i, const int 
     const int jump = header_size_ + node_size_ * (N_x_ * (N_y_ * k + j) + i);
 
     // Jump to data of interest
-    if (fseek(f1, jump, SEEK_SET)) ERR;
+    // if (fseek(f1, jump, SEEK_SET)) ERR;
+    MPI_CHECK(MPI_File_seek(fh, jump, MPI_SEEK_SET));	
 
     // 0
-    if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // epsilon
+    // if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // epsilon
+    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
     output.push_back(entry);		
     
     // 1
@@ -247,36 +294,48 @@ std::vector<Real> RT_problem::read_single_node(FILE *f1, const int i, const int 
     output.push_back(Cul);
     
     // 2
-    if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // temperature
+    // if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // temperature
+    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
     output.push_back(entry);
 
-    if (fread(&atomic_density, sizeof(double), 1, f1)!=1) ERR; // atomic density		
+    // if (fread(&atomic_density, sizeof(double), 1, f1)!=1) ERR; // atomic density	
+    MPI_CHECK(MPI_File_read(fh, &atomic_density, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	
 
     // 3
-    if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // Bx		
+    // if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // Bx	
+    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	
     output.push_back(entry);  
     // 4
-    if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // By
+    // if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // By
+    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
     output.push_back(entry);		
     // 5
-    if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // Bz
+    // if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // Bz
+    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
     output.push_back(entry);		
     // 6
-    if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // vx		
+    // if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // vx	
+    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	
     output.push_back(entry);		
     // 7
-    if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // vy
+    // if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // vy
+    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
     output.push_back(entry);		
     // 8
-    if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // vz
+    // if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // vz
+    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
     output.push_back(entry);		
 
     // density matrix components of the lower level:
     if (L_LIMIT != 1) std::cout << "WARNING: reading 3D input L_LIMIT is not unity!" << std::endl;
 
-    for (int j = 0; j < L_LIMIT; j++) {			
-        if (fread(&rho00l, sizeof(double), 1, f1)!=1) ERR; // real component						
-        if (fread(&entry,  sizeof(double), 1, f1)!=1) ERR; // im components						
+    for (int jj = 0; jj < L_LIMIT; jj++) 
+    {			
+        // if (fread(&rho00l, sizeof(double), 1, f1)!=1) ERR; // real component						
+        // if (fread(&entry,  sizeof(double), 1, f1)!=1) ERR; // im components			
+
+        MPI_CHECK(MPI_File_read(fh, &rho00l, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+        MPI_CHECK(MPI_File_read(fh, &entry , 1, MPI_DOUBLE, MPI_STATUS_IGNORE));			
     }    
     
     // recover populations 
@@ -285,29 +344,36 @@ std::vector<Real> RT_problem::read_single_node(FILE *f1, const int i, const int 
     output.push_back(Nl);	
    	
     // density matrix components of the upper level:
-    for (int j = 0; j < U_LIMIT; j++) {
-        if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // real component						
-        if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // im components						
+    for (int jj = 0; jj < U_LIMIT; jj++) 
+    {
+        // if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // real component						
+        // if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // im components		
+        MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+        MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));							
     }
     
     // components of the J^K_Q tensor:
-    for (int j = 0; j < NJKQ; j++) {
-        if (fread(&entry, sizeof(double), 1, f1)!=1) ERR;			
-    }
+    // for (int jj = 0; jj < NJKQ; jj++) if (fread(&entry, sizeof(double), 1, f1)!=1) ERR;			
+    for (int jj = 0; jj < NJKQ; jj++) MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	
+    
 
     // rest of the MHD quantities 
     // 10
-    if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // Voight parameter a
+    // if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // Voight parameter a
+	MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));							
     output.push_back(entry);		
     // 11
-    if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // delta2 (depolarizing collisional rate)
-    entry *= Aul_; // delta2 = D2/Aul, PORTA usesd delta2 here and conversion is needed
+    // if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // delta2 (depolarizing collisional rate)
+    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));							
+    entry *= Aul_; // delta2 = D2/Aul, PORTA uses delta2 here and conversion is needed
     output.push_back(entry);		
     // 12
-    if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // continuum opacity
+    // if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // continuum opacity
+    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));							
     output.push_back(entry);		
     // 13
-    if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // continuum emissivity
+    // if (fread(&entry, sizeof(double), 1, f1)!=1) ERR; // continuum emissivity
+    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));							
     output.push_back(entry);	
 
     return output;
@@ -755,9 +821,19 @@ void RT_problem::read_depth(input_string filename){
 	} 		
 }
 
-void RT_problem::read_frequency(input_string filename){
+void RT_problem::read_frequency(input_string filename, const bool use_wavelength){
 
-	if (mpi_rank_ == 0) std::cout << "Reading frequencies [s-1] from " << filename << std::endl;
+	if (mpi_rank_ == 0)
+	{
+		if (use_wavelength)
+		{
+			std::cout << "Reading frequencies in [A] from " << filename << std::endl;
+		}
+		else
+		{
+			std::cout << "Reading frequencies in [s-1] from " << filename << std::endl;
+		}
+	} 
 
 	std::ifstream myFile(filename);
 	std::string line;	
@@ -774,9 +850,23 @@ void RT_problem::read_frequency(input_string filename){
 
 		if (not first_line) // skip first line 
 		{		
-			lineStream >> entry;			
-			lineStream >> entry;
-			nu_grid_.push_back(entry);		
+			if (use_wavelength)
+			{
+				lineStream >> entry;	
+
+				// TODO conversion from air to vacuum
+
+				// convert to [s-1]
+				entry = 1e8 * c_ / entry;
+
+				nu_grid_.push_back(entry);		
+			}
+			else
+			{
+				lineStream >> entry;			
+				lineStream >> entry;
+				nu_grid_.push_back(entry);					
+			}
 
 			if (entry < 1.0e14) std::cerr << "\nWARNING: frequency: " << entry << " probably not in Herz[s-1]!\n" << std::endl;
 		}		
@@ -1408,22 +1498,7 @@ void RT_problem::set_up(){
 		for (size_t n = 0; n < N_nu_; ++n)
 		{
 			u[n] = (nu_0_ - nu_grid_[n]) / Doppler_width_dev.ref(i,j,k);						
-		}	
-
-		// // TEST DEBUG
-		// if (i == 0 and j == 0 and k == 0)
-        // {
-        // 	// if (use_PORTA_input_) std::cout << "using PORTA input" << std::endl;	
-        	
-        // 	// std::cout << "T_dev.ref(0,0,0) = " << T_dev.ref(i,j,k) << std::endl;	
-        // 	// std::cout << "xi_dev.ref(0,0,0) = " << xi_dev.ref(i,j,k) << std::endl;	
-        // 	// std::cout << "epsilon_dev.ref(0,0,0) = " << epsilon_dev.ref(i,j,k) << std::endl;	
-        // 	// std::cout << "D1_dev.ref(0,0,0) = " << D1_dev.ref(i,j,k) << std::endl;	
-        // 	// std::cout << "D2_dev.ref(0,0,0) = " << D2_dev.ref(i,j,k) << std::endl;	
-        	// std::cout << "k_L_dev.ref(0,0,0) = " << k_L_dev.ref(i,j,k) << std::endl;	
-        // 	// std::cout << "Doppler_width_dev.ref(0,0,0) = " << Doppler_width_dev.ref(i,j,k) << std::endl;	
-        // 	// std::cout << "W_T_dev.ref(0,0,0) = " << W_T_dev.ref(i,j,k) << std::endl;	
-        // }
+		}			
     });			      
 
 	// precompute polarization tensors T_KQ
@@ -1505,7 +1580,7 @@ void const RT_problem::print_surface_profile(const Field_ptr_t field, const int 
 
 
 void const RT_problem::print_surface_QI_profile(const Field_ptr_t field, const int i_space, const int j_space, 
-	 const int j_theta, const int k_chi, const int i_stokes){
+	 const int j_theta, const int k_chi, const int i_stokes, const bool center_line){
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
@@ -1516,6 +1591,7 @@ void const RT_problem::print_surface_QI_profile(const Field_ptr_t field, const i
 	if (mpi_rank_ == 0 and i_stokes == 3) std::cout << "\nSurface V/I, ";
 
 	if (mpi_rank_ == 0) std::cout << "mu =  " << mu_grid_[j_theta] << ", chi =  " << chi_grid_[k_chi] << std::endl;		
+	if (mpi_rank_ == 0) std::cout << "i,j =  " << i_space << ", " << j_space << std::endl;	
 	
 	const auto f_dev = field->view_device();	
 	const auto g_dev = space_grid_->view_device();
@@ -1544,15 +1620,30 @@ void const RT_problem::print_surface_QI_profile(const Field_ptr_t field, const i
 
 					if (j_global == j_space)
 					{
-						const int b_start = local_to_block(j_theta, k_chi, 0);
+						const int b_start = local_to_block(j_theta, k_chi, 0);						
 
-						for (int b = 0; b < 4 * N_nu_; b = b + 4) 
-						{	
-							const double I   = f_dev.block(i,j,k_start)[b_start + b];
-							const double QUV = f_dev.block(i,j,k_start)[b_start + b + i_stokes];							
+						if (center_line)
+						{
+							// print only center line
+							const int b_nu_0 = 4 * (N_nu_ - 1) / 2;
+							const double I   = f_dev.block(i,j,k_start)[b_start + b_nu_0];
+							const double QUV = f_dev.block(i,j,k_start)[b_start + b_nu_0 + i_stokes];	
 
-							std::cout << QUV/I << std::endl; 							
+							std::cout << QUV/I << std::endl; 						
 						}
+						else
+						{
+							for (int b = 0; b < 4 * N_nu_; b = b + 4) 
+							{															
+								const double I   = f_dev.block(i,j,k_start)[b_start + b];
+								const double QUV = f_dev.block(i,j,k_start)[b_start + b + i_stokes];							
+
+								std::cout << QUV/I << std::endl; 														
+							}
+						}						
+
+						MPI_Barrier(MPI_COMM_WORLD);
+						std::this_thread::sleep_for(std::chrono::seconds(1));
 
 						return;
 					}
@@ -1562,7 +1653,7 @@ void const RT_problem::print_surface_QI_profile(const Field_ptr_t field, const i
 	}
 
 	MPI_Barrier(MPI_COMM_WORLD);
-	std::this_thread::sleep_for(std::chrono::seconds(2));
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 
 
@@ -1756,26 +1847,37 @@ void RT_problem::set_grid_partition()
 		mpi_size_y_ = 1;
 	}
 	else
-	{
-		// // HARDCODED		
-		// mpi_size_z_ = 128;
-		// mpi_size_x_ = 3;
-		// mpi_size_y_ = 3;
-		// if (mpi_rank_ == 0) std::cout << "WARNING: hardcoding grid partition for #procs = " << mpi_size_z_ * mpi_size_y_ * mpi_size_x_ << std::endl;				
+	{			
+		if (mpi_size_ == 1152) // HARDCODED
+		{
+			mpi_size_z_ = 128;
+			mpi_size_x_ = 3;
+			mpi_size_y_ = 3;
+			if (mpi_rank_ == 0) std::cout << "========== WARNING: hardcoding grid partition ==========" << std::endl;					
+		}	
+		else if (mpi_size_ == 384) // HARDCODED
+		{
+			mpi_size_z_ = 128;
+			mpi_size_x_ = 3;
+			mpi_size_y_ = 1;
+			if (mpi_rank_ == 0) std::cout << "========== WARNING: hardcoding grid partition ==========" << std::endl;				
+		}
+		else
+		{
+			mpi_size_z_ = N_z_;
 
-		mpi_size_z_ = N_z_;
+			const double mpi_size_xy = mpi_size_ / mpi_size_z_;
 
-		const double mpi_size_xy = mpi_size_ / mpi_size_z_;
+			if (std::floor(mpi_size_xy) != mpi_size_xy) std::cout << "ERROR: problem with domain decomposition: mpi_size_ / mpi_size_z_ not integer!" << std::endl;
 
-		if (std::floor(mpi_size_xy) != mpi_size_xy) std::cout << "ERROR: problem with domain decomposition: mpi_size_ / mpi_size_z_ not integer!" << std::endl;
+			mpi_size_x_ = std::floor(std::sqrt(mpi_size_xy));
 
-		mpi_size_x_ = std::floor(std::sqrt(mpi_size_xy));
+			const double mpi_size_y = mpi_size_xy / mpi_size_x_;
 
-		const double mpi_size_y = mpi_size_xy / mpi_size_x_;
+			if (std::floor(mpi_size_y) != mpi_size_y) std::cout << "ERROR: problem with domain decomposition: mpi_size_y not integer!" << std::endl;
 
-		if (std::floor(mpi_size_y) != mpi_size_y) std::cout << "ERROR: problem with domain decomposition: mpi_size_y not integer!" << std::endl;
-
-		mpi_size_y_ = (int) mpi_size_y;		
+			mpi_size_y_ = (int) mpi_size_y;		
+		}
 	}
 }
 
