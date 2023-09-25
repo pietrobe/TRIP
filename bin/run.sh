@@ -1,13 +1,13 @@
 #!/bin/bash -l
 
-#SBATCH --ntasks=1152
+#SBATCH --ntasks=48
 #SBATCH --cpus-per-task=1
 #SBATCH --constrain=gpu
-#SBATCH --time=04:15:00
+#SBATCH --time=01:00:00
 #SBATCH --account=sm74
 #SBATCH --job-name="PRD_3D"
 
-srun ./solar_3D -ksp_monitor -ksp_view -ksp_rtol 1e-7
+srun ./solar_3D -ksp_monitor -ksp_rtol 1e-8 
 
 
 

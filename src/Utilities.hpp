@@ -68,10 +68,19 @@ inline double* convert_cartesian_to_spherical(const double x, const double y, co
 
 inline int apply_periodic_bc(const int i, const size_t N)
 {
-    const int i_new = (i < 0 ) ? i + N : i % N;
+    int i_new;
 
-    if (i_new < 0 ) std::cout << "WARNING: negative index in apply BC";                 
-                
+    if (i > 0)
+    {
+        i_new = i % N;
+    }
+    else
+    {
+        i_new = i;
+
+        while (i_new < 0) i_new += N;
+    }
+
     return i_new;
 }
 

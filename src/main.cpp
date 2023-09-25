@@ -4,7 +4,7 @@
 #include "tools.h"
 
 // compile and run with:
-// make -j 32 && srun -n 4 ./main 2 4
+// make -j 32 && srun -n 4 ./main
 
 int main(int argc, char *argv[]) {
 
@@ -17,23 +17,23 @@ int main(int argc, char *argv[]) {
     const bool use_CRD     = false;
     const bool use_prec    = true;
     
-    const std::string input_path  = "../input/PORTA";
-    // const std::string input_path  = "../input/FAL-C/1_B0_V0_12T_8C_99F";
+    // const std::string input_path  = "../input/PORTA";
+    const std::string input_path  = "../input/FAL-C/1_B0_V0_12T_8C_99F";
     // const std::string input_path  = "../input/FAL-C/1_B0_V0_12T_8C_64F_64";
     // const std::string input_path  = "../input/FAL-C/1_B0_V0_12T_8C_4F_64";
 
-    // PORTA input
-    auto rt_problem_ptr = std::make_shared<RT_problem>("../input/PORTA/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd", input_path, use_CRD);
-    const size_t N_theta = rt_problem_ptr->N_theta_;
-    const size_t N_chi   = rt_problem_ptr->N_chi_; 
+    // // PORTA input
+    // auto rt_problem_ptr = std::make_shared<RT_problem>("../input/PORTA/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd", input_path, use_CRD);
+    // const size_t N_theta = rt_problem_ptr->N_theta_;
+    // const size_t N_chi   = rt_problem_ptr->N_chi_; 
 
-    // //FAL-C input
-    // const size_t N_theta = 8;
-    // const size_t N_chi   = 8;
-    // auto rt_problem_ptr = std::make_shared<RT_problem>(input_path, N_theta, N_chi);    
+    //FAL-C input
+    const size_t N_theta = 12;
+    const size_t N_chi   = 8;
+    auto rt_problem_ptr = std::make_shared<RT_problem>(input_path, N_theta, N_chi, use_CRD);    
 
-    RT_solver rt_solver(rt_problem_ptr, "BESSER", use_prec);
-    // RT_solver rt_solver(rt_problem_ptr, "DELO_linear", use_prec);
+    // RT_solver rt_solver(rt_problem_ptr, "BESSER", use_prec);
+    RT_solver rt_solver(rt_problem_ptr, "DELO_linear", use_prec);
 
     // return EXIT_SUCCESS;
 
@@ -42,23 +42,30 @@ int main(int argc, char *argv[]) {
     // rt_problem_ptr->print_surface_profile(rt_problem_ptr->I_field_, 0, 0, 0, N_theta - 1, 0);     
     // rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta - 1, 0, 1); 
 
-    rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2    , 0, 1);
-    rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, 0, 1);
-    rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta - 1  , 0, 1);
+    // rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2    , 0, 1);
+    // rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, 0, 1);
+    // rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta - 1  , 0, 1);
+    
+    // rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2    , 0, 2);
+    // rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, 0, 2);
+    // rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta - 1  , 0, 2);
 
-    rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 2, 2, N_theta/2    , 0, 1);
-    rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 2, 2, N_theta/2 + 1, 0, 1);
-    rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 2, 2, N_theta - 1  , 0, 1);
+    // for (int i = N_theta/2; i < N_theta; ++i)
+    // {
+      // std::cout << "========== i = " << i << "==========" << std::endl;
+      
+      rt_problem_ptr->print_surface_profile(rt_problem_ptr->I_field_, 0, 0, 0, N_theta - 1, N_chi - 1);  
+      rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta - 1, N_chi - 1, 1);
+      rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta - 1, N_chi - 1, 2);
+      rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta - 1, N_chi - 1, 3);
+    // }
     
-    
-    rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2    , 0, 2);
-    rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, 0, 2);
-    rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta - 1  , 0, 2);
 
-    rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 2, 2, N_theta/2    , 0, 2);
-    rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 2, 2, N_theta/2 + 1, 0, 2);
-    rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 2, 2, N_theta - 1  , 0, 2);
-    
+    // rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2    , 0, 3);
+    // rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, 0, 3);
+    // rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta - 1  , 0, 3);
+
+
     // rt_problem_ptr->print_surface_QI_profile(rt_problem_ptr->I_field_, 0, 0, N_theta/2 + 1, i_chi, 3); 
    
     // rt_solver.apply_formal_solver();

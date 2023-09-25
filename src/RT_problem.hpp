@@ -70,7 +70,7 @@ public:
     	// N_x_ = std::sqrt(mpi_size_)/2;
     	N_x_ = 1;
     	N_y_ = N_x_;
-    	L_   = 100.0;
+    	L_   = 400.0;
     	// const double L_tot = 1000.0;
     	// L_ = L_tot/N_x_;
 
@@ -102,7 +102,8 @@ public:
 		// read atm data (needs grid object)
 		read_atmosphere_1D(    input_path + "/atmosphere.dat");    // NOTE: solar surface for space index k = 0
 		read_bulk_velocity_1D( input_path + "/bulk_velocity.dat");	
-		read_magnetic_field_1D(input_path + "/magnetic_field.dat");
+		// read_magnetic_field_1D(input_path + "/magnetic_field.dat");
+		read_magnetic_field_1D(input_path + "/magnetic_field_20.dat");
 		
 		read_continumm_1D(input_path + "/continuum/continuum_scat_opac.dat", 
 						  input_path + "/continuum/continuum_tot_opac.dat",

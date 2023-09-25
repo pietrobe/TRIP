@@ -47,7 +47,7 @@ struct MF_context {
 	int mpi_rank_;
 	int mpi_size_;
 	
-	bool use_single_long_step_  = false;
+	bool use_single_long_step_  = true;
 	bool use_always_long_ray_   = true;
 
 	// serial objects for formal solution

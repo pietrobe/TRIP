@@ -762,9 +762,7 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
                     i_intersect = apply_periodic_bc(i_intersect, N_x);
                     j_intersect = apply_periodic_bc(j_intersect, N_y);                
 
-                    weight = T[cell + 1].w[face_vertices]; 
-
-                    if (mpi_rank_ == 0) std::cout << "weight2 = " << weight << std::endl; 
+                    weight = T[cell + 1].w[face_vertices];                     
 
                     for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
                     {
@@ -1021,6 +1019,7 @@ std::vector<double> MF_context::single_long_ray_step(const std::vector<t_interse
 
     for (int face_vertices = 0; face_vertices < 4; ++face_vertices)
     {
+
         i_intersect = i + T[0].ix[face_vertices];
         j_intersect = j + T[0].iy[face_vertices];
         k_intersect = k - T[0].iz[face_vertices]; 
@@ -1029,9 +1028,7 @@ std::vector<double> MF_context::single_long_ray_step(const std::vector<t_interse
         i_intersect = apply_periodic_bc(i_intersect, N_x);
         j_intersect = apply_periodic_bc(j_intersect, N_y);                
        
-        weight = T[0].w[face_vertices];  
-
-        if (weight < 0) std::cout << "weight = " << weight << std::endl;      
+        weight = T[0].w[face_vertices];          
         
         for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
         {
@@ -1043,7 +1040,7 @@ std::vector<double> MF_context::single_long_ray_step(const std::vector<t_interse
 
             // interpolate S1 and I1
             S1[i_stokes] += weight * S_dev.block(i_intersect,j_intersect,k_intersect)[b_index];                                             
-            I1[i_stokes] += weight * I_dev.block(i_intersect,j_intersect,k_intersect)[b_index];                                                                                                    
+            I1[i_stokes] += weight * I_dev.block(i_intersect,j_intersect,k_intersect)[b_index];                
         }   
     }
 
@@ -1514,30 +1511,38 @@ void MF_context::set_up_emission_module(){
 
     fsf_sh_ptr->make_formal_solver();
 
-    std::list<emission_coefficient_components> components{
-        // emission_coefficient_components::epsilon_R_II,
-        emission_coefficient_components::epsilon_R_II_CONTRIB, // less memory is used for this version
-        // emission_coefficient_components::epsilon_R_III,
-        emission_coefficient_components::epsilon_R_III_GL,
-        emission_coefficient_components::epsilon_csc};
-    
-    std::list<emission_coefficient_components> components_approx{
-        // emission_coefficient_components::epsilon_R_II,
-        emission_coefficient_components::epsilon_R_III_pCRD_limit,
-        emission_coefficient_components::epsilon_csc
-    };
-    
+    std::list<emission_coefficient_components> components;    
+
     if (RT_problem_->use_CRD_limit_)
     {
-        if (mpi_rank_ == 0) std::cout << "\n======= Using CRD limit ======="<< std::endl;
-        epsilon_fun_ = ecc_sh_ptr_->make_computation_function(components_approx); 
+        components.push_back(emission_coefficient_components::epsilon_pCRD_VHP_limit);     
+        components.push_back(emission_coefficient_components::epsilon_csc);      
+
+        if (mpi_rank_ == 0) std::cout << "\nUsing CRD emission, components:"<< std::endl;
     }
     else
     {
-        epsilon_fun_ = ecc_sh_ptr_->make_computation_function(components);        
-        epsilon_fun_approx_ = ecc_sh_ptr_->make_computation_function(components_approx);
+        // components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB);
+        components.push_back(emission_coefficient_components::epsilon_R_II);
+        components.push_back(emission_coefficient_components::epsilon_R_III_GL);
+        components.push_back(emission_coefficient_components::epsilon_csc);      
+
+        if (mpi_rank_ == 0) std::cout << "\nUsing PRD emission, components:"<< std::endl;        
     }
+
+    epsilon_fun_ = ecc_sh_ptr_->make_computation_function(components);    
+
+    // Print out emission module
+    if (mpi_rank_ == 0) std::cout << ecc_sh_ptr_->emission_components_to_string();    
     
+    // module for preconditioner 
+    std::list<emission_coefficient_components> components_approx{    
+        emission_coefficient_components::epsilon_pCRD_limit,	
+        emission_coefficient_components::epsilon_csc
+    };       
+    
+    epsilon_fun_approx_ = ecc_sh_ptr_->make_computation_function(components_approx);
+
     offset_fun_ = rii_include::make_default_offset_function(RT_problem_->N_theta_, RT_problem_->N_chi_, RT_problem_->N_nu_);
         	
 	// rii_consts::rii_units::kilometer);		  //
