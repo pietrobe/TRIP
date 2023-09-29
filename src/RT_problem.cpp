@@ -1,3 +1,5 @@
+#include <thread>
+
 #include "RT_problem.hpp"
 
 // some bounds for the pmd file
@@ -493,8 +495,9 @@ void RT_problem::read_magnetic_field_1D(input_string filename){
 		{						
 			// read data
 			lineStream >> entry;				
-			entry *= 1399600; // convert to Larmor frequency
+			entry *= Real(1399600.0); // convert to Larmor frequency
 			nu_L_vec.push_back(entry);
+
 			lineStream >> entry;
 			theta_B_vec.push_back(entry);
 			lineStream >> entry;

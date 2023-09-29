@@ -1522,15 +1522,24 @@ void MF_context::set_up_emission_module(){
     }
     else
     {
-        // components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB);
+// #define USE_R_II_CONTRIB
+#ifdef USE_R_II_CONTRIB
+        components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB);
+#else
         components.push_back(emission_coefficient_components::epsilon_R_II);
-        components.push_back(emission_coefficient_components::epsilon_R_III_GL);
-        components.push_back(emission_coefficient_components::epsilon_csc);      
+#endif
 
-        if (mpi_rank_ == 0) std::cout << "\nUsing PRD emission, components:"<< std::endl;        
+        components.push_back(emission_coefficient_components::epsilon_R_III_GL);
+        components.push_back(emission_coefficient_components::epsilon_csc);              
     }
 
     epsilon_fun_ = ecc_sh_ptr_->make_computation_function(components);    
+
+    // if (mpi_rank_ == 0) {
+         std::cout << "\nUsing PRD emission, components:"<< std::endl;  
+        std::cout << std::endl << ecc_sh_ptr_->emission_components_to_string() << std::endl;
+         std::cout << "\nUsing PRD emission end"<< std::endl;  
+    // }
 
     // Print out emission module
     if (mpi_rank_ == 0) std::cout << ecc_sh_ptr_->emission_components_to_string();    
