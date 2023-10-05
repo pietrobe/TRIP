@@ -52,7 +52,7 @@ public:
 	}
 
 	// constructor
-	RT_problem(input_string input_path, const size_t N_theta, const size_t N_chi, const bool use_CRD_limit = false)			   
+	RT_problem(input_string input_path, const int N_theta, const int N_chi, const bool use_CRD_limit = false)			   
 	{
 		// set CRD flag
 		use_CRD_limit_ = use_CRD_limit;    	
@@ -88,7 +88,7 @@ public:
 
 		// menage grid distribution // TODO: now bit hardcoded // necessary?
 		set_grid_partition();
-		space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0},
+		space_grid_->init(MPI_COMM_WORLD, {N_x_, N_y_, N_z_}, {1, 1, 0},
 									 {mpi_size_x_, mpi_size_y_, mpi_size_z_}, use_ghost_layers_); 
 		
 		// space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0}, {}, use_ghost_layers); 
@@ -102,8 +102,8 @@ public:
 		// read atm data (needs grid object)
 		read_atmosphere_1D(    input_path + "/atmosphere.dat");    // NOTE: solar surface for space index k = 0
 		read_bulk_velocity_1D( input_path + "/bulk_velocity.dat");	
-		// read_magnetic_field_1D(input_path + "/magnetic_field.dat");
-		read_magnetic_field_1D(input_path + "/magnetic_field_20.dat");
+		read_magnetic_field_1D(input_path + "/magnetic_field.dat");
+		// read_magnetic_field_1D(input_path + "/magnetic_field_20.dat");
 		
 		read_continumm_1D(input_path + "/continuum/continuum_scat_opac.dat", 
 						  input_path + "/continuum/continuum_tot_opac.dat",
@@ -118,14 +118,14 @@ public:
 	}
 
 	// convert block index to to local ones = [j_theta, k_chi, n_nu, i_stokes]
-	inline std::vector<size_t> block_to_local(const size_t block_index)
+	inline std::vector<int> block_to_local(const int block_index)
 	{
-		std::vector<size_t> local_indeces;
+		std::vector<int> local_indeces;
 
-		const size_t i_stokes =  block_index % 4;
-		const size_t n        = (block_index / 4) % N_nu_;
-		const size_t k        = (block_index / (4 * N_nu_)) % N_chi_;
-		const size_t j        = (block_index / (4 * N_nu_ * N_chi_)) % N_theta_;
+		const int i_stokes =  block_index % 4;
+		const int n        = (block_index / 4) % N_nu_;
+		const int k        = (block_index / (4 * N_nu_)) % N_chi_;
+		const int j        = (block_index / (4 * N_nu_ * N_chi_)) % N_theta_;
 				
 		local_indeces.push_back(j);
 		local_indeces.push_back(k);
@@ -136,7 +136,7 @@ public:
 	}
 
 	// convert local indeces to block one (of fields) for the first Stokes parameter and vice versa
-	inline size_t local_to_block(const size_t j, const size_t k, const size_t n) { return 4 * ( N_nu_ * ( N_chi_ * j + k ) + n); }
+	inline int local_to_block(const int j, const int k, const int n) { return 4 * ( N_nu_ * ( N_chi_ * j + k ) + n); }
 
 	inline void print_PETSc_mem()
 	{
@@ -166,6 +166,12 @@ public:
 	void const print_profile(const Field_ptr_t field, 
 							 const int i_stoke = 0, const int i_space = 0, const int j_space = 0, const int k_space = 0,
 							 const int j_theta = 0, const int k_chi = 0);
+
+
+	// write surface profile in file in MATLAB format
+	void const write_surface_point_profiles(input_string file_name, const int i_space, const int j_space);
+									        
+
 		
 	// MPI varables
 	int mpi_rank_;
@@ -200,19 +206,19 @@ public:
 	std::vector<Real> w_chi_;
 
 	// grids sizes	
-	size_t N_x_;     
-	size_t N_y_;     
-	size_t N_z_;  
-	size_t N_s_; // N_s_ = N_x_ * N_y_ * N_z_
+	int N_x_;     
+	int N_y_;     
+	int N_z_;  
+	int N_s_; // N_s_ = N_x_ * N_y_ * N_z_
 
-	size_t N_theta_; 
-	size_t N_chi_;   
-	size_t N_dirs_; // N_dirs_ = N_theta_ * N_chi_;   
-	size_t N_nu_;        
+	int N_theta_; 
+	int N_chi_;   
+	int N_dirs_; // N_dirs_ = N_theta_ * N_chi_;   
+	int N_nu_;        
 	
-	size_t block_size_; // 4 * N_nu_ * N_theta_ * N_chi_;
-	size_t tot_size_;   // N_s_ * block_size;
-	size_t local_size_; // == tot_size_ con mpi_size_ = 1
+	int block_size_; // 4 * N_nu_ * N_theta_ * N_chi_;
+	int tot_size_;   // N_s_ * block_size;
+	int local_size_; // == tot_size_ con mpi_size_ = 1
 
 	// unknown quantities 
 	Field_ptr_t I_field_; // intensity     
@@ -311,7 +317,7 @@ private:
 	void init_field(Field_ptr_t input_field, const Real input_value); // TODO remove?
 	
 	// set grids and sizes
-	void set_theta_chi_grids(const size_t N_theta, const size_t N_chi, const bool double_GL = true);
+	void set_theta_chi_grids(const int N_theta, const int N_chi, const bool double_GL = true);
 	void set_sizes();
 
 	// menage grid distribution
@@ -334,8 +340,8 @@ private:
 	std::vector<Real> read_single_node(MPI_File fh, const int i, const int j, const int k);
 
 	// compute polarization tensors (vector of six components)
-	std::vector<std::complex<Real> > compute_T_KQ(const size_t stokes_i, const Real theta, const Real chi);
-	std::complex<Real> get_TKQi(const size_t i_stokes, const int K, const int Q, const size_t j, const size_t k);
+	std::vector<std::complex<Real> > compute_T_KQ(const int stokes_i, const Real theta, const Real chi);
+	std::complex<Real> get_TKQi(const int i_stokes, const int K, const int Q, const int j, const int k);
 
 	void set_TKQ_tensor();
 

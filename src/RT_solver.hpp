@@ -47,7 +47,7 @@ struct MF_context {
 	int mpi_rank_;
 	int mpi_size_;
 	
-	bool use_single_long_step_  = true;
+	bool use_single_long_step_  = false;
 	bool use_always_long_ray_   = true;
 
 	// serial objects for formal solution
@@ -101,7 +101,7 @@ struct MF_context {
 	void update_emission(const Vec &I_field, const bool approx = false);
 
 	// init serial fields (serial eta and rho are filled)
-	void init_serial_fields(const size_t n_tiles);	
+	void init_serial_fields(const int n_tiles);	
 };
 
 class RT_solver
@@ -116,9 +116,7 @@ public:
     	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size_);  
 
     	RT_problem_ = RT_problem;  
-    	using_prec_ = using_prec;    	
-
-    	if (using_prec_ and RT_problem_->use_CRD_limit_ and mpi_rank_ == 0) std::cout << "ERROR: CRD + preconditioning not supported." << std::endl;  	
+    	using_prec_ = using_prec;    	    	
 
     	mf_ctx_.RT_problem_    = RT_problem;  
     	mf_ctx_.mpi_rank_      = mpi_rank_;
@@ -126,7 +124,7 @@ public:
     	mf_ctx_.formal_solver_ = Formal_solver(formal_solver);    
 
     	// init serial grids for formal solution
-    	const size_t n_tiles = 1; // TODO: now fixed
+    	const int n_tiles = 1; // TODO: now fixed
     	mf_ctx_.init_serial_fields(n_tiles);	
     	    	
     	mf_ctx_.set_up_emission_module();  	  
@@ -170,7 +168,7 @@ public:
     		ierr = KSPSetType(mf_ctx_.pc_solver_,KSPGMRES);CHKERRV(ierr); 
 
     		// const int max_its = 10;
-    		// const double r_tol = 1e-3;
+    		// const double r_tol = 1e-11;
     		// ierr = KSPSetFromOptions(mf_ctx_.pc_solver_);CHKERRV(ierr);    		
     		// ierr = KSPSetTolerances(mf_ctx_.pc_solver_,r_tol,PETSC_DEFAULT,PETSC_DEFAULT, PETSC_DEFAULT);CHKERRV(ierr);
     		// ierr = KSPSetTolerances(mf_ctx_.pc_solver_,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT, max_its);CHKERRV(ierr);
@@ -303,7 +301,7 @@ public:
 			{
 				for (int i = i_start; i < i_end; ++i)				
 				{
-					for (int b = 0; b < (int)block_size; b++) 
+					for (int b = 0; b < block_size; b++) 
 					{			
 						field_dev.block(i, j, k)[b] = istart + counter;							
 
@@ -345,7 +343,7 @@ private:
 	Vec rhs_;
 	
 	KSP ksp_solver_;
-	KSPType ksp_type_ = KSPGMRES;
+	KSPType ksp_type_ = KSPFGMRES;
 	PC pc_;
 	
 	bool using_prec_;	

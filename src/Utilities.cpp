@@ -682,8 +682,8 @@ std::vector<double> solve_4_by_4_system_optimized(const std::vector<double>  &K,
 
 std::vector<double> refine_vector(const std::vector<double> &v)
 {
-  const size_t n = v.size();
-  const size_t n_fn = 2 * n - 1;
+  const int n = v.size();
+  const int n_fn = 2 * n - 1;
 
   std::vector<double> v_fine;
 
@@ -691,13 +691,13 @@ std::vector<double> refine_vector(const std::vector<double> &v)
   v_fine.resize(n_fn);  
 
   // copy
-  for (size_t i = 0; i < n_fn; i = i + 2)
+  for (int i = 0; i < n_fn; i = i + 2)
   {
     v_fine[i] = v[i/2];
   }
 
   // fill new values
-  for (size_t i = 1; i < n_fn - 1; i = i + 2)
+  for (int i = 1; i < n_fn - 1; i = i + 2)
   {
     v_fine[i] = 0.5 * (v[i/2] + v[i/2 + 1]);
   }
@@ -706,16 +706,16 @@ std::vector<double> refine_vector(const std::vector<double> &v)
 }
 
 
-std::vector<double> refine_vector_blocked(const std::vector<double> &v, const size_t block_size)
+std::vector<double> refine_vector_blocked(const std::vector<double> &v, const int block_size)
 {
 
-  const size_t n = v.size();
+  const int n = v.size();
   
-  const size_t number_of_blocks = n / block_size;
+  const int number_of_blocks = n / block_size;
 
   if (n % block_size > 0) std::cout << "WARNING: error in block_size!" << std::endl;
   
-  const size_t n_fn = (2 * number_of_blocks - 1 ) * block_size;
+  const int n_fn = (2 * number_of_blocks - 1 ) * block_size;
 
   std::vector<double> v_fine;
 
@@ -723,23 +723,23 @@ std::vector<double> refine_vector_blocked(const std::vector<double> &v, const si
   v_fine.resize(n_fn);  
 
   // copy
-  for (size_t i = 0; i < n_fn; i = i + 2 * block_size)
+  for (int i = 0; i < n_fn; i = i + 2 * block_size)
   {
-    for (size_t j = 0; j < block_size; ++j)
+    for (int j = 0; j < block_size; ++j)
     {
       v_fine[i + j] = v[i/2 + j]; 
     }
   }
 
   // fill
-  size_t cr_index;
-  size_t i_over_bs;
+  int cr_index;
+  int i_over_bs;
 
-  for (size_t i = block_size; i < n_fn - block_size; i = i + 2 * block_size)
+  for (int i = block_size; i < n_fn - block_size; i = i + 2 * block_size)
   {
     i_over_bs = i/block_size;
 
-    for (size_t j = 0; j < block_size; ++j)
+    for (int j = 0; j < block_size; ++j)
     {
       cr_index = block_size * (i_over_bs/2) + j;
 
@@ -751,12 +751,12 @@ std::vector<double> refine_vector_blocked(const std::vector<double> &v, const si
 }
 
 // refine lines 
-std::vector<double> refine_vector_blocked2(const std::vector<double> &v, const size_t block_size)
+std::vector<double> refine_vector_blocked2(const std::vector<double> &v, const int block_size)
 {
-  const size_t n = v.size();
-  const size_t number_of_blocks = n / block_size;
-  const size_t block_size_fn = 2 * block_size - 1;
-  const size_t n_fn = number_of_blocks * block_size_fn;
+  const int n = v.size();
+  const int number_of_blocks = n / block_size;
+  const int block_size_fn = 2 * block_size - 1;
+  const int n_fn = number_of_blocks * block_size_fn;
 
   
   std::vector<double> v_fine;
@@ -764,13 +764,13 @@ std::vector<double> refine_vector_blocked2(const std::vector<double> &v, const s
   v_fine.reserve(n_fn);
   v_fine.resize(n_fn);  
 
-  size_t index;
+  int index;
 
-  for (int i = 0; i < (int)number_of_blocks; ++i)
+  for (int i = 0; i < number_of_blocks; ++i)
   {
 
     // copy
-    for (size_t j = 0; j < block_size_fn; j = j + 2)
+    for (int j = 0; j < block_size_fn; j = j + 2)
     {
 
       index = i * block_size_fn + j;
@@ -779,7 +779,7 @@ std::vector<double> refine_vector_blocked2(const std::vector<double> &v, const s
     }
 
     // fill new values
-    for (size_t j = 1; j < block_size_fn - 1; j = j + 2)
+    for (int j = 1; j < block_size_fn - 1; j = j + 2)
     {
 
       index = i * block_size_fn + j;

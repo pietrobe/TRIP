@@ -33,16 +33,9 @@ void RT_problem::read_3D(const char* filename){
 	MPI_CHECK(MPI_File_read_all(fh, &y_origin, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 	MPI_CHECK(MPI_File_read_all(fh, &z_origin, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 
-	// need this for conversion
-	int N_x_int, N_y_int, N_z_int;
-
-	MPI_CHECK(MPI_File_read_all(fh, &N_x_int, 1, MPI_INT, MPI_STATUS_IGNORE));
-	MPI_CHECK(MPI_File_read_all(fh, &N_y_int, 1, MPI_INT, MPI_STATUS_IGNORE));
-	MPI_CHECK(MPI_File_read_all(fh, &N_z_int, 1, MPI_INT, MPI_STATUS_IGNORE));
-
-	N_x_ = (size_t)N_x_int;
-	N_y_ = (size_t)N_y_int;
-	N_z_ = (size_t)N_z_int;
+	MPI_CHECK(MPI_File_read_all(fh, &N_x_, 1, MPI_INT, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &N_y_, 1, MPI_INT, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &N_z_, 1, MPI_INT, MPI_STATUS_IGNORE));
 	
 	// WARNING: valid for Lx = Ly = constant 
 	L_ = 1e-5 * Lx/N_x_; // conversion from cm to km
@@ -68,13 +61,8 @@ void RT_problem::read_3D(const char* filename){
 	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));
 
 	// inclinations and azimuths per octant 	
-	int N_theta_int, N_chi_int;
-
-	MPI_CHECK(MPI_File_read_all(fh, &N_theta_int, 1, MPI_INT , MPI_STATUS_IGNORE));
-	MPI_CHECK(MPI_File_read_all(fh, &N_chi_int  , 1, MPI_INT , MPI_STATUS_IGNORE));
-
-	N_theta_ = (size_t)N_theta_int;
-	N_chi_   = (size_t)N_chi_int;
+	MPI_CHECK(MPI_File_read_all(fh, &N_theta_, 1, MPI_INT , MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &N_chi_  , 1, MPI_INT , MPI_STATUS_IGNORE));
 
 	// convert from octant to total 
 	N_theta_ *= 2;
@@ -132,11 +120,11 @@ void RT_problem::read_3D(const char* filename){
 	
 	// menage grid distribution and init
 	set_grid_partition();	
-	space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0},
+	space_grid_->init(MPI_COMM_WORLD, {N_x_, N_y_, N_z_}, {1, 1, 0},
 									 {mpi_size_x_, mpi_size_y_, mpi_size_z_}, use_ghost_layers_); 
 
 	// // TEST
-	// space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0}, {}, use_ghost_layers_); 
+	// space_grid_->init(MPI_COMM_WORLD, {N_x_, N_y_, N_z_}, {1, 1, 0}, {}, use_ghost_layers_); 
 		
 	// init fields
 	allocate_fields();				
@@ -163,7 +151,7 @@ void RT_problem::read_3D(const char* filename){
 	auto g_dev = space_grid_->view_device();
 
 	// TEST
-	// if (mpi_rank_ == 0) std::cout << "WARNING: hardcoding magnetic field (20 G)! " << std::endl;
+	if (mpi_rank_ == 0) std::cout << "WARNING: hardcoding magnetic field (20 G)! " << std::endl;
 
 	// fill field 
 	sgrid::parallel_for("READ-ATM1D", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
@@ -194,13 +182,13 @@ void RT_problem::read_3D(const char* filename){
 														  tmp_vector[4],
 														  tmp_vector[5]);
 		
-		B_dev.block(i, j, k)[0] = B_spherical[0] * 1399600; // converting to Larmor frequency					
-		B_dev.block(i, j, k)[1] = B_spherical[1]; 					
-		B_dev.block(i, j, k)[2] = B_spherical[2]; 
+		// B_dev.block(i, j, k)[0] = B_spherical[0] * 1399600.0; // converting to Larmor frequency					
+		// B_dev.block(i, j, k)[1] = B_spherical[1]; 					
+		// B_dev.block(i, j, k)[2] = B_spherical[2]; 
 
-		// B_dev.block(i, j, k)[0] = 20 * 1399600; // converting to Larmor frequency					
-		// B_dev.block(i, j, k)[1] = 1.5707963268;
-		// B_dev.block(i, j, k)[2] = 0; 
+		B_dev.block(i, j, k)[0] = 20 * 1399600.0; // converting to Larmor frequency					
+		B_dev.block(i, j, k)[1] = 1.5707963268;
+		B_dev.block(i, j, k)[2] = 0; 
 		
 		// convert to spherical coordinates
 		auto v_spherical = convert_cartesian_to_spherical(tmp_vector[6], 
@@ -212,7 +200,7 @@ void RT_problem::read_3D(const char* filename){
 		v_b_dev.block(i, j, k)[2] = v_spherical[2];	
 		
 		// continuum 
-		for (int n = 0; n < (int)N_nu_; ++n)
+		for (int n = 0; n < N_nu_; ++n)
 		{			
 			// hardcoded to 0.0 as in PORTA
 			sigma_dev.block(   i, j, k)[n] = 0.0;		
@@ -430,7 +418,7 @@ void RT_problem::read_continumm_1D(input_string filename_sigma, input_string fil
 		first_line = false;
 	} 
 
-	const size_t N_z_N_nu_ = N_z_ * N_nu_;
+	const int N_z_N_nu_ = N_z_ * N_nu_;
 
 	// safety check
 	if (sigma_vec.size()    != N_z_N_nu_) std::cout << "WARNING: size mismatch in read_continumm_1D()" << std::endl;
@@ -444,7 +432,7 @@ void RT_problem::read_continumm_1D(input_string filename_sigma, input_string fil
 
 		int k_global;
 
-		for (int n = 0; n < (int)N_nu_; ++n)
+		for (int n = 0; n < N_nu_; ++n)
 		{
 			k_global = N_nu_ * (g_dev.start[2] + k - g_dev.margin[2]) + n;
 
@@ -493,7 +481,7 @@ void RT_problem::read_magnetic_field_1D(input_string filename){
 		{						
 			// read data
 			lineStream >> entry;				
-			entry *= 1399600; // convert to Larmor frequency
+			entry *= 1399600.0; // convert to Larmor frequency
 			nu_L_vec.push_back(entry);
 			lineStream >> entry;
 			theta_B_vec.push_back(entry);
@@ -833,7 +821,7 @@ void RT_problem::set_sizes(){
 	block_size_ = 4 * N_nu_ * N_theta_ * N_chi_;
 	tot_size_   = N_s_ * block_size_;	
 
-	if (mpi_rank_ == 0 and mpi_size_ > (int) N_s_) std::cerr << "\n========= WARNING: mpi_size > N_s! =========\n" << std::endl;
+	if (mpi_rank_ == 0 and mpi_size_ > N_s_) std::cerr << "\n========= WARNING: mpi_size > N_s! =========\n" << std::endl;
 
 	if (mpi_size_ > block_size_/4)
 	{
@@ -887,15 +875,15 @@ void const RT_problem::print_info(){
 
 		std::cout << "\ntheta grid = [ ";
 
-		for (int i = 0; i < (int)N_theta_; ++i) std::cout << theta_grid_[i] << " ";
+		for (int i = 0; i < N_theta_; ++i) std::cout << theta_grid_[i] << " ";
 
 		std::cout << "]\nmu grid    = [ ";
 
-		for (int i = 0; i < (int)N_theta_; ++i) std::cout   << mu_grid_[i] << " ";
+		for (int i = 0; i < N_theta_; ++i) std::cout   << mu_grid_[i] << " ";
 
 		std::cout << "]\nchi grid   = [ ";
 
-		for (int i = 0; i < (int)N_chi_; ++i) std::cout   << chi_grid_[i] << " ";
+		for (int i = 0; i < N_chi_; ++i) std::cout   << chi_grid_[i] << " ";
 
 		std::cout << "] " << std::endl;			
 	}
@@ -996,7 +984,7 @@ void RT_problem::init_field(Field_ptr_t input_field, const Real input_value){
     {         
         auto *block = field_dev.block(i, j, k);
          
-        for (int b = 0; b < (int)block_size_; ++b) 
+        for (int b = 0; b < block_size_; ++b) 
         {
         	block[b] = input_value;        	
         }
@@ -1004,7 +992,7 @@ void RT_problem::init_field(Field_ptr_t input_field, const Real input_value){
 }
 
 
-void RT_problem::set_theta_chi_grids(const size_t N_theta, const size_t N_chi, const bool double_GL){
+void RT_problem::set_theta_chi_grids(const int N_theta, const int N_chi, const bool double_GL){
 
 	if (mpi_rank_ == 0 and N_theta % 2 != 0) std::cerr << "\n========= WARNING: N_theta odd! =========\n" << std::endl;
 
@@ -1023,7 +1011,7 @@ void RT_problem::set_theta_chi_grids(const size_t N_theta, const size_t N_chi, c
     	legendre_rule(N_theta / 2,   0.0, 1.0, mu_2, w_2);
 
     	// first half
-    	for (size_t i = 0; i < N_theta / 2; ++i)
+    	for (int i = 0; i < N_theta / 2; ++i)
 	    {
 	    	mu_grid_.push_back(mu_1[i]);
 	    	w_theta_.push_back(w_1[i]);
@@ -1032,7 +1020,7 @@ void RT_problem::set_theta_chi_grids(const size_t N_theta, const size_t N_chi, c
 	    }
 
 	    // second half
-    	for (size_t i = 0; i < N_theta / 2; ++i)
+    	for (int i = 0; i < N_theta / 2; ++i)
 	    {
 	    	mu_grid_.push_back(mu_2[i]);
 	    	w_theta_.push_back(w_2[i]);
@@ -1044,7 +1032,7 @@ void RT_problem::set_theta_chi_grids(const size_t N_theta, const size_t N_chi, c
     {
     	legendre_rule(N_theta,  -1.0, 1.0, mu_grid_, w_theta_);
 
-	    for (size_t i = 0; i < N_theta; ++i)
+	    for (int i = 0; i < N_theta; ++i)
 	    {
 	    	theta_grid_.push_back(std::acos(mu_grid_[i]));
 	    }
@@ -1055,20 +1043,18 @@ void RT_problem::set_theta_chi_grids(const size_t N_theta, const size_t N_chi, c
     if (N_chi % 2 != 0) std::cout << "WARNING: chi grid is not even!" << std::endl;
     if (N_chi % 4 != 0) std::cout << "WARNING: chi grid is not the same for each quadrant!" << std::endl;
     
-    const Real delta_chi = 2.0 * PI / N_chi;
+    const Real delta_chi = 2.0 * PI / N_chi;    
 
-    std::cout << "WARNING: chi test" << std::endl;
-
-    for (size_t i = 0; i < N_chi; ++i)
+    for (int i = 0; i < N_chi; ++i)
     {
-    	chi_grid_.push_back(i * delta_chi + 0.00001);	     // grid axes inlcuded
-    	// chi_grid_.push_back((i + 0.5) * delta_chi);	 // avoiding grid axes   	
+    	// chi_grid_.push_back(i * delta_chi + 0.00001);	     // grid axes inlcuded
+    	chi_grid_.push_back((i + 0.5) * delta_chi);	 // avoiding grid axes   	
     	w_chi_.push_back(delta_chi);    	
     }    
 }
 
 
-std::vector<std::complex<Real> > RT_problem::compute_T_KQ(const size_t stokes_i, const Real theta, const Real chi){
+std::vector<std::complex<Real> > RT_problem::compute_T_KQ(const int stokes_i, const Real theta, const Real chi){
 
 	// using standard ordering from tables: T_KQ = [T_00 T_10 T_11 T_20 T_21 T_22] 
 	// for Q negative T_K-Q = (-1)^Q * bar(T_KQ)
@@ -1143,7 +1129,7 @@ std::vector<std::complex<Real> > RT_problem::compute_T_KQ(const size_t stokes_i,
 }
 
 
-std::complex<Real> RT_problem::get_TKQi(const size_t i_stokes, const int K, const int Q, const size_t j, const size_t k){
+std::complex<Real> RT_problem::get_TKQi(const int i_stokes, const int K, const int Q, const int j, const int k){
 
 	// checks 	
 	if ( i_stokes >= 4) std::cerr  << "\nERROR: i_stokes is too large" << std::endl; 					
@@ -1249,8 +1235,8 @@ void RT_problem::set_eta_and_rhos(){
         Rotation_matrix R(0.0, -theta_B, -chi_B);
         
         // indeces
-        std::vector<size_t> local_idx;
-        size_t j_theta, k_chi, n_nu;
+        std::vector<int> local_idx;
+        int j_theta, k_chi, n_nu;
 
 		// // coeffs
 		// int q2;
@@ -1259,7 +1245,7 @@ void RT_problem::set_eta_and_rhos(){
 
 		// std::complex<Real> D_KQQ, faddeva, fact_re, fact_im;
          
-        for (size_t b = 0; b < block_size_; b = b + 4) 
+        for (int b = 0; b < block_size_; b = b + 4) 
         {        	        	
         	block_rho[b + 1] = 0;
 
@@ -1367,9 +1353,9 @@ void RT_problem::set_TKQ_tensor()
 {
 	for (int i = 0; i < 4; ++i)
 	{
-		for (size_t j = 0; j < N_theta_; ++j)
+		for (int j = 0; j < N_theta_; ++j)
 		{
-			for (size_t k = 0; k < N_chi_; ++k)
+			for (int k = 0; k < N_chi_; ++k)
 			{
 				auto T_KQ = compute_T_KQ(i, theta_grid_[j], chi_grid_[k]);
 			
@@ -1442,7 +1428,7 @@ void RT_problem::set_up(){
 		W_T_dev.ref(i,j,k) = tmp_const2 * std::exp(- h_ * nu_0_ / (k_B_ * T));		
 		
 		// on position and frequency
-		for (size_t n = 0; n < N_nu_; ++n)
+		for (int n = 0; n < N_nu_; ++n)
 		{
 			u[n] = (nu_0_ - nu_grid_[n]) / Doppler_width_dev.ref(i,j,k);						
 		}			
@@ -1742,6 +1728,115 @@ void const RT_problem::print_profile(const Field_ptr_t field, const int i_stoke,
 	}	
 
 	MPI_Barrier(MPI_COMM_WORLD);
+}
+
+
+void const RT_problem::write_surface_point_profiles(input_string file_name, const int i_space, const int j_space)
+{
+	const auto f_dev = I_field_->view_device();	
+	const auto g_dev = space_grid_->view_device();
+
+	// indeces
+	const int i_start = g_dev.margin[0]; 
+	const int j_start = g_dev.margin[1];
+	const int k_start = g_dev.margin[2];
+
+	const int i_end = i_start + g_dev.dim[0];
+	const int j_end = j_start + g_dev.dim[1];
+		
+	int i_global, j_global;
+
+	double I, QUV;
+
+	// write profiles
+	if (g_dev.global_coord(2, k_start) == 0)
+	{
+		for (int i = i_start; i < i_end; ++i)
+		{
+			i_global = g_dev.global_coord(0, i);
+
+			if (i_global == i_space)
+			{
+				for (int j = j_start; j < j_end; ++j)
+				{
+					j_global = g_dev.global_coord(1, j);
+
+					if (j_global == j_space)
+					{
+						// a single MPI rank writes output
+						std::cout << "\nMPI rank " << mpi_rank_ << " writing...";
+
+						// Create a new file 
+						input_string output_file = file_name + std::to_string(i_space) + std::to_string(j_space) + ".m";
+					 	std::ofstream outputFile(output_file);
+
+						if (outputFile.is_open()) 		
+						{		
+							// write grids 
+							outputFile << "\nnu_grid_ = [ ";
+							for (int n = 0; n < N_nu_; ++n) outputFile << nu_grid_[n] << " ";
+							outputFile << "];\n";
+
+							outputFile << "\ntheta_grid = [ ";
+							for (int j_theta = 0; j_theta < N_theta_; ++j_theta) outputFile << theta_grid_[j_theta] << " ";
+							outputFile << "];\n";
+
+							outputFile << "\nmu_grid = [ ";
+							for (int j_theta = 0; j_theta < N_theta_; ++j_theta) outputFile << mu_grid_[j_theta] << " ";
+							outputFile << "];\n";
+
+							outputFile << "\nchi_grid = [ ";
+							for (int k_chi = 0; k_chi < N_chi_; ++k_chi) outputFile << chi_grid_[k_chi] << " ";
+							outputFile << "];\n";
+
+							// create MATLAB data structure
+							outputFile <<  "\nField = cell(4," << N_theta_ << "," << N_chi_ << ");" << std::endl;
+
+							for (int j_theta = N_theta_/2; j_theta < N_theta_; ++j_theta)
+							{								
+								for (int k_chi = 0; k_chi < N_chi_; ++k_chi)
+								{							
+									const int b_start = local_to_block(j_theta, k_chi, 0);						
+						
+									for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+									{
+										outputFile << "\nField{" << i_stokes + 1 << "," << j_theta + 1 << "," << k_chi + 1 << "} = [ ";										
+
+										for (int b = 0; b < 4 * N_nu_; b = b + 4) 
+										{
+											I = f_dev.block(i,j,k_start)[b_start + b];
+
+											if (i_stokes == 0)
+											{
+												outputFile << I << " ";
+											}
+											else
+											{
+												QUV = f_dev.block(i,j,k_start)[b_start + b + i_stokes];
+
+												outputFile << 100.0 * QUV/I << " ";
+											}
+										}
+
+										outputFile << "];\n";	
+									}
+								}
+							}
+
+							// Close the file		
+    						outputFile.close();
+
+    						if (mpi_rank_ == 0) std::cout << "\nOutput written in " << output_file << "\n" << std::endl;    						
+    					} 
+						else
+					  	{
+					    	if (mpi_rank_ == 0) std::cout << "\nERROR: failed to create the output file." << std::endl;
+					  	}
+					}
+				}
+			}
+		}
+	}  	
 }
 
 

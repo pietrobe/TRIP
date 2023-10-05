@@ -66,7 +66,8 @@ inline double* convert_cartesian_to_spherical(const double x, const double y, co
     return spherical_coordinates;
 }
 
-inline int apply_periodic_bc(const int i, const size_t N)
+// TODO: this one is not necessary anymore with size_t -> int?
+inline int apply_periodic_bc(const int i, const int N)
 {
     int i_new;
 
@@ -113,8 +114,8 @@ double W3JS(int J1, int J2, int J3, int M1, int M2, int M3);
 
 // linearly interpolate vector and double its size 
 std::vector<double> refine_vector(const std::vector<double> &v);
-std::vector<double> refine_vector_blocked(const std::vector<double> &v, const size_t block_size);
-std::vector<double> refine_vector_blocked2(const std::vector<double> &v, const size_t block_size_fn);
+std::vector<double> refine_vector_blocked(const std::vector<double> &v, const int block_size);
+std::vector<double> refine_vector_blocked2(const std::vector<double> &v, const int block_size_fn);
 
 double pow_gen(const double x, const double exponent);
 

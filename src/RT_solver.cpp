@@ -80,7 +80,7 @@ void MF_context::field_to_vec(const Field_ptr_t field, Vec &v)
 		{
 			for (int i = i_start; i < i_end; ++i)				
 			{
-				for (int b = 0; b < (int)block_size; b++) 
+				for (int b = 0; b < block_size; b++) 
 				{
 					// set row index and corresponding entry
 					row = istart + counter;
@@ -137,7 +137,7 @@ void MF_context::vec_to_field(Field_ptr_t field, const Vec &v)
 		{
 			for (int i = i_start; i < i_end; ++i)				
 			{
-				for (int b = 0; b < (int)block_size; b++) 
+				for (int b = 0; b < block_size; b++) 
 				{
 					// set row index and correposnding entry
 					row = istart + counter;					
@@ -173,7 +173,7 @@ void MF_context::apply_bc(Field_ptr_t I_field, const Real I0){
         {       
             const Real W_T_deep = I0 * W_T_dev.ref(i,j,k);
             
-            for (int b = 0; b < (int)block_size; b = b + 4) 
+            for (int b = 0; b < block_size; b = b + 4) 
             {
                 I_field_dev.block(i,j,k)[b] = W_T_deep;         
             }            
@@ -582,7 +582,7 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
 
         // // test
         // // get indeces
-        // std::vector<size_t> local_idx;
+        // std::vector<int> local_idx;
         // local_idx = RT_problem_->block_to_local(block_index);
         
         // const int j_theta = local_idx[0];
@@ -881,7 +881,7 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
 
         // test
         // get indeces
-        // std::vector<size_t> local_idx;
+        // std::vector<int> local_idx;
         // local_idx = RT_problem_->block_to_local(block_index); // % tile_size_;
         
         // const int j_theta = local_idx[0];
@@ -1127,7 +1127,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     std::vector<int> i_intersect(4), j_intersect(4), k_intersect(4);
 
     // serial indexing coeffs    
-    std::vector<size_t> local_idx;
+    std::vector<int> local_idx;
     int block_start, block_end, j_theta_start, k_chi_start, n_nu_start, j_theta_end, k_chi_end, n_nu_end;
 
 	// misc coeffs
@@ -1213,7 +1213,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     				for (int i = i_start; i < i_end; ++i)
     				{					                       
     					// loop over directions 
-    					for (int j_theta = j_theta_start; j_theta < (int)j_theta_end; ++j_theta)
+    					for (int j_theta = j_theta_start; j_theta < j_theta_end; ++j_theta)
     					{
     						theta = theta_grid[j_theta];
     						mu    = mu_grid[j_theta];						
@@ -1223,14 +1223,14 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     						// depth index
     						k_global = g_dev.global_coord(2, k_aux);	                         
 
-    						boundary = (k_global == 0 and mu < 0) or (k_global == (int)N_z - 1 and mu > 0);
+    						boundary = (k_global == 0 and mu < 0) or (k_global == N_z - 1 and mu > 0);
     						
     						if (not boundary)
     						{						
     							// set vertical box size
     							dz = (mu > 0) ? depth_grid[k_global] -  depth_grid[k_global + 1] : depth_grid[k_global - 1] - depth_grid[k_global];                                                                
 
-    							for (int k_chi = k_chi_start; k_chi < (int)k_chi_end; ++k_chi)
+    							for (int k_chi = k_chi_start; k_chi < k_chi_end; ++k_chi)
     							{	                                
     								chi = chi_grid[k_chi]; 
     								
@@ -1260,7 +1260,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
                                     
                                     if (stencil_size == 3)
                                     {                                        
-                                        if ( k_global > 0 and k_global < (int)N_z - 1)
+                                        if ( k_global > 0 and k_global < N_z - 1)
                                         {
                                             const double dz_2    = (mu > 0) ? depth_grid[k_global - 1] -  depth_grid[k_global] : depth_grid[k_global] - depth_grid[k_global + 1]; 
                                             const double theta_2 = PI - theta;
@@ -1301,7 +1301,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
                                     }                                                                 
                                     
     								// loop on freqs
-                                    for (int n = n_nu_start; n < (int)n_nu_end; ++n)
+                                    for (int n = n_nu_start; n < n_nu_end; ++n)
     								{			     
                                         if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);                                                                                                                 
                                         Real start_one = MPI_Wtime();                                               
@@ -1515,15 +1515,15 @@ void MF_context::set_up_emission_module(){
 
     if (RT_problem_->use_CRD_limit_)
     {
-        components.push_back(emission_coefficient_components::epsilon_pCRD_VHP_limit);     
+        components.push_back(emission_coefficient_components::epsilon_pCRD_VHP_limit);             
         components.push_back(emission_coefficient_components::epsilon_csc);      
 
         if (mpi_rank_ == 0) std::cout << "\nUsing CRD emission, components:"<< std::endl;
     }
     else
     {
-        // components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB);
-        components.push_back(emission_coefficient_components::epsilon_R_II);
+        components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB);
+        // components.push_back(emission_coefficient_components::epsilon_R_II);
         components.push_back(emission_coefficient_components::epsilon_R_III_GL);
         components.push_back(emission_coefficient_components::epsilon_csc);      
 
@@ -1537,7 +1537,7 @@ void MF_context::set_up_emission_module(){
     
     // module for preconditioner 
     std::list<emission_coefficient_components> components_approx{    
-        emission_coefficient_components::epsilon_pCRD_limit,	
+        emission_coefficient_components::epsilon_pCRD_limit,        
         emission_coefficient_components::epsilon_csc
     };       
     
@@ -1663,7 +1663,7 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
 }
 
 
-void MF_context::init_serial_fields(const size_t n_tiles){
+void MF_context::init_serial_fields(const int n_tiles){
     
     auto block_size = RT_problem_->block_size_;
 
@@ -1698,7 +1698,7 @@ void MF_context::init_serial_fields(const size_t n_tiles){
     if (mpi_rank_ == 0 and use_ghost_layers) std::cout << "\nusing ghost layers for serial grid" << std::endl;    
 
     space_grid_serial_ = std::make_shared<Grid_t>();    
-    space_grid_serial_->init(MPI_COMM_SELF, {(int)N_x, (int)N_y, (int)N_z}, {1, 1, 0}, {}, use_ghost_layers); 
+    space_grid_serial_->init(MPI_COMM_SELF, {N_x, N_y, N_z}, {1, 1, 0}, {}, use_ghost_layers); 
 
     // create serial fields 
     I_field_serial_   = std::make_shared<Field_t>("I_serial", space_grid_serial_, tile_size_); 
@@ -1801,9 +1801,9 @@ void RT_solver::assemble_rhs(){
     		
     		double value;
 
-    		std::vector<size_t> local_idx;
+    		std::vector<int> local_idx;
 
-    		for (int b = 0; b < (int)block_size; b++) 
+    		for (int b = 0; b < block_size; b++) 
     		{		
     			local_idx = RT_problem_->block_to_local(b);
 

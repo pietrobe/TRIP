@@ -12,8 +12,8 @@ int test_rii_3D_include(int argc, char *argv[]) {
   Kokkos::initialize(argc, argv);
 
   {
-    const size_t N_theta = atoi(argv[1]);
-    const size_t N_chi = atoi(argv[2]);
+    const int N_theta = atoi(argv[1]);
+    const int N_chi = atoi(argv[2]);
 
     RT_problem rt_problem("/users/sriva/git_rii_tests/r_iii_exact_tests/"
                           "CaI_4227/FAL-C/B0_V0_12T_8C_99F/",
