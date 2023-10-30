@@ -65,6 +65,7 @@ include_directories(${RII_INCLUDES}/src/rii_RII_KKpQ)
 include_directories(${RII_INCLUDES}/src/epsilon_alt)
 include_directories(${RII_INCLUDES}/src/sphere_lebedev_rule)
 include_directories(${RII_INCLUDES}/src/tk_spline)
+include_directories(${RII_INCLUDES}/src/rii_aa_emission_coefficient)
 include_directories(${RII_INCLUDES}/src/utils)
 
 
