@@ -47,7 +47,7 @@ struct MF_context {
 	int mpi_rank_;
 	int mpi_size_;
 	
-	bool use_single_long_step_  = false;
+	bool use_single_long_step_  = false; 
 	bool use_always_long_ray_   = true;
 
 	// serial objects for formal solution
@@ -141,7 +141,7 @@ public:
     	// save_vec(RT_problem_->I_vec_, "../output/eta_t.m" ,"etat");     	
   
     	// set linear system
-		int local_size = RT_problem_->local_size_;
+		PetscInt local_size = RT_problem_->local_size_;
 		ierr = VecGetLocalSize(rhs_, &local_size);CHKERRV(ierr); 		
 
 		// init user defined Mat mult
@@ -151,7 +151,7 @@ public:
     	// set Krylov solver
     	ierr = KSPCreate(PETSC_COMM_WORLD,&ksp_solver_);CHKERRV(ierr);
     	ierr = KSPSetOperators(ksp_solver_,MF_operator_,MF_operator_);CHKERRV(ierr);	    		
-    	ierr = KSPSetType(ksp_solver_,ksp_type_);CHKERRV(ierr); 
+    	ierr = KSPSetType(ksp_solver_,ksp_type_);CHKERRV(ierr);     	
 
     	// set preconditioner
     	ierr = KSPGetPC(ksp_solver_,&pc_);CHKERRV(ierr);    		    	    		
@@ -173,7 +173,7 @@ public:
     		// ierr = KSPSetTolerances(mf_ctx_.pc_solver_,r_tol,PETSC_DEFAULT,PETSC_DEFAULT, PETSC_DEFAULT);CHKERRV(ierr);
     		// ierr = KSPSetTolerances(mf_ctx_.pc_solver_,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT, max_its);CHKERRV(ierr);
     		// ierr = KSPSetNormType(mf_ctx_.pc_solver_, KSP_NORM_NONE);CHKERRV(ierr);
-
+    		// ierr = KSPSetInitialGuessNonzero(mf_ctx_.pc_solver_, PETSC_TRUE);CHKERRV(ierr); // TEST
 
     		// set PC
     		ierr = PCSetType(pc_,PCSHELL);CHKERRV(ierr);
@@ -218,7 +218,7 @@ public:
 	{		
 		Real start = MPI_Wtime();		
 
-		// set source fun
+		// // set source fun
 		// if (mpi_rank_ == 0) std::cout << "WARNING: setting source function in apply_formal_solver()" << std::endl;
 
 		// auto S_dev = RT_problem_->S_field_->view_device();
@@ -229,8 +229,8 @@ public:
 
 		// 	for (int b = 0; b < (int)RT_problem_->block_size_; ++b) 
 		// 	{	    
-		// 		// block[b] = 0.1;     	   	
-		// 		if (block[b] != 0) std::cout << "S not zero!" << std::endl;
+		// 		block[b] = 0.1;     	   	
+		// 		// if (block[b] != 0) std::cout << "S not zero!" << std::endl;
 		// 	}
 		// });
 
@@ -291,7 +291,7 @@ public:
 
 		int counter = 0;
 
-		int istart;	
+		PetscInt istart;	
 		ierr = VecGetOwnershipRange(RT_problem_->I_vec_, &istart, NULL);CHKERRV(ierr);	
 
 		// init
@@ -343,7 +343,7 @@ private:
 	Vec rhs_;
 	
 	KSP ksp_solver_;
-	KSPType ksp_type_ = KSPFGMRES;
+	KSPType ksp_type_ = KSPGMRES; //KSPBCGS; // KSPFGMRES; // test KSPPIPEFGMRES
 	PC pc_;
 	
 	bool using_prec_;	

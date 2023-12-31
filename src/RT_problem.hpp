@@ -18,7 +18,8 @@ class RT_problem
 public:
 
 	// constructor for PORTA input file
-	RT_problem(const char* PORTA_input, input_string input_path_frequency, const bool use_CRD_limit = false)
+	RT_problem(const char* PORTA_input, input_string input_path_frequency, 
+			   const bool use_CRD_limit = false, const bool use_magnetic_field = false)
 	{				
 		Real start = MPI_Wtime();
 
@@ -30,11 +31,12 @@ public:
 
 		// set flags    	
     	use_PORTA_input_ = true;
-    	use_CRD_limit_   = use_CRD_limit;    	
+    	use_magnetic_field_ = use_magnetic_field;
+    	use_CRD_limit_      = use_CRD_limit;    	    	
 
     	// frequency grid is not contained in PORTA input (but can be computed from T_ref)
-    	const bool use_wavelength = true;
-    	read_frequency(input_path_frequency + "/frequency.dat", use_wavelength);
+    	// const bool use_wavelength = false; // TEST
+    	read_frequency(input_path_frequency + "/frequency.dat");
     	read_3D(PORTA_input);
 
     	// timing
@@ -52,11 +54,15 @@ public:
 	}
 
 	// constructor
-	RT_problem(input_string input_path, const int N_theta, const int N_chi, const bool use_CRD_limit = false)			   
+	RT_problem(input_string input_path, const int N_theta, const int N_chi, 
+			   const bool use_CRD_limit = false, const bool use_magnetic_field = false)			   
 	{
 		// set CRD flag
-		use_CRD_limit_ = use_CRD_limit;    	
+		use_CRD_limit_      = use_CRD_limit;  
+		use_magnetic_field_ = use_magnetic_field;  	
 
+		if (use_magnetic_field_ and mpi_rank_ == 0) std::cout << "\nWARNING: B is hardcoded!\n" << std::endl;				
+		
 		Real start = MPI_Wtime();
 
 		// assign MPI varaibles 
@@ -102,8 +108,15 @@ public:
 		// read atm data (needs grid object)
 		read_atmosphere_1D(    input_path + "/atmosphere.dat");    // NOTE: solar surface for space index k = 0
 		read_bulk_velocity_1D( input_path + "/bulk_velocity.dat");	
-		read_magnetic_field_1D(input_path + "/magnetic_field.dat");
-		// read_magnetic_field_1D(input_path + "/magnetic_field_20.dat");
+
+		if (use_magnetic_field_)
+		{
+			read_magnetic_field_1D(input_path + "/magnetic_field_20.dat");
+		}
+		else
+		{
+			read_magnetic_field_1D(input_path + "/magnetic_field.dat");
+		}		
 		
 		read_continumm_1D(input_path + "/continuum/continuum_scat_opac.dat", 
 						  input_path + "/continuum/continuum_tot_opac.dat",
@@ -168,11 +181,11 @@ public:
 							 const int j_theta = 0, const int k_chi = 0);
 
 
-	// write surface profile in file in MATLAB format
+	// write surface profile in file in MATLAB format in onw point and all surface
 	void const write_surface_point_profiles(input_string file_name, const int i_space, const int j_space);
+	// void const write_surface_profiles(input_string file_name); // TODO
 									        
 
-		
 	// MPI varables
 	int mpi_rank_;
 	int mpi_size_;	
@@ -215,10 +228,10 @@ public:
 	int N_chi_;   
 	int N_dirs_; // N_dirs_ = N_theta_ * N_chi_;   
 	int N_nu_;        
-	
-	int block_size_; // 4 * N_nu_ * N_theta_ * N_chi_;
-	int tot_size_;   // N_s_ * block_size;
+		
 	int local_size_; // == tot_size_ con mpi_size_ = 1
+	PetscInt block_size_; // 4 * N_nu_ * N_theta_ * N_chi_;
+	PetscInt tot_size_;   // N_s_ * block_size;	
 
 	// unknown quantities 
 	Field_ptr_t I_field_; // intensity     
@@ -275,6 +288,7 @@ private:
 
 	const bool use_ghost_layers_ = false;
 		  bool use_PORTA_input_  = false;
+		  bool use_magnetic_field_ = false;
 
 	// physical constants 
 	const Real c_   = 2.99792458e+10;

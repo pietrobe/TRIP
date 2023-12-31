@@ -96,11 +96,11 @@ void RT_problem::read_3D(const char* filename){
     MPI_CHECK(MPI_File_read_all(fh, &gu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
     MPI_CHECK(MPI_File_read_all(fh, &T_ref_, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 
-    // change Eu units to [cm-1]     
-    Eu_ /= c_ * h_; 
+    // // change Eu units to [cm-1]     
+    // Eu_ /= c_ * h_; 
     
-    // // hardcoded from FAL-C 
-    // Eu_ = 23652.304;
+    // hardcoded from FAL-C 
+    Eu_ = 23652.304;    
     
   	// some irrelevant data double temp[ny][nx];    matrix of ground (iz=0) for Planckian boundary
 	skip_size = (N_x_ * N_y_) * sizeof(double);
@@ -112,9 +112,9 @@ void RT_problem::read_3D(const char* filename){
 
 	/////////////////// set sizes
 	N_nu_ = nu_grid_.size();
-	block_size_ = 4 * N_nu_ * N_theta_ * N_chi_;
-	tot_size_   = N_s_ * block_size_;	
-
+	block_size_ = (PetscInt) 4 * N_nu_ * N_theta_ * N_chi_;
+	tot_size_   = (PetscInt) N_s_ * block_size_;	
+	
 	// create space grid
 	space_grid_ = std::make_shared<Grid_t>();
 	
@@ -148,10 +148,17 @@ void RT_problem::read_3D(const char* filename){
 	auto eps_c_th_dev = eps_c_th_ ->view_device();
 	auto epsilon_dev  = epsilon_  ->view_device();
 
+	auto Doppler_width_dev = Doppler_width_->view_device();
+
 	auto g_dev = space_grid_->view_device();
 
-	// TEST
-	if (mpi_rank_ == 0) std::cout << "WARNING: hardcoding magnetic field (20 G)! " << std::endl;
+	// some constants hardcoded	
+	if (mpi_rank_ == 0) std::cout << "WARNING: hardcoding quantities for PORTA input read!" << std::endl;
+	const double Aul_RH = 2.17674e8;    
+	const double mass_real_RH = 6.65511e-23; // hardcoded		
+
+	// hardcod xi
+	std::array<double, 133> xi_vec = { 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 1.9886373912499999e+00, 1.9773626719999999e+00, 1.9419696239999999e+00, 1.8600738539999999e+00, 1.7778424079999999e+00, 1.6824751599999999e+00, 1.5795074739999999e+00, 1.4744281220000000e+00, 1.3537171600000000e+00, 1.2327272599999999e+00, 1.1129887319999998e+00, 9.9467995799999975e-01, 8.7645056999999993e-01, 7.8089990399999998e-01, 6.8735903999999992e-01, 6.0959461199999998e-01, 5.6051231999999995e-01, 5.1142826399999997e-01, 4.9363330559999996e-01, 4.8427622399999998e-01, 4.7908703999999996e-01, 4.8846167039999999e-01, 4.9785317760000003e-01, 5.1861966000000015e-01, 5.4516093000000010e-01, 5.8094278171428582e-01, 6.2224760000000012e-01, 6.7522791428571438e-01, 7.3142138000000012e-01, 8.0070458000000022e-01, 8.7089629200000007e-01, 9.5220700000000047e-01, 1.0332738400000001e+00, 1.1213362909090909e+00, 1.2152569890909093e+00, 1.3094004363636367e+00, 1.4048512000000004e+00, 1.5007467520000004e+00, 1.5978336000000002e+00, 1.6978324000000005e+00, 1.7978304000000003e+00, 1.8947160320000005e+00, 1.9907144960000005e+00, 2.0867125760000005e+00, 2.1827118080000001e+00, 2.2787102720000001e+00, 2.3705575253333340e+00, 2.4612234666666670e+00, 2.5518886826666671e+00, 2.6425844611764711e+00, 2.7343480658823536e+00, 2.8261127717647065e+00, 2.9178771105882353e+00, 3.0096418164705878e+00, 3.0936051408695651e+00, 3.1753403478260873e+00, 3.2570791513043482e+00, 3.3388189356521742e+00, 3.4205534886956523e+00, 3.5020644897959188e+00, 3.5755338775510208e+00, 3.6489997387755104e+00, 3.7224691265306125e+00, 3.7959382204081633e+00, 3.8687040000000006e+00, 3.9367072639999998e+00, 4.0047040000000003e+00, 4.0727037280000005e+00, 4.1407040000000004e+00, 4.2084453608247427e+00, 4.2744210474226803e+00, 4.3404041237113411e+00, 4.4063803381443298e+00, 4.4723597195876286e+00, 4.5390595657142860e+00, 4.6076277028571422e+00, 4.6761985828571433e+00, 4.7447738514285716e+00, 4.8133414400000003e+00, 4.8820457066666672e+00, 4.9553796266666668e+00, 5.0287088533333337e+00, 5.1020427733333342e+00, 5.1753755200000002e+00, 5.2502169904761908e+00, 5.3264074666666668e+00, 5.4025979428571436e+00, 5.4787847619047625e+00, 5.5549752380952384e+00, 5.6335312941176472e+00, 5.7182371764705886e+00, 5.8029430588235300e+00, 5.8876489411764705e+00, 5.9725229090909098e+00, 6.0634269090909090e+00, 6.1543359999999998e+00, 6.2481976369230772e+00, 6.3497304123076930e+00, 6.4512745600000008e+00, 6.5531384216216226e+00, 6.6666519351351363e+00, 6.7818653538461549e+00, 6.9049422769230784e+00, 7.0308618105263161e+00, 7.1716484000000005e+00, 7.3142758956521750e+00, 7.4573813333333341e+00, 7.6035485714285720e+00, 7.7321138285714301e+00, 7.8826903272727300e+00, 8.3409513513513822e+00, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01};
 
 	// fill field 
 	sgrid::parallel_for("READ-ATM1D", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
@@ -173,22 +180,38 @@ void RT_problem::read_3D(const char* filename){
 		a_dev.ref(i,j,k)       = tmp_vector[10];		
 		D2_dev.ref(i,j,k)      = tmp_vector[11];
 		
-		// hardcoding Qel_ and xi_ to zero
-		xi_dev.ref(i,j,k)  = 0.0;				
-		Qel_dev.ref(i,j,k) = 0.0;
+		// hardcoding xi
+		xi_dev.ref(i,j,k) = 0; // with conversion to cm/s
+
+		// RH Doppler_width to compute Qel
+		const double xi = 1e5 * xi_vec[k_reverse];; // with conversion to cm/s
+		const double Dw_RH = Eu_ * std::sqrt(xi * xi + 2 * k_B_ * T_dev.ref(i,j,k) / mass_real_RH);		
+
+		// compute Qel
+		Qel_dev.ref(i,j,k) = a_dev.ref(i,j,k) * (4 * PI * Dw_RH) - Aul_RH;
 		
 		// convert to spherical coordinates
 		auto B_spherical = convert_cartesian_to_spherical(tmp_vector[3], 
 														  tmp_vector[4],
-														  tmp_vector[5]);
-		
-		// B_dev.block(i, j, k)[0] = B_spherical[0] * 1399600.0; // converting to Larmor frequency					
-		// B_dev.block(i, j, k)[1] = B_spherical[1]; 					
-		// B_dev.block(i, j, k)[2] = B_spherical[2]; 
+														  tmp_vector[5]);	
+		if (use_magnetic_field_)
+		{								
+			B_dev.block(i, j, k)[0] = B_spherical[0] * 1399600.0; // converting to Larmor frequency					
+			B_dev.block(i, j, k)[1] = B_spherical[1]; 					
+			B_dev.block(i, j, k)[2] = B_spherical[2]; 
 
-		B_dev.block(i, j, k)[0] = 20 * 1399600.0; // converting to Larmor frequency					
-		B_dev.block(i, j, k)[1] = 1.5707963268;
-		B_dev.block(i, j, k)[2] = 0; 
+			// // hardcoded
+			// B_dev.block(i, j, k)[0] = 20 * 1399600.0; // converting to Larmor frequency					
+			// B_dev.block(i, j, k)[1] = 1.5707963268;
+			// B_dev.block(i, j, k)[2] = 0; 
+
+		}
+		else
+		{
+			B_dev.block(i, j, k)[0] = 0;
+			B_dev.block(i, j, k)[1] = 0;
+			B_dev.block(i, j, k)[2] = 0;
+		}
 		
 		// convert to spherical coordinates
 		auto v_spherical = convert_cartesian_to_spherical(tmp_vector[6], 
@@ -818,8 +841,8 @@ void RT_problem::set_sizes(){
 
 	N_s_ = N_x_ * N_y_ * N_z_;
 
-	block_size_ = 4 * N_nu_ * N_theta_ * N_chi_;
-	tot_size_   = N_s_ * block_size_;	
+	block_size_ = (PetscInt) 4 * N_nu_ * N_theta_ * N_chi_;
+	tot_size_   = (PetscInt) N_s_ * block_size_;	
 
 	if (mpi_rank_ == 0 and mpi_size_ > N_s_) std::cerr << "\n========= WARNING: mpi_size > N_s! =========\n" << std::endl;
 
@@ -907,7 +930,7 @@ void RT_problem::allocate_fields(){
 
 		///////////////////////
 
-		if (mpi_rank_ == 0) std::cout << "\nCreating PETSc vector..." << std::endl;
+		if (mpi_rank_ == 0) std::cout << "\nCreating PETSc vector..." << std::endl;		
 
 		PetscErrorCode ierr; 
 	
@@ -1047,7 +1070,7 @@ void RT_problem::set_theta_chi_grids(const int N_theta, const int N_chi, const b
 
     for (int i = 0; i < N_chi; ++i)
     {
-    	// chi_grid_.push_back(i * delta_chi + 0.00001);	     // grid axes inlcuded
+    	// chi_grid_.push_back(i * delta_chi + 0.00001);  // grid axes included
     	chi_grid_.push_back((i + 0.5) * delta_chi);	 // avoiding grid axes   	
     	w_chi_.push_back(delta_chi);    	
     }    
@@ -1237,13 +1260,6 @@ void RT_problem::set_eta_and_rhos(){
         // indeces
         std::vector<int> local_idx;
         int j_theta, k_chi, n_nu;
-
-		// // coeffs
-		// int q2;
-		// Real fact, coeff_K, W3J1, W3J2, um, v_dot_Omega;
-		// Real u_red, u_b;
-
-		// std::complex<Real> D_KQQ, faddeva, fact_re, fact_im;
          
         for (int b = 0; b < block_size_; b = b + 4) 
         {        	        	
@@ -1399,6 +1415,7 @@ void RT_problem::set_up(){
 	auto D1_dev   = D1_  ->view_device();
 	auto k_L_dev  = k_L_ ->view_device();
 	auto u_dev    = u_   ->view_device();
+	auto a_dev    = a_   ->view_device();
 
 	auto Doppler_width_dev = Doppler_width_->view_device();
 	auto epsilon_dev       = epsilon_ ->view_device();
@@ -1415,15 +1432,19 @@ void RT_problem::set_up(){
     	Real Cul = Cul_dev.ref(i,j,k);
     	
         // precompute quantities depening only on position
-        if (not use_PORTA_input_) D2_dev.ref(i,j,k)  = 0.5 * Qel_dev.ref(i,j,k); 
+        if (not use_PORTA_input_) 
+        {
+        	D2_dev.ref(i,j,k)  = 0.5 * Qel_dev.ref(i,j,k); 
+        	epsilon_dev.ref(i,j,k) = Cul/(Cul + Aul_);	
+        }
 
 		D1_dev.ref(i,j,k)  = tmp_const3 * D2_dev.ref(i,j,k);
 
-		k_L_dev.ref(i,j,k) = tmp_const * Nl_dev.ref(i,j,k);
+		k_L_dev.ref(i,j,k) = tmp_const * Nl_dev.ref(i,j,k);		
 		
-		Doppler_width_dev.ref(i,j,k) = dE * std::sqrt(2 * k_B_ * T / mass_real + xi * xi);
+		Doppler_width_dev.ref(i,j,k) = dE * std::sqrt(xi * xi + 2 * k_B_ * T / mass_real);			
 
-		epsilon_dev.ref(i,j,k) = Cul/(Cul + Aul_);	
+		if (use_PORTA_input_) a_dev.ref(i,j,k) = (Aul_ + Cul + Qel_dev.ref(i,j,k)) / (4 * PI * Doppler_width_dev.ref(i,j,k));
 
 		W_T_dev.ref(i,j,k) = tmp_const2 * std::exp(- h_ * nu_0_ / (k_B_ * T));		
 		
@@ -1730,9 +1751,12 @@ void const RT_problem::print_profile(const Field_ptr_t field, const int i_stoke,
 	MPI_Barrier(MPI_COMM_WORLD);
 }
 
-
+// write surface profile in one single point
 void const RT_problem::write_surface_point_profiles(input_string file_name, const int i_space, const int j_space)
 {
+	// // a single MPI rank writes output
+	// if (mpi_rank_ == 0) std::cout << " Writing output in spatial point (" << i_space << ", " << j_space << ")" << std::endl;
+
 	const auto f_dev = I_field_->view_device();	
 	const auto g_dev = space_grid_->view_device();
 
@@ -1762,12 +1786,9 @@ void const RT_problem::write_surface_point_profiles(input_string file_name, cons
 					j_global = g_dev.global_coord(1, j);
 
 					if (j_global == j_space)
-					{
-						// a single MPI rank writes output
-						std::cout << "\nMPI rank " << mpi_rank_ << " writing...";
-
+					{						
 						// Create a new file 
-						input_string output_file = file_name + std::to_string(i_space) + std::to_string(j_space) + ".m";
+						input_string output_file = file_name + "_" + std::to_string(i_space) + "_" + std::to_string(j_space) + ".m";
 					 	std::ofstream outputFile(output_file);
 
 						if (outputFile.is_open()) 		
@@ -1878,7 +1899,7 @@ bool RT_problem::field_is_zero(const Field_ptr_t field)
 }
 
 
-void RT_problem::set_grid_partition()
+void RT_problem::set_grid_partition() // TODO remove hardcoding
 {
 	// TODO: now hardcoded	
 
@@ -1902,6 +1923,34 @@ void RT_problem::set_grid_partition()
 			mpi_size_z_ = 128;
 			mpi_size_x_ = 3;
 			mpi_size_y_ = 1;
+			if (mpi_rank_ == 0) std::cout << "========== WARNING: hardcoding grid partition ==========" << std::endl;				
+		}
+		else if (mpi_size_ == 1024) // HARDCODED
+		{
+			mpi_size_z_ = 1;
+			mpi_size_x_ = 32;
+			mpi_size_y_ = 32;
+			if (mpi_rank_ == 0) std::cout << "========== WARNING: hardcoding grid partition ==========" << std::endl;				
+		}
+		else if (mpi_size_ == 2048) // HARDCODED
+		{
+			mpi_size_z_ = 128;
+			mpi_size_x_ = 4;
+			mpi_size_y_ = 4;
+			if (mpi_rank_ == 0) std::cout << "========== WARNING: hardcoding grid partition ==========" << std::endl;				
+		}
+		else if (mpi_size_ == 4096) // CHECK THIS?
+		{
+			mpi_size_z_ = 1;
+			mpi_size_x_ = 64;
+			mpi_size_y_ = 64;
+			if (mpi_rank_ == 0) std::cout << "========== WARNING: hardcoding grid partition ==========" << std::endl;				
+		}
+		else if (mpi_size_ == 8192) // HARDCODED
+		{
+			mpi_size_z_ = 128;
+			mpi_size_x_ = 8;
+			mpi_size_y_ = 8;
 			if (mpi_rank_ == 0) std::cout << "========== WARNING: hardcoding grid partition ==========" << std::endl;				
 		}
 		else

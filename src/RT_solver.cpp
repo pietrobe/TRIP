@@ -66,7 +66,7 @@ void MF_context::field_to_vec(const Field_ptr_t field, Vec &v)
 	const int j_end = j_start + g_dev.dim[1];
 	const int k_end = k_start + g_dev.dim[2];	
 
-	int istart, row;
+	PetscInt istart, row;
 
 	double value;
 	
@@ -123,7 +123,7 @@ void MF_context::vec_to_field(Field_ptr_t field, const Vec &v)
 	const int j_end = j_start + g_dev.dim[1];
 	const int k_end = k_start + g_dev.dim[2];	
 
-	int istart, row;
+	PetscInt istart, row;
 
 	double value;
 	
@@ -155,7 +155,7 @@ void MF_context::vec_to_field(Field_ptr_t field, const Vec &v)
 
 
 void MF_context::apply_bc(Field_ptr_t I_field, const Real I0){
-
+         
     // init some quantities 
     const auto N_z        = RT_problem_->N_z_;
     const auto block_size = RT_problem_->block_size_;
@@ -164,7 +164,7 @@ void MF_context::apply_bc(Field_ptr_t I_field, const Real I0){
     // apply BC
     const auto W_T_dev     = RT_problem_->W_T_->view_device();
     const auto g_dev       =        space_grid->view_device();
-    auto I_field_dev       =           I_field->view_device();       
+    auto I_field_dev       =           I_field->view_device();         
 
     sgrid::parallel_for("APPLY BC", space_grid->md_range(), SGRID_LAMBDA(int i, int j, int k) {
                                     
@@ -175,7 +175,7 @@ void MF_context::apply_bc(Field_ptr_t I_field, const Real I0){
             
             for (int b = 0; b < block_size; b = b + 4) 
             {
-                I_field_dev.block(i,j,k)[b] = W_T_deep;         
+                I_field_dev.block(i,j,k)[b] = W_T_deep;                
             }            
         }
     }); 
@@ -440,7 +440,7 @@ std::vector<t_intersect> MF_context::find_prolongation(double theta, double chi,
 std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T, 
                                                const Field_ptr_t I_field, const Field_ptr_t S_field, 
                                                const int i, const int j, const int k, const int block_index)
-{                 
+{   
     const auto N_x = RT_problem_->N_x_;
     const auto N_y = RT_problem_->N_y_;
     
@@ -461,7 +461,7 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
 	double eta_I_1, weight, dtau;
 
 	std::vector<double> I1(4), I2(4), S1(4), S2(4), etas(4), rhos(4), K1(16), K2(16);
-   
+
 	for (int cell = 0; cell < N; ++cell)
 	{							
 		// quantities in (1)
@@ -476,6 +476,12 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
 				I1[i_stokes]   = 0;
 			}
 
+            weight = 0;
+            for (int face_vertices = 0; face_vertices < 4; ++face_vertices)
+            {
+                weight += T[cell].w[face_vertices];
+            }            
+
 			for (int face_vertices = 0; face_vertices < 4; ++face_vertices)
 			{
 				i_intersect = i + T[cell].ix[face_vertices];
@@ -486,7 +492,7 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
                 i_intersect = apply_periodic_bc(i_intersect, N_x);
                 j_intersect = apply_periodic_bc(j_intersect, N_y);                
 
-				weight = T[cell].w[face_vertices];	
+				weight = T[cell].w[face_vertices];	               
 
 				for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
 				{
@@ -580,55 +586,76 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
         
 		formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);
 
-        // // test
-        // // get indeces
-        // std::vector<int> local_idx;
-        // local_idx = RT_problem_->block_to_local(block_index);
+        // test
+        // get indeces
+        std::vector<int> local_idx;
+        local_idx = RT_problem_->block_to_local(tile_size_* mpi_rank_ + block_index);
         
-        // const int j_theta = local_idx[0];
-        // const int k_chi   = local_idx[1];
-        // const int n_nu    = local_idx[2];
+        const int j_theta = local_idx[0];
+        const int k_chi   = local_idx[1];
+        const int n_nu    = local_idx[2];
 
-        // const auto mu_grid    = RT_problem_->mu_grid_;
-        // const auto theta_grid = RT_problem_->theta_grid_;   
+        const auto mu_grid    = RT_problem_->mu_grid_;
+        const auto theta_grid = RT_problem_->theta_grid_;   
+        const auto chi_grid   = RT_problem_->chi_grid_;   
     
-        // const double theta = theta_grid[j_theta];
-        // // const double mu    = mu_grid[j_theta];                       
+        const double theta = theta_grid[j_theta];
+        const double mu    = mu_grid[j_theta];     
+        const double chi   = chi_grid[k_chi];                       
 
         // std::cout << "k = " << k << std::endl;    
         // std::cout << "j_theta = " << j_theta << std::endl;
         // std::cout << "k_chi = "   << k_chi << std::endl;
-        // // // std::cout << "n_nu = "    << n_nu << std::endl;
+        // std::cout << "n_nu = "    << n_nu << std::endl;
 
-        // if (j_theta == 1 and k_chi == 0 and n_nu == 15 and k == 30)
-        // {                                                                            
-        //     // if (long_ray) std::cout << "WARNING LONG RAY: look at long ray routines for data!" << std::endl;                                               
-
-        //     // std::cout << "theta = " << theta << std::endl;
-        //     // std::cout << "chi = "<< chi << std::endl;
-        //     // std::cout << "mu = " << mu << std::endl;
-        //     // std::cout << "n = "  << n << std::endl;                                            
-        //     // std::cout << "dz = "<< dz << std::endl;
+        //if (j_theta == 4 and k_chi == 0 and n_nu == 45)
+        //{                                                                            
+            // if (long_ray) std::cout << "WARNING LONG RAY: look at long ray routines for data!" << std::endl;                                               
+            // std::cout << "\nk = " << k << std::endl;                                                          
+            // std::cout << "cell = "  << cell << std::endl;
+            // std::cout << "mu = " << mu << std::endl;
+            // std::cout << "chi = "   << chi << std::endl;
+            // std::cout << "n_nu = " << n_nu << std::endl;
+            // std::cout << "mu = " << mu << std::endl;
+            // std::cout << "n = "  << n << std::endl;                                            
+            // std::cout << "dz = "<< dz << std::endl;
             
-        //     // std::cout << "mpi_rank_ = " << mpi_rank_ << std::endl;   
-        //     // std::cout << "k_global = " << g_dev.global_coord(2, k_aux) << std::endl;                                              
-        //     // std::cout << "k = " << k << std::endl;                                              
+            // std::cout << "mpi_rank_ = " << mpi_rank_ << std::endl;   
+            // std::cout << "k_global = " << g_dev.global_coord(2, k_aux) << std::endl;                                                          
 
-        //     // std::cout << "I1 = "   << I1[0] << std::endl;   
-        //     // std::cout << "Q1 = "   << I1[1] << std::endl;   
-        //     // std::cout << "U1 = "   << I1[2] << std::endl;   
-        //     // std::cout << "V1 = "   << I1[3] << std::endl;   
+            // std::cout << "I1 = "   << I1[0] << std::endl;   
+            // std::cout << "Q1 = "   << I1[1] << std::endl;   
+            // std::cout << "U1 = "   << I1[2] << std::endl;   
+            // std::cout << "V1 = "   << I1[3] << std::endl;   
 
-        //     // std::cout << "I2 = "   << I2[0] << std::endl;    
-        //     // std::cout << "Q2 = "   << I2[1] << std::endl;   
-        //     // std::cout << "U2 = "   << I2[2] << std::endl;   
-        //     // std::cout << "V2 = "   << I2[3] << std::endl;   
+            // // std::cout << "I2 = "   << I2[0] << std::endl;    
+            // // std::cout << "Q2 = "   << I2[1] << std::endl;   
+            // std::cout << "U2 = "   << I2[2] << std::endl;   
+            // std::cout << "V2 = "   << I2[3] << std::endl;   
+
+            // std::cout << "S1[2] = "   << S1[2] << std::endl;   
+            // std::cout << "S2[2] = "   << S2[2] << std::endl;   
+
+            // std::cout << "S1[3] = "   << S1[3] << std::endl;   
+            // std::cout << "S2[3] = "   << S2[3] << std::endl;   
+
+            // std::cout << "S1 = " << std::endl;
+            // for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S1[i_stokes] << std::endl;
+
+            // std::cout << "S2 = " << std::endl;
+            // for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S2[i_stokes] << std::endl;
+
+            // std::cout << "K1 = " << std::endl;
+            // for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K1[i_stokes] << std::endl;
+
+            // std::cout << "K2 = " << std::endl;
+            // for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K2[i_stokes] << std::endl;
 
             // std::cout << "dtau = " << dtau  << std::endl;    
-        //     std::cout << "etas[0] = " << etas[0] << std::endl;  
-        //     std::cout << "eta_I_1 = " << eta_I_1 << std::endl;                     
-        //     // std::cout << "distance = " << cell_distance << std::endl; 
-        // }       
+            // std::cout << "etas[0] = " << etas[0] << std::endl;  
+            // std::cout << "eta_I_1 = " << eta_I_1 << std::endl;                     
+            // std::cout << "distance = " << cell_distance << std::endl; 
+        //}       
 	}	
                                                                                                                     
     return I2;
@@ -882,7 +909,7 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
         // test
         // get indeces
         // std::vector<int> local_idx;
-        // local_idx = RT_problem_->block_to_local(block_index); // % tile_size_;
+        // local_idx = RT_problem_->block_to_local(tile_size_* mpi_rank_ + block_index);
         
         // const int j_theta = local_idx[0];
         // const int k_chi   = local_idx[1];
@@ -1197,9 +1224,9 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
             k_chi_end   = local_idx[1] + 1;
             n_nu_end    = local_idx[2] + 1;                
 
-            if (j_theta_end < j_theta_start) { std::cout << "ERROR with j_theta partition" << std::endl; throw_error = true; }      
-            if (k_chi_end   < k_chi_start)   { std::cout << "ERROR with k_chi partition"   << std::endl; throw_error = true; }     
-            if (n_nu_end    < n_nu_start)    { std::cout << "ERROR with n_nu partition"    << std::endl; throw_error = true; }   
+            if (j_theta_end < j_theta_start) { std::cout << "ERROR with j_theta partition: N_theta*(N_chi)*[N_dirs] shoud be divisible by mpi_size (using extra parentesis ()[] as mpi_size increases)!" << std::endl; throw_error = true; }      
+            if (k_chi_end   < k_chi_start)   { std::cout << "ERROR with k_chi partition: N_theta*(N_chi)*[N_dirs] shoud be divisible by mpi_size! (using extra parentesis ()[] as mpi_size increases)!"  << std::endl; throw_error = true; }     
+            if (n_nu_end    < n_nu_start)    { std::cout << "ERROR with n_nu partition: N_theta*(N_chi)*[N_dirs] shoud be divisible by mpi_size! (using extra parentesis ()[] as mpi_size increases)!"   << std::endl; throw_error = true; }   
         
             if (local_idx[3] != 3) { std::cout << "ERROR in block decomposition in formal_solve_global(), i_stokes_end not 3" << std::endl; throw_error = true; }      
             
@@ -1251,7 +1278,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
                                     else
                                     {
                                         long_ray = (not horizontal_face) and (i == i_start or j == j_start);     
-                                    }     
+                                    }                                         
                                         
                                     if (long_ray) intersection_data_long_ray = find_prolongation(theta, chi, dz, L);
 
@@ -1306,7 +1333,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
                                         if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);                                                                                                                 
                                         Real start_one = MPI_Wtime();                                               
 
-    									// block index (coorected for tile size)                                    
+    									// block index (corrected for tile size)                                    
     									b_start = RT_problem_->local_to_block(j_theta, k_chi, n) % tile_size_;                                   
 
     									// solve ODE
@@ -1413,36 +1440,38 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     										formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);
 
                                             // // test
-                                            // if (j_theta ==  N_theta - 1 and k_chi == N_chi - 1 and n == 0 and i == i_start and j == j_start)                                                
+                                            // if (j_theta ==  N_theta/2 and k_chi == 0 and n == 45 and i == i_start and j == j_start)                                                
                                             // {                                                                                                                         
-                                            //     std::cout << "\nk = " << k << std::endl;                                              
-                                            //     std::cout << "theta = " << theta << std::endl;
-                                            //     std::cout << "chi = "<< chi << std::endl;
-                                            //     // std::cout << "mu = " << mu << std::endl;                                                
+                                            //     // std::cout << "\nk = " << k << std::endl;                                              
+                                            //     std::cout << "\nk_global = " << g_dev.global_coord(2, k_aux) << std::endl;                                              
+                                            //     // std::cout << "theta = " << theta << std::endl;
+                                            //     std::cout << "mu = "  << mu  << std::endl;                                                
+                                            //     std::cout << "chi = " << chi << std::endl;                                                
                                             //     // std::cout << "n = "  << n << std::endl;                                                                                            
                                                 
-                                            //     std::cout << "dtau = "     << dtau  << std::endl;   
+                                            //     // std::cout << "dtau = "     << dtau  << std::endl;   
                                             //     // std::cout << "coeff = "    << coeff << std::endl;   
                                             //     // std::cout << "etas[0] = "  << etas[0] << std::endl;  
                                             //     // std::cout << "eta_I_1 = "  << eta_I_1 << std::endl;                                                   
-                                            //     std::cout << "distance = " << intersection_data.distance << std::endl;                                                                                                           
+                                            //     // std::cout << "distance = " << intersection_data.distance << std::endl;                                                                                                           
 
-                                            //     // std::cout << "mpi_rank_ = " << mpi_rank_ << std::endl;   
-                                            //     // std::cout << "k_global = " << g_dev.global_coord(2, k_aux) << std::endl;                                              
+                                            //     // std::cout << "mpi_rank_ = " << mpi_rank_ << std::endl;                                               
 
-
-                                            //     std::cout << "I1 = "   << I1[0] << std::endl;   
+                                            //     // std::cout << "I1 = "   << I1[0] << std::endl;   
                                             //     // std::cout << "Q1 = "   << I1[1] << std::endl;   
-                                            //     // std::cout << "U1 = "   << I1[2] << std::endl;   
-                                            //     // std::cout << "V1 = "   << I1[3] << std::endl;   
+                                            //     std::cout << "U1 = "   << I1[2] << std::endl;   
+                                            //     std::cout << "V1 = "   << I1[3] << std::endl;   
 
-                                            //     std::cout << "I2 = "   << I2[0] << std::endl;    
+                                            //     // std::cout << "I2 = "   << I2[0] << std::endl;    
                                             //     // std::cout << "Q2 = "   << I2[1] << std::endl;   
-                                            //     // std::cout << "U2 = "   << I2[2] << std::endl;   
-                                            //     // std::cout << "V2 = "   << I2[3] << std::endl;                                                   
+                                            //     std::cout << "U2 = "   << I2[2] << std::endl;                                                   
+                                            //     std::cout << "V2 = "   << I2[3] << std::endl;                                                   
                                                 
-                                            //     std::cout << "S1[0] = " << S1[0]<< std::endl;
-                                            //     std::cout << "S2[0] = " << S2[0]<< std::endl;
+                                            //     std::cout << "S1[2] = " << S1[2]<< std::endl;
+                                            //     std::cout << "S2[2] = " << S2[2]<< std::endl;
+                                            //     std::cout << "S1[3] = " << S1[3]<< std::endl;
+                                            //     std::cout << "S2[3] = " << S2[3]<< std::endl;
+                                            //     // std::cout << "S1 = " << std::endl;
                                             //     // for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S1[i_stokes] << std::endl;
 
                                             //     // std::cout << "S2 = " << std::endl;
@@ -1452,7 +1481,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
                                             //     // for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K1[i_stokes] << std::endl;
 
                                             //     // std::cout << "K2 = " << std::endl;
-                                            //     // for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K2[i_stokes] << std::endl;                                                                                                           
+                                            //     // for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K2[i_stokes] << std::endl;
         									// }
                                         
                                             one_step_timer += MPI_Wtime() - start_one;                           									                                        												
@@ -1538,6 +1567,8 @@ void MF_context::set_up_emission_module(){
     // module for preconditioner 
     std::list<emission_coefficient_components> components_approx{    
         emission_coefficient_components::epsilon_pCRD_limit,        
+        // emission_coefficient_components::epsilon_R_II_AA_PRECOND,
+        // emission_coefficient_components::epsilon_R_III,
         emission_coefficient_components::epsilon_csc
     };       
     
@@ -1586,9 +1617,9 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
     std::vector<double>  input(block_size);        
     std::vector<double> output(block_size); 
 
-    int ix[block_size];
+    PetscInt ix[block_size];
 
-    int istart, iend; 
+    PetscInt istart, iend; 
     ierr = VecGetOwnershipRange(I_vec, &istart, &iend);CHKERRV(ierr);	
 	
 	const int istart_local = istart / block_size;
@@ -1600,7 +1631,7 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
     int counter_i = 0;
     int counter_j = 0;
     int counter_k = 0;
-
+    
     for (int i_vec = istart_local; i_vec < iend_local; ++i_vec)
     {
     	// set indeces
@@ -1659,7 +1690,7 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
             counter_j = 0;
             counter_k++;
         }
-    }    
+    }  
 }
 
 
@@ -1838,10 +1869,10 @@ void RT_solver::assemble_rhs(){
 
     				// eps_l_th / eta_i_l
     				value = eta_i * epsilon_dev.ref(i,j,k) * W_T_dev.ref(i,j,k) / eta_I;	
-    			}	
+    			}	                
 
     			// finally se eps_th
-    			eps_th_dev.block(i,j,k)[b] = value;	                            
+    			eps_th_dev.block(i,j,k)[b] = value;	                                            
     		}	
     	});
 
@@ -1858,7 +1889,7 @@ void RT_solver::assemble_rhs(){
 
 // matrix-free matrix vector multiplication y = (Id - LJ)x
 PetscErrorCode UserMult(Mat mat, Vec x, Vec y){
-
+    
 	PetscErrorCode ierr; 
 
 	void *ptr;
@@ -1868,7 +1899,7 @@ PetscErrorCode UserMult(Mat mat, Vec x, Vec y){
   	auto RT_problem = mf_ctx_->RT_problem_;
 
     Real start = MPI_Wtime();       
-
+    
     // compute new emission in S_field_ 
     mf_ctx_->update_emission(x);  
 
@@ -1906,7 +1937,7 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
     // compute new emission in S_field_ 
     mf_ctx_->update_emission(x, true);  
    
-    if (RT_problem->mpi_rank_ == 0) printf("update CRD emission:\t\t%g seconds\n", MPI_Wtime() - start);              
+    if (RT_problem->mpi_rank_ == 0) printf("Update preconditioner emission:\t\t%g seconds\n", MPI_Wtime() - start);              
 
     // fill rhs_ from formal solve with zero bc     
     mf_ctx_->formal_solve_global(RT_problem->I_field_, RT_problem->S_field_, 0.0);
@@ -1947,7 +1978,7 @@ PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y){
 	ierr = KSPSolve(mf_ctx->pc_solver_, x, y);CHKERRQ(ierr);
 
     // print  iterations 
-    int iterations;
+    PetscInt iterations;
     ierr = KSPGetIterationNumber(mf_ctx->pc_solver_, &iterations);CHKERRQ(ierr);
     if (mf_ctx->mpi_rank_ == 0) std::cout << "Preconditioner iterations: " << iterations << std::endl;
 
