@@ -12,6 +12,9 @@ include(CMakeFindDependencyMacro)
 find_package(sgrid 0 REQUIRED)
 find_package(Boost 1.61 COMPONENTS program_options regex serialization filesystem system atomic  REQUIRED)
 
+include_directories(${Boost_INCLUDE_DIRS})
+set(Boost_LIBRARY_DIRS "${BOOST_ROOT}/lib")
+
 list(APPEND SOURCES_FILES 
 	src/Faddeeva.cpp 
 	src/Formal_solver.cpp 
@@ -21,7 +24,7 @@ list(APPEND SOURCES_FILES
 	src/RT_problem.cpp
 	src/RT_solver.cpp
 	src/Utilities.cpp
-    src/Test_rii_include.cpp
+        src/Test_rii_include.cpp
 )
 
 list(APPEND HEADERS_FILES 
@@ -77,8 +80,10 @@ set(CMAKE_CXX_FLAGS  " -O3 -fopenmp -std=c++17 -Wno-deprecated-declarations ")
 add_library(rii SHARED IMPORTED)
 set_property(TARGET rii PROPERTY IMPORTED_LOCATION "${RII_ROOT_PATH}/build/librii.so")
 
+message( STATUS  "RII path: ${RII_ROOT_PATH}")
+
 # import all the dependencies and targets
-target_link_libraries(solar_3D PUBLIC  sgrid::sgrid rii)
+target_link_libraries(solar_3D PUBLIC  sgrid::sgrid rii ${Boost_LIBRARIES})
 
 target_sources(solar_3D PUBLIC ${SOURCES_FILES})
 target_include_directories(solar_3D PUBLIC  src)

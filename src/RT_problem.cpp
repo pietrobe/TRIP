@@ -776,6 +776,7 @@ void RT_problem::read_depth(input_string filename){
 	} 		
 }
 
+
 void RT_problem::read_frequency(input_string filename, const bool use_wavelength){
 
 	if (mpi_rank_ == 0)
@@ -829,6 +830,7 @@ void RT_problem::read_frequency(input_string filename, const bool use_wavelength
 		first_line = false;
 	} 
 }
+
 
 void RT_problem::set_sizes(){
 
@@ -1444,7 +1446,7 @@ void RT_problem::set_up(){
 		
 		Doppler_width_dev.ref(i,j,k) = dE * std::sqrt(xi * xi + 2 * k_B_ * T / mass_real);			
 
-		if (use_PORTA_input_) a_dev.ref(i,j,k) = (Aul_ + Cul + Qel_dev.ref(i,j,k)) / (4 * PI * Doppler_width_dev.ref(i,j,k));
+		// if (use_PORTA_input_) a_dev.ref(i,j,k) = (Aul_ + Cul + Qel_dev.ref(i,j,k)) / (4 * PI * Doppler_width_dev.ref(i,j,k));
 
 		W_T_dev.ref(i,j,k) = tmp_const2 * std::exp(- h_ * nu_0_ / (k_B_ * T));		
 		
