@@ -30,7 +30,7 @@ public:
     	if (mpi_rank_ == 0) std::cout << "\n~~~~~~ MPI size = " << mpi_size_ << " ~~~~~~" << std::endl;		
 
 		// set flags    	
-    	use_PORTA_input_ = true;
+    	use_PORTA_input_    = true;
     	use_magnetic_field_ = use_magnetic_field;
     	use_CRD_limit_      = use_CRD_limit;    	    	
 
@@ -183,6 +183,7 @@ public:
 
 	// write surface profile in file in MATLAB format in onw point and all surface
 	void const write_surface_point_profiles(input_string file_name, const int i_space, const int j_space);
+	void const write_surface_point_profiles_Omega(input_string file_name, const int i_space, const int j_space);
 	// void const write_surface_profiles(input_string file_name); // TODO
 									        
 
@@ -245,8 +246,8 @@ public:
 	Field_ptr_t rho_field_;
 
 	// atmospheric quantities
-	Field_ptr_t Nl_;   // lower level populations 
 	// Field_ptr_t Nu_;   // upper level populations 
+	Field_ptr_t Nl_;   // lower level populations 
 	Field_ptr_t T_;    // temperature 
 	Field_ptr_t xi_;   // microturbulent velocity (a.k.a. non-thermal microscopic velocity)			
 	Field_ptr_t Cul_;  // rate of inelastic de-exciting collisions
@@ -284,10 +285,20 @@ public:
 
 	bool field_is_zero(const Field_ptr_t field);
 
+	// auxiliary_fields for single direction Omega outside theta and chi grids
+	void allocate_fields_Omega(); 
+	void set_eta_and_rhos_Omega(const Real theta, const Real chi);	
+
+	Field_ptr_t I_field_Omega_; // intensity     
+	Field_ptr_t S_field_Omega_; // source function
+	Field_ptr_t eta_field_Omega_; 
+	Field_ptr_t rho_field_Omega_; 
+
+
 private:
 
-	const bool use_ghost_layers_ = false;
-		  bool use_PORTA_input_  = false;
+	const bool use_ghost_layers_   = false;
+		  bool use_PORTA_input_    = false;
 		  bool use_magnetic_field_ = false;
 
 	// physical constants 
@@ -324,7 +335,7 @@ private:
 	std::vector<std::vector<std::complex<Real> > > T_KQ_; // polarization tensor 
 
 	// allocate grid fields 
-	void allocate_fields();
+	void allocate_fields();	
 	void allocate_atmosphere();
 
 	// init fields 
@@ -356,11 +367,12 @@ private:
 	// compute polarization tensors (vector of six components)
 	std::vector<std::complex<Real> > compute_T_KQ(const int stokes_i, const Real theta, const Real chi);
 	std::complex<Real> get_TKQi(const int i_stokes, const int K, const int Q, const int j, const int k);
+	std::complex<Real> get_TKQi(const std::vector<std::complex<Real>> T_KQ_i, const int K, const int Q);
 
 	void set_TKQ_tensor();
 
 	// compute elements of the propagation matrix K
-	void set_eta_and_rhos();
+	void set_eta_and_rhos();		
 	
 	// precompute quantities
 	void set_up();

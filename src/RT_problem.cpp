@@ -945,6 +945,27 @@ void RT_problem::allocate_fields(){
 		ierr = VecSetFromOptions(I_vec_);CHKERRV(ierr);		
 }
 
+
+// allocate fields in a single direction Omega
+void RT_problem::allocate_fields_Omega(){		
+
+	const PetscInt block_size_Omega = 4 * N_nu_;
+
+	// create fields 
+	I_field_Omega_ = std::make_shared<Field_t>("I_Omega", space_grid_, block_size_Omega); 
+	S_field_Omega_ = std::make_shared<Field_t>("S_Omega", space_grid_, block_size_Omega);
+
+	eta_field_Omega_ = std::make_shared<Field_t>("eta_Omega", space_grid_, block_size_Omega);
+	rho_field_Omega_ = std::make_shared<Field_t>("rho_Omega", space_grid_, block_size_Omega);
+
+	// necessary?
+	I_field_Omega_->  allocate_on_device(); 
+	S_field_Omega_->  allocate_on_device(); 
+	eta_field_Omega_->allocate_on_device(); 
+	rho_field_Omega_->allocate_on_device(); 					
+}
+
+
 void RT_problem::allocate_atmosphere(){
 	
 	// create atmospheric quantities 
@@ -1091,7 +1112,7 @@ std::vector<std::complex<Real> > RT_problem::compute_T_KQ(const int stokes_i, co
 	std::complex<Real> e2ix = std::polar(1.0, 2.0 * chi);  // exp(2 * i * chi)
 
 	// various coeffs
- std::complex<Real> fa, fb;
+ 	std::complex<Real> fa, fb;
 
 	Real c2g = std::cos(2.0 * gamma_);
     Real ct  = std::cos(theta);
@@ -1220,6 +1241,68 @@ std::complex<Real> RT_problem::get_TKQi(const int i_stokes, const int K, const i
 }
 
 
+// for data structure with a single direction
+std::complex<Real> RT_problem::get_TKQi(const std::vector<std::complex<Real>> T_KQ_i, const int K, const int Q)
+{
+	// checks 		
+	if (K > 2) std::cerr           << "\nERROR: K is too large"        << std::endl; 			
+	if (std::abs(Q) > K) std::cerr << "\nERROR: Q is too large"        << std::endl; 		
+
+	std::complex<Real> T_KQ;
+
+	if (K == 0)
+	{
+		T_KQ = T_KQ_i[0];
+	}
+	else if (K == 1)
+	{
+		if (Q == 0)
+		{
+			T_KQ = T_KQ_i[1];
+		}
+		else if (Q == 1)
+		{
+			T_KQ = T_KQ_i[2];
+		}
+		else if (Q == -1)
+		{
+			T_KQ = - 1.0 * std::conj(T_KQ_i[2]);
+		}				
+		else { std::cerr << "\nERROR: wrong Q input" << std::endl; }		
+	}
+	else if (K == 2)
+	{
+		if (Q == 0)
+		{
+			T_KQ = T_KQ_i[3];
+		}
+		else if (Q == 1)
+		{
+			T_KQ = T_KQ_i[4];
+		}
+		else if (Q == -1)
+		{
+			T_KQ = - 1.0 * std::conj(T_KQ_i[4]);
+		}
+		else if (Q == 2)
+		{
+			T_KQ = T_KQ_i[5];
+		}
+		else if (Q == -2)
+		{
+			T_KQ = std::conj(T_KQ_i[5]);
+		}
+		else { std::cerr << "\nERROR: wrong Q input" << std::endl; }		
+	}
+	else
+	{
+		std::cerr << "\nERROR: wrong K input" << std::endl; 
+	}
+
+	return T_KQ;
+}
+
+
 void RT_problem::set_eta_and_rhos(){
 
 	auto eta_dev = eta_field_->view_device();
@@ -1333,10 +1416,10 @@ void RT_problem::set_eta_and_rhos(){
 
         	if (enable_continuum_) block_eta[b] += k_c[n_nu];       
 
-        	// if (i == 0 and j == 0) 
+        	// if (i == 0 and j == 0 and g_dev.global_coord(2, k) == 0 and b >= block_size_ - 4 * N_nu_) 
         	// {
-        	// 	std::cout << "k = "     <<   k      << std::endl; 
-        	// 	std::cout << "block_eta[b] = "     <<   block_eta[b]       << std::endl; 
+        	// 	// std::cout << "k = "     <<   k      << std::endl; 
+        	// 	std::cout <<   block_eta[b]       << std::endl; 
         	// }	
 			// std::cout << "block_eta[b + 1] = " <<   block_eta[b + 1]   << std::endl; 
 			// std::cout << "block_eta[b + 2] = " <<   block_eta[b + 2]   << std::endl; 
@@ -1345,6 +1428,148 @@ void RT_problem::set_eta_and_rhos(){
         	// std::cout << "block_rho[b + 2] = " <<   block_rho[b + 2]   << std::endl; 
         	// std::cout << "block_rho[b + 3] = " <<   block_rho[b + 3]   << std::endl; 
 
+        	// sanity checks
+        	if (block_eta[b] == 0) std::cerr << "\nWARNING: zero eta_I!"     << std::endl; 
+        	if (block_eta[b] < 0)  std::cerr << "\nWARNING: negative eta_I!" << std::endl; 		
+        	if (block_rho[b] < 0)  std::cerr << "\nWARNING: negative rho_I!" << std::endl; 	      
+
+        	if (isnan(block_eta[b    ])) std::cerr << "\nWARNING: eta_I = NaN!" << std::endl; 
+        	if (isnan(block_eta[b + 1])) std::cerr << "\nWARNING: eta_Q = NaN!" << std::endl; 
+        	if (isnan(block_eta[b + 2])) std::cerr << "\nWARNING: eta_U = NaN!" << std::endl; 
+        	if (isnan(block_eta[b + 3])) std::cerr << "\nWARNING: eta_V = NaN!" << std::endl;         	
+        	if (isnan(block_rho[b + 1])) std::cerr << "\nWARNING: rho_Q = NaN!" << std::endl; 
+        	if (isnan(block_rho[b + 2])) std::cerr << "\nWARNING: rho_U = NaN!" << std::endl; 
+        	if (isnan(block_rho[b + 3])) std::cerr << "\nWARNING: rho_V = NaN!" << std::endl;         	      	        	
+        } 	
+    });	
+
+	// debug			
+	// const Real dichroism_module = std::sqrt(etas_and_rhos[1] * etas_and_rhos[1] + etas_and_rhos[2] * etas_and_rhos[2] + etas_and_rhos[3] * etas_and_rhos[3]);	
+	// if (etas_and_rhos[0] < dichroism_module) dichroism_warning = true;				
+	// if (dichroism_warning) std::cout << "\nWARNING: eta_I < eta! (Eq. (7) Gioele Paganini 2018, Part III)" << std::endl; 		
+}
+
+
+void RT_problem::set_eta_and_rhos_Omega(const Real theta, const Real chi){
+
+	// vector with KQ components for each stokes profile
+	std::vector< std::vector<std::complex<Real> > > T_KQ(4);
+
+	for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+	{
+		T_KQ[i_stokes] = compute_T_KQ(i_stokes, theta, chi);			
+	}	
+
+	auto eta_dev = eta_field_Omega_->view_device();
+	auto rho_dev = rho_field_Omega_->view_device();
+
+	auto a_dev   = a_    ->view_device();
+	auto u_dev   = u_    ->view_device();
+	auto k_L_dev = k_L_  ->view_device();
+	auto k_c_dev = k_c_  ->view_device();	
+	auto B_dev   = B_    ->view_device();	
+	auto v_b_dev = v_b_  ->view_device();
+	
+	auto Doppler_width_dev = Doppler_width_->view_device();	
+
+    sgrid::parallel_for("INIT ETA-RHO", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) 
+    {         
+        auto *block_eta = eta_dev.block(i, j, k);
+        auto *block_rho = rho_dev.block(i, j, k);
+        
+        auto *u   =   u_dev.block(i, j, k);		
+		auto *k_c = k_c_dev.block(i, j, k);		
+		auto *B   =   B_dev.block(i, j, k);       
+        auto *v_b = v_b_dev.block(i, j, k);           
+                        
+        // assign some variables for readability
+        Real theta_v_b = v_b[1];
+        Real chi_v_b   = v_b[2];
+
+        Real nu_L    = B[0];
+        Real theta_B = B[1];
+        Real chi_B   = B[2];
+
+        Real Doppler_width = Doppler_width_dev.ref(i,j,k);
+    	Real k_L           = k_L_dev.ref(i,j,k);
+		Real a             = a_dev.ref(i,j,k);
+
+		// init rotation matrix
+        Rotation_matrix R(0.0, -theta_B, -chi_B);
+        
+        // indeces
+        int b;
+         
+        for (int n_nu = 0; n_nu < N_nu_; n_nu++) 
+        {        	        	
+        	// block_rho[b + 1] = 0;
+			
+			// index
+			b = 4 * n_nu;
+			
+			const Real coeff  =  k_L / (std::sqrt(PI) * Doppler_width);
+			const Real coeff2 = nu_L / Doppler_width; 
+
+			const std::complex<Real> a_damp(0.0, a);
+
+			// for reduced frequency
+			const Real v_dot_Omega = v_b[0] * ( cos(theta_v_b) * cos(theta) + sin(theta_v_b) * sin(theta) * cos(chi - chi_v_b));
+			const Real u_b = nu_0_ * v_dot_Omega / (c_ * Doppler_width);
+
+			const Real u_red = u[n_nu] + u_b;			
+			
+			for (int K = 0; K < 3; ++K)
+			{
+				const double coeff_K = coeff * std::sqrt(3.0 * (2.0 * double(K) + 1.0));
+	
+				for (int Mu2 = - Ju2_; Mu2 < Ju2_ + 1; Mu2 += 2)
+				{
+					for (int Ml2 = - Jl2_; Ml2 < Jl2_ + 1; Ml2 += 2)
+					{										
+						if (std::abs(Mu2 - Ml2) <= 2) 
+						{
+							const int q2 = Ml2 - Mu2;
+
+				      		const double W3J1 = W3JS(Ju2_, Jl2_, 2,-Mu2, Ml2, -q2);  
+				      		const double W3J2 = W3JS(2, 2, 2 * K, q2, -q2, 0); 
+
+							const double fact = coeff_K * std::pow(-1.0, double(q2) / 2.0 + 1.0) * std::pow(W3J1, 2) * W3J2;								   
+							
+		      				const double um = coeff2 * (gu_ * (double(Mu2) / 2.0) - gl_ * (double(Ml2) / 2.0)) + u_red;
+					
+							for (int Q = -K; Q < K + 1; ++Q)
+							{			
+								const std::complex<double> faddeva = Faddeeva::w(um + a_damp);
+				        		const auto D_KQQ                   = std::conj(R(K, 0, Q));
+
+				        		const auto fact_re = fact * std::real(faddeva) * D_KQQ;
+				        		const auto fact_im = fact * std::imag(faddeva) * D_KQQ;	
+
+				        		for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+								{
+
+									auto TKQi = get_TKQi(T_KQ[i_stokes], K, Q);
+
+									// etas
+									block_eta[b + i_stokes] += std::real(fact_re * TKQi);
+
+									// rhos
+									if (i_stokes > 0) block_rho[b + i_stokes] += std::real(fact_im * TKQi);
+								}						        								
+							}
+						}
+					}		
+				}
+        	}
+
+        	if (enable_continuum_) block_eta[b] += k_c[n_nu];      
+
+        	// if (i == 0 and j == 0 and g_dev.global_coord(2, k) == 0) 
+        	// {
+        	// 	// std::cout << "k = "     <<   k      << std::endl; 
+        		// std::cout << block_eta[b] << std::endl; 
+        	// }	 
+        	
         	// sanity checks
         	if (block_eta[b] == 0) std::cerr << "\nWARNING: zero eta_I!"     << std::endl; 
         	if (block_eta[b] < 0)  std::cerr << "\nWARNING: negative eta_I!" << std::endl; 		
@@ -1861,6 +2086,95 @@ void const RT_problem::write_surface_point_profiles(input_string file_name, cons
 		}
 	}  	
 }
+
+
+
+// write surface profile in one single point
+void const RT_problem::write_surface_point_profiles_Omega(input_string file_name, const int i_space, const int j_space)
+{
+	// // a single MPI rank writes output
+	// if (mpi_rank_ == 0) std::cout << " Writing output in spatial point (" << i_space << ", " << j_space << ")" << std::endl;
+
+	const auto I_dev = I_field_Omega_->view_device();	
+	const auto g_dev = space_grid_->view_device();
+
+	const int block_size = 4 * N_nu_;
+
+	// indeces
+	const int i_start = g_dev.margin[0]; 
+	const int j_start = g_dev.margin[1];
+	const int k_start = g_dev.margin[2];
+
+	const int i_end = i_start + g_dev.dim[0];
+	const int j_end = j_start + g_dev.dim[1];
+		
+	int i_global, j_global;
+
+	double I, QUV;
+
+	// write profiles
+	if (g_dev.global_coord(2, k_start) == 0)
+	{
+		for (int i = i_start; i < i_end; ++i)
+		{
+			i_global = g_dev.global_coord(0, i);
+
+			if (i_global == i_space)
+			{
+				for (int j = j_start; j < j_end; ++j)
+				{
+					j_global = g_dev.global_coord(1, j);
+
+					if (j_global == j_space)
+					{						
+						// Create a new file 
+						input_string output_file = file_name + "_" + std::to_string(i_space) + "_" + std::to_string(j_space) + ".m";
+					 	std::ofstream outputFile(output_file);
+
+						if (outputFile.is_open()) 		
+						{									
+							// create MATLAB data structure
+							outputFile <<  "\nField_Omega = cell(4,1);" << std::endl;
+						
+								for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+								{
+									outputFile << "\nField_Omega{" << i_stokes + 1 << "} = [ ";										
+
+									for (int b = 0; b < block_size; b = b + 4) 
+									{
+										I = I_dev.block(i,j,k_start)[b];
+
+										if (i_stokes == 0)
+										{
+											outputFile << I << " ";
+										}
+										else
+										{
+											QUV = I_dev.block(i,j,k_start)[b + i_stokes];
+
+											outputFile << 100.0 * QUV/I << " ";
+										}
+									}
+
+									outputFile << "];\n";	
+								}													
+
+							// Close the file		
+    						outputFile.close();
+
+    						if (mpi_rank_ == 0) std::cout << "\nOutput written in " << output_file << "\n" << std::endl;    						
+    					} 
+						else
+					  	{
+					    	if (mpi_rank_ == 0) std::cout << "\nERROR: failed to create the output file." << std::endl;
+					  	}
+					}
+				}
+			}
+		}
+	}  	
+}
+
 
 
 bool RT_problem::field_is_zero(const Field_ptr_t field)

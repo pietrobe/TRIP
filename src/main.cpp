@@ -23,9 +23,9 @@ int main(int argc, char *argv[]) {
     // const std::string FAL_input_path = "../input/FAL-C/1_B0_V0_12T_8C_64F";
     const std::string FAL_input_path = "../input/FAL-C/96F";
 
-    // const char* PORTA_input_path = "../input/PORTA/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd";
+    const char* PORTA_input_path = "../input/PORTA/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd";
     // const char* PORTA_input_path = "../input/PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_32x32x133.pmd";
-    const char* PORTA_input_path = "../input/PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_64x64x133.pmd";
+    // const char* PORTA_input_path = "../input/PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_64x64x133.pmd";
   
     auto rt_problem_ptr = std::make_shared<RT_problem>(PORTA_input_path, FAL_input_path, use_CRD, use_B);
     
@@ -43,19 +43,32 @@ int main(int argc, char *argv[]) {
     rt_solver.solve(); 
    
     // write output
-    const std::string output_path = "../output/surface_profiles/";
+    const std::string output_path = "../output/surface_profiles_5x5x133/"; // TODO change
     const std::string output_file = (use_CRD) ? output_path + "profiles_CRD" : output_path + "profiles_PRD";
     
-    const int N_x = rt_problem_ptr->N_x_;
-    const int N_y = rt_problem_ptr->N_y_; 
+    // const int N_x = rt_problem_ptr->N_x_;
+    // const int N_y = rt_problem_ptr->N_y_; 
 
-    for (int i = 0; i < N_x; ++i)
-    {
-      for (int j = 0; j < N_y; ++j)
-      {
-        rt_problem_ptr->write_surface_point_profiles(output_file, i, j);
-      }
-    }
+    // for (int i = 0; i < N_x; ++i)
+    // {
+    //   for (int j = 0; j < N_y; ++j)
+    //   {
+        rt_problem_ptr->write_surface_point_profiles(output_file, 0, 0);
+    //   }
+    // }
+
+
+    // write is arbitriary direction 
+    // const Real mu    = 0.9;
+    const Real theta = 0.374835; //acos(mu);
+    const Real chi   = 6.08684;
+
+    // allocate new data structure and compute I_Field_Omega
+    rt_solver.apply_formal_solver_Omega(theta, chi);
+
+    // const std::string output_file_Omega = output_file + "_theta_" + std::to_string(theta) + "_chi_" + std::to_string(chi);
+    const std::string output_file_Omega = output_file + "_Omega";
+    rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, 0, 0);
 
     // return EXIT_SUCCESS;
     

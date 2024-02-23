@@ -50,6 +50,9 @@ struct MF_context {
 	bool use_single_long_step_  = false; 
 	bool use_always_long_ray_   = true;
 
+	// formal solution in arbitrary direction
+	bool formal_solution_Omega = false;
+
 	// serial objects for formal solution
 	Grid_ptr_t  space_grid_serial_;	
 
@@ -61,8 +64,18 @@ struct MF_context {
 	Field_ptr_t eta_field_serial_;
 	Field_ptr_t rho_field_serial_;
 
+	// data structures a single direction Omega (if needed)
+	sgrid::ReMap<Field_t> I_remap_Omega_;
+	sgrid::ReMap<Field_t> S_remap_Omega_;
+	
+	Field_ptr_t I_field_serial_Omega_;
+	Field_ptr_t S_field_serial_Omega_;
+	Field_ptr_t eta_field_serial_Omega_;
+	Field_ptr_t rho_field_serial_Omega_;
+
 	// total number of rays a single processor will handle, n_local_rays_ = block_size/mpi_size
 	int n_local_rays_;
+	int local_block_size_;
 
 	// number of tiles each processor will handle, n_tiles_ = 1 default, to be increased to reduce memmory usage
     int n_tiles_;   
@@ -91,6 +104,7 @@ struct MF_context {
 
 	// formal solver	
 	void formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
+	void formal_solve_ray(const Real mu, const Real chi);		
 	
 	void apply_bc(Field_ptr_t I_field, const Real I0);	
 		
@@ -100,8 +114,14 @@ struct MF_context {
 	// update emission in all spatial points (given the current I_field_, update S_field_)
 	void update_emission(const Vec &I_field, const bool approx = false);
 
+	// update emission in all spatial points (given the current I_field_, update S_field_) for an arbitrary direction 
+	void update_emission_Omega(const Vec &I_field, const Real theta, const Real chi);
+
 	// init serial fields (serial eta and rho are filled)
 	void init_serial_fields(const int n_tiles);	
+
+	// init serial fields (serial eta and rho are filled) in a single direction
+	void init_serial_fields_Omega();	
 };
 
 class RT_solver
@@ -248,7 +268,6 @@ public:
 	inline void compute_emission()
 	{
 		Real start = MPI_Wtime();		
-
 		if (mpi_rank_ == 0) std::cout << "Computing emission..." << std::endl;
 
 		// // test
@@ -258,17 +277,47 @@ public:
   		mf_ctx_.update_emission(RT_problem_->I_vec_);   
     		
 		MPI_Barrier(MPI_COMM_WORLD);
-		if (mpi_rank_ == 0) std::cout << "Computing PRD emission took (s) = " << MPI_Wtime() - start << std::endl;	
+		if (mpi_rank_ == 0) std::cout << "Computing emission took (s) = " << MPI_Wtime() - start << std::endl;	
 
-		start = MPI_Wtime();		
+		// start = MPI_Wtime();		
 
-		mf_ctx_.update_emission(RT_problem_->I_vec_, true); 
+		// mf_ctx_.update_emission(RT_problem_->I_vec_, true); 
 
-		MPI_Barrier(MPI_COMM_WORLD);
-		if (mpi_rank_ == 0) std::cout << "Computing CRD emission took (s) = " << MPI_Wtime() - start << std::endl;	
+		// MPI_Barrier(MPI_COMM_WORLD);
+		// if (mpi_rank_ == 0) std::cout << "Computing approximate emission took (s) = " << MPI_Wtime() - start << std::endl;	
 
 		// // use I_vec to store S for later use
 		// mf_ctx_.field_to_vec(RT_problem_->S_field_, RT_problem_->I_vec_);
+	}
+
+
+	// set the radiation field in an arbitrary direction Omega
+	inline void apply_formal_solver_Omega(const Real theta, const Real chi)
+	{
+		// allocate new data structure
+		if (not mf_ctx_.formal_solution_Omega)
+		{
+			if (mpi_rank_ == 0) std::cout << "\nAllocating fields for new direction...";
+
+			RT_problem_->allocate_fields_Omega();
+			mf_ctx_.init_serial_fields_Omega();
+			mf_ctx_.formal_solution_Omega = true;
+
+			if (mpi_rank_ == 0) std::cout << "done" << std::endl;
+		}		
+
+		// set eta and rhos 
+	    RT_problem_->set_eta_and_rhos_Omega(theta, chi);
+	
+		Real start = MPI_Wtime();				
+
+		// update emissivity with current I_field (in all directions)
+		mf_ctx_.update_emission_Omega(RT_problem_->I_vec_, theta, chi);
+		
+		if (mpi_rank_ == 0) std::cout << "Computing emission took (s) = " << MPI_Wtime() - start << std::endl;	
+		
+		// formal solve
+		mf_ctx_.formal_solve_ray(theta, chi);		
 	}
 	
 
