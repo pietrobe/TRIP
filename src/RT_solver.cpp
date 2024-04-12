@@ -186,8 +186,8 @@ void MF_context::apply_bc(Field_ptr_t I_field, const Real I0){
 
 void MF_context::find_intersection(double theta, double chi, const double Z_down, const double Z_top, const double L, t_intersect *T) 
 {
-    // check theta
-    if (theta == 0 or chi == 0) std::cout << "WARNING: ray direction not supported in find_intersection!" << std::endl;       
+    // check theta and possibly correct
+    if (theta == 0 or chi == 0) 
     {        
         theta += 1e-16;
         chi   += 1e-16;                 
@@ -446,15 +446,8 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
     const auto N_x = RT_problem_->N_x_;
     const auto N_y = RT_problem_->N_y_;
     
-    auto eta_dev = eta_field_serial_->view_device(); 
-    auto rho_dev = rho_field_serial_->view_device(); 
-
-    // for formal solution in Omega
-    if (formal_solution_Omega)
-    {
-        eta_dev = eta_field_serial_Omega_->view_device(); 
-        rho_dev = rho_field_serial_Omega_->view_device(); 
-    }
+    const auto eta_dev = (formal_solution_Omega_) ? eta_field_serial_Omega_->view_device() : eta_field_serial_->view_device(); 
+    const auto rho_dev = (formal_solution_Omega_) ? rho_field_serial_Omega_->view_device() : rho_field_serial_->view_device(); 
     
     const auto I_dev = I_field->view_device();     
     const auto S_dev = S_field->view_device(); 
@@ -682,15 +675,8 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
     const auto N_x = RT_problem_->N_x_;
     const auto N_y = RT_problem_->N_y_;
 
-    auto eta_dev = eta_field_serial_->view_device(); 
-    auto rho_dev = rho_field_serial_->view_device(); 
-
-    // for formal solution in Omega
-    if (formal_solution_Omega)
-    {
-        eta_dev = eta_field_serial_Omega_->view_device(); 
-        rho_dev = rho_field_serial_Omega_->view_device(); 
-    }
+    const auto eta_dev = (formal_solution_Omega_) ? eta_field_serial_Omega_->view_device() : eta_field_serial_->view_device(); 
+    const auto rho_dev = (formal_solution_Omega_) ? rho_field_serial_Omega_->view_device() : rho_field_serial_->view_device(); 
     
     const auto I_dev = I_field->view_device();     
     const auto S_dev = S_field->view_device(); 
@@ -922,28 +908,44 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
         
         formal_solver_.one_step_quadratic(dtau_1, dtau_2, K1, K2, K3, S1, S2, S3, I1, I2);       
 
-        // test
-        // get indeces
-        // std::vector<int> local_idx;
-        // local_idx = RT_problem_->block_to_local(tile_size_* mpi_rank_ + block_index);
+        // TEST
+        bool print_flag2 = true;
+
+        // Real mu, chi;
+
+        // if (not formal_solution_Omega_)
+        // {            
+        //     // get indeces
+        //     std::vector<int> local_idx;
+        //     local_idx = RT_problem_->block_to_local(tile_size_* mpi_rank_ + block_index);
+            
+        //     const int j_theta = local_idx[0];
+        //     const int k_chi   = local_idx[1];            
+        //     const int n_nu    = local_idx[2];
+
+        //     if (j_theta == 7 and k_chi == 15 and n_nu == 20)
+        //     {
+        //         print_flag2 = true;
+
+        //         const auto mu_grid  = RT_problem_->mu_grid_;        
+        //         const auto chi_grid = RT_problem_->chi_grid_; 
+                    
+        //         mu  = mu_grid[j_theta];     
+        //         chi = chi_grid[k_chi];  
+        //     }            
+        // }
+        // else
+        // {
+        //     print_flag2 = true;
+        // }        
         
-        // const int j_theta = local_idx[0];
-        // const int k_chi   = local_idx[1];
-        // const int n_nu    = local_idx[2];
-
-        // const auto mu_grid    = RT_problem_->mu_grid_;
-        // const auto theta_grid = RT_problem_->theta_grid_;   
-    
-        // const double theta = theta_grid[j_theta];
-        // const double mu    = mu_grid[j_theta];     
-
         // const auto N_theta = RT_problem_->N_theta_;               
 
         // bool nu_n_equal_zero = (block_index == tile_size_/2);
         
-        if (print_flag)            
+        if (print_flag and print_flag2)            
         {
-        std::cout << "mpi_rank_ = " << mpi_rank_ << std::endl;   
+            std::cout << "mpi_rank_ = " << mpi_rank_ << std::endl;   
         //  std::cout << "j_theta = " << j_theta << std::endl;
         //  std::cout << "k_chi = "   << k_chi << std::endl;         
 
@@ -952,10 +954,12 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
 
         // if (j_theta == N_theta - 1 and k_chi == 0 and n_nu == 0 and i == 0 and j == 0)
         // {                                                                            
-        
-        //     // std::cout << "theta = " << theta << std::endl;
-        //     // std::cout << "chi = "<< chi << std::endl;
-        //     std::cout << "mu = " << mu << std::endl;
+            // if (not formal_solution_Omega_)
+            // {
+            //     // std::cout << "theta = " << theta << std::endl;
+            //     std::cout << "mu = "   << mu << std::endl;
+            //     std::cout << "chi = "  << chi << std::endl;            
+            // }
         //     // std::cout << "n = "  << n << std::endl;                                            
         //     // std::cout << "dz = "<< dz << std::endl;           
            
@@ -988,9 +992,13 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
                 // std::cout << "distance_1 = " << distance_test << std::endl;
                 // std::cout << "distance_2 = " << cell_distance << std::endl;             
 
-                // std::cout << "S1[0] = " <<  S1[0] << std::endl;
-                // std::cout << "S2[0] = " <<  S2[0] << std::endl;
-                // std::cout << "S3[0] = " <<  S3[0] << std::endl;            
+                std::cout << "S1[0] = " <<  S1[0] << std::endl;
+                std::cout << "S2[0] = " <<  S2[0] << std::endl;
+                std::cout << "S3[0] = " <<  S3[0] << std::endl;            
+                std::cout << "K1[0] = " <<  K1[0] << std::endl;
+                std::cout << "K2[0] = " <<  K2[0] << std::endl;
+                std::cout << "K3[0] = " <<  K3[0] << std::endl;            
+
 
             // std::cout << "S1 = " << std::endl;
             // for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S1[i_stokes] << std::endl;
@@ -1028,16 +1036,9 @@ std::vector<double> MF_context::single_long_ray_step(const std::vector<t_interse
     const auto N_x = RT_problem_->N_x_;
     const auto N_y = RT_problem_->N_y_;
 
-    auto eta_dev = eta_field_serial_->view_device(); 
-    auto rho_dev = rho_field_serial_->view_device(); 
+    const auto eta_dev = (formal_solution_Omega_) ? eta_field_serial_Omega_->view_device() : eta_field_serial_->view_device(); 
+    const auto rho_dev = (formal_solution_Omega_) ? rho_field_serial_Omega_->view_device() : rho_field_serial_->view_device(); 
 
-    // for formal solution in Omega
-    if (formal_solution_Omega)
-    {
-        eta_dev = eta_field_serial_Omega_->view_device(); 
-        rho_dev = rho_field_serial_Omega_->view_device(); 
-    }
-    
     const auto I_dev = I_field->view_device();     
     const auto S_dev = S_field->view_device(); 
 
@@ -1133,13 +1134,14 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
 {       
     const Real mu = cos(theta);
 
-    if (mpi_rank_ == 0) std::cout << "\nStart formal solution for mu = " << mu << " and chi = " << chi << std::endl;
+    if (mpi_rank_ == 0) std::cout << "\nStart formal solution for mu = " << mu << 
+                                    ", theta = " << theta << ", and chi = " << chi << std::endl;    
 
     // init some quantities         
     const auto N_x = RT_problem_->N_x_;
     const auto N_y = RT_problem_->N_y_;
     const auto N_z = RT_problem_->N_z_;
-
+    
     const auto N_nu = RT_problem_->N_nu_;
 
     const auto block_size = 4 * N_nu;
@@ -1170,7 +1172,7 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
 
     bool use_linear_method;
     
-    int i_aux, j_aux, k_aux, k_global, b_index, block_start, block_end;
+    int i_aux, j_aux, k_aux, k_global, b_index;
 
     std::vector<int> i_intersect(4), j_intersect(4), k_intersect(4);
 
@@ -1219,28 +1221,24 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
     S_remap_Omega_.from_pgrid_to_pblock(*RT_problem_->S_field_Omega_, *S_field_serial_Omega_, 0);                                    
 
     ////////////////////////////////////////////////
-                                           
-    // get local block range
-    block_start = mpi_rank_ * local_block_size_;
-    block_end   = block_start + local_block_size_ - 1; // unnecessary?
-    
-    const bool idle_proc = (block_start > block_size - 1);
-                     
-    // communication                    
+
+    const bool idle_proc = (mpi_rank_ * local_block_size_ > block_size - 1);
+                         
+    // communication timer                 
     if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
     Real start_comm = MPI_Wtime();                                    
             
     comm_timer += MPI_Wtime() - start_comm;          
-
+    
     if (not idle_proc)
-    {              
+    {                                        
         // loops over spatial points
         for (int k = k_start; k < k_end; ++k)                   
-        {                                        
+        {                                                  
             for (int j = j_start; j < j_end; ++j)
-            {
+            {                
                 for (int i = i_start; i < i_end; ++i)
-                {                                                          
+                {                          
                     k_aux = (mu > 0.0) ? k_end - 1 - k + g_dev.margin[2]: k; 
 
                     // depth index
@@ -1277,8 +1275,8 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
                         // for quadratic stencil consider an extra intersection point (on the boundary linear is used)
                         use_linear_method = (stencil_size == 2);
                         
-                        if (stencil_size == 3)
-                        {                                        
+                        if (stencil_size == 3)                            
+                        {                                                 
                             if ( k_global > 0 and k_global < N_z - 1)
                             {
                                 const double dz_2    = (mu > 0) ? depth_grid[k_global - 1] -  depth_grid[k_global] : depth_grid[k_global] - depth_grid[k_global + 1]; 
@@ -1330,7 +1328,11 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
                             {
                                 if (use_single_long_step_ and mpi_rank_ == 0) std::cerr << "WARNING: use_single_long_step_ not supported with BESSER" << std::endl;
 
-                                const bool print_flag = false;                               
+                                // for debug
+                                bool print_flag = false;
+
+                                // if (mpi_rank_ == 48 and g_dev.global_coord(0, i_aux) == 0 and g_dev.global_coord(1, j_aux) == 0) print_flag = true;
+                           
                                 
                                 I2 = long_ray_steps_quadratic(intersection_data_long_ray, I_field_serial_Omega_, S_field_serial_Omega_,
                                                                                             i_aux, j_aux, k_aux, b, print_flag);                                            
@@ -1410,7 +1412,7 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
                                 formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);
 
                                 // // test
-                                // if (i == i_start and j == j_start)                                                
+                                // if (i == i_start and j == j_start and mpi_rank_ == 48)                                                
                                 // {                                                                                                                         
                                 //     std::cout << "\nk = " << k << std::endl;                                              
                                 //     std::cout << "\nk_global = " << g_dev.global_coord(2, k_aux) << std::endl;                                              
@@ -1418,7 +1420,7 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
                                 //     std::cout << "mu = "  << mu  << std::endl;                                                
                                 //     std::cout << "chi = " << chi << std::endl;                                                
                                 //     // std::cout << "n = "  << n << std::endl;   
-                                //     std::cout << "b = "  << b << std::endl;                                                                                            
+                                //     // std::cout << "b = "  << b << std::endl;                                                                                            
                                     
                                 //     // std::cout << "dtau = "     << dtau  << std::endl;   
                                 //     // std::cout << "coeff = "    << coeff << std::endl;   
@@ -1428,18 +1430,18 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
 
                                 //     std::cout << "mpi_rank_ = " << mpi_rank_ << std::endl;                                               
 
-                                //     // std::cout << "I1 = "   << I1[0] << std::endl;   
+                                //     std::cout << "I1 = "   << I1[0] << std::endl;   
                                 //     // std::cout << "Q1 = "   << I1[1] << std::endl;   
                                 //     // std::cout << "U1 = "   << I1[2] << std::endl;   
                                 //     // std::cout << "V1 = "   << I1[3] << std::endl;   
 
-                                //     // // std::cout << "I2 = "   << I2[0] << std::endl;    
-                                //     // // std::cout << "Q2 = "   << I2[1] << std::endl;   
+                                //     std::cout << "I2 = "   << I2[0] << std::endl;    
+                                //     // std::cout << "Q2 = "   << I2[1] << std::endl;   
                                 //     // std::cout << "U2 = "   << I2[2] << std::endl;                                                   
                                 //     // std::cout << "V2 = "   << I2[3] << std::endl;                                                   
                                     
-                                //     // std::cout << "S1[2] = " << S1[2]<< std::endl;
-                                //     // std::cout << "S2[2] = " << S2[2]<< std::endl;
+                                //     std::cout << "S1[0] = " << S1[0]<< std::endl;
+                                //     std::cout << "S2[0] = " << S2[0]<< std::endl;
                                 //     // std::cout << "S1[3] = " << S1[3]<< std::endl;
                                 //     // std::cout << "S2[3] = " << S2[3]<< std::endl;
                                 //     // // std::cout << "S1 = " << std::endl;
@@ -1468,15 +1470,14 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
                 }                
             }               
         }      
-    }          
-      
+    }
+                  
     if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
     start_comm = MPI_Wtime();    
     
     I_remap_Omega_.from_pblock_to_pgrid(*I_field_serial_Omega_, *RT_problem_->I_field_Omega_, 0); 
 
-    comm_timer += MPI_Wtime() - start_comm;     
-
+    comm_timer  += MPI_Wtime() - start_comm;     
     total_timer += MPI_Wtime() - start_total;                     
     
     if (mpi_rank_ == 0)
@@ -1484,7 +1485,7 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
         printf("comm_timer:\t\t%g seconds\n", comm_timer);
         printf("one_step_timer:\t\t%g seconds\n", one_step_timer);                        
         printf("total_timer:\t\t%g seconds\n", total_timer);                        
-    }        
+    }           
 }
       
 
@@ -1605,7 +1606,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 
             j_theta_end = local_idx[0] + 1;
             k_chi_end   = local_idx[1] + 1;
-            n_nu_end    = local_idx[2] + 1;                
+            n_nu_end    = local_idx[2] + 1;          
 
             if (j_theta_end < j_theta_start) { std::cout << "ERROR with j_theta partition: N_theta*(N_chi)*[N_dirs] shoud be divisible by mpi_size (using extra parentesis ()[] as mpi_size increases)!" << std::endl; throw_error = true; }      
             if (k_chi_end   < k_chi_start)   { std::cout << "ERROR with k_chi partition: N_theta*(N_chi)*[N_dirs] shoud be divisible by mpi_size! (using extra parentesis ()[] as mpi_size increases)!"  << std::endl; throw_error = true; }     
@@ -1669,8 +1670,9 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
                                     use_linear_method = (stencil_size == 2);
                                     
                                     if (stencil_size == 3)
-                                    {                                        
-                                        if ( k_global > 0 and k_global < N_z - 1)
+                                    {                                   
+                                        // last point has to use linear method     
+                                        if (k_global > 0 and k_global < N_z - 1)
                                         {
                                             const double dz_2    = (mu > 0) ? depth_grid[k_global - 1] -  depth_grid[k_global] : depth_grid[k_global] - depth_grid[k_global + 1]; 
                                             const double theta_2 = PI - theta;
@@ -1724,7 +1726,10 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
                                         {
                                             if (use_single_long_step_ and mpi_rank_ == 0) std::cerr << "WARNING: use_single_long_step_ not supported with BESSER" << std::endl;
 
+                                            // for debug
                                             bool print_flag = false;
+
+                                            // if (g_dev.global_coord(0, i_aux) == 0 and g_dev.global_coord(1, j_aux) == 0) print_flag = true;
 
                                            // if (j_theta ==  N_theta/2 + 1 and k_chi == 0 and n == 0  and i_aux == 0 and j_aux == 0)                                                                                            
                                             //{
@@ -1823,7 +1828,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     										formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);
 
                                             // // test
-                                            // if (j_theta ==  N_theta/2 and k_chi == 0 and n == 45 and i == i_start and j == j_start)                                                
+                                            // if (j_theta ==  N_theta - 1 and k_chi == N_chi - 1 and n == 48 and i == i_start and j == j_start)                                                
                                             // {                                                                                                                         
                                             //     // std::cout << "\nk = " << k << std::endl;                                              
                                             //     std::cout << "\nk_global = " << g_dev.global_coord(2, k_aux) << std::endl;                                              
@@ -1840,20 +1845,20 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 
                                             //     // std::cout << "mpi_rank_ = " << mpi_rank_ << std::endl;                                               
 
-                                            //     // std::cout << "I1 = "   << I1[0] << std::endl;   
+                                            //     std::cout << "I1 = "   << I1[0] << std::endl;   
                                             //     // std::cout << "Q1 = "   << I1[1] << std::endl;   
-                                            //     std::cout << "U1 = "   << I1[2] << std::endl;   
-                                            //     std::cout << "V1 = "   << I1[3] << std::endl;   
+                                            //     // std::cout << "U1 = "   << I1[2] << std::endl;   
+                                            //     // std::cout << "V1 = "   << I1[3] << std::endl;   
 
-                                            //     // std::cout << "I2 = "   << I2[0] << std::endl;    
+                                            //     std::cout << "I2 = "   << I2[0] << std::endl;    
                                             //     // std::cout << "Q2 = "   << I2[1] << std::endl;   
-                                            //     std::cout << "U2 = "   << I2[2] << std::endl;                                                   
-                                            //     std::cout << "V2 = "   << I2[3] << std::endl;                                                   
+                                            //     // std::cout << "U2 = "   << I2[2] << std::endl;                                                   
+                                            //     // std::cout << "V2 = "   << I2[3] << std::endl;                                                   
                                                 
-                                            //     std::cout << "S1[2] = " << S1[2]<< std::endl;
-                                            //     std::cout << "S2[2] = " << S2[2]<< std::endl;
-                                            //     std::cout << "S1[3] = " << S1[3]<< std::endl;
-                                            //     std::cout << "S2[3] = " << S2[3]<< std::endl;
+                                            //     std::cout << "S1[0] = " << S1[0]<< std::endl;
+                                            //     std::cout << "S2[0] = " << S2[0]<< std::endl;
+                                            //     // std::cout << "S1[3] = " << S1[3]<< std::endl;
+                                            //     // std::cout << "S2[3] = " << S2[3]<< std::endl;
                                             //     // std::cout << "S1 = " << std::endl;
                                             //     // for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S1[i_stokes] << std::endl;
 
@@ -2082,7 +2087,7 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
 // for each spatial point (i,j,k)
 void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const Real chi)
 {      
-    const bool include_eps_lth   = true;        
+    const bool include_eps_lth = true;        
     // const bool include_continuum = false;
     const bool include_continuum = RT_problem_->enable_continuum_;
 
@@ -2104,7 +2109,7 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
            
     const auto g_dev       = RT_problem_->space_grid_      ->view_device();  
     const auto eta_dev     = RT_problem_->eta_field_Omega_ ->view_device();
-    const auto S_dev_omega = RT_problem_->S_field_Omega_   ->view_device(); 
+    const auto S_dev_Omega = RT_problem_->S_field_Omega_   ->view_device(); 
     
     const auto block_size = RT_problem_->block_size_;   
     const auto N_nu       = RT_problem_->N_nu_;     
@@ -2172,11 +2177,11 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
         {
             b = 4 * n_nu;
 
-            eta_I_inv = 1.0 / (eta_dev.block(i,j,k)[b]);
+            eta_I_inv = 1.0 / (eta_dev.block(i,j,k)[b]);            
 
             for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
             {
-                S_dev_omega.block(i,j,k)[b + i_stokes] = eta_I_inv * (*IQUV_matrix_sh_ptr)(n_nu, i_stokes);                
+                S_dev_Omega.block(i,j,k)[b + i_stokes] = eta_I_inv * (*IQUV_matrix_sh_ptr)(n_nu, i_stokes);                
             }                                    
         }
 
@@ -2207,13 +2212,17 @@ void MF_context::init_serial_fields(const int n_tiles){
     auto N_y = RT_problem_->N_y_;
     auto N_z = RT_problem_->N_z_;
 
+    auto N_theta = RT_problem_->N_theta_;
+    auto N_chi   = RT_problem_->N_chi_;
+    auto N_nu    = RT_problem_->N_nu_;
+
     // set the number of local rays and tiles
     n_tiles_ = n_tiles;    
     n_local_rays_ = block_size/mpi_size_;
 
-    if (n_local_rays_ < 4) // TODO: to test
+    if (n_local_rays_ < 4) 
     {
-        if (mpi_rank_ == 0) std::cout << "WARNING: mpi_size > number of rays, not tested" << std::endl;
+        if (mpi_rank_ == 0) std::cout << "WARNING: mpi_size > number of rays" << std::endl;
         n_local_rays_ = 4; 
     } 
     else
@@ -2221,7 +2230,25 @@ void MF_context::init_serial_fields(const int n_tiles){
         if (n_local_rays_ * mpi_size_ != block_size) std::cout << "ERROR in init_serial_fields(): block_size/mpi_size_ not integer" << std::endl;  
     }
     
-    
+    const int N_thea_chi = N_theta * N_chi;
+
+    // check block decomposition
+    if (mpi_size_ > N_thea_chi)
+    {        
+        if (( N_thea_chi * N_nu / mpi_size_) * mpi_size_ != N_thea_chi * N_nu)
+        {
+         
+            throw std::runtime_error("ERROR with block decomposition I");
+        } 
+    }
+    else if (mpi_size_ > N_theta)
+    {
+        if (( N_thea_chi / mpi_size_) * mpi_size_ != N_thea_chi)
+        {            
+            throw std::runtime_error("ERROR with block decomposition II");
+        } 
+    }
+
     if (n_local_rays_ % 4 != 0) std::cout << "ERROR in init_serial_fields(): n_local_rays_ should be divisible by 4" << std::endl;        
 
     tile_size_ = n_local_rays_/n_tiles_;
@@ -2231,7 +2258,6 @@ void MF_context::init_serial_fields(const int n_tiles){
 
     // init serial grid
     const bool use_ghost_layers = false;
-    if (mpi_rank_ == 0 and use_ghost_layers) std::cout << "\nusing ghost layers for serial grid" << std::endl;    
 
     space_grid_serial_ = std::make_shared<Grid_t>();    
     space_grid_serial_->init(MPI_COMM_SELF, {N_x, N_y, N_z}, {1, 1, 0}, {}, use_ghost_layers); 
@@ -2268,26 +2294,29 @@ void MF_context::init_serial_fields(const int n_tiles){
 
 void MF_context::init_serial_fields_Omega(){
     
+    auto N_z  = RT_problem_->N_z_;
     auto N_nu = RT_problem_->N_nu_;
     auto block_size = 4 * N_nu;
 
-    auto N_x = RT_problem_->N_x_;
-    auto N_y = RT_problem_->N_y_;
-    auto N_z = RT_problem_->N_z_;
-
     // set the number of local rays and tiles   
-    local_block_size_ = block_size/mpi_size_;
+    local_block_size_ = block_size/mpi_size_;        
 
-    if (local_block_size_ < 4) // TODO: to test
+    if (local_block_size_ < 4)
     {
-        if (mpi_rank_ == 0) std::cout << "WARNING: mpi_size > number of rays, not tested" << std::endl;
+        if (mpi_rank_ == 0) std::cout << "WARNING: mpi_size > number of rays" << std::endl;
+        
         local_block_size_ = 4; 
+        
+        // // some ranks can stay idle
+        // if (mpi_rank_ >= N_nu)
+        // {
+        //     idle_processor_Omega_ = true;         TODO  local_block_size_ = 1 here?
+        // }
     } 
     else
     {
         if (local_block_size_ * mpi_size_ != block_size) std::cout << "ERROR in init_serial_fields(): block_size/mpi_size_ not integer" << std::endl;  
     }
-    
     
     if (local_block_size_ % 4 != 0) std::cout << "ERROR in init_serial_fields(): local_block_size_ should be divisible by 4" << std::endl;        
         
@@ -2310,23 +2339,26 @@ void MF_context::init_serial_fields_Omega(){
     S_remap_Omega_.init(*(RT_problem_->S_field_Omega_), *S_field_serial_Omega_);      
 
     // apply BC on I_Field
-    const auto I_Omega_dev = I_field_serial_Omega_->view_device();      
-    const auto W_T_dev     = RT_problem_->W_T_    ->view_device();     
-    const auto g_dev       = space_grid_serial_   ->view_device();  
+    const auto I_Omega_dev = RT_problem_->I_field_Omega_->view_device();      
+    const auto W_T_dev     = RT_problem_->W_T_          ->view_device();     
+    const auto g_dev       = RT_problem_->space_grid_   ->view_device();  
 
-    sgrid::parallel_for("APPLY BC", space_grid_serial_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
+    sgrid::parallel_for("APPLY BC", RT_problem_->space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
                                     
         // just in max depth
         if (g_dev.global_coord(2, k) == (N_z - 1))        
         {       
-            const Real W_T_deep = W_T_dev.ref(i,j,k);
+            const Real W_T_deep = W_T_dev.ref(i,j,k);            
             
-            for (int b = 0; b < local_block_size_; b = b + 4) 
+            for (int b = 0; b < block_size; b = b + 4) 
             {
                 I_Omega_dev.block(i,j,k)[b] = W_T_deep;                                
             }                       
         }
-    }); 
+    });     
+
+    // init BC in serial grid
+    I_remap_Omega_.from_pgrid_to_pblock(*RT_problem_->I_field_Omega_, *I_field_serial_Omega_, 0);                                    
 } 
 
 

@@ -1,4 +1,4 @@
- #include "RT_solver.hpp"
+#include "RT_solver.hpp"
 #include "Test_rii_include.hpp"
 #include <chrono>
 #include "tools.h"
@@ -17,6 +17,12 @@ int main(int argc, char *argv[]) {
     const bool use_B    = true;
     const bool use_CRD  = true;
     const bool use_prec = (not use_CRD);
+
+    if (not use_CRD) 
+    {
+      std::cout << "Test PRD for arbitrary LOS" << std::endl;
+      return EXIT_SUCCESS;
+    }
 
     // inputs
     // const std::string FAL_input_path = "../input/FAL-C/1_B0_V0_12T_8C_99F";
@@ -41,8 +47,10 @@ int main(int argc, char *argv[]) {
     // RT_solver rt_solver(rt_problem_ptr, "DELO_linear", use_prec);
 
     rt_solver.solve(); 
+    // rt_solver.solve_checkpoint("../output/surface_profiles_5x5x133/", 20); 
    
-    // write output
+    // // write output
+    // const std::string output_path = "../output/surface_profiles_test/"; // TODO change
     const std::string output_path = "../output/surface_profiles_5x5x133/"; // TODO change
     const std::string output_file = (use_CRD) ? output_path + "profiles_CRD" : output_path + "profiles_PRD";
     
@@ -51,25 +59,52 @@ int main(int argc, char *argv[]) {
 
     // for (int i = 0; i < N_x; ++i)
     // {
-    //   for (int j = 0; j < N_y; ++j)
-    //   {
+    //    for (int j = 0; j < N_y; ++j)
+    //    {
         rt_problem_ptr->write_surface_point_profiles(output_file, 0, 0);
-    //   }
+    //    }
     // }
 
+    // // free some memory
+    // // rt_problem_ptr->free_fields_memory();
+    // rt_solver.free_fields_memory();
 
-    // write is arbitriary direction 
-    // const Real mu    = 0.9;
-    const Real theta = 0.374835; //acos(mu);
-    const Real chi   = 6.08684;
+    // // write is arbitriary direction     
+    // Real chi   = 0.19635;
 
-    // allocate new data structure and compute I_Field_Omega
-    rt_solver.apply_formal_solver_Omega(theta, chi);
+    
+    // Real mu    = 0.930568;
+    // Real theta = acos(mu);
 
-    // const std::string output_file_Omega = output_file + "_theta_" + std::to_string(theta) + "_chi_" + std::to_string(chi);
-    const std::string output_file_Omega = output_file + "_Omega";
-    rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, 0, 0);
+    // std::string output_file_Omega;
 
+    // rt_solver.apply_formal_solver_Omega(theta, chi);
+
+    // // output_file_Omega = output_file + "_" + std::to_string(mu) + "_" + std::to_string(chi);
+    // output_file_Omega = output_file + "_control";
+    // rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, 0, 0);
+  
+    
+    // mu = 0.5;
+    // theta = acos(mu);
+
+    // // allocate new data structure and compute I_Field_Omega
+    // rt_solver.apply_formal_solver_Omega(theta, chi);
+
+    // output_file_Omega = output_file + "_05";
+    // rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, 0, 0);
+
+    // mu = 1.0;
+    // theta = acos(mu);
+
+    // // allocate new data structure and compute I_Field_Omega
+    // rt_solver.apply_formal_solver_Omega(theta, chi);
+
+    // output_file_Omega = output_file + "_1";
+    // rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, 0, 0);
+      
+           
+  
     // return EXIT_SUCCESS;
     
     // rt_problem_ptr->print_surface_profile(rt_problem_ptr->I_field_, 0, 0, 0, N_theta/2, 0);     
@@ -100,7 +135,7 @@ int main(int argc, char *argv[]) {
     
     rt_problem_ptr->print_PETSc_mem();
         
-    if (save_raw) rt_problem_ptr->I_field_->write("I_field.raw");          
+    if (save_raw) rt_problem_ptr->I_field_->write("/scratch/snx3000/pietrob/I_field.raw");          
   }
 
   Kokkos::finalize();

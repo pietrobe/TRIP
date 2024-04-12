@@ -51,8 +51,8 @@ struct MF_context {
 	bool use_always_long_ray_   = true;
 
 	// formal solution in arbitrary direction
-	bool formal_solution_Omega = false;
-
+	bool formal_solution_Omega_ = false;
+	
 	// serial objects for formal solution
 	Grid_ptr_t  space_grid_serial_;	
 
@@ -121,7 +121,7 @@ struct MF_context {
 	void init_serial_fields(const int n_tiles);	
 
 	// init serial fields (serial eta and rho are filled) in a single direction
-	void init_serial_fields_Omega();	
+	void init_serial_fields_Omega();		
 };
 
 class RT_solver
@@ -141,8 +141,8 @@ public:
     	mf_ctx_.RT_problem_    = RT_problem;  
     	mf_ctx_.mpi_rank_      = mpi_rank_;
     	mf_ctx_.mpi_size_      = mpi_size_;   
-    	mf_ctx_.formal_solver_ = Formal_solver(formal_solver);    
-
+    	mf_ctx_.formal_solver_ = Formal_solver(formal_solver);        	
+    	
     	// init serial grids for formal solution
     	const int n_tiles = 1; // TODO: now fixed
     	mf_ctx_.init_serial_fields(n_tiles);	
@@ -213,8 +213,8 @@ public:
 		// test
 		// ierr = MatMult(MF_operator_, rhs_, RT_problem_->I_vec_);CHKERRV(ierr);	        				
 		// const std::string filename =  "../output/rhs_" + std::to_string(mpi_size_) + ".m";
-  //   	const std::string varible  =  "rhs" + std::to_string(mpi_size_);
-  //   	save_vec(rhs_, filename.c_str(), varible.c_str());                 	  		
+  		// const std::string varible  =  "rhs" + std::to_string(mpi_size_);
+  		// save_vec(rhs_, filename.c_str(), varible.c_str());                 	  		
 	}
 
 	// solve linear system
@@ -231,7 +231,40 @@ public:
 		if (mpi_rank_ == 0) std::cout << "Solve time (s) = " << end - start << std::endl;	
 
 		// update I_field for later use
-		mf_ctx_.vec_to_field(RT_problem_->I_field_, RT_problem_->I_vec_);
+		mf_ctx_.vec_to_field(RT_problem_->I_field_, RT_problem_->I_vec_);		
+	}
+
+	inline void solve_checkpoint(const std::string output_path, const int checkpoint_interval)
+	{
+		PetscErrorCode ierr;
+		KSPConvergedReason reason = KSP_DIVERGED_ITS;
+		std::string output_file;
+    		
+		int counter = 0;
+		PetscInt its;
+
+		ierr = KSPSetInitialGuessNonzero(ksp_solver_, PETSC_TRUE);CHKERRV(ierr); 
+		ierr = KSPSetTolerances(ksp_solver_,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT, checkpoint_interval);CHKERRV(ierr);						
+
+		// while KSPSolve reaches max it
+		while (reason == KSP_DIVERGED_ITS)
+		{
+			ierr = KSPSolve(ksp_solver_, rhs_, RT_problem_->I_vec_);CHKERRV(ierr);
+			ierr = KSPGetConvergedReason(ksp_solver_, &reason);CHKERRV(ierr); 
+			ierr = KSPGetIterationNumber(ksp_solver_, &its);CHKERRV(ierr); 
+
+			counter += its;
+
+			// update I_field for write_surface_point_profiles()
+			mf_ctx_.vec_to_field(RT_problem_->I_field_, RT_problem_->I_vec_);		
+			
+			output_file = output_path + "CP" + std::to_string(counter);
+			RT_problem_->write_surface_point_profiles(output_file, 0, 0);
+
+		}		
+		
+		// update I_field for later use
+		mf_ctx_.vec_to_field(RT_problem_->I_field_, RT_problem_->I_vec_);		
 	}
 
 	inline void apply_formal_solver()
@@ -295,13 +328,13 @@ public:
 	inline void apply_formal_solver_Omega(const Real theta, const Real chi)
 	{
 		// allocate new data structure
-		if (not mf_ctx_.formal_solution_Omega)
+		if (not mf_ctx_.formal_solution_Omega_)
 		{
 			if (mpi_rank_ == 0) std::cout << "\nAllocating fields for new direction...";
 
 			RT_problem_->allocate_fields_Omega();
 			mf_ctx_.init_serial_fields_Omega();
-			mf_ctx_.formal_solution_Omega = true;
+			mf_ctx_.formal_solution_Omega_ = true;
 
 			if (mpi_rank_ == 0) std::cout << "done" << std::endl;
 		}		
@@ -374,6 +407,16 @@ public:
 		// const std::string filename =  "../output/I_" + std::to_string(mpi_size_) + ".m";
 	}
 
+	inline void free_fields_memory()
+	{
+		if (mpi_rank_ == 0) std::cout << "Freeing RT_solver fields memory..." << std::endl;				
+
+		mf_ctx_.I_field_serial_.reset();
+		mf_ctx_.S_field_serial_.reset();
+		mf_ctx_.eta_field_serial_.reset();
+		mf_ctx_.rho_field_serial_.reset();
+	}
+
 private:	
 
 	// MPI varables
@@ -392,7 +435,7 @@ private:
 	Vec rhs_;
 	
 	KSP ksp_solver_;
-	KSPType ksp_type_ = KSPGMRES; //KSPBCGS; // KSPFGMRES; // test KSPPIPEFGMRES
+	KSPType ksp_type_ = KSPFGMRES; //KSPFGMRES; //KSPBCGS; // KSPFGMRES; // test KSPPIPEFGMRES
 	PC pc_;
 	
 	bool using_prec_;	

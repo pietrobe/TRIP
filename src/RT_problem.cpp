@@ -962,7 +962,7 @@ void RT_problem::allocate_fields_Omega(){
 	I_field_Omega_->  allocate_on_device(); 
 	S_field_Omega_->  allocate_on_device(); 
 	eta_field_Omega_->allocate_on_device(); 
-	rho_field_Omega_->allocate_on_device(); 					
+	rho_field_Omega_->allocate_on_device(); 		
 }
 
 
@@ -1450,14 +1450,14 @@ void RT_problem::set_eta_and_rhos(){
 }
 
 
-void RT_problem::set_eta_and_rhos_Omega(const Real theta, const Real chi){
+void RT_problem::set_eta_and_rhos_Omega(const Real theta, const Real chi){	
 
 	// vector with KQ components for each stokes profile
 	std::vector< std::vector<std::complex<Real> > > T_KQ(4);
 
 	for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
 	{
-		T_KQ[i_stokes] = compute_T_KQ(i_stokes, theta, chi);			
+		T_KQ[i_stokes] = compute_T_KQ(i_stokes, theta, chi);		
 	}	
 
 	auto eta_dev = eta_field_Omega_->view_device();
@@ -1471,9 +1471,9 @@ void RT_problem::set_eta_and_rhos_Omega(const Real theta, const Real chi){
 	auto v_b_dev = v_b_  ->view_device();
 	
 	auto Doppler_width_dev = Doppler_width_->view_device();	
-
+	
     sgrid::parallel_for("INIT ETA-RHO", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) 
-    {         
+    {             	
         auto *block_eta = eta_dev.block(i, j, k);
         auto *block_rho = rho_dev.block(i, j, k);
         
@@ -1499,14 +1499,19 @@ void RT_problem::set_eta_and_rhos_Omega(const Real theta, const Real chi){
         
         // indeces
         int b;
-         
+        
         for (int n_nu = 0; n_nu < N_nu_; n_nu++) 
-        {        	        	
-        	// block_rho[b + 1] = 0;
-			
+        {        	        	        				
 			// index
-			b = 4 * n_nu;
-			
+			b = 4 * n_nu;		
+
+			// init to zero
+			for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+			{
+				block_eta[b + i_stokes] = 0;				
+				block_rho[b + i_stokes] = 0;								
+			}
+
 			const Real coeff  =  k_L / (std::sqrt(PI) * Doppler_width);
 			const Real coeff2 = nu_L / Doppler_width; 
 
@@ -1516,12 +1521,12 @@ void RT_problem::set_eta_and_rhos_Omega(const Real theta, const Real chi){
 			const Real v_dot_Omega = v_b[0] * ( cos(theta_v_b) * cos(theta) + sin(theta_v_b) * sin(theta) * cos(chi - chi_v_b));
 			const Real u_b = nu_0_ * v_dot_Omega / (c_ * Doppler_width);
 
-			const Real u_red = u[n_nu] + u_b;			
-			
+			const Real u_red = u[n_nu] + u_b;
+
 			for (int K = 0; K < 3; ++K)
-			{
+			{				
 				const double coeff_K = coeff * std::sqrt(3.0 * (2.0 * double(K) + 1.0));
-	
+					
 				for (int Mu2 = - Ju2_; Mu2 < Ju2_ + 1; Mu2 += 2)
 				{
 					for (int Ml2 = - Jl2_; Ml2 < Jl2_ + 1; Ml2 += 2)
@@ -1535,8 +1540,8 @@ void RT_problem::set_eta_and_rhos_Omega(const Real theta, const Real chi){
 
 							const double fact = coeff_K * std::pow(-1.0, double(q2) / 2.0 + 1.0) * std::pow(W3J1, 2) * W3J2;								   
 							
-		      				const double um = coeff2 * (gu_ * (double(Mu2) / 2.0) - gl_ * (double(Ml2) / 2.0)) + u_red;
-					
+		      				const double um = coeff2 * (gu_ * (double(Mu2) / 2.0) - gl_ * (double(Ml2) / 2.0)) + u_red;		      											      					      			
+
 							for (int Q = -K; Q < K + 1; ++Q)
 							{			
 								const std::complex<double> faddeva = Faddeeva::w(um + a_damp);
@@ -1548,10 +1553,10 @@ void RT_problem::set_eta_and_rhos_Omega(const Real theta, const Real chi){
 				        		for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
 								{
 
-									auto TKQi = get_TKQi(T_KQ[i_stokes], K, Q);
+									auto TKQi = get_TKQi(T_KQ[i_stokes], K, Q);										
 
 									// etas
-									block_eta[b + i_stokes] += std::real(fact_re * TKQi);
+									block_eta[b + i_stokes] += std::real(fact_re * TKQi);										
 
 									// rhos
 									if (i_stokes > 0) block_rho[b + i_stokes] += std::real(fact_im * TKQi);
@@ -1564,11 +1569,11 @@ void RT_problem::set_eta_and_rhos_Omega(const Real theta, const Real chi){
 
         	if (enable_continuum_) block_eta[b] += k_c[n_nu];      
 
-        	// if (i == 0 and j == 0 and g_dev.global_coord(2, k) == 0) 
+        	// if (i == 0 and j == 0) 
         	// {
         	// 	// std::cout << "k = "     <<   k      << std::endl; 
-        		// std::cout << block_eta[b] << std::endl; 
-        	// }	 
+        	// 	std::cout << block_eta[b] << std::endl;         		
+        	// }	         	
         	
         	// sanity checks
         	if (block_eta[b] == 0) std::cerr << "\nWARNING: zero eta_I!"     << std::endl; 
@@ -2133,7 +2138,7 @@ void const RT_problem::write_surface_point_profiles_Omega(input_string file_name
 
 						if (outputFile.is_open()) 		
 						{									
-							// create MATLAB data structure
+							// create MATLAB data structure							
 							outputFile <<  "\nField_Omega = cell(4,1);" << std::endl;
 						
 								for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
@@ -2227,47 +2232,61 @@ void RT_problem::set_grid_partition() // TODO remove hardcoding
 	}
 	else
 	{			
+		if (mpi_rank_ == 0) std::cout << "========== WARNING: hardcoding grid partition ==========" << std::endl;					
+
 		if (mpi_size_ == 1152) // HARDCODED
 		{
 			mpi_size_z_ = 128;
 			mpi_size_x_ = 3;
-			mpi_size_y_ = 3;
-			if (mpi_rank_ == 0) std::cout << "========== WARNING: hardcoding grid partition ==========" << std::endl;					
+			mpi_size_y_ = 3;			
 		}	
 		else if (mpi_size_ == 384) // HARDCODED
 		{
 			mpi_size_z_ = 128;
 			mpi_size_x_ = 3;
-			mpi_size_y_ = 1;
-			if (mpi_rank_ == 0) std::cout << "========== WARNING: hardcoding grid partition ==========" << std::endl;				
+			mpi_size_y_ = 1;			
+		}
+		else if (mpi_size_ == 512) // HARDCODED
+		{
+			mpi_size_z_ = 128;
+			mpi_size_x_ = 2;
+			mpi_size_y_ = 2;			
 		}
 		else if (mpi_size_ == 1024) // HARDCODED
 		{
-			mpi_size_z_ = 1;
-			mpi_size_x_ = 32;
-			mpi_size_y_ = 32;
-			if (mpi_rank_ == 0) std::cout << "========== WARNING: hardcoding grid partition ==========" << std::endl;				
+			mpi_size_z_ = 128;
+			mpi_size_x_ = 4;
+			mpi_size_y_ = 2;	
 		}
 		else if (mpi_size_ == 2048) // HARDCODED
 		{
 			mpi_size_z_ = 128;
 			mpi_size_x_ = 4;
-			mpi_size_y_ = 4;
-			if (mpi_rank_ == 0) std::cout << "========== WARNING: hardcoding grid partition ==========" << std::endl;				
+			mpi_size_y_ = 4;		
 		}
-		else if (mpi_size_ == 4096) // CHECK THIS?
+		else if (mpi_size_ == 4096) // HARDCODED
 		{
 			mpi_size_z_ = 1;
 			mpi_size_x_ = 64;
-			mpi_size_y_ = 64;
-			if (mpi_rank_ == 0) std::cout << "========== WARNING: hardcoding grid partition ==========" << std::endl;				
+			mpi_size_y_ = 64;			
+		}
+		else if (mpi_size_ == 6144) // HARDCODED
+		{
+			mpi_size_z_ = 128;
+			mpi_size_x_ = 4;
+			mpi_size_y_ = 12;			
 		}
 		else if (mpi_size_ == 8192) // HARDCODED
 		{
 			mpi_size_z_ = 128;
 			mpi_size_x_ = 8;
-			mpi_size_y_ = 8;
-			if (mpi_rank_ == 0) std::cout << "========== WARNING: hardcoding grid partition ==========" << std::endl;				
+			mpi_size_y_ = 8;			
+		}
+		else if (mpi_size_ == 12288) // HARDCODED
+		{
+			mpi_size_z_ = 128;
+			mpi_size_x_ = 12;
+			mpi_size_y_ = 8;			
 		}
 		else
 		{

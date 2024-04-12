@@ -294,6 +294,16 @@ public:
 	Field_ptr_t eta_field_Omega_; 
 	Field_ptr_t rho_field_Omega_; 
 
+	inline void free_fields_memory()
+	{
+		if (mpi_rank_ == 0) std::cout << "Freeing RT_Problem fields memory..." << std::endl;				
+
+		// I_field_.reset();
+    	// S_field_.reset();
+    	rho_field_.reset();
+    	eta_field_.reset();
+	}
+
 
 private:
 
