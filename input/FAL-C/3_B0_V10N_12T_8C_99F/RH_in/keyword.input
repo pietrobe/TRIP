@@ -1,0 +1,308 @@
+## --- file: keyword.input ------------------------------------------ ##
+#
+#      Version: rh1.0, 1-D plane-parallel
+## ------------------------------------------------------------------ ##
+
+# Specify input files for atmosphere and abundances 
+# (both KEYWORD_REQUIRED).
+
+  ATMOS_FILE = ../../Atmos/FALC93_70_v10N.atmos
+
+  ABUND_FILE = ../../Atoms/abundance.input
+
+# Specify input file for all atoms (KEYWORD_REQUIRED).
+
+  ATOMS_FILE = atoms.input
+
+# Specify input file for all molecules (KEYWORD_REQUIRED).
+
+  MOLECULES_FILE = molecules.input
+
+# Set number of rays (mu in [0,1]) for the angular discretization.
+# Keyword specific for the 1-D plane-parallel version of the code.
+# (KEYWORD_OPTIONAL, default is 0).
+
+  NRAYS = 6
+
+# Set to TRUE for turning on hydrostatic equilibrium iterations.
+# Keyword specific for the 1-D plane-parallel version of the code.
+# (KEYWORD_DEFAULT, default is FALSE).
+
+##  HYDROSTATIC = TRUE
+
+# Specify the file containing Kurucz partition function tables (as 
+# function of T) for the first 100 peridic table elements.
+# It is needed when either KURUCZ_DATA or SOLVE_NE is set.
+# (KEYWORD_REQUIRED / DEFAULT?).
+
+  KURUCZ_PF_DATA = ../../Atoms/pf_Kurucz.input
+
+# Solve for electron density if SOLVE_NE is set to ONCE or ITERATION.
+# (KEYWORD_DEFAULT, default is FALSE).
+
+##  SOLVE_NE = ONCE
+
+# ???????
+
+##  RLK_SCATTER = TRUE
+
+####################################################################
+# Keyword for chosing method of interpolation of source function in 
+# short chracteristics. Possible values are: PARABOLIC (DEFAULT) and 
+# BEZIER (KEYWORD_DEFAULT)
+####################################################################
+
+#  S_INTERPOLATION = S_BEZIER3
+#  S_INTERPOLATION_STOKES = DELO_BEZIER3
+
+###################################
+# Specific keywords for wavelengths
+###################################
+# Specify file with table of additional wavelengths.
+# (KEYWORD_OPTIONAL, default is NONE).
+
+##  WAVETABLE = ../../../Atoms/wave_files/MgII.wave
+
+# Reference wavelength in [nm]. In 1-D geometry, opacity at this 
+# wavelength is used to convert geometric height scale and column mass 
+# scale into optical depth (at lambda = LAMBDA_REF).
+# When not specified or set to 0.0 no additional wavelength point will 
+# be added.
+# (KEYWORD_DEFAULT, default is 500.0).
+
+## LAMBDA_REF = 500.0
+
+# If set to TRUE, converts vacuum wavelengths at and above 
+# VACUUM_TO_AIR_LIMIT (see spectrum.h) into air wavelengths in the 
+# output files.
+# (KEYWORD_OPTIONAL, default is ??).
+
+  VACUUM_TO_AIR = TRUE	
+
+##################################
+# Specific keywords for background
+##################################
+# Set HYDROGEN_LTE = TRUE if hydrogen in the background has to be
+# treated with LTE populations. If set to FALSE, NON-LTE hydrogen 
+# populations should be provided in the atmospheric file.
+# (KEYWORD_DEFAULT, default is FALSE).
+
+##  HYDROGEN_LTE = TRUE
+
+# Keyword to allow for background lines to be included in the 
+# calculations.
+# (KEYWORD_DEFAULT, default is TRUE).
+
+##  ALLOW_PASSIVE_BB = FALSE
+
+# Logarithm of the metallicity scaling factor. If set to -1.0 
+# (for instance), all metal abundances are scaled by a factor 0.1.
+# (KEYWORD_DEFAULT, default is 0.0)
+
+##  METALLICITY = 0.4
+
+# Specify the name of a file that lists a series of filenames, each 
+# file containing a list of lines in Bob Kurucz's format to be used for 
+# background line opacity calculations.
+# (KEYWORD_OPTIONAL, default is NONE --> no data is read).
+
+##  KURUCZ_DATA = kurucz.input
+
+# Specify file containing wavelength-dependent multiplicative  factors 
+# that can be applied to the background absorption and scattering 
+# coefficients to compensate for missing UV line haze.
+# (KEYWORD_OPTIONAL, default is NONE --> no data is read).
+
+  OPACITY_FUDGE = ../../Atmos/opacity_fudge.input
+
+##################################################################
+# Specific keywords for including magnetic fields and polarization
+##################################################################
+# Specify input file with magnetic field data.
+# When specified, polarization in the 4 Stokes parameters due to the 
+# Zeeman effect is calculated.
+# (KEYWORD_OPTIONAL, default is NONE).
+
+#  STOKES_INPUT = ../../../Atmos/FALC93_70_0G.B
+
+# Specify Stokes mode. Options are: 
+# NO_STOKES: ignore polarization.
+# FIELD_FREE: iterate NON-LTE solution with unpolarized profiles, and 
+#  perform formal solution with full polarization after convergence. 
+# POLARIZATION_FREE: iterate NON-LTE solution with Zeeman splitting when 
+#  calculating I, and perform formal solution with polarization after 
+#  convergence.
+# FULL_STOKES: perform NON-LTE solution with full polarization 
+#  (much slower and generally not necessary for solar magnetic fields).
+# (KEYWORD_OPTIONAL, default is NO_STOKES)
+
+  STOKES_MODE = NO_STOKES
+
+# Set to TRUE for including magneto-optical effects. 
+# (KEYWORD_DEFAULT, default is TRUE).
+
+#  MAGNETO_OPTICAL = TRUE
+
+# Typical value of magnetic field in Tesla (1 T = 1.0E+4 Gauss).
+# Necessary to aid in the distribution of wavelength points in polarized
+# line profiles (points around centers of Zeeman components are added).
+# (KEYWORD_DEFAULT, default is 0.0).
+
+  B_STRENGTH_CHAR = 0.05
+
+# Include scattering polarization in the background (Thomson and Rayleigh).
+# When set to TRUE, STOKES_MODE should be set to FULL_STOKES.
+# (KEYWORD_DEFAULT, default is FALSE).
+
+  BACKGROUND_POLARIZATION = TRUE
+
+#########################################################
+# Specific keywords for micro- and macroscopic velocities
+#########################################################
+# Typical value of microscopic velocity broadening in [km/s]. 
+# Used in getlambda.c to convert doppler units to real wavelengths.
+# (KEYWORD_REQUIRED)
+
+  VMICRO_CHAR = 2.5
+
+# Treshold value of macroscopic velocity in [km/s] above which line
+# absorption coefficients are calculated seperately for the different mu
+# values 
+# (KEYWORD_OPTIONAL, default is 0.1).
+
+  VMACRO_TRESH = 0.0
+
+##############################################################
+# Specific keywords for iterative computations and convergence
+##############################################################
+# Set maximum number of iterations to initialize scattering radiation
+# field in the background. 
+# (KEYWORD_OPTIONAL, default is 5)
+
+  N_MAX_SCATTER = 5
+
+# Specify row of statistical equilibrium equation that is to be 
+# eliminated to enforce particle conservation. 
+# If set to -1, the row with the largest population from the previous 
+# iteration will be eliminated at each spatial location.
+# (KEYWORD_REQUIRED).
+
+  I_SUM = -1
+
+# Set number of maximum iterations and convergence limit.
+# (both KEYWORD_REQUIRED).
+
+  N_MAX_ITER = 1000
+  ITER_LIMIT = 1.0E-3
+
+# Set parameters for Ng convergence acceleration (all KEYWORD_OPTIONAL).
+# (default for NG_ORDER = 0 --> no acceleration)
+# (default for NG_DELAY = 0)
+# (default for NG_PERIOD = 1)
+
+  NG_DELAY  = 10
+  NG_ORDER  = 2
+  NG_PERIOD = 3
+
+########################### 
+# Specific keywords for PRD
+########################### 
+# PRD_N_MAX_ITER is the maximum number of PRD iterations per main 
+# iteration (if = 0 all lines will be treated in CRD ??).
+# PRD_ITER_LIMIT is the convergence limit of PRD iterations in each 
+# main iteration. If PRD_ITER_LIMIT is negative, the dpopsmax of the 
+# current main iteration is taken as the PRD convergence limit. 
+# (both KEYWORD_OPTIONAL, default values are 3 and 1.0E-2).
+
+  PRD_N_MAX_ITER = 3
+  PRD_ITER_LIMIT = 1.0E-2
+
+# PRD_NG_XXX are the Ng acceleration parameters for PRD iterations
+# (all KEYWORD_OPTIONAL).
+# (default for PRD_NG_ORDER = 0)
+# (default for PRD_NG_DELAY = 0)
+# (default for PRD_NG_PERIOD = 0)
+
+##  PRD_NG_DELAY   = 0
+##  PRD_NG_ORDER   = 2
+##  PRD_NG_PERIOD  = 3
+
+# If PRD_ANGLE_DEP is set to TRUE angle-dependent PRD is used.
+# (KEYWORD_DEFAULT, default is FALSE).
+
+  PRD_ANGLE_DEP = TRUE
+
+# Flag enabling cross-redistribution between PRD levels that share
+# a common upper level. If set to TRUE, the code automatically 
+# determines which levels to include. 
+# (KEYWORD_OPTIONAL, default is FALSE).
+  
+##  XRD = FALSE
+
+#######################################################
+# Specific keywords for temporary and output data files
+#######################################################
+# Temporary files for mean intensities (J_FILE) and background 
+# opacities (BACKGROUND_FILE).
+# STARTING_J determines the starting solution for the angle-averaged
+# radiation field. Options: 
+# NEW_J: to start with radiation field calculated from the initial 
+# solution of the population numbers. 
+# OLD_J: to start from the radiation field obtained in a previous run.
+# (all KEYWORD_REQUIRED).
+
+  J_FILE          = J.dat
+  STARTING_J      = NEW_J
+  BACKGROUND_FILE = background.dat
+  OLD_BACKGROUND  = FALSE
+
+# ATOM_OUTPUT: output file for atomic data.
+# ATMOS_OUTPUT: output file for model atmosphere data.
+# GEOMETRY_OUTPUT: output file for geometry data.
+# SPECTRUM_OUTPUT: output file for wavelengths and emergent intensities.
+# (all KEYWORD_DEFAULT, default are atom.out, atmos.out, geometry.out, 
+# and spectrum.out).
+
+## SPECTRUM_OUTPUT = spectrum.out
+
+# OPACITY_OUTPUT: opacity and emissivity of active transitions of the 
+# solution are written to the specified file.
+# RADRATE_OUTPUT: radiative rates for active transitions are written to 
+# the specified file.
+# COLLRATE_OUTPUT: collisional rates for active transitions are written to 
+# the specified file.
+# DAMPING_OUTPUT: damping parameters for active transitions are written to 
+# the specified file, as well as the broadening velocity for the specific 
+# atom.
+# (all KEYWORD_OPTIONAL, default is NONE --> no output is produced).
+
+  OPACITY_OUTPUT  = opacity.out
+  RADRATE_OUTPUT  = radrate.out
+  COLLRATE_OUTPUT = collrate.out
+  DAMPING_OUTPUT  = damping.out
+
+############################################
+# Specific keywords for computer performance
+############################################
+# Keyword that enables saving memory by storing the angle-averaged 
+# intensity J and the line profiles to temporary files, rather than 
+# keeping them in memory.
+# (KEYWORD_DEFAULT, default is FALSE).
+
+##  LIMIT_MEMORY = TRUE
+
+# Enable program to do the formal solution for N_THREADS wavelengths
+# concurrently. Maximum number of threads is limited by the value of 
+# N_THREAD_LIMIT in routine setThreadValue in file readvalue.c. 
+# Typically, N_THREADS should be equal to the number of processors in a 
+# multi-processor machine, or zero (the default) otherwise.
+# (KEYWORD_OPTIONAL, default is 0)
+
+##  N_THREADS = 2
+
+# Set this value to TRUE to get printout on CPU usage (may take some
+# extra CPU usage though!).
+
+##  PRINT_CPU = TRUE
+
+# End

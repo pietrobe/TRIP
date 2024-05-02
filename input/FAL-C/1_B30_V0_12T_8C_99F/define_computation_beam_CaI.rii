@@ -1,0 +1,108 @@
+#########################################################
+# Define the problem to be solved.
+# emission_coefficient_RII              : Compute epsilon RII 
+# radiative_beam                        : Compute the radiative beam with the CRD model R_II + R_III
+# lambda_iterations, #number_of_steps   : Compute the lambda iterations on the athmosphere 
+#                                        (in this case the second argument is the number of steps default=1).
+# Ca I beam FALC atmos
+
+ solve( radiative_beam )
+# solve( lambda_iterations, 1)
+
+# Input format
+# std_irsol:  The folder and files structure decided at IRSOL.
+# rii_format: The original and deprecated structure used by this app.
+input_format( std_irsol )
+
+dimesions_file(dimensions.dat)
+
+
+
+
+#########################################################
+# Set the emission coefficnet model used during the lambda iteration.
+# RII_RIII_PRD_full_model  : R_II + R_III PRD model 
+# RIII_CRD                 : R_III CRD model
+emission_coefficient_model( RII_RIII_PRD_full_model )
+# emission_coefficient_model( RIII_CRD )
+
+
+
+test_name("Ca I - B=0 - FALC atmos")
+
+#########################################################
+# Base directory of the input data
+# If empty it uses the current directory (or the directory of this file) 
+# as a base directory.
+
+base_dir()
+
+output_dir(/tmp/CaI_layers_FALC)
+
+#############################################################
+# Input file with the athmospheric model for each altitude 
+# And continuum
+
+atmos_file( atmosphere.dat )
+
+# continuum data:  epsilon_c, sigma_c,   Kc
+# a.k.a.:          
+# eps_c --> continuum thermal emissivity           [erg cm^-3 s^-1 Hz^-1 sr^-1]
+# sigma --> continuum scattering opacity                    [cm-1]
+# k_c   --> continuum total opacity (absorption+scattering) [cm-1] 
+
+# One value for each frequency
+atmos_continuum(continuum/continuum_therm_emiss.dat, continuum/continuum_scat_opac.dat, continuum/continuum_tot_opac.dat)
+
+#########################################################
+# Input atom file.
+
+atom_file( atom_CaI_4227.rii )
+
+#########################################################
+# file with the magnetic fields and bulk velocities.
+# 1st arg: magnetic field
+# 2nd arg: Velocity
+magnetic_field_velocity_file(magnetic_field.dat, bulk_velocity.dat)
+
+#########################################################
+# file with the grid of the frequencies.
+
+frequencies_file(frequency.dat)
+
+#########################################################
+# Quadrature model for the emission coefficient. 
+# fixed_grid:              Only fixed grid.
+# fixed_grid_adaptive_pi:  Fixed grid for generic cases. But adaptive for Theta=Pi.
+# full_adaptive:           Adaptive quadrature for all cases.
+
+# quadrature_model_emission_coefficient_RII( fixed_grid )
+
+#########################################################
+# Set true in case you want to interpolate the Faddeeva function
+# interpolated_Faddeeva(false)
+
+#########################################################
+# Defines the interpolation model used in the Doppler shift
+# weno : 4^{th} order WENO interpolation 
+# spline : cubic spline
+
+# Doppler_shift_interpolation( spline )
+
+
+
+#####################################################################
+# The files with a unique incoming field
+# incoming_fields_files(StokesI.dat, StokesQ.dat, StokesU.dat, StokesV.dat)
+
+#####################################################################
+# The initial Guess
+# The four args corresponds with the directories.
+initial_guess(StokesI)
+# initial_guess(Plank)
+
+#####################################################################
+# The file used to define the diffused directions 
+# (in the computation of the emission coeff.).
+
+diffused_directions_file(diff_directions_list.rii)

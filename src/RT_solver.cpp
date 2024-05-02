@@ -2113,8 +2113,6 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
     
     const auto block_size = RT_problem_->block_size_;   
     const auto N_nu       = RT_problem_->N_nu_;     
-
-    if (not RT_problem_->use_CRD_limit_) std::cout << "WARNING: PRD not present in update_emission_arbitrary_direction()!" << std::endl;
     
     // field range indeces 
     const int i_start = g_dev.margin[0]; 
@@ -2159,8 +2157,9 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
         if (j >= j_end) std::cout << "ERROR with counters in update_emission(), j = " << j << std::endl;
         if (k >= k_end) std::cout << "ERROR with counters in update_emission(), k = " << k << std::endl;
 
-        // set input field (CRD hardcoded)        
-        auto epsilon_computation_Omega = ecc_sh_ptr_->make_computation_function_arbitrary_direction("CRD", include_eps_lth, include_continuum);
+        // set input field         
+        const std::string scattering_model = (RT_problem_->use_CRD_limit_) ? "CRD" : "PRD";        
+        auto epsilon_computation_Omega = ecc_sh_ptr_->make_computation_function_arbitrary_direction(scattering_model, include_eps_lth, include_continuum);
 
         ecc_sh_ptr_->update_incoming_field(i, j, k, offset_fun_, input.data());
 

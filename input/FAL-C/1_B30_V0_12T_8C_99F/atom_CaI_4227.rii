@@ -1,0 +1,23 @@
+
+# Atomic symbol (The atomic mass is retrieved from the internal database)
+atom( Ca )
+
+# Ionization (positive integer for positive ionization, negative for  negative ionization, 0 for neural atom) 
+ionization( 1 )
+
+# Angular momentum of the lower and upper level (multiplied by 2 !!)
+Jl2_Ju2( 0 , 2 )
+
+# gl and gu: Lande factors of the lower and upper level, respectively
+gl_gu( 0.0 , 1.0 )
+
+# El Eu object the lower and the upper levels energy expressed int \f$ cm^{-1}\f$ or \f$ m^{-1}\f$
+El_Eu(  0.000  ,  23652.304 )
+
+# Einstein coefficient [aka.: (A_{ul}); \Gamma_R]
+Einstein_coefficient(2.18E+08 )
+
+
+
+
+

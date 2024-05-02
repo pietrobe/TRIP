@@ -1,0 +1,28 @@
+# Natom
+   13
+
+# model file                ACTIVE/PASSIVE  INITIAL_SOLUTION   population file
+
+# Hydrogen
+  ../../../Atoms/H.atom          PASSIVE     LTE_POPULATIONS
+
+# Active atoms
+  ../../../Atoms/Cafull.atom	 ACTIVE      ZERO_RADIATION    pops.CA.out
+#  ../../../Atoms/Ca_4227.atom	 ACTIVE      ZERO_RADIATION    pops.CA.out
+#  ../../../Atoms/CaI.atom		 ACTIVE      ZERO_RADIATION    pops.CA.out
+
+# Background atoms 
+# (elements whose solar abundance > 10^-4 %, except Ne and Ar)
+  ../../../Atoms/He.atom         PASSIVE     LTE_POPULATIONS
+  ../../../Atoms/C.atom          PASSIVE     LTE_POPULATIONS
+  ../../../Atoms/N.atom          PASSIVE     LTE_POPULATIONS
+  ../../../Atoms/O.atom          PASSIVE     LTE_POPULATIONS
+
+  ../../../Atoms/Na.atom         PASSIVE     LTE_POPULATIONS
+  ../../../Atoms/Mg.atom         PASSIVE     LTE_POPULATIONS
+  ../../../Atoms/Al.atom         PASSIVE     LTE_POPULATIONS  
+  ../../../Atoms/Si.atom         PASSIVE     LTE_POPULATIONS  
+  ../../../Atoms/S.atom          PASSIVE     LTE_POPULATIONS  
+			              
+  ../../../Atoms/Fe.atom         PASSIVE     LTE_POPULATIONS  
+  ../../../Atoms/NiI.atom        PASSIVE     LTE_POPULATIONS

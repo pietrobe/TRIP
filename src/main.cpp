@@ -15,19 +15,14 @@ int main(int argc, char *argv[]) {
   {
     const bool save_raw = false;
     const bool use_B    = true;
-    const bool use_CRD  = true;
+    const bool use_CRD  = false;
     const bool use_prec = (not use_CRD);
-
-    if (not use_CRD) 
-    {
-      std::cout << "Test PRD for arbitrary LOS" << std::endl;
-      return EXIT_SUCCESS;
-    }
 
     // inputs
     // const std::string FAL_input_path = "../input/FAL-C/1_B0_V0_12T_8C_99F";
     // const std::string FAL_input_path = "../input/FAL-C/1_B0_V0_12T_8C_64F";
-    const std::string FAL_input_path = "../input/FAL-C/96F";
+    // const std::string FAL_input_path = "../input/FAL-C/96F";
+    const std::string FAL_input_path = "../input/FAL-C/64F";
 
     const char* PORTA_input_path = "../input/PORTA/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd";
     // const char* PORTA_input_path = "../input/PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_32x32x133.pmd";
@@ -51,48 +46,57 @@ int main(int argc, char *argv[]) {
    
     // // write output
     // const std::string output_path = "../output/surface_profiles_test/"; // TODO change
-    const std::string output_path = "../output/surface_profiles_5x5x133/"; // TODO change
+    const std::string output_path = "../output/surface_profiles_64x64x133/"; // TODO change
     const std::string output_file = (use_CRD) ? output_path + "profiles_CRD" : output_path + "profiles_PRD";
     
     // const int N_x = rt_problem_ptr->N_x_;
     // const int N_y = rt_problem_ptr->N_y_; 
 
-    // for (int i = 0; i < N_x; ++i)
+    // for (int i = 0; i < 5; ++i)
     // {
-    //    for (int j = 0; j < N_y; ++j)
+    //    for (int j = 0; j < 5; ++j)
     //    {
         rt_problem_ptr->write_surface_point_profiles(output_file, 0, 0);
     //    }
     // }
 
     // // free some memory
-    // // rt_problem_ptr->free_fields_memory();
+    // rt_problem_ptr->free_fields_memory();
     // rt_solver.free_fields_memory();
 
     // // write is arbitriary direction     
     // Real chi   = 0.19635;
-
-    
     // Real mu    = 0.930568;
     // Real theta = acos(mu);
 
     // std::string output_file_Omega;
 
     // rt_solver.apply_formal_solver_Omega(theta, chi);
-
-    // // output_file_Omega = output_file + "_" + std::to_string(mu) + "_" + std::to_string(chi);
-    // output_file_Omega = output_file + "_control";
-    // rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, 0, 0);
-  
     
-    // mu = 0.5;
+    // output_file_Omega = output_file + "_control";
+
+    // for (int i = 0; i < 5; ++i)
+    // {
+    //    for (int j = 0; j < 5; ++j)
+    //    {
+    //         rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, i, j);
+    //    }
+    // }
+
+    // mu = 0.1;
     // theta = acos(mu);
 
     // // allocate new data structure and compute I_Field_Omega
     // rt_solver.apply_formal_solver_Omega(theta, chi);
 
-    // output_file_Omega = output_file + "_05";
-    // rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, 0, 0);
+    // output_file_Omega = output_file + "_mu01";
+    // for (int i = 0; i < 5; ++i)
+    // {
+    //    for (int j = 0; j < 5; ++j)
+    //    {
+    //         rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, i, j);
+    //    }
+    // }
 
     // mu = 1.0;
     // theta = acos(mu);
@@ -100,11 +104,16 @@ int main(int argc, char *argv[]) {
     // // allocate new data structure and compute I_Field_Omega
     // rt_solver.apply_formal_solver_Omega(theta, chi);
 
-    // output_file_Omega = output_file + "_1";
-    // rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, 0, 0);
+    // output_file_Omega = output_file + "_mu1";
+
+    // for (int i = 0; i < 5; ++i)
+    // {
+    //    for (int j = 0; j < 5; ++j)
+    //    {
+    //         rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, i, j);
+    //    }
+    // }
       
-           
-  
     // return EXIT_SUCCESS;
     
     // rt_problem_ptr->print_surface_profile(rt_problem_ptr->I_field_, 0, 0, 0, N_theta/2, 0);     
