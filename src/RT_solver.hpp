@@ -435,7 +435,7 @@ private:
 	Vec rhs_;
 	
 	KSP ksp_solver_;
-	KSPType ksp_type_ = KSPFGMRES; //KSPFGMRES; //KSPBCGS; // KSPFGMRES; // test KSPPIPEFGMRES
+	KSPType ksp_type_ = KSPFGMRES; //KSPBCGS; // test KSPPIPEFGMRES
 	PC pc_;
 	
 	bool using_prec_;	

@@ -40,7 +40,8 @@ public:
     	read_3D(PORTA_input);
 
     	// timing
-    	MPI_Barrier(space_grid_->raw_comm()); Real end = MPI_Wtime(); 	    
+    	// MPI_Barrier(space_grid_->raw_comm());
+    	Real end = MPI_Wtime(); 	    
 	    if (mpi_rank_ == 0) printf("Reading input time:\t\t%g (seconds)\n", end - start);	      		
     	start = MPI_Wtime();
 
@@ -49,7 +50,8 @@ public:
 
 		print_info();	    
 	
-	   	MPI_Barrier(space_grid_->raw_comm()); end = MPI_Wtime(); 	    
+	   	// MPI_Barrier(space_grid_->raw_comm()); 
+	   	end = MPI_Wtime(); 	    
 	    if (mpi_rank_ == 0) printf("Set up time:\t\t%g (seconds)\n", end - start);	      		
 	}
 
@@ -184,7 +186,8 @@ public:
 	// write surface profile in file in MATLAB format in onw point and all surface
 	void const write_surface_point_profiles(input_string file_name, const int i_space, const int j_space);
 	void const write_surface_point_profiles_Omega(input_string file_name, const int i_space, const int j_space);
-	// void const write_surface_profiles(input_string file_name); // TODO
+	void const write_surface_profiles(input_string file_name); 
+	void const write_surface_profiles_Omega(input_string file_name); 
 									        
 
 	// MPI varables

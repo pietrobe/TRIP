@@ -814,10 +814,10 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
             
             dtau_1 = coeff * (eta_I_1 + etas[0]) * cell_distance;                  
 
-            distance_test = cell_distance;
+            // distance_test = cell_distance;
             
             if (dtau_1 > 0)  std::cout << "ERROR in dtau_1 sign, dtau_1 = " << dtau_1 << std::endl;   
-            if (dtau_1 == 0) std::cout << "WARNING: dtau_1 = 0, possible e.g. for N_chi = 4" << std::endl;                                 
+            if (dtau_1 == 0) std::cout << "WARNING: dtau_1 = 0, possible e.g. for N_chi = 4" << std::endl;                                                         
         }
         else // reuse
         {
@@ -1222,7 +1222,10 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
 
     ////////////////////////////////////////////////
 
-    const bool idle_proc = (mpi_rank_ * local_block_size_ > block_size - 1);
+    // const bool idle_proc = (mpi_rank_ * local_block_size_ > block_size - 1);
+
+    // TODO FIX
+    const bool idle_proc = (eta_dev.block(i_start,j_start,k_start)[0] == 0);
                          
     // communication timer                 
     if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
@@ -1231,7 +1234,44 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
     comm_timer += MPI_Wtime() - start_comm;          
     
     if (not idle_proc)
-    {                                        
+    {                       
+        // /////////// TEST //////////////            
+        // if (g_dev.global_coord(0, i_start) == 0 and
+        //     g_dev.global_coord(1, j_start) == 0 and 
+        //     g_dev.global_coord(2, k_start) == 0)
+        // {                    
+        //     std::cout << "--------------- mpi_rank_ = " << mpi_rank_ << std::endl;
+
+        //     // for (int bb = 0; bb < local_block_size_; +bb)
+        //     // {
+        //         std::cout << "eta_serial = " << eta_dev.block(i_start,j_start,k_start)[0] << std::endl;
+        //     // }
+
+        //     std::cout << "---------------"<< std::endl;
+        // }
+
+        // const auto eta_dev_par = RT_problem_->eta_field_Omega_->view_device();     
+        // const auto g_dev_par   = RT_problem_->space_grid_->view_device();   
+
+        // const int i_s = g_dev_par.margin[0];
+        // const int j_s = g_dev_par.margin[1];
+        // const int k_s = g_dev_par.margin[2];
+        
+        // if (g_dev_par.global_coord(0, i_s) == 0 and g_dev_par.global_coord(1, j_s) == 0 and g_dev_par.global_coord(2, k_s) == 0)
+        // {        
+        //     std::cout << "---------------"<< std::endl;
+
+        //     for (int bb = 0; bb < 4*N_nu; bb = bb + 4)
+        //     {
+        //         std::cout << "eta = " << eta_dev_par.block(i_s,j_s,k_s)[bb] << std::endl;
+        //     }
+
+        //     std::cout << "---------------"<< std::endl;
+        // }
+
+        ////////////////////
+
+
         // loops over spatial points
         for (int k = k_start; k < k_end; ++k)                   
         {                                                  
@@ -1939,6 +1979,7 @@ void MF_context::set_up_emission_module(){
     }
     else
     {
+        // components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB_FAST);
         components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB);
         // components.push_back(emission_coefficient_components::epsilon_R_II);
         components.push_back(emission_coefficient_components::epsilon_R_III_GL);
@@ -1957,6 +1998,7 @@ void MF_context::set_up_emission_module(){
         emission_coefficient_components::epsilon_pCRD_limit,        
         // emission_coefficient_components::epsilon_R_II_AA_PRECOND,
         // emission_coefficient_components::epsilon_R_III,
+        // emission_coefficient_components::epsilon_R_II_CONTRIB_EXTREME_FAST,
         emission_coefficient_components::epsilon_csc
     };       
     
@@ -2046,11 +2088,11 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
 	    	rii_include::make_indices_convertion_function<double>(out_field, offset_fun_)(output.data());    
     	}
     	else
-    	{
-    		const auto out_field = epsilon_fun_(i,j,k);	    	
-            rii_include::make_indices_convertion_function<double>(out_field, offset_fun_)(output.data());  
+    	{            
+    		const auto out_field = epsilon_fun_(i,j,k);	     
+            rii_include::make_indices_convertion_function<double>(out_field, offset_fun_)(output.data());           
     	}
-    	    	
+
         // update S_field_ from output scaling by eta_I
         double eta_I_inv; 
 
@@ -2489,6 +2531,7 @@ void RT_solver::assemble_rhs(){
 
 // matrix-free matrix vector multiplication y = (Id - LJ)x
 PetscErrorCode UserMult(Mat mat, Vec x, Vec y){
+
     
 	PetscErrorCode ierr; 
 
@@ -2496,7 +2539,7 @@ PetscErrorCode UserMult(Mat mat, Vec x, Vec y){
    	MatShellGetContext(mat,&ptr);
   	MF_context *mf_ctx_ = (MF_context *)ptr;
 
-  	auto RT_problem = mf_ctx_->RT_problem_;
+  	auto RT_problem = mf_ctx_->RT_problem_;    
 
     Real start = MPI_Wtime();       
     
@@ -2507,7 +2550,7 @@ PetscErrorCode UserMult(Mat mat, Vec x, Vec y){
     start = MPI_Wtime();      
   	    
   	// fill rhs_ from formal solve with zero bc  	
-    mf_ctx_->formal_solve_global(RT_problem->I_field_, RT_problem->S_field_, 0.0);
+    mf_ctx_->formal_solve_global(RT_problem->I_field_, RT_problem->S_field_, 0.0); 
       
     if (RT_problem->mpi_rank_ == 0) printf("formal_solve_global:\t\t%g seconds\n", MPI_Wtime() - start);              
     

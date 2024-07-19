@@ -11,6 +11,9 @@ void RT_problem::read_3D(const char* filename){
 
 	if (mpi_rank_ == 0) std::cout << "Reading PORTA input from " << filename << std::endl;
 
+	const bool zero_velocities = true;
+	if (mpi_rank_ == 0 and zero_velocities) std::cout << "ZERO velocities HARDCODED!" << std::endl;
+
 	// reading atom and grids from file
 	MPI_File fh;
 	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_RDONLY, MPI_INFO_NULL, &fh));
@@ -208,19 +211,29 @@ void RT_problem::read_3D(const char* filename){
 		}
 		else
 		{
-			B_dev.block(i, j, k)[0] = 0;
-			B_dev.block(i, j, k)[1] = 0;
-			B_dev.block(i, j, k)[2] = 0;
+			B_dev.block(i, j, k)[0] = 0.0;
+			B_dev.block(i, j, k)[1] = 0.0;
+			B_dev.block(i, j, k)[2] = 0.0;
 		}
 		
-		// convert to spherical coordinates
-		auto v_spherical = convert_cartesian_to_spherical(tmp_vector[6], 
-														  tmp_vector[7], 
-														  tmp_vector[8]);
 		
-		v_b_dev.block(i, j, k)[0] = v_spherical[0];					
-		v_b_dev.block(i, j, k)[1] = v_spherical[1];					
-		v_b_dev.block(i, j, k)[2] = v_spherical[2];	
+		if (zero_velocities)
+		{
+			v_b_dev.block(i, j, k)[0] = 0.0;					
+			v_b_dev.block(i, j, k)[1] = 0.0;					
+			v_b_dev.block(i, j, k)[2] = 0.0;	
+		}
+		else
+		{
+			// convert to spherical coordinates
+			auto v_spherical = convert_cartesian_to_spherical(tmp_vector[6], 
+														      tmp_vector[7], 
+														      tmp_vector[8]);		
+			v_b_dev.block(i, j, k)[0] = v_spherical[0];					
+			v_b_dev.block(i, j, k)[1] = v_spherical[1];					
+			v_b_dev.block(i, j, k)[2] = v_spherical[2];	
+		}
+		
 		
 		// continuum 
 		for (int n = 0; n < N_nu_; ++n)
@@ -2079,7 +2092,7 @@ void const RT_problem::write_surface_point_profiles(input_string file_name, cons
 							// Close the file		
     						outputFile.close();
 
-    						if (mpi_rank_ == 0) std::cout << "\nOutput written in " << output_file << "\n" << std::endl;    						
+    						if (mpi_rank_ == 0) std::cout << "Output written in " << output_file << "\n" << std::endl;    						
     					} 
 						else
 					  	{
@@ -2092,6 +2105,112 @@ void const RT_problem::write_surface_point_profiles(input_string file_name, cons
 	}  	
 }
 
+
+// write surface profile in all surface
+void const RT_problem::write_surface_profiles(input_string file_name)
+{	
+	if (mpi_size_x_ > 1 or mpi_size_y_ > 1)
+	{
+		std::cerr << "\nWARNING: write_surface_profiles not supported for hotizontal decomposition!" << std::endl;    						
+	}
+	
+	const auto f_dev = I_field_->view_device();	
+	const auto g_dev = space_grid_->view_device();
+
+	// indeces
+	const int i_start = g_dev.margin[0]; 
+	const int j_start = g_dev.margin[1];
+	const int k_start = g_dev.margin[2];
+
+	const int i_end = i_start + g_dev.dim[0];
+	const int j_end = j_start + g_dev.dim[1];
+		
+	int i_global, j_global;
+
+	double I, QUV;
+
+	// write profiles
+	if (g_dev.global_coord(2, k_start) == 0)
+	{
+		// Create a new file 
+		input_string output_file = file_name + ".m";
+		std::ofstream outputFile(output_file);
+
+		if (outputFile.is_open()) 		
+		{		
+			if (mpi_rank_ == 0) std::cout << "\nWriting surface output in " << output_file << "\n" << std::endl;    						
+
+			// write grids 
+			outputFile << "\nnu_grid_ = [ ";
+			for (int n = 0; n < N_nu_; ++n) outputFile << nu_grid_[n] << " ";
+			outputFile << "];\n";
+
+			outputFile << "\ntheta_grid = [ ";
+			for (int j_theta = 0; j_theta < N_theta_; ++j_theta) outputFile << theta_grid_[j_theta] << " ";
+			outputFile << "];\n";
+
+			outputFile << "\nmu_grid = [ ";
+			for (int j_theta = 0; j_theta < N_theta_; ++j_theta) outputFile << mu_grid_[j_theta] << " ";
+			outputFile << "];\n";
+
+			outputFile << "\nchi_grid = [ ";
+			for (int k_chi = 0; k_chi < N_chi_; ++k_chi) outputFile << chi_grid_[k_chi] << " ";
+			outputFile << "];\n";
+
+			// create MATLAB data structure
+			outputFile <<  "\nField = cell(4," << N_x_ << "," << N_y_ << "," << N_theta_ << "," << N_chi_ << ");" << std::endl;			
+		}
+		else
+		{
+			if (mpi_rank_ == 0) std::cout << "\nERROR: failed to create the output file." << std::endl;
+		}
+
+		// loop over spatial ppoints and directions
+		for (int i = i_start; i < i_end; ++i)
+		{
+			i_global = g_dev.global_coord(0, i);
+			
+			for (int j = j_start; j < j_end; ++j)
+			{
+				j_global = g_dev.global_coord(1, j);
+											
+				for (int j_theta = N_theta_/2; j_theta < N_theta_; ++j_theta)
+				{								
+					for (int k_chi = 0; k_chi < N_chi_; ++k_chi)
+					{							
+						const int b_start = local_to_block(j_theta, k_chi, 0);						
+				
+						for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+						{
+							outputFile << "\nField{" << i_stokes + 1 << "," << i_global + 1 << "," << j_global + 1<< "," << j_theta + 1 << "," << k_chi + 1 << "} = [ ";
+
+							for (int b = 0; b < 4 * N_nu_; b = b + 4) 
+							{
+								I = f_dev.block(i,j,k_start)[b_start + b];
+
+								if (i_stokes == 0)
+								{
+									outputFile << I << " ";
+								}
+								else
+								{
+									QUV = f_dev.block(i,j,k_start)[b_start + b + i_stokes];
+
+									outputFile << 100.0 * QUV/I << " ";
+								}
+							}
+
+							outputFile << "];\n";	
+						}
+					}
+				}				
+			}		
+		}
+		
+		// Close the file		
+		outputFile.close();
+	}  		
+}
 
 
 // write surface profile in one single point
@@ -2167,7 +2286,7 @@ void const RT_problem::write_surface_point_profiles_Omega(input_string file_name
 							// Close the file		
     						outputFile.close();
 
-    						if (mpi_rank_ == 0) std::cout << "\nOutput written in " << output_file << "\n" << std::endl;    						
+    						if (mpi_rank_ == 0) std::cout << "Output written in " << output_file << "\n" << std::endl;    						
     					} 
 						else
 					  	{
@@ -2179,6 +2298,90 @@ void const RT_problem::write_surface_point_profiles_Omega(input_string file_name
 		}
 	}  	
 }
+
+
+// write surface profile for arbitrary direction
+void const RT_problem::write_surface_profiles_Omega(input_string file_name)
+{	
+	if (mpi_size_x_ > 1 or mpi_size_y_ > 1)
+	{
+		std::cerr << "\nWARNING: write_surface_profiles_Omega not supported for hotizontal decomposition!" << std::endl;    						
+	}
+
+	const auto I_dev = I_field_Omega_->view_device();	
+	const auto g_dev = space_grid_->view_device();
+
+	const int block_size = 4 * N_nu_;
+
+	// indeces
+	const int i_start = g_dev.margin[0]; 
+	const int j_start = g_dev.margin[1];
+	const int k_start = g_dev.margin[2];
+
+	const int i_end = i_start + g_dev.dim[0];
+	const int j_end = j_start + g_dev.dim[1];
+		
+	int i_global, j_global;
+
+	double I, QUV;
+
+	// write profiles
+	if (g_dev.global_coord(2, k_start) == 0)
+	{
+		// Create a new file 
+		input_string output_file = file_name + ".m";
+		std::ofstream outputFile(output_file);
+
+		if (outputFile.is_open()) 							
+		{						
+			if (mpi_rank_ == 0) std::cout << "\nWriting surface output in " << output_file << "\n" << std::endl;    						
+			
+			// create MATLAB data structure
+			outputFile <<  "\nField = cell(4," << N_x_ << "," << N_y_ << ");" << std::endl;					
+		}
+		else
+		{
+			if (mpi_rank_ == 0) std::cout << "\nERROR: failed to create the output file." << std::endl;
+		}	
+
+		for (int i = i_start; i < i_end; ++i)
+		{
+			i_global = g_dev.global_coord(0, i);
+
+			for (int j = j_start; j < j_end; ++j)
+			{
+				j_global = g_dev.global_coord(1, j);
+																							
+				for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+				{
+					outputFile << "\nField{" << i_stokes + 1 << "," << i_global + 1 << "," << j_global + 1 << "} = [ ";
+
+					for (int b = 0; b < block_size; b = b + 4) 
+					{
+						I = I_dev.block(i,j,k_start)[b];
+
+						if (i_stokes == 0)
+						{
+							outputFile << I << " ";
+						}
+						else
+						{
+							QUV = I_dev.block(i,j,k_start)[b + i_stokes];
+
+							outputFile << 100.0 * QUV/I << " ";
+						}
+					}
+
+					outputFile << "];\n";	
+				}																									
+			}			
+		}
+
+		// Close the file		
+    	outputFile.close();
+	}  	
+}
+
 
 
 
@@ -2246,6 +2449,12 @@ void RT_problem::set_grid_partition() // TODO remove hardcoding
 			mpi_size_x_ = 3;
 			mpi_size_y_ = 1;			
 		}
+		else if (mpi_size_ == 256) // HARDCODED
+		{
+			mpi_size_z_ = 128;
+			mpi_size_x_ = 2;
+			mpi_size_y_ = 1;			
+		}
 		else if (mpi_size_ == 512) // HARDCODED
 		{
 			mpi_size_z_ = 128;
@@ -2287,6 +2496,12 @@ void RT_problem::set_grid_partition() // TODO remove hardcoding
 			mpi_size_z_ = 128;
 			mpi_size_x_ = 12;
 			mpi_size_y_ = 8;			
+		}
+		else if (mpi_size_ == 16384) 
+		{
+			mpi_size_z_ = 128;
+            mpi_size_x_ = 16;
+			mpi_size_y_ = 8;
 		}
 		else
 		{
