@@ -1,4 +1,5 @@
 #include "RT_solver.hpp"
+#include "cpu_clock.h"
 
 //////////////////////////////////////////////////////
 // Jiri functions for find_prolongation
@@ -2081,7 +2082,16 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
 
     	// set input field
         ecc_sh_ptr_->update_incoming_field(i, j, k, offset_fun_, input.data());
-       	
+
+        if (this->mpi_rank_ == 0 and not approx) {
+               std::cout << "Start epsilon_computation_function [MAIN], rank: " << this->mpi_rank_ << std::endl;
+        }
+   
+         auto clock = rii_utils::cpu_clock();
+  
+         clock.start_clock();
+
+
     	if (approx)
     	{
     		const auto out_field = epsilon_fun_approx_(i,j,k);       
@@ -2092,6 +2102,12 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
     		const auto out_field = epsilon_fun_(i,j,k);	     
             rii_include::make_indices_convertion_function<double>(out_field, offset_fun_)(output.data());           
     	}
+
+	clock.stop_clock();
+        if (this->mpi_rank_ == 0 and not approx) {
+              clock.print_clock_h("Execution time of RII + RIII + Eps_csc");
+        }
+
 
         // update S_field_ from output scaling by eta_I
         double eta_I_inv; 

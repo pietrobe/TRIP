@@ -1,0 +1,29 @@
+
+test_name("Ca I - B=20 - V = 0 - FALC atmos")
+solve( solve_ray )
+
+input_format( std_irsol )
+dimensions_file(dimensions.dat)
+
+
+#########################################################
+# Set the emission coefficnet model used during the lambda iteration.
+# RII_RIII_PRD_full_model  : R_II + R_III PRD model 
+# RIII_CRD                 : R_III CRD model
+emission_coefficient_model( RII_RIII_PRD_full_model )
+
+base_dir()
+output_dir(/scratch/sriva/FSHE/forward-scattering-results/Hanle_diagram/solve-ray/PRD/Inclined/B20_V0_12T_8C_99F_1Pi4_9Pi8)
+
+magnetic_field_velocity_file(magnetic_field.dat, bulk_velocity.dat)
+
+atmos_file( atmosphere.dat )
+
+atmos_continuum(continuum/continuum_therm_emiss.dat, continuum/continuum_scat_opac.dat, continuum/continuum_tot_opac.dat)
+
+atom_file( atom_CaI_4227.rii )
+
+frequencies_file(frequency.dat)
+initial_guess(StokesI, StokesQ, StokesU, StokesV)
+diffused_directions_file(diff_directions_list.rii)
+    

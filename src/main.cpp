@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
     const bool use_prec = (not use_CRD);
 
     // inputs
-    const std::string FAL_input_path = "/users/pietrob/solar_3d/input/FAL-C/1_B0_V0_12T_8C_99F";
+    const std::string FAL_input_path = "/users/sriva/git/solar_3d/input/FAL-C/B20_V0_12T_8C_99F_1Pi4_9Pi8";
     // const std::string FAL_input_path = "../input/FAL-C/1_B0_V0_12T_8C_64F";
     // const std::string FAL_input_path = "/users/pietrob/solar_3d/input/FAL-C/96F";
     // const std::string FAL_input_path = "/users/pietrob/solar_3d/input/FAL-C/64F";
@@ -47,8 +47,8 @@ int main(int argc, char *argv[]) {
     // write output
     if (output)
     {            
-        // const std::string output_path = "../output/surface_profiles_test/"; // TODO change
-        const std::string output_path = "output/surface_profiles_64x64x133/B0V0/"; // TODO change
+        const std::string output_path = "../output/surface_profiles_test/"; // TODO change
+        // const std::string output_path = "output/surface_profiles_64x64x133/B0V0/"; // TODO change
         const std::string output_file = (use_CRD) ? output_path + "profiles_CRD" : output_path + "profiles_PRD";
         
         const int N_x = rt_problem_ptr->N_x_;
