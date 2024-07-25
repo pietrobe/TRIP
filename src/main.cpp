@@ -2,9 +2,15 @@
 #include "Test_rii_include.hpp"
 #include <chrono>
 #include "tools.h"
+#include <string>
+#include <filesystem>
 
 // compile and run with:
 // make -j 32 && srun -n 4 ./main
+
+// WARNING: if you want to use PORTA input, you need to set USE_PORTA = 1
+#define USE_PORTA_INPUT 1
+//////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char *argv[]) {
 
@@ -18,25 +24,38 @@ int main(int argc, char *argv[]) {
     const bool use_CRD  = false;
     const bool use_prec = (not use_CRD);
 
+   // Some main input directories
+   /// /users/pietrob/solar_3d/input/
+   /// /home/usi/usi441290/git/solar_3d/input
+   /// 
+
+   std::filesystem::path main_input_dir = "/users/sriva/git/solar_3d/input/";
+
     // inputs
-    const std::string FAL_input_path = "/users/sriva/git/solar_3d/input/FAL-C/B20_V0_12T_8C_99F_1Pi4_9Pi8";
+    auto FAL_input_path =  main_input_dir / std::filesystem::path("FAL-C/B20_V0_12T_8C_99F_1Pi4_9Pi8");
     // const std::string FAL_input_path = "../input/FAL-C/1_B0_V0_12T_8C_64F";
     // const std::string FAL_input_path = "/users/pietrob/solar_3d/input/FAL-C/96F";
     // const std::string FAL_input_path = "/users/pietrob/solar_3d/input/FAL-C/64F";
 
+#if USE_PORTA == 1   // PORTA setup 
+
+    auto frequencies_input_path =  main_input_dir / std::filesystem::path("FAL-C/B20_V0_12T_8C_99F_1Pi4_9Pi8");
+
     // const char* PORTA_input_path = "/users/pietrob/solar_3d/input/PORTA/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd";
     // // const char* PORTA_input_path = "/users/pietrob/solar_3d/input/PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_32x32x133.pmd";
-    // // const char* PORTA_input_path = "/users/pietrob/solar_3d/input/PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_64x64x133.pmd";
+    const std::string FAL_input_path =  main_input_dir / std::filesystem::path("PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_64x64x133.pmd");
   
-    // auto rt_problem_ptr = std::make_shared<RT_problem>(PORTA_input_path, FAL_input_path, use_CRD, use_B);
+    auto rt_problem_ptr = std::make_shared<RT_problem>(PORTA_input_path.string(), frequencies_input_path.string() , use_CRD, use_B);
     
     // const int N_theta = rt_problem_ptr->N_theta_;
     // const int N_chi   = rt_problem_ptr->N_chi_; 
-
+#else 
     //FAL-C input    
     const int N_theta = 8;
     const int N_chi   = 16;
-    auto rt_problem_ptr = std::make_shared<RT_problem>(FAL_input_path, N_theta, N_chi, use_CRD, use_B);    
+    auto rt_problem_ptr = std::make_shared<RT_problem>(FAL_input_path.string(), N_theta, N_chi, use_CRD, use_B);    
+
+#endif
 
     RT_solver rt_solver(rt_problem_ptr, "BESSER", use_prec);
     // RT_solver rt_solver(rt_problem_ptr, "DELO_linear", use_prec);

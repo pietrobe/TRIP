@@ -70,6 +70,8 @@ void RT_problem::read_3D(const char* filename){
 	// convert from octant to total 
 	N_theta_ *= 2;
 	N_chi_   *= 4;
+
+	if (mpi_rank_ == 0) std::cout << "N_theta = " << N_theta_ << ", N_chi = " << N_chi_ << ", from PORTA input." << std::endl;
 		
 	// some irrelevant data	
 	skip_size = PMD_MAIN_HEADER2 - 196608 - 16;
