@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
   {
     const bool output   = false;
     const bool use_B    = false;
-    const bool use_CRD  = false;
+    const bool use_CRD  = true;
     const bool use_prec = (not use_CRD);
 
    // Some main input directories
@@ -29,7 +29,23 @@ int main(int argc, char *argv[]) {
    /// /home/usi/usi441290/git/solar_3d/input
    /// 
 
-   std::filesystem::path main_input_dir = "/users/sriva/git/solar_3d/input/";
+   std::filesystem::path main_input_dir = "/home/usi/usi441290/git/solar_3d/input";
+
+#if USE_PORTA_INPUT == 1   // PORTA setup for 3D
+
+    auto frequencies_input_path =  main_input_dir / std::filesystem::path("FAL-C/96F");
+
+    // const char* PORTA_input_path = "/users/pietrob/solar_3d/input/PORTA/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd";
+    // // const char* PORTA_input_path = "/users/pietrob/solar_3d/input/PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_32x32x133.pmd";
+    auto PORTA_input_path =  main_input_dir / std::filesystem::path("PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_64x64x133.pmd");
+  
+    auto rt_problem_ptr = std::make_shared<RT_problem>(PORTA_input_path.string().c_str(), frequencies_input_path.string() , use_CRD, use_B);
+    
+    const int N_theta = rt_problem_ptr->N_theta_;
+    const int N_chi   = rt_problem_ptr->N_chi_; 
+
+#else 
+    //FAL-C input for 1D setup
 
     // inputs
     auto FAL_input_path =  main_input_dir / std::filesystem::path("FAL-C/B20_V0_12T_8C_99F_1Pi4_9Pi8");
@@ -37,20 +53,6 @@ int main(int argc, char *argv[]) {
     // const std::string FAL_input_path = "/users/pietrob/solar_3d/input/FAL-C/96F";
     // const std::string FAL_input_path = "/users/pietrob/solar_3d/input/FAL-C/64F";
 
-#if USE_PORTA == 1   // PORTA setup 
-
-    auto frequencies_input_path =  main_input_dir / std::filesystem::path("FAL-C/B20_V0_12T_8C_99F_1Pi4_9Pi8");
-
-    // const char* PORTA_input_path = "/users/pietrob/solar_3d/input/PORTA/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd";
-    // // const char* PORTA_input_path = "/users/pietrob/solar_3d/input/PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_32x32x133.pmd";
-    const std::string FAL_input_path =  main_input_dir / std::filesystem::path("PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_64x64x133.pmd");
-  
-    auto rt_problem_ptr = std::make_shared<RT_problem>(PORTA_input_path.string(), frequencies_input_path.string() , use_CRD, use_B);
-    
-    // const int N_theta = rt_problem_ptr->N_theta_;
-    // const int N_chi   = rt_problem_ptr->N_chi_; 
-#else 
-    //FAL-C input    
     const int N_theta = 8;
     const int N_chi   = 16;
     auto rt_problem_ptr = std::make_shared<RT_problem>(FAL_input_path.string(), N_theta, N_chi, use_CRD, use_B);    
