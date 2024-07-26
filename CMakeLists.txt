@@ -75,7 +75,7 @@ include_directories(${RII_INCLUDES}/src/rii_aa_emission_coefficient/)
 
 # we use one of our examples here
 add_executable(solar_3D ${CMAKE_SOURCE_DIR}/src/main.cpp)
-set(CMAKE_CXX_FLAGS  " -O3 -fopenmp -std=c++17 -Wno-deprecated-declarations ")
+set(CMAKE_CXX_FLAGS  " -O3 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option ")
 
 add_library(rii SHARED IMPORTED)
 set_property(TARGET rii PROPERTY IMPORTED_LOCATION "${RII_ROOT_PATH}/build/librii.so")

@@ -8,7 +8,8 @@
 // compile and run with:
 // make -j 32 && srun -n 4 ./main
 
-// WARNING: if you want to use PORTA input, you need to set USE_PORTA = 1
+// WARNING: if you want to use PORTA input for 3D setup, you need to set USE_PORTA_INPUT = 1
+// otherwise, it will use FAL-C input for 1D setup
 #define USE_PORTA_INPUT 1
 //////////////////////////////////////////////////////////////////////////
 

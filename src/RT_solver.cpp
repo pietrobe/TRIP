@@ -2303,7 +2303,8 @@ void MF_context::init_serial_fields(const int n_tiles){
         if (( N_thea_chi * N_nu / mpi_size_) * mpi_size_ != N_thea_chi * N_nu)
         {
             std::stringstream ss;
-            ss << "ERROR with block decomposition I, N_thea_chi = " << N_thea_chi << ", N_nu = " << N_nu << ", mpi_size_ = " << mpi_size_;
+            ss << "ERROR: with block decomposition I, at line  " << __LINE__ << " in file " <<  __FILE__ << std::endl;
+            ss << "ERROR: N_thea_chi = " << N_thea_chi << ", N_nu = " << N_nu << ", mpi_size_ = " << mpi_size_;
             ss << ", N_thea_chi * N_nu = " << N_thea_chi * N_nu << ", ( N_thea_chi * N_nu / mpi_size_) * mpi_size_ = " << ( N_thea_chi * N_nu / mpi_size_) * mpi_size_;
             throw std::runtime_error(ss.str());
         } 
@@ -2313,7 +2314,8 @@ void MF_context::init_serial_fields(const int n_tiles){
         if (( N_thea_chi / mpi_size_) * mpi_size_ != N_thea_chi)
         {       
             std::stringstream ss;
-            ss << "ERROR with block decomposition II, N_thea_chi = " << N_thea_chi << ", mpi_size_ = " << mpi_size_;
+            ss << "ERROR: with block decomposition II, at line  " << __LINE__ << " in file " <<  __FILE__ << std::endl;
+            ss << "ERROR: N_thea_chi = " << N_thea_chi << ", mpi_size_ = " << mpi_size_;
             ss << ", N_thea_chi / mpi_size_ = " << N_thea_chi / mpi_size_ << ", ( N_thea_chi / mpi_size_) * mpi_size_ = " << ( N_thea_chi / mpi_size_) * mpi_size_;     
             throw std::runtime_error(ss.str());
         } 
