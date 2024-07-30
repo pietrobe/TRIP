@@ -2094,10 +2094,10 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
                std::cout << "Start epsilon_computation_function [MAIN], rank: " << this->mpi_rank_ << std::endl;
         }
    
+#ifdef CLOCK_EPSILON
          auto clock = rii_utils::cpu_clock();
-  
          clock.start_clock();
-
+#endif
 
     	if (approx)
     	{
@@ -2110,10 +2110,12 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
             rii_include::make_indices_convertion_function<double>(out_field, offset_fun_)(output.data());           
     	}
 
-	clock.stop_clock();
+#ifdef CLOCK_EPSILON
+	    clock.stop_clock();
         if (this->mpi_rank_ == 0 and not approx) {
-              clock.print_clock_h("Execution time of RII + RIII + Eps_csc");
+              clock.print_clock_h("Execution time of Epsilon emissivity");
         }
+#endif
 
 
         // update S_field_ from output scaling by eta_I
