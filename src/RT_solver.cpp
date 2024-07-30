@@ -2025,7 +2025,9 @@ void MF_context::set_up_emission_module(){
 
     if (mpi_rank_ == 0) std::cout << std::endl << fs_mem_stat.sam_memory_stat.to_string() << std::endl;
 
-    if (mpi_rank_ == 0) std::cout << "done" << std::endl;
+    if (mpi_rank_ == 0) std::cout << std::endl << ecc_sh_ptr_->margins_to_string() << std::endl;
+
+    if (mpi_rank_ == 0) std::cout << "--------------------- done -------------------" << std::endl;
 
     // std::cout << ecc_sh_ptr_->print_atmos_parameters(0,0,1);
     // std::cout << ecc_sh_ptr_->print_atmos_parameters(1,1,65);
