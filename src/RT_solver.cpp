@@ -2092,13 +2092,13 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
     	// set input field
         ecc_sh_ptr_->update_incoming_field(i, j, k, offset_fun_, input.data());
 
+#ifdef CLOCK_EPSILON
         if (this->mpi_rank_ == 0 and not approx) {
-               std::cout << "Start epsilon_computation_function [MAIN], rank: " << this->mpi_rank_ << std::endl;
+            std::cout << "Start epsilon_computation_function [MAIN], rank: " << this->mpi_rank_ << std::endl;
         }
    
-#ifdef CLOCK_EPSILON
-         auto clock = rii_utils::cpu_clock();
-         clock.start_clock();
+        auto clock = rii_utils::cpu_clock();
+        clock.start_clock();
 #endif
 
     	if (approx)
