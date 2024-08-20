@@ -73,6 +73,11 @@ bool write_fields(
   // write the number of fields
   MPI_File_write(fh, &fileds_cnt, 1, MPI_INT, MPI_STATUS_IGNORE);
 
+  // write the sizes
+  MPI_File_write(fh, &size_theta, 1, MPI_INT, MPI_STATUS_IGNORE);
+  MPI_File_write(fh, &size_chi, 1, MPI_INT, MPI_STATUS_IGNORE);
+  MPI_File_write(fh, &size_u, 1, MPI_INT, MPI_STATUS_IGNORE);
+
   for (int field_i = 0; field_i < fileds_cnt; field_i++) {
 
     auto field_it = fields_list.begin();
@@ -116,8 +121,14 @@ bool write_fields(
 
     const int field_size = size_theta * size_chi * size_u * 4;
 
-    std::vector<float> field_float32(field_size);
-    std::vector<double> field_double(field_size);
+    std::vector<float> field_float32();
+    std::vector<double> field_double();
+
+    if (to_float32) {
+      field_float32.resize(field_size);
+    } else {
+      field_double.resize(field_size);
+    }
 
     for (int i = 0; i < size_theta; i++) {
       for (int j = 0; j < size_chi; j++) {
