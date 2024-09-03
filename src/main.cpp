@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
   Kokkos::initialize(argc, argv);
 
   {
-    const bool output   = false;
+    const bool output   = true;
     const bool use_B    = false;
     const bool use_CRD  = true;
     const bool use_prec = (not use_CRD);
@@ -30,20 +30,39 @@ int main(int argc, char *argv[]) {
    /// /home/usi/usi441290/git/solar_3d/input
    /// 
 
-   std::filesystem::path main_input_dir = "/home/usi/usi441290/git/solar_3d/input";
+  // std::filesystem::path main_input_dir = "/home/usi/usi441290/git/solar_3d/input";
+  // std::filesystem::path main_input_dir = "/users/sriva/git/solar_3d/input/";
+
+  // Set here the main input and output directories //////////////////////////
+  std::filesystem::path main_input_dir = "/users/sriva/git_rii_tests/Comparison-TRIP-PORTA";
+  std::filesystem::path main_output_dir = "/users/sriva/git_rii_tests/Comparison-TRIP-PORTA/output";
+
 
 #if USE_PORTA_INPUT == 1   // PORTA setup for 3D
 
+    // Set here the problem input file //////////////////////////
+    const auto problem_input_file = std::filesystem::path("AR_385_Cut_64x64_mirrorxy-CRD_I_V0-V0_conv.pmd");
+
     auto frequencies_input_path =  main_input_dir / std::filesystem::path("FAL-C/96F");
 
-    // const char* PORTA_input_path = "/users/pietrob/solar_3d/input/PORTA/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd";
+//    auto PORTA_input_path =  main_input_dir / std::filesystem::path("PORTA/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd");
     // // const char* PORTA_input_path = "/users/pietrob/solar_3d/input/PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_32x32x133.pmd";
-    auto PORTA_input_path =  main_input_dir / std::filesystem::path("PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_64x64x133.pmd");
-  
+    // auto PORTA_input_path =  main_input_dir / std::filesystem::path("PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_64x64x133.pmd");
+    // auto PORTA_input_path =  main_input_dir / std::filesystem::path("PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_32x32x133.pmd");
+    // auto PORTA_input_path =  main_input_dir / std::filesystem::path("PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_16x16x133.pmd");
+
+    auto PORTA_input_path =  main_input_dir / problem_input_file;
+
     auto rt_problem_ptr = std::make_shared<RT_problem>(PORTA_input_path.string().c_str(), frequencies_input_path.string() , use_CRD, use_B);
     
     const int N_theta = rt_problem_ptr->N_theta_;
     const int N_chi   = rt_problem_ptr->N_chi_; 
+
+    if (rt_problem_ptr->mpi_rank_ == 0){
+      std::cout << "PORTA input file: " << PORTA_input_path << std::endl;
+      std::cout << "N_theta =         " << N_theta << std::endl;
+      std::cout << "N_chi =           " << N_chi << std::endl;
+    }
 
 #else 
     //FAL-C input for 1D setup
@@ -63,16 +82,41 @@ int main(int argc, char *argv[]) {
     RT_solver rt_solver(rt_problem_ptr, "BESSER", use_prec);
     // RT_solver rt_solver(rt_problem_ptr, "DELO_linear", use_prec);
 
+    //////////////////////////////////////////////////////////////////////////
+    // Prepare output directory
+    // If the output directory does not exist, create it
+    // It it exists, abort !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    std::string output_file;
+    if (output)
+    {            
+        const auto output_path = (main_output_dir / problem_input_file); 
+
+        if (rt_problem_ptr->mpi_rank_ == 0) {
+          if (not std::filesystem::exists(output_path)){
+            std::filesystem::create_directories(output_path);
+          } else {
+            std::cerr << "File: " << __FILE__ << " Line: " << __LINE__ << " MPI rank: " << rt_problem_ptr->mpi_rank_ << " Directory: " << output_path << " already exists" << std::endl;
+            std::cerr << "Use different output directory" << std::endl;
+            MPI_Abort(MPI_COMM_WORLD, 1);
+          }
+        } 
+
+        // const std::string output_path = "output/surface_profiles_64x64x133/B0V0/"; // TODO change
+        output_file = (use_CRD) ? (output_path / "profiles_CRD").string() : (output_path / "profiles_PRD").string();
+
+        std::cout << "Output file: " << output_file << std::endl;
+    }
+
+    ///////////////////////////////////////////////////
+    // solve //////////////////////////////////////////
     rt_solver.solve(); 
     // rt_solver.solve_checkpoint("../output/surface_profiles_5x5x133/", 20); 
     
+
+
+
     // write output
-    if (output)
-    {            
-        const std::string output_path = "../output/surface_profiles_test/"; // TODO change
-        // const std::string output_path = "output/surface_profiles_64x64x133/B0V0/"; // TODO change
-        const std::string output_file = (use_CRD) ? output_path + "profiles_CRD" : output_path + "profiles_PRD";
-        
+    if (output){
         const int N_x = rt_problem_ptr->N_x_;
         const int N_y = rt_problem_ptr->N_y_; 
 
