@@ -1974,7 +1974,7 @@ void MF_context::set_up_emission_module(){
 
     if (RT_problem_->use_CRD_limit_)
     {
-        components.push_back(emission_coefficient_components::epsilon_pCRD_VHP_limit);             
+        components.push_back(emission_coefficient_components::epsilon_pCRD_GL_limit);             
         components.push_back(emission_coefficient_components::epsilon_csc);      
 
         if (mpi_rank_ == 0) std::cout << "\nUsing CRD emission, components:"<< std::endl;
