@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
 
-#SBATCH --ntasks=6144
+#SBATCH --ntasks=1024
 #SBATCH --cpus-per-task=1
 #SBATCH --time=04:30:00
 #SBATCH --account=u0

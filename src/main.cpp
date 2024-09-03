@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
 #if USE_PORTA_INPUT == 1   // PORTA setup for 3D
 
     // Set here the problem input file //////////////////////////
-    const auto problem_input_file = std::filesystem::path("AR_385_Cut_64x64_mirrorxy-CRD_I_V0-V0_conv.pmd");
+    const auto problem_input_file = std::filesystem::path("AR_385_Cut_32x32-CRD_I_V0-B0_V0_conv.pmd");
 
     auto frequencies_input_path =  main_input_dir / std::filesystem::path("FAL-C/96F");
 
