@@ -21,6 +21,8 @@ int main(int argc, char *argv[]) {
 
   {
     const bool output   = true;
+    const bool check_output = true;
+
     const bool use_B    = false;
     const bool use_CRD  = true;
     const bool use_prec = (not use_CRD);
@@ -34,14 +36,14 @@ int main(int argc, char *argv[]) {
   // std::filesystem::path main_input_dir = "/users/sriva/git/solar_3d/input/";
 
   // Set here the main input and output directories //////////////////////////
-  std::filesystem::path main_input_dir = "/users/sriva/git_rii_tests/Comparison-TRIP-PORTA";
-  std::filesystem::path main_output_dir = "/users/sriva/git_rii_tests/Comparison-TRIP-PORTA/output";
+  std::filesystem::path main_input_dir = "/scratch/sriva/Comparison-TRIP-PORTA/PORTA";
+  std::filesystem::path main_output_dir = "/scratch/sriva/Comparison-TRIP-PORTA/PORTA/output";
 
 
 #if USE_PORTA_INPUT == 1   // PORTA setup for 3D
 
     // Set here the problem input file //////////////////////////
-    const auto problem_input_file = std::filesystem::path("AR_385_Cut_32x32-CRD_I_V0-B0_V0_conv.pmd");
+    const auto problem_input_file = std::filesystem::path("cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_wider_pp_it100.pmd");
 
     auto frequencies_input_path =  main_input_dir / std::filesystem::path("FAL-C/96F");
 
@@ -68,19 +70,20 @@ int main(int argc, char *argv[]) {
     //FAL-C input for 1D setup
 
     // inputs
-    auto FAL_input_path =  main_input_dir / std::filesystem::path("FAL-C/B20_V0_12T_8C_99F_1Pi4_9Pi8");
+    auto problem_input_file = std::filesystem::path("FAL-C/B20_V0_12T_8C_99F_1Pi4_9Pi8");
+    auto problem_input_FAL = main_input_dir / problem_input_file;
     // const std::string FAL_input_path = "../input/FAL-C/1_B0_V0_12T_8C_64F";
     // const std::string FAL_input_path = "/users/pietrob/solar_3d/input/FAL-C/96F";
     // const std::string FAL_input_path = "/users/pietrob/solar_3d/input/FAL-C/64F";
 
     const int N_theta = 8;
     const int N_chi   = 16;
-    auto rt_problem_ptr = std::make_shared<RT_problem>(FAL_input_path.string(), N_theta, N_chi, use_CRD, use_B);    
+    auto rt_problem_ptr = std::make_shared<RT_problem>(problem_input_FAL.string(), N_theta, N_chi, use_CRD, use_B);    
 
 #endif
 
     RT_solver rt_solver(rt_problem_ptr, "BESSER", use_prec);
-    // RT_solver rt_solver(rt_problem_ptr, "DELO_linear", use_prec);
+   // RT_solver rt_solver(rt_problem_ptr, "DELO_linear", use_prec);
 
     //////////////////////////////////////////////////////////////////////////
     // Prepare output directory
@@ -89,12 +92,15 @@ int main(int argc, char *argv[]) {
     std::string output_file;
     if (output)
     {            
-        const auto output_path = (main_output_dir / problem_input_file); 
+        const auto output_path = main_output_dir / problem_input_file;
+
+         if (rt_problem_ptr->mpi_rank_ == 0) 
+           std::cout << "Output path: " << output_path << std::endl;
 
         if (rt_problem_ptr->mpi_rank_ == 0) {
           if (not std::filesystem::exists(output_path)){
             std::filesystem::create_directories(output_path);
-          } else {
+          } else if (check_output) {
             std::cerr << "File: " << __FILE__ << " Line: " << __LINE__ << " MPI rank: " << rt_problem_ptr->mpi_rank_ << " Directory: " << output_path << " already exists" << std::endl;
             std::cerr << "Use different output directory" << std::endl;
             MPI_Abort(MPI_COMM_WORLD, 1);
@@ -104,7 +110,8 @@ int main(int argc, char *argv[]) {
         // const std::string output_path = "output/surface_profiles_64x64x133/B0V0/"; // TODO change
         output_file = (use_CRD) ? (output_path / "profiles_CRD").string() : (output_path / "profiles_PRD").string();
 
-        std::cout << "Output file: " << output_file << std::endl;
+       if (rt_problem_ptr->mpi_rank_ == 0)  
+        std::cout << "Output file: " << output_path << std::endl;
     }
 
     ///////////////////////////////////////////////////

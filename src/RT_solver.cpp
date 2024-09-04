@@ -2296,12 +2296,12 @@ void MF_context::init_serial_fields(const int n_tiles){
     else
     {
         if (n_local_rays_ * mpi_size_ != block_size){ 
-            std::cout << "ERROR file: " << __FILE__ << " line: " << __LINE__ << std::endl;
-            std::cout << "ERROR in init_serial_fields(): block_size/mpi_size_ not integer" << std::endl;
-            std::cout << "ERROR block_size = " << block_size << std::endl;
-            std::cout << "ERROR mpi_size = " << mpi_size_ << std::endl;
-            std::cout << "ERROR n_local_rays_ = " << n_local_rays_ << std::endl;
-            std::cout << "ERROR block_size % mpi_size_ = " << (block_size % mpi_size_) << std::endl;
+            std::cout << "ERROR: file: " << __FILE__ << " line: " << __LINE__ << std::endl;
+            std::cout << "ERROR: in init_serial_fields(): block_size/mpi_size_ not integer" << std::endl;
+            std::cout << "ERROR: block_size = " << block_size << std::endl;
+            std::cout << "ERROR: mpi_size = " << mpi_size_ << std::endl;
+            std::cout << "ERROR: n_local_rays_ = " << n_local_rays_ << std::endl;
+            std::cout << "ERROR: block_size % mpi_size_ = " << (block_size % mpi_size_) << std::endl;
         }  
     }
     
@@ -2312,7 +2312,7 @@ void MF_context::init_serial_fields(const int n_tiles){
     {
         if (mpi_size_ > N_thea_chi)
         {        
-            if (( N_thea_chi * N_nu / mpi_size_) * mpi_size_ != N_thea_chi * N_nu)
+            if ((( N_thea_chi * N_nu / mpi_size_) * mpi_size_ != N_thea_chi * N_nu) and mpi_rank_ == 0)
             {
                 std::stringstream ss;
                 ss << "ERROR: with block decomposition I, at line  " << __LINE__ << " in file " <<  __FILE__ << std::endl;
@@ -2323,7 +2323,7 @@ void MF_context::init_serial_fields(const int n_tiles){
         }
         else if (mpi_size_ > N_theta)
         {
-            if (( N_thea_chi / mpi_size_) * mpi_size_ != N_thea_chi)
+            if ((( N_thea_chi / mpi_size_) * mpi_size_ != N_thea_chi) and mpi_rank_ == 0)
             {       
                 std::stringstream ss;
                 ss << "ERROR: with block decomposition II, at line  " << __LINE__ << " in file " <<  __FILE__ << std::endl;
@@ -2334,12 +2334,12 @@ void MF_context::init_serial_fields(const int n_tiles){
         }
     }
 
-    if (n_local_rays_ % 4 != 0) std::cout << "ERROR in init_serial_fields(): n_local_rays_ should be divisible by 4" << std::endl;        
+    if ((n_local_rays_ % 4 != 0) and mpi_rank_ == 0) std::cout << "ERROR: in init_serial_fields(): n_local_rays_ should be divisible by 4" << std::endl;        
 
     tile_size_ = n_local_rays_/n_tiles_;
 
-    if (tile_size_ * n_tiles_ != n_local_rays_) std::cout << "ERROR in init_serial_fields(): n_local_rays_/n_tiles_ not integer" << std::endl;        
-    if (tile_size_ % 4 != 0)                    std::cout << "ERROR in init_serial_fields(): tile_size_ should be divisible by 4" << std::endl;            
+    if ((tile_size_ * n_tiles_ != n_local_rays_) and mpi_rank_ == 0) std::cout << "ERROR: in init_serial_fields(): n_local_rays_/n_tiles_ not integer" << std::endl;        
+    if ((tile_size_ % 4 != 0) and mpi_rank_ == 0)                    std::cout << "ERROR: in init_serial_fields(): tile_size_ should be divisible by 4" << std::endl;            
 
     // init serial grid
     const bool use_ghost_layers = false;
@@ -2400,17 +2400,17 @@ void MF_context::init_serial_fields_Omega(){
     } 
     else
     {
-        if (local_block_size_ * mpi_size_ != block_size) { 
-            std::cout << "ERROR file: " << __FILE__ << " line: " << __LINE__ << std::endl;
-            std::cout << "ERROR in init_serial_fields(): block_size/mpi_size_ not integer" << std::endl;
-            std::cout << "ERROR block_size = " << block_size << std::endl;
-            std::cout << "ERROR mpi_size = " << mpi_size_ << std::endl;
-            std::cout << "ERROR n_local_rays_ = " << n_local_rays_ << std::endl;
-            std::cout << "ERROR block_size % mpi_size_ = " << (block_size % mpi_size_) << std::endl;
+        if (local_block_size_ * mpi_size_ != block_size and this->mpi_rank_ == 0) { 
+            std::cout << "ERROR: file: " << __FILE__ << " line: " << __LINE__ << std::endl;
+            std::cout << "ERROR: in init_serial_fields(): block_size/mpi_size_ not integer" << std::endl;
+            std::cout << "ERROR: block_size = " << block_size << std::endl;
+            std::cout << "ERROR: mpi_size = " << mpi_size_ << std::endl;
+            std::cout << "ERROR: n_local_rays_ = " << n_local_rays_ << std::endl;
+            std::cout << "ERROR: block_size % mpi_size_ = " << (block_size % mpi_size_) << std::endl;
         }    
     }
     
-    if (local_block_size_ % 4 != 0) std::cout << "ERROR in init_serial_fields(): local_block_size_ should be divisible by 4" << std::endl;        
+    if (local_block_size_ % 4 != 0) std::cout << "ERROR: in init_serial_fields(): local_block_size_ should be divisible by 4" << std::endl;        
         
     // create serial fields 
     I_field_serial_Omega_   = std::make_shared<Field_t>("I_serial", space_grid_serial_, local_block_size_); 
