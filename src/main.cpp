@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
 
   {
     const bool output   = true;
-    const bool check_output = true;
+    const bool output_overwrite_prevention = true; // if true the application stops if the output directory already exists
 
     const bool use_B    = false;
     const bool use_CRD  = true;
@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
 #if USE_PORTA_INPUT == 1   // PORTA setup for 3D
 
     // Set here the problem input file //////////////////////////
-    const auto problem_input_file = std::filesystem::path("cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_wider_pp_it100.pmd");
+    const auto problem_input_file = std::filesystem::path("cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd");
 
     auto frequencies_input_path =  main_input_dir / std::filesystem::path("FAL-C/96F");
 
@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
     const int N_theta = rt_problem_ptr->N_theta_;
     const int N_chi   = rt_problem_ptr->N_chi_; 
 
-    if (rt_problem_ptr->mpi_rank_ == 0){
+    if (rt_problem_ptr->mpi_rank_ == 0) {
       std::cout << "PORTA input file: " << PORTA_input_path << std::endl;
       std::cout << "N_theta =         " << N_theta << std::endl;
       std::cout << "N_chi =           " << N_chi << std::endl;
@@ -94,13 +94,13 @@ int main(int argc, char *argv[]) {
     {            
         const auto output_path = main_output_dir / problem_input_file;
 
-         if (rt_problem_ptr->mpi_rank_ == 0) 
-           std::cout << "Output path: " << output_path << std::endl;
+        //  if (rt_problem_ptr->mpi_rank_ == 0) 
+        //    std::cout << "Output path: " << output_path << std::endl;
 
         if (rt_problem_ptr->mpi_rank_ == 0) {
           if (not std::filesystem::exists(output_path)){
             std::filesystem::create_directories(output_path);
-          } else if (check_output) {
+          } else if (output_overwrite_prevention) {
             std::cerr << "File: " << __FILE__ << " Line: " << __LINE__ << " MPI rank: " << rt_problem_ptr->mpi_rank_ << " Directory: " << output_path << " already exists" << std::endl;
             std::cerr << "Use different output directory" << std::endl;
             MPI_Abort(MPI_COMM_WORLD, 1);
@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
         output_file = (use_CRD) ? (output_path / "profiles_CRD").string() : (output_path / "profiles_PRD").string();
 
        if (rt_problem_ptr->mpi_rank_ == 0)  
-        std::cout << "Output file: " << output_path << std::endl;
+        std::cout << "Output directory: " << output_path << std::endl;
     }
 
     ///////////////////////////////////////////////////

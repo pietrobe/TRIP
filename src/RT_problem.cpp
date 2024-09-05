@@ -836,6 +836,9 @@ void RT_problem::read_frequency(input_string filename, const bool use_wavelength
 			{
 				lineStream >> entry;			
 				lineStream >> entry;
+				if(this->mpi_rank_ == 0) {
+					std::cout << "Frequency: " << std::scientific << std::setprecision(15) << entry << std::endl;
+				}
 				nu_grid_.push_back(entry);					
 			}
 
@@ -2042,23 +2045,23 @@ void const RT_problem::write_surface_point_profiles(input_string file_name, cons
 						{		
 							// write grids 
 							outputFile << "\nnu_grid_ = [ ";
-							for (int n = 0; n < N_nu_; ++n) outputFile << nu_grid_[n] << " ";
+							for (int n = 0; n < N_nu_; ++n) outputFile << std::scientific << std::setprecision(15) << nu_grid_[n] << " ";
 							outputFile << "];\n";
 
 							outputFile << "\ntheta_grid = [ ";
-							for (int j_theta = 0; j_theta < N_theta_; ++j_theta) outputFile << theta_grid_[j_theta] << " ";
+							for (int j_theta = 0; j_theta < N_theta_; ++j_theta) outputFile << std::scientific << std::setprecision(15) << theta_grid_[j_theta] << " ";
 							outputFile << "];\n";
 
 							outputFile << "\nmu_grid = [ ";
-							for (int j_theta = 0; j_theta < N_theta_; ++j_theta) outputFile << mu_grid_[j_theta] << " ";
+							for (int j_theta = 0; j_theta < N_theta_; ++j_theta) outputFile << std::scientific << std::setprecision(15) << mu_grid_[j_theta] << " ";
 							outputFile << "];\n";
 
 							outputFile << "\nchi_grid = [ ";
-							for (int k_chi = 0; k_chi < N_chi_; ++k_chi) outputFile << chi_grid_[k_chi] << " ";
+							for (int k_chi = 0; k_chi < N_chi_; ++k_chi) outputFile << std::scientific << std::setprecision(15) << chi_grid_[k_chi] << " ";
 							outputFile << "];\n";
 
 							// create MATLAB data structure
-							outputFile <<  "\nField = cell(4," << N_theta_ << "," << N_chi_ << ");" << std::endl;
+							outputFile << std::scientific << std::setprecision(15) <<  "\nField = cell(4," << N_theta_ << "," << N_chi_ << ");" << std::endl;
 
 							for (int j_theta = N_theta_/2; j_theta < N_theta_; ++j_theta)
 							{								
@@ -2076,13 +2079,13 @@ void const RT_problem::write_surface_point_profiles(input_string file_name, cons
 
 											if (i_stokes == 0)
 											{
-												outputFile << I << " ";
+												outputFile << std::scientific << std::setprecision(15) << I << " ";
 											}
 											else
 											{
 												QUV = f_dev.block(i,j,k_start)[b_start + b + i_stokes];
 
-												outputFile << 100.0 * QUV/I << " ";
+												outputFile << std::scientific << std::setprecision(15) << 100.0 * QUV/I << " ";
 											}
 										}
 

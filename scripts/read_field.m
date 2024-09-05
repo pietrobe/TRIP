@@ -1,3 +1,11 @@
+clear all;
+
+data_path = '';  % Path to the data folder
+
+addpath(data_path)
+
+profiles_CRD_0_3
+
 i_theta = 8;
 i_chi = 1;
 
@@ -20,10 +28,12 @@ chi = chi_grid(i_chi);
 xmin = 4225;
 xmax = 4228;
 
+M = "o"; % Marker
+
 subplot(2,2,1)
 set_plot_defaults
-plot(nu_grid,Field{1,i_theta,i_chi})
-% xlim([xmin, xmax])
+plot(nu_grid,Field{1,i_theta,i_chi}, Marker=M)
+xlim([xmin, xmax])
 hold on
 title(['$(\mu,\chi) = ($', num2str(mu,3), ', ', num2str(chi,3),')'])
 ylabel('$I$')
@@ -31,7 +41,7 @@ set_plot_defaults
 
 subplot(2,2,2)
 set_plot_defaults
-plot(nu_grid,Field{2,i_theta,i_chi})
+plot(nu_grid,Field{2,i_theta,i_chi}, Marker=M)
 xlim([xmin, xmax])
 hold on
 ylabel('$Q/I[\%]$')
@@ -39,7 +49,7 @@ set_plot_defaults
 
 subplot(2,2,3)
 set_plot_defaults
-plot(nu_grid,Field{3,i_theta,i_chi})
+plot(nu_grid,Field{3,i_theta,i_chi}, Marker=M)
 xlim([xmin, xmax])
 hold on
 ylabel('$U/I[\%]$')
@@ -47,7 +57,7 @@ set_plot_defaults
 
 subplot(2,2,4)
 set_plot_defaults
-plot(nu_grid,Field{4,i_theta,i_chi})
+plot(nu_grid,Field{4,i_theta,i_chi}, Marker=M)
 xlim([xmin, xmax])
 hold on
 ylabel('$V/I[\%]$')
