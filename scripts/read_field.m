@@ -1,10 +1,11 @@
 clear all;
 
-data_path = '';  % Path to the data folder
+% Path to the data folder
+data_path = '/home/sriva/hero_scratch/Comparison-TRIP-PORTA/PORTA/output/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd/';  
 
 addpath(data_path)
 
-profiles_CRD_0_3
+profiles_CRD_1_1
 
 i_theta = 8;
 i_chi = 1;
@@ -28,7 +29,12 @@ chi = chi_grid(i_chi);
 xmin = 4225;
 xmax = 4228;
 
-M = "o"; % Marker
+M = "none"; % Marker
+% Use one of these values: '+' | 'o' | '*' | '.' | 'x' |
+% 'square' | 'diamond' | 'v' | '^' | '>' | '<' | 
+% 'pentagram' | 'hexagram' | '|' |
+% '_' | 'none'.
+
 
 subplot(2,2,1)
 set_plot_defaults

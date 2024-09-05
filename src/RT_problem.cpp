@@ -836,9 +836,9 @@ void RT_problem::read_frequency(input_string filename, const bool use_wavelength
 			{
 				lineStream >> entry;			
 				lineStream >> entry;
-				if(this->mpi_rank_ == 0) {
-					std::cout << "Frequency: " << std::scientific << std::setprecision(15) << entry << std::endl;
-				}
+				// if(this->mpi_rank_ == 0) {
+				// 	 std::cout << "Frequency: " << std::scientific << std::setprecision(15) << entry << std::endl;
+				// }
 				nu_grid_.push_back(entry);					
 			}
 
