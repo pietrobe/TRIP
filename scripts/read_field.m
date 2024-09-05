@@ -1,13 +1,14 @@
-clear all;
+clear;
+restoredefaultpath;
 
 % Path to the data folder
-data_path = '/home/sriva/hero_scratch/Comparison-TRIP-PORTA/PORTA/output/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd/';  
+data_path = '/home/sriva/hero_scratch/Comparison-TRIP-PORTA/PORTA/output/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd';  
 
 addpath(data_path)
 
 profiles_CRD_1_1
 
-i_theta = 8;
+i_theta = 5;
 i_chi = 1;
 
 if i_theta <= size(Field,2)/2
@@ -29,7 +30,7 @@ chi = chi_grid(i_chi);
 xmin = 4225;
 xmax = 4228;
 
-M = "none"; % Marker
+M = "+"; % Marker
 % Use one of these values: '+' | 'o' | '*' | '.' | 'x' |
 % 'square' | 'diamond' | 'v' | '^' | '>' | '<' | 
 % 'pentagram' | 'hexagram' | '|' |
