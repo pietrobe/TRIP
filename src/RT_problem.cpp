@@ -206,9 +206,9 @@ void RT_problem::read_3D(const char* filename){
 			B_dev.block(i, j, k)[2] = B_spherical[2]; 
 
 			// // hardcoded
-			// B_dev.block(i, j, k)[0] = 20 * 1399600.0; // converting to Larmor frequency					
-			// B_dev.block(i, j, k)[1] = 1.5707963268;
-			// B_dev.block(i, j, k)[2] = 0; 
+			 B_dev.block(i, j, k)[0] = 0.0 * 1399600.0; // converting to Larmor frequency					
+			 B_dev.block(i, j, k)[1] = 1.5707963268;
+			 B_dev.block(i, j, k)[2] = 0; 
 
 		}
 		else
