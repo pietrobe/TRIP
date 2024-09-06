@@ -2,13 +2,12 @@ clear;
 restoredefaultpath;
 
 % Path to the data folder
-data_path = '/home/sriva/hero_scratch/Comparison-TRIP-PORTA/PORTA/output/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd';  
-
+data_path = '/home/sriva/hero_scratch/TRIP_test/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd_RII_CONTRIB_FAST/';
 addpath(data_path)
 
-profiles_CRD_1_1
+profiles_PRD_2_1
 
-i_theta = 5;
+i_theta = 6;
 i_chi = 1;
 
 if i_theta <= size(Field,2)/2
@@ -17,7 +16,6 @@ if i_theta <= size(Field,2)/2
     i_theta = size(Field,2)/2 + 1;
 
     disp(i_theta)
-
 end
 
 % load_nu_grid;
@@ -36,39 +34,47 @@ M = "+"; % Marker
 % 'pentagram' | 'hexagram' | '|' |
 % '_' | 'none'.
 
+update_plot(nu_grid, Field, i_theta, i_chi, mu, chi, xmin, xmax, M)
 
-subplot(2,2,1)
-set_plot_defaults
-plot(nu_grid,Field{1,i_theta,i_chi}, Marker=M)
-xlim([xmin, xmax])
-hold on
-title(['$(\mu,\chi) = ($', num2str(mu,3), ', ', num2str(chi,3),')'])
-ylabel('$I$')
-set_plot_defaults
 
-subplot(2,2,2)
-set_plot_defaults
-plot(nu_grid,Field{2,i_theta,i_chi}, Marker=M)
-xlim([xmin, xmax])
-hold on
-ylabel('$Q/I[\%]$')
-set_plot_defaults
 
-subplot(2,2,3)
-set_plot_defaults
-plot(nu_grid,Field{3,i_theta,i_chi}, Marker=M)
-xlim([xmin, xmax])
-hold on
-ylabel('$U/I[\%]$')
-set_plot_defaults
 
-subplot(2,2,4)
-set_plot_defaults
-plot(nu_grid,Field{4,i_theta,i_chi}, Marker=M)
-xlim([xmin, xmax])
-hold on
-ylabel('$V/I[\%]$')
-set_plot_defaults
+
+function update_plot(nu_grid, Field, i_theta, i_chi, mu, chi, xmin, xmax, M)
+    subplot(2,2,1)
+    set_plot_defaults
+    plot(nu_grid,Field{1,i_theta,i_chi}, Marker=M)
+    xlim([xmin, xmax])
+    hold on
+    title(['$(\mu,\chi) = ($', num2str(mu,3), ', ', num2str(chi,3),')'])
+    ylabel('$I$')
+    set_plot_defaults
+    
+    subplot(2,2,2)
+    set_plot_defaults
+    plot(nu_grid,Field{2,i_theta,i_chi}, Marker=M)
+    xlim([xmin, xmax])
+    hold on
+    ylabel('$Q/I[\%]$')
+    set_plot_defaults
+    
+    subplot(2,2,3)
+    set_plot_defaults
+    plot(nu_grid,Field{3,i_theta,i_chi}, Marker=M)
+    xlim([xmin, xmax])
+    hold on
+    ylabel('$U/I[\%]$')
+    set_plot_defaults
+    
+    subplot(2,2,4)
+    set_plot_defaults
+    plot(nu_grid,Field{4,i_theta,i_chi}, Marker=M)
+    xlim([xmin, xmax])
+    hold on
+    ylabel('$V/I[\%]$')
+    set_plot_defaults
+
+end
 
 function set_plot_defaults()
  
