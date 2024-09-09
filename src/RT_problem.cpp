@@ -6,6 +6,8 @@
 #define TWOLEVEL_HEADER1    4
 #define TWOLEVEL_HEADER2    32 
 
+#define TO_LARMOR_FREQUENCY(BB__) ((BB__) * 1399600.0) // [Gauss] -> [Hz]
+
 // read atom and grid quantities 
 void RT_problem::read_3D(const char* filename){
 
@@ -206,9 +208,9 @@ void RT_problem::read_3D(const char* filename){
 			B_dev.block(i, j, k)[2] = B_spherical[2]; 
 
 			// // hardcoded
-			 B_dev.block(i, j, k)[0] = 0.0 * 1399600.0; // converting to Larmor frequency					
-			 B_dev.block(i, j, k)[1] = 1.5707963268;
-			 B_dev.block(i, j, k)[2] = 0; 
+			B_dev.block(i, j, k)[0] = 20.0 * 1399600.0; // converting to Larmor frequency					
+			B_dev.block(i, j, k)[1] = 1.5707963268;
+			B_dev.block(i, j, k)[2] = 0; 
 
 		}
 		else
@@ -555,7 +557,7 @@ void RT_problem::read_magnetic_field_1D(input_string filename){
 
 			const double B_max = 30.0;	
 
-			B_dev.block(i,j,k)[0] = 1399600 * B_max * (1 + cos(x) * cos(y)/2.0);	
+			B_dev.block(i,j,k)[0] = 1399600.0 * B_max * (1 + cos(x) * cos(y)/2.0);	
 			B_dev.block(i,j,k)[1] =     PI * abs(cos(x) * cos(y));
 			B_dev.block(i,j,k)[2] = 2 * PI * abs(cos(x) * cos(y));
 		}

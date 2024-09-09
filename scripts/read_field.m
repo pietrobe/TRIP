@@ -1,7 +1,13 @@
 clear;
 restoredefaultpath;
 
-i_theta = 5;
+% Path to the data folder
+data_path = '/home/sriva/hero_scratch/TRIP_test/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd.PRD.128/';
+addpath(data_path)
+
+profiles_PRD_2_1
+
+i_theta = 8;
 i_chi = 1;
 
 path_prd = "/home/sriva/hero_scratch/TRIP_test/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd.PRD.128_RII_CONTRIB_FAST";
