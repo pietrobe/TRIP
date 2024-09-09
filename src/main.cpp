@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
     std::string output_file;
     if (output)
     {            
-        const std::filesystem::path output_path = main_output_dir / std::filesystem::path(problem_input_file_string + (use_CRD ? ".CRD" : ".PRD"));
+        const std::filesystem::path output_path = main_output_dir / std::filesystem::path(problem_input_file_string + ((use_CRD) ? ".CRD" : ".PRD"));
 
         //  if (rt_problem_ptr->mpi_rank_ == 0) 
         //    std::cout << "Output path: " << output_path << std::endl;
