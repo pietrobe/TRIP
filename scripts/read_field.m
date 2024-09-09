@@ -2,12 +2,12 @@ clear;
 restoredefaultpath;
 
 % Path to the data folder
-data_path = '/home/sriva/hero_scratch/TRIP_test/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd_RII_CONTRIB_FAST/';
+data_path = '/home/sriva/hero_scratch/TRIP_test/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd.PRD.128/';
 addpath(data_path)
 
 profiles_PRD_2_1
 
-i_theta = 6;
+i_theta = 8;
 i_chi = 1;
 
 if i_theta <= size(Field,2)/2
