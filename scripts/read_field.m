@@ -1,42 +1,51 @@
 clear;
 restoredefaultpath;
 
-% Path to the data folder
-data_path = '/home/sriva/hero_scratch/TRIP_test/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd_RII_CONTRIB_FAST/';
-addpath(data_path)
-
-profiles_PRD_2_1
-
-i_theta = 6;
+i_theta = 5;
 i_chi = 1;
 
-if i_theta <= size(Field,2)/2
-    disp('WARNING: mu < 0! Setting i_theta to the first emerging direction:')    
+path_prd = "/home/sriva/hero_scratch/TRIP_test/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd.PRD.128_RII_CONTRIB_FAST";
 
-    i_theta = size(Field,2)/2 + 1;
+path_n = '/home/sriva/hero_scratch/TRIP_test/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd.PRD';
+path_f = '/home/sriva/hero_scratch/TRIP_test/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd_RII_CONTRIB_FAST';
 
-    disp(i_theta)
+
+plot_profiles(path_prd, ...
+    i_theta, i_chi)
+
+function plot_profiles(data_path, i_theta, i_chi)
+    addpath(data_path)
+    
+    profiles_PRD_2_3;
+    
+    if i_theta <= size(Field,2)/2
+        disp('WARNING: mu < 0! Setting i_theta to the first emerging direction:')    
+    
+        i_theta = size(Field,2)/2 + 1;
+    
+        disp(i_theta)
+    end
+    
+    % load_nu_grid;
+    % nu_grid = nu_grid_(:,1);
+    nu_grid = vacuum_to_air(freq_to_angstrom(nu_grid_));
+    
+    mu  = mu_grid(i_theta);
+    chi = chi_grid(i_chi);
+    
+    xmin = 4224.5;
+    xmax = 4228.5;
+    
+    M = "+"; % Marker
+    % Use one of these values: '+' | 'o' | '*' | '.' | 'x' |
+    % 'square' | 'diamond' | 'v' | '^' | '>' | '<' | 
+    % 'pentagram' | 'hexagram' | '|' |
+    % '_' | 'none'.
+    
+    update_plot(nu_grid, Field, i_theta, i_chi, mu, chi, xmin, xmax, M)
+
+    rmpath(data_path)
 end
-
-% load_nu_grid;
-% nu_grid = nu_grid_(:,1);
-nu_grid = vacuum_to_air(freq_to_angstrom(nu_grid_));
-
-mu  = mu_grid(i_theta);
-chi = chi_grid(i_chi);
-
-xmin = 4225;
-xmax = 4228;
-
-M = "+"; % Marker
-% Use one of these values: '+' | 'o' | '*' | '.' | 'x' |
-% 'square' | 'diamond' | 'v' | '^' | '>' | '<' | 
-% 'pentagram' | 'hexagram' | '|' |
-% '_' | 'none'.
-
-update_plot(nu_grid, Field, i_theta, i_chi, mu, chi, xmin, xmax, M)
-
-
 
 
 
