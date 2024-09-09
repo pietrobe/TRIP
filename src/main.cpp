@@ -21,10 +21,10 @@ int main(int argc, char *argv[]) {
 
   {
     const bool output   = true;
-    const bool output_overwrite_prevention = true; // if true the application stops if the output directory already exists
+    const bool output_overwrite_prevention = true; // if true the application stops (with an MPI_Abort) if the output directory already exists
 
-    const bool use_B    = false;
-    const bool use_CRD  = true;
+    const bool use_B    = true;
+    const bool use_CRD  = false;
     const bool use_prec = (not use_CRD);
 
    // Some main input directories
@@ -36,14 +36,18 @@ int main(int argc, char *argv[]) {
   // std::filesystem::path main_input_dir = "/users/sriva/git/solar_3d/input/";
 
   // Set here the main input and output directories //////////////////////////
-  std::filesystem::path main_input_dir = "/scratch/sriva/Comparison-TRIP-PORTA/PORTA";
-  std::filesystem::path main_output_dir = "/scratch/sriva/Comparison-TRIP-PORTA/PORTA/output";
-
+  std::filesystem::path main_input_dir = "/users/sriva/git_rii_tests/Comparison-TRIP-PORTA/PORTA";
+  std::filesystem::path main_output_dir = "/capstor/scratch/cscs/sriva/TRIP/output";
+  ////////////////////////////////////////////////////////////////////////////
 
 #if USE_PORTA_INPUT == 1   // PORTA setup for 3D
 
     // Set here the problem input file //////////////////////////
-    const auto problem_input_file = std::filesystem::path("cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd");
+    const std::string problem_input_file_string = std::string("cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd");
+    /////////////////////////////////////////////////////////////
+
+
+    const auto problem_input_file = std::filesystem::path(problem_input_file_string);
 
     auto frequencies_input_path =  main_input_dir / std::filesystem::path("FAL-C/96F");
 
@@ -61,6 +65,16 @@ int main(int argc, char *argv[]) {
     const int N_chi   = rt_problem_ptr->N_chi_; 
 
     if (rt_problem_ptr->mpi_rank_ == 0) {
+
+      // print the command line arguments
+      std::cout << std::endl << "Command line arguments: " << std::endl;
+      std::cout << "argc = " << argc << std::endl;
+      std::cout << "argv: ";
+      for (int i = 0; i < argc; ++i) {
+        std::cout << argv[i] << " ";
+      }
+      std::cout << std::endl << std::endl;
+
       std::cout << "PORTA input file: " << PORTA_input_path << std::endl;
       std::cout << "N_theta =         " << N_theta << std::endl;
       std::cout << "N_chi =           " << N_chi << std::endl;
@@ -92,7 +106,7 @@ int main(int argc, char *argv[]) {
     std::string output_file;
     if (output)
     {            
-        const auto output_path = main_output_dir / problem_input_file;
+        const std::filesystem::path output_path = main_output_dir / std::filesystem::path(problem_input_file_string + (use_CRD ? ".CRD" : ".PRD"));
 
         //  if (rt_problem_ptr->mpi_rank_ == 0) 
         //    std::cout << "Output path: " << output_path << std::endl;
