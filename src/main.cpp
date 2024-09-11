@@ -39,6 +39,7 @@ bool getOptionFlag(int argc, char *argv[], const std::string &option) {
 }
 
 void print_help() {
+  std::cout << "----------------------------------------------------------------" << std::endl << std::endl;
   std::cout << "Usage: mpirun ./solar_3D [options]" << std::endl;
   std::cout << "Options:" << std::endl;
   std::cout << "  --CRD: use CRD" << std::endl;
@@ -50,6 +51,7 @@ void print_help() {
   std::cout << "----------------------------------------------------------------" << std::endl << std::endl;
 
   std::cout << "Example: mpirun ./solar_3D --CRD --input_dir /path/to/input --output_dir /path/to/output --problem_input_file problem_input_file.pmd" << std::endl;
+  std::cout << std::endl;
   std::cout << "In the output directory, the code creates a results directory with the name of the problem input file and the extension \".CRD\" or \".PRD\", depending on the --CRD option." << std::endl;
   std::cout << "If the results output directory already exists, the code will stop." << std::endl;
   std::cout << "Default solver is the PRD." << std::endl;
@@ -60,9 +62,7 @@ void print_help() {
 //////////////////////////////////////////////////////////////////////////
 int main(int argc, char *argv[]) {
 
-  MPI_CHECK(MPI_Init(&argc, &argv));   
-  PetscInitialize(&argc, &argv, (char *)0, NULL);
-  Kokkos::initialize(argc, argv);
+  MPI_CHECK(MPI_Init(&argc, &argv));
 
   { // check if the user wants to print the help message
     // if yes, print the help message and return
@@ -75,6 +75,11 @@ int main(int argc, char *argv[]) {
       return 0;
     }
   }
+
+  PetscInitialize(&argc, &argv, (char *)0, NULL);
+  Kokkos::initialize(argc, argv);
+
+
 
   {
     const bool output   = true;
