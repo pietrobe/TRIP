@@ -6,7 +6,7 @@
 #define TWOLEVEL_HEADER1    4
 #define TWOLEVEL_HEADER2    32 
 
-#define TO_LARMOR_FREQUENCY(BB__) ((BB__) * 1399600.0) // [Gauss] -> [Hz]
+#define GAUSS_TO_LARMOR_FREQUENCY(BB__) ((BB__) * 1399600.0) // [Gauss] -> [Hz]
 
 // read atom and grid quantities 
 void RT_problem::read_3D(const char* filename){
@@ -207,10 +207,18 @@ void RT_problem::read_3D(const char* filename){
 			B_dev.block(i, j, k)[1] = B_spherical[1]; 					
 			B_dev.block(i, j, k)[2] = B_spherical[2]; 
 
-			// // hardcoded
-			B_dev.block(i, j, k)[0] = 20.0 * 1399600.0; // converting to Larmor frequency					
-			B_dev.block(i, j, k)[1] = 1.5707963268;
-			B_dev.block(i, j, k)[2] = 0; 
+			// // /*  hardcoded B field */ ////////////////////
+			const double B_field_hardcoded = 1000.0; // [Gauss]
+			const double theta_B_field = 1.5707963268; // [rad]
+			const double chi_B_field = 0.0; // [rad]
+			if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD: of:    " <<  B_field_hardcoded << " Gauss" << std::endl;
+			if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD, theta: " <<  theta_B_field << " rad" << std::endl;
+			if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD, chi:   " <<  chi_B_field << " rad" << std::endl;
+
+			B_dev.block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(B_field_hardcoded) ; // converting to Larmor frequency					
+			B_dev.block(i, j, k)[1] = theta_B_field;
+			B_dev.block(i, j, k)[2] = chi_B_field; 
+			// // end hardcoded B field ////////////////////
 
 		}
 		else

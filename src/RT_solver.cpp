@@ -1981,9 +1981,9 @@ void MF_context::set_up_emission_module(){
     }
     else
     {
-    //     components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB_FAST);
-        components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB);
-        // components.push_back(emission_coefficient_components::epsilon_R_II);
+        components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB_FAST);
+        // components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB);
+
         components.push_back(emission_coefficient_components::epsilon_R_III_GL);
         components.push_back(emission_coefficient_components::epsilon_csc);      
 

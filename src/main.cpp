@@ -13,19 +13,82 @@
 #define USE_PORTA_INPUT 1
 //////////////////////////////////////////////////////////////////////////
 
+// WARNING: if you want to use command line options, you need to set USE_CMD_LINE_OPTIONS = 1
+// otherwise, it will use the default and hard-coded values
+#define USE_CMD_LINE_OPTIONS 1
+//////////////////////////////////////////////////////////////////////////
+
+std::string getOptionArgument(int argc, char *argv[], const std::string &option) {
+  for (int i = 1; i < argc; ++i) {
+    std::string arg = argv[i];
+    if (arg == option && i + 1 < argc) {
+      return argv[i + 1];
+    }
+  }
+  return std::string();  // Option not found or argument missing
+}
+
+bool getOptionFlag(int argc, char *argv[], const std::string &option) {
+  for (int i = 1; i < argc; ++i) {
+    std::string arg = argv[i];
+    if (arg == option) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void print_help() {
+  std::cout << "Usage: mpirun ./solar_3D [options]" << std::endl;
+  std::cout << "Options:" << std::endl;
+  std::cout << "  --CRD: use CRD" << std::endl;
+  std::cout << "  --input_dir <input_dir>: input directory" << std::endl;
+  std::cout << "  --output_dir <output_dir>: output directory" << std::endl;
+  std::cout << "  --problem_input_file <problem_input_file>: problem input file" << std::endl;
+  std::cout << "  --help: print help" << std::endl << std::endl;
+
+  std::cout << "----------------------------------------------------------------" << std::endl << std::endl;
+
+  std::cout << "Example: mpirun ./solar_3D --CRD --input_dir /path/to/input --output_dir /path/to/output --problem_input_file problem_input_file.pmd" << std::endl;
+  std::cout << "In the output directory, the code creates a results directory with the name of the problem input file and the extension \".CRD\" or \".PRD\", depending on the --CRD option." << std::endl;
+  std::cout << "If the results output directory already exists, the code will stop." << std::endl;
+  std::cout << "Default solver is the PRD." << std::endl;
+  std::cout << std::endl;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
 int main(int argc, char *argv[]) {
 
   MPI_CHECK(MPI_Init(&argc, &argv));   
   PetscInitialize(&argc, &argv, (char *)0, NULL);
   Kokkos::initialize(argc, argv);
 
+  { // check if the user wants to print the help message
+    // if yes, print the help message and return
+    int mpi_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    if (getOptionFlag(argc, argv, "--help")) {
+       if (mpi_rank == 0) 
+          print_help();
+          
+      return 0;
+    }
+  }
+
   {
     const bool output   = true;
     const bool output_overwrite_prevention = true; // if true the application stops (with an MPI_Abort) if the output directory already exists
 
     const bool use_B    = true;
+
+#if USE_CMD_LINE_OPTIONS == 1
+    const bool use_CRD  = getOptionFlag(argc, argv, "--CRD");
+    const bool use_prec = (not use_CRD);
+#else
     const bool use_CRD  = false;
     const bool use_prec = (not use_CRD);
+#endif
 
    // Some main input directories
    /// /users/pietrob/solar_3d/input/
@@ -36,15 +99,24 @@ int main(int argc, char *argv[]) {
   // std::filesystem::path main_input_dir = "/users/sriva/git/solar_3d/input/";
 
   // Set here the main input and output directories //////////////////////////
-  std::filesystem::path main_input_dir = "/users/sriva/git_rii_tests/Comparison-TRIP-PORTA/PORTA";
-  std::filesystem::path main_output_dir = "/capstor/scratch/cscs/sriva/TRIP/output";
+#if USE_CMD_LINE_OPTIONS == 1
+  const std::filesystem::path main_input_dir = getOptionArgument(argc, argv, "--input_dir");
+  const std::filesystem::path  main_output_dir = getOptionArgument(argc, argv, "--output_dir");
+#else
+  const std::filesystem::path main_input_dir = "/users/sriva/git_rii_tests/Comparison-TRIP-PORTA/PORTA";
+  const std::filesystem::path main_output_dir = "/capstor/scratch/cscs/sriva/TRIP/output";
+#endif
   ////////////////////////////////////////////////////////////////////////////
 
 #if USE_PORTA_INPUT == 1   // PORTA setup for 3D
 
-    // Set here the problem input file //////////////////////////
+  // Set here the problem input file //////////////////////////
+  #if USE_CMD_LINE_OPTIONS == 1
+    const std::string problem_input_file_string = getOptionArgument(argc, argv, "--problem_input_file");
+  #else
     const std::string problem_input_file_string = std::string("cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd");
-    /////////////////////////////////////////////////////////////
+  #endif
+  /////////////////////////////////////////////////////////////
 
 
     const auto problem_input_file = std::filesystem::path(problem_input_file_string);
@@ -68,16 +140,20 @@ int main(int argc, char *argv[]) {
 
       // print the command line arguments
       std::cout << std::endl << "Command line arguments: " << std::endl;
-      std::cout << "argc = " << argc << std::endl;
+      std::cout << "argc: " << argc << std::endl;
       std::cout << "argv: ";
       for (int i = 0; i < argc; ++i) {
         std::cout << argv[i] << " ";
       }
       std::cout << std::endl << std::endl;
 
-      std::cout << "PORTA input file: " << PORTA_input_path << std::endl;
-      std::cout << "N_theta =         " << N_theta << std::endl;
-      std::cout << "N_chi =           " << N_chi << std::endl;
+      std::cout << "PORTA 3D input file: " << PORTA_input_path << std::endl;
+      std::cout << "N_theta =            " << N_theta << std::endl;
+      std::cout << "N_chi =              " << N_chi << std::endl << std::endl;
+
+      const auto petsc_index_size = sizeof(PetscInt);
+      std::cout << "PetscInt size: " << petsc_index_size << " bytes; " << (petsc_index_size * 8) << " bits." << std::endl << std::endl;
+      
     }
 
 #else 
