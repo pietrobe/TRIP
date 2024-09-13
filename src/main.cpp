@@ -40,17 +40,17 @@ bool getOptionFlag(int argc, char *argv[], const std::string &option) {
 
 void print_help() {
   std::cout << "----------------------------------------------------------------" << std::endl << std::endl;
-  std::cout << "Usage: mpirun ./solar_3D [options]" << std::endl;
+  std::cout << "Usage: mpirun ./solar_3D [options] [PETSC options]" << std::endl;
   std::cout << "Options:" << std::endl;
   std::cout << "  --CRD: use CRD" << std::endl;
   std::cout << "  --input_dir <input_dir>: input directory" << std::endl;
   std::cout << "  --output_dir <output_dir>: output directory" << std::endl;
   std::cout << "  --problem_input_file <problem_input_file>: problem input file" << std::endl;
-  std::cout << "  --help: print help" << std::endl << std::endl;
+  std::cout << "  --help: print help and exit" << std::endl << std::endl;
 
   std::cout << "----------------------------------------------------------------" << std::endl << std::endl;
 
-  std::cout << "Example: mpirun ./solar_3D --CRD --input_dir /path/to/input --output_dir /path/to/output --problem_input_file problem_input_file.pmd" << std::endl;
+  std::cout << "Example: mpirun ./solar_3D --CRD --input_dir /path/to/input --output_dir /path/to/output --problem_input_file problem_input_file.pmd  -ksp_type gmres -ksp_max_it 100 -ksp_rtol 1e-10" << std::endl;
   std::cout << std::endl;
   std::cout << "In the output directory, the code creates a results directory with the name of the problem input file and the extension \".CRD\" or \".PRD\", depending on the --CRD option." << std::endl;
   std::cout << "If the results output directory already exists, the code will stop." << std::endl;
@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
 
     const auto problem_input_file = std::filesystem::path(problem_input_file_string);
 
-    auto frequencies_input_path =  main_input_dir / std::filesystem::path("FAL-C/96F");
+    auto frequencies_input_path =  main_input_dir / std::filesystem::path("frequency/96F");
 
 //    auto PORTA_input_path =  main_input_dir / std::filesystem::path("PORTA/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd");
     // // const char* PORTA_input_path = "/users/pietrob/solar_3d/input/PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_32x32x133.pmd";
@@ -329,15 +329,4 @@ int main(int argc, char *argv[]) {
 // TODO use Real insted of double
 
 // output
-// python ../../sgrid/scripts/transpose_data.py -x 4 -y 4 -z 70 -b 99 -p
-// sigma.raw
-
-
-
-
-
-
-
-
-
-
+// python ../../sgrid/scripts/transpose_data.py -x 4 -y 4 -z 70 -b 99 -
