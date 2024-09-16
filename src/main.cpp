@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
   Kokkos::initialize(argc, argv);
 
   {
-    const bool output   = false;
+    const bool output   = true;
     const bool use_B    = false;
     const bool use_CRD  = true;
     const bool use_prec = (not use_CRD);
@@ -28,17 +28,16 @@ int main(int argc, char *argv[]) {
    // Some main input directories
    /// /users/pietrob/solar_3d/input/
    /// /home/usi/usi441290/git/solar_3d/input
-   /// 
 
-   std::filesystem::path main_input_dir = "/home/usi/usi441290/git/solar_3d/input";
+   std::filesystem::path main_input_dir = "/capstor/scratch/cscs/pietrob/solar_3d/input";
 
 #if USE_PORTA_INPUT == 1   // PORTA setup for 3D
 
     auto frequencies_input_path =  main_input_dir / std::filesystem::path("FAL-C/96F");
 
-    // const char* PORTA_input_path = "/users/pietrob/solar_3d/input/PORTA/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd";
-    // // const char* PORTA_input_path = "/users/pietrob/solar_3d/input/PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_32x32x133.pmd";
-    auto PORTA_input_path =  main_input_dir / std::filesystem::path("PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_64x64x133.pmd");
+    auto PORTA_input_path = main_input_dir / std::filesystem::path("PORTA/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd");
+    // auto PORTA_input_path =  main_input_dir / std::filesystem::path("PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_32x32x133.pmd");
+    // auto PORTA_input_path =  main_input_dir / std::filesystem::path("PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_64x64x133.pmd");
   
     auto rt_problem_ptr = std::make_shared<RT_problem>(PORTA_input_path.string().c_str(), frequencies_input_path.string() , use_CRD, use_B);
     
@@ -69,7 +68,7 @@ int main(int argc, char *argv[]) {
     // write output
     if (output)
     {            
-        const std::string output_path = "../output/surface_profiles_test/"; // TODO change
+        const std::string output_path = "output/surface_5x5_profiles_test/"; // TODO change
         // const std::string output_path = "output/surface_profiles_64x64x133/B0V0/"; // TODO change
         const std::string output_file = (use_CRD) ? output_path + "profiles_CRD" : output_path + "profiles_PRD";
         
@@ -83,7 +82,7 @@ int main(int argc, char *argv[]) {
             rt_problem_ptr->write_surface_point_profiles(output_file, i, j);
            }
         }
-
+/*
         // free some memory    
         rt_problem_ptr->free_fields_memory(); 
         rt_solver.free_fields_memory();
@@ -137,6 +136,8 @@ int main(int argc, char *argv[]) {
                 rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, i, j);
            }
         }
+
+	*/
 
         // if (save_raw) rt_problem_ptr->I_field_->write("/scratch/snx3000/pietrob/I_field.raw");          
           
