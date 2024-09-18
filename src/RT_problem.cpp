@@ -208,6 +208,7 @@ void RT_problem::read_3D(const char* filename){
 			B_dev.block(i, j, k)[2] = B_spherical[2]; 
 
 			// // /*  hardcoded B field */ ////////////////////
+			/*
 			const double B_field_hardcoded = 1000.0; // [Gauss]
 			const double theta_B_field = 1.5707963268; // [rad]
 			const double chi_B_field = 0.0; // [rad]
@@ -218,6 +219,7 @@ void RT_problem::read_3D(const char* filename){
 			B_dev.block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(B_field_hardcoded) ; // converting to Larmor frequency					
 			B_dev.block(i, j, k)[1] = theta_B_field;
 			B_dev.block(i, j, k)[2] = chi_B_field; 
+			*/
 			// // end hardcoded B field ////////////////////
 
 		}
