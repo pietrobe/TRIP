@@ -10,7 +10,7 @@
 #SBATCH --qos=gp_resa
 ## #SBATCH --nodes=1
 
-## TODO in order of priority and execution.
+## TODO (ATHMOSPHERE_NAME) in order of priority and execution.
 ## AR_385_Cut_64x64_mirrorxy-CRD_I_V0-B0_V0_conv.pmd
 ## AR_385_Cut_64x64_mirrorxy-CRD_I_V0-B0_conv.pmd
 ## AR_385_Cut_64x64_mirrorxy-CRD_I_V0-V0_conv.pmd
