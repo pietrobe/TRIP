@@ -4,6 +4,17 @@
 #include "tools.h"
 #include <string>
 #include <filesystem>
+#include <iomanip>
+#include <sstream>
+
+std::string getCurrentDateTime() {
+    auto now = std::chrono::system_clock::now();
+    auto in_time_t = std::chrono::system_clock::to_time_t(now);
+
+    std::stringstream ss;
+    ss << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d %H:%M:%S");
+    return ss.str();
+}
 
 // compile and run with:
 // make -j 32 && srun -n 4 ./main
@@ -59,10 +70,17 @@ void print_help() {
 }
 
 
+
+
 //////////////////////////////////////////////////////////////////////////
 int main(int argc, char *argv[]) {
 
+  std::stringstream ss_a, ss_b;
+
   MPI_CHECK(MPI_Init(&argc, &argv));
+
+  int mpi_size;
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 
   { // check if the user wants to print the help message
     // if yes, print the help message and return
@@ -140,22 +158,27 @@ int main(int argc, char *argv[]) {
     if (rt_problem_ptr->mpi_rank_ == 0) {
 
       // print the command line arguments
-      std::cout << std::endl << "Command line arguments: " << std::endl;
-      std::cout << "argc: " << argc << std::endl;
-      std::cout << "argv: ";
+      ss_a << "MPI size = " << mpi_size << std::endl;
+      ss_a << "Date and time: " << getCurrentDateTime() << std::endl; 
+      ss_a << std::endl << "Command line arguments: " << std::endl;
+      ss_a << "argc: " << argc << std::endl;
+      ss_a << "argv: ";
       for (int i = 0; i < argc; ++i) {
-        std::cout << argv[i] << " ";
+        ss_a << argv[i] << " ";
       }
-      std::cout << std::endl << std::endl;
+      ss_a << std::endl << std::endl;
 
-      std::cout << "PORTA 3D input file: " << PORTA_input_path << std::endl;
-      std::cout << "N_theta =            " << N_theta << std::endl;
-      std::cout << "N_chi =              " << N_chi << std::endl << std::endl;
+      ss_a << "PORTA 3D input file: " << PORTA_input_path << std::endl;
+      ss_a << "N_theta =            " << N_theta << std::endl;
+      ss_a << "N_chi =              " << N_chi << std::endl << std::endl;
 
       const auto petsc_index_size = sizeof(PetscInt);
-      std::cout << "PetscInt size: " << petsc_index_size << " bytes; " << (petsc_index_size * 8) << " bits." << std::endl << std::endl;
-      
+      ss_a << "PetscInt size: " << petsc_index_size << " bytes; " << (petsc_index_size * 8) << " bits." << std::endl << std::endl;
+
+      std::cout << ss_a.str();  
     }
+
+    
 
 #else 
     //FAL-C input for 1D setup
@@ -201,8 +224,17 @@ int main(int argc, char *argv[]) {
         // const std::string output_path = "output/surface_profiles_64x64x133/B0V0/"; // TODO change
         output_file = (use_CRD) ? (output_path / "profiles_CRD").string() : (output_path / "profiles_PRD").string();
 
-       if (rt_problem_ptr->mpi_rank_ == 0)  
-        std::cout << "Output directory: " << output_path << std::endl;
+       if (rt_problem_ptr->mpi_rank_ == 0)  {
+        ss_b << "Output directory: " << output_path << std::endl;
+        std::cout << ss_b.str();
+
+        const auto output_info_file = output_path / "info.txt";
+        std::ofstream output_file_info(output_info_file);
+
+        output_file_info << ss_a.str();
+        output_file_info << ss_b.str();
+        output_file_info.close();
+      }
     }
 
     ///////////////////////////////////////////////////
@@ -225,7 +257,7 @@ int main(int argc, char *argv[]) {
             rt_problem_ptr->write_surface_point_profiles(output_file, i, j);
            }
         }
-/*
+
         // free some memory    
         rt_problem_ptr->free_fields_memory(); 
         rt_solver.free_fields_memory();
@@ -280,7 +312,7 @@ int main(int argc, char *argv[]) {
            }
         }
 
-	*/
+	
 
         // if (save_raw) rt_problem_ptr->I_field_->write("/scratch/snx3000/pietrob/I_field.raw");          
           

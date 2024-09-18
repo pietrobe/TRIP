@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
 ## to be defined !!!!!!!!!
-#SBATCH --ntasks=1024
+#SBATCH --ntasks=0
 
 #SBATCH --cpus-per-task=1
 #SBATCH --time=06:00:00
@@ -9,6 +9,12 @@
 #SBATCH --job-name="TRIP_PRD_3D"
 #SBATCH --qos=gp_resa
 ## #SBATCH --nodes=1
+
+## TODO in order of priority and execution.
+## AR_385_Cut_64x64_mirrorxy-CRD_I_V0-B0_V0_conv.pmd
+## AR_385_Cut_64x64_mirrorxy-CRD_I_V0-B0_conv.pmd
+## AR_385_Cut_64x64_mirrorxy-CRD_I_V0-V0_conv.pmd
+## AR_385_Cut_64x64_mirrorxy-CRD_I_V0_conv.pmd
 
 ### set here the main input data directory
 export MAIN_INPUT_PROBLEMS_SERIES_DIR=Comparison-TRIP-PORTA-20240827T115438Z-001-CRD
