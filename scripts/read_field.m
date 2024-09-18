@@ -10,21 +10,21 @@ i_theta = 8;
 i_chi = 1;
 
 %path_prd = "/home/sriva/hero_scratch/TRIP_test/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd.PRD.1000G.RII";
-path_prd = "/home/sriva/hero_scratch/TRIP_test/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd.PRD.1000G.RII_FAST/"
+%path_prd = "/home/sriva/hero_scratch/TRIP_test/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd.PRD.1000G.RII_FAST/"
 
-%path_crd = "/home/sriva/hero_scratch/TRIP_test/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd.CRD_test";
+path_crd = "/home/sriva/hero_scratch/TRIP_test/out/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd.CRD_2048/";
 
 %path_n = '/home/sriva/hero_scratch/TRIP_test/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd.PRD';
 %path_f = '/home/sriva/hero_scratch/TRIP_test/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd_RII_CONTRIB_FAST';
 
 
-plot_profiles(path_prd, ...
+plot_profiles(path_crd, ...
     i_theta, i_chi)
 
 function plot_profiles(data_path, i_theta, i_chi)
     addpath(data_path)
     
-    profiles_PRD_4_4;
+    profiles_CRD_4_4;
     
     if i_theta <= size(Field,2)/2
         disp('WARNING: mu < 0! Setting i_theta to the first emerging direction:')    
@@ -44,7 +44,7 @@ function plot_profiles(data_path, i_theta, i_chi)
     xmin = 4224.5;
     xmax = 4228.5;
     
-    M = "o"; % Marker
+    M = "+"; % Marker
     % Use one of these values: '+' | 'o' | '*' | '.' | 'x' |
     % 'square' | 'diamond' | 'v' | '^' | '>' | '<' | 
     % 'pentagram' | 'hexagram' | '|' |
