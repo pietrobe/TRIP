@@ -153,14 +153,18 @@ public:
 	// convert local indeces to block one (of fields) for the first Stokes parameter and vice versa
 	inline int local_to_block(const int j, const int k, const int n) { return 4 * ( N_nu_ * ( N_chi_ * j + k ) + n); }
 
-	inline void print_PETSc_mem()
+	inline std::string print_PETSc_mem()
 	{
 		PetscLogDouble space;
    		PetscMemoryGetCurrentUsage(&space);   
 
    		const double byte_to_GB = 1.0 / (1000 * 1024 * 1024);
 
-    	if (mpi_rank_ == 0) std::cout << "Memory used by PETSc = " << mpi_size_ * byte_to_GB * space << " GB" <<  std::endl;   
+		std::stringstream ss;
+
+    	ss << "Memory used by PETSc = " << mpi_size_ * byte_to_GB * space << " GB" <<  std::endl;   
+
+		return ss.str();
 	}
 
 	// print I_field on surface 
