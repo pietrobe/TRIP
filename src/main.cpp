@@ -76,6 +76,7 @@ void print_help() {
 int main(int argc, char *argv[]) {
 
   std::stringstream ss_a, ss_b;
+  std::filesystem::path output_info_file;
 
   MPI_CHECK(MPI_Init(&argc, &argv));
 
@@ -242,7 +243,22 @@ int main(int argc, char *argv[]) {
     rt_solver.solve(); 
     // rt_solver.solve_checkpoint("../output/surface_profiles_5x5x133/", 20); 
     
+    // lambda to compute arbitrary beam
+      const auto compute_arbitrary_beam = [&] (const Real mu, const Real chi, const std::string output_file) {
 
+        std::string output_file_Omega_mu = output_file + "_mu" + std::to_string(mu);
+        
+        const Real theta = acos(mu);
+        rt_solver.apply_formal_solver_Omega(theta, chi);
+
+        for (int i = 0; i < N_theta; ++i)
+        {
+          for (int j = 0; j < N_chi; ++j)
+          {
+                rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega_mu, i, j);
+          }
+        }
+    };
 
 
     // write output
@@ -262,54 +278,61 @@ int main(int argc, char *argv[]) {
         rt_problem_ptr->free_fields_memory(); 
         rt_solver.free_fields_memory();
 
-        // write is arbitriary direction     
-        Real chi   = 0.19635;
-        Real mu    = 0.930568;
-        Real theta = acos(mu);
+
 
         std::string output_file_Omega;
 
-        rt_solver.apply_formal_solver_Omega(theta, chi);
+        // rt_solver.apply_formal_solver_Omega(theta, chi);
         
-        output_file_Omega = output_file + "_control";
+        // output_file_Omega = output_file + "_control";
+
+        // // for (int i = 0; i < N_x; ++i)
+        // // {
+        // //    for (int j = 0; j < N_y; ++j)
+        // //    {
+        //       rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, 0, 0);
+        // //    }
+        // // }
+
+        // mu = 0.1;
+        // theta = acos(mu);
+
+        // // allocate new data structure and compute I_Field_Omega
+        // rt_solver.apply_formal_solver_Omega(theta, chi);
+
+        // output_file_Omega = output_file + "_mu01";
+        // for (int i = 0; i < N_x; ++i)
+        // {
+        //    for (int j = 0; j < N_y; ++j)
+        //    {
+        //         rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, i, j);
+        //    }
+        // }
+
+        // mu = 1.0;
+        // theta = acos(mu);
+
+        // // allocate new data structure and compute I_Field_Omega
+        // rt_solver.apply_formal_solver_Omega(theta, chi);
+
+        // output_file_Omega = output_file + "_mu1";
 
         // for (int i = 0; i < N_x; ++i)
         // {
         //    for (int j = 0; j < N_y; ++j)
         //    {
-              rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, 0, 0);
+        //         rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, i, j);
         //    }
         // }
 
-        mu = 0.1;
-        theta = acos(mu);
-
-        // allocate new data structure and compute I_Field_Omega
-        rt_solver.apply_formal_solver_Omega(theta, chi);
-
-        output_file_Omega = output_file + "_mu01";
-        for (int i = 0; i < N_x; ++i)
+        std::vector<Real> mus = {0.1, 1.0};
+        // write is arbitriary direction     
+        Real chi   = 0.19635;
+        //Real mu    = 0.930568;
+        //Real theta = acos(mu);
+        for (auto mu : mus)
         {
-           for (int j = 0; j < N_y; ++j)
-           {
-                rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, i, j);
-           }
-        }
-
-        mu = 1.0;
-        theta = acos(mu);
-
-        // allocate new data structure and compute I_Field_Omega
-        rt_solver.apply_formal_solver_Omega(theta, chi);
-
-        output_file_Omega = output_file + "_mu1";
-
-        for (int i = 0; i < N_x; ++i)
-        {
-           for (int j = 0; j < N_y; ++j)
-           {
-                rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, i, j);
-           }
+          compute_arbitrary_beam(mu, chi, output_file);
         }
 
 	
@@ -332,7 +355,7 @@ int main(int argc, char *argv[]) {
       
         // rt_solver.compute_emission();
         // rt_problem_ptr->print_profile(rt_problem_ptr->S_field_, 0, 0, 0, 0, N_theta/2, 0);  
-    }
+    } // end write output
   
     // print memory usage 
     const double byte_to_GB = 1.0 / (1000 * 1024 * 1024);
@@ -342,10 +365,22 @@ int main(int argc, char *argv[]) {
     
     rii::process_mem_usage(vm_usage, resident_set);
     
-    if (rt_problem_ptr->mpi_rank_ == 0) std::cout << "Total memory usage (vm_usage) = "     <<  byte_to_GB * vm_usage     << " GB" << std::endl;
-    if (rt_problem_ptr->mpi_rank_ == 0) std::cout << "Total memory usage (resident_set) = " <<  byte_to_GB * resident_set << " GB" << std::endl;
+    if (rt_problem_ptr->mpi_rank_ == 0){
+      std::stringstream ss_mem;
+      ss_mem << "Total memory usage (vm_usage) = "     <<  byte_to_GB * vm_usage     << " GB" << std::endl;
+      ss_mem << "Total memory usage (resident_set) = " <<  byte_to_GB * resident_set << " GB" << std::endl;
     
-    rt_problem_ptr->print_PETSc_mem();        
+      std::string mem_petsc = rt_problem_ptr->print_PETSc_mem();        
+      ss_mem << mem_petsc << std::endl;
+
+      std::cout << ss_mem.str();
+
+      
+      std::ofstream output_file_info(output_info_file, std::ios::app);
+      output_file_info << ss_mem.str();
+      output_file_info.close();
+      
+    }
   }
   
   Kokkos::finalize();
