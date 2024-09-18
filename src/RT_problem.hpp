@@ -375,7 +375,9 @@ private:
 
 	// read 3D input from pmd file 
 	void read_3D(const char* filename);
+	void read_3D(const char* filename_pmd, const char* filename_cul, const char* filename_qel);
 	std::vector<Real> read_single_node(MPI_File fh, const int i, const int j, const int k);
+	Real read_single_node_single_field(MPI_File fh, const int i, const int j, const int k);
 
 	// compute polarization tensors (vector of six components)
 	std::vector<std::complex<Real> > compute_T_KQ(const int stokes_i, const Real theta, const Real chi);

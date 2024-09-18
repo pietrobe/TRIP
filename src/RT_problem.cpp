@@ -9,6 +9,277 @@
 #define GAUSS_TO_LARMOR_FREQUENCY(BB__) ((BB__) * 1399600.0) // [Gauss] -> [Hz]
 
 // read atom and grid quantities 
+void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, const char* filename_qel)
+{
+	if (mpi_rank_ == 0) std::cout << "Reading PORTA input from " << filename_pmd << std::endl;
+
+	const bool zero_velocities = false;
+	if (mpi_rank_ == 0 and zero_velocities) std::cout << "WARNING: ZERO velocities HARDCODED!" << std::endl;
+
+	// reading atom and grids from file
+	MPI_File fh, f_cul, f_qel;
+	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_pmd, MPI_MODE_RDONLY, MPI_INFO_NULL, &fh));
+	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_cul, MPI_MODE_RDONLY, MPI_INFO_NULL, &f_cul));
+	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_qel, MPI_MODE_RDONLY, MPI_INFO_NULL, &f_qel));
+
+	// buffers
+	Real entry;
+	char c;
+
+    // some irrelevant data
+	for (int i = 0; i < PMD_MAIN_HEADER1 - 48; i++) { MPI_CHECK(MPI_File_read_all(fh, &c, 1, MPI_CHAR, MPI_STATUS_IGNORE)); }
+
+	// TODO there are not used 
+	double Lx, Ly, Lz, x_origin, y_origin, z_origin; // 48 in previuos line for these
+	
+	MPI_CHECK(MPI_File_read_all(fh, &Lx, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &Ly, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &Lz, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+
+	MPI_CHECK(MPI_File_read_all(fh, &x_origin, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &y_origin, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &z_origin, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+
+	MPI_CHECK(MPI_File_read_all(fh, &N_x_, 1, MPI_INT, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &N_y_, 1, MPI_INT, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &N_z_, 1, MPI_INT, MPI_STATUS_IGNORE));
+	
+	// WARNING: valid for Lx = Ly = constant 
+	L_ = 1e-5 * Lx/N_x_; // conversion from cm to km
+
+	// some irrelevant data (x,y coordinates)	
+	int skip_size = 16384 * sizeof(double);
+	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));
+
+	// get z grid (depth)
+	for (int i = 0; i < N_z_; ++i)
+	{		
+		MPI_CHECK(MPI_File_read_all(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+		 
+		entry *= 1e-5; // conversion from cm to km			
+		depth_grid_.push_back(entry);      		
+	}
+	
+	// reverse to get correct ordering
+	reverse(depth_grid_.begin(), depth_grid_.end());
+
+	// some irrelevant data (extra z coordinates)
+	skip_size = (8192 - N_z_) * sizeof(double);	
+	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));
+
+	// inclinations and azimuths per octant 	
+	MPI_CHECK(MPI_File_read_all(fh, &N_theta_, 1, MPI_INT , MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &N_chi_  , 1, MPI_INT , MPI_STATUS_IGNORE));
+
+	// convert from octant to total 
+	N_theta_ *= 2;
+	N_chi_   *= 4;
+
+	if (mpi_rank_ == 0) std::cout << "N_theta = " << N_theta_ << ", N_chi = " << N_chi_ << ", from PORTA input." << std::endl;
+		
+	// some irrelevant data	
+	skip_size = PMD_MAIN_HEADER2 - 196608 - 16;
+	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));
+
+    int module_head_size;
+
+	// Size of each grid node	
+	MPI_CHECK(MPI_File_read_all(fh, &module_head_size, 1, MPI_INT, MPI_STATUS_IGNORE));
+
+	// Size of each grid node	
+	MPI_CHECK(MPI_File_read_all(fh, &node_size_, 1, MPI_INT, MPI_STATUS_IGNORE));
+
+    // Jump to data
+    header_size_ = PMD_MAIN_HEADER1 + PMD_MAIN_HEADER2 + 12 + module_head_size;
+
+	// some irrelevant data    
+    MPI_CHECK(MPI_File_seek(fh, TWOLEVEL_HEADER1, MPI_SEEK_CUR));
+
+	// reading atomic data    
+    MPI_CHECK(MPI_File_read_all(fh, &mass_,  1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+    MPI_CHECK(MPI_File_read_all(fh, &Aul_,   1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+    MPI_CHECK(MPI_File_read_all(fh, &Eu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+    MPI_CHECK(MPI_File_read_all(fh, &Jl2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
+    MPI_CHECK(MPI_File_read_all(fh, &Ju2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
+    MPI_CHECK(MPI_File_read_all(fh, &gl_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+    MPI_CHECK(MPI_File_read_all(fh, &gu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+    MPI_CHECK(MPI_File_read_all(fh, &T_ref_, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+
+    // // change Eu units to [cm-1]     
+    // Eu_ /= c_ * h_; 
+    
+    // hardcoded from FAL-C 
+    Eu_ = 23652.304;    
+    
+  	// some irrelevant data double temp[ny][nx];    matrix of ground (iz=0) for Planckian boundary
+	skip_size = (N_x_ * N_y_) * sizeof(double);
+	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));		
+
+	// set angualr grids and sizes and print
+	set_theta_chi_grids(N_theta_, N_chi_);
+	set_sizes();
+
+	/////////////////// set sizes
+	N_nu_ = nu_grid_.size();
+	block_size_ = (PetscInt) 4 * N_nu_ * N_theta_ * N_chi_;
+	tot_size_   = (PetscInt) N_s_ * block_size_;	
+	
+	// create space grid
+	space_grid_ = std::make_shared<Grid_t>();
+	
+	// menage grid distribution and init
+	set_grid_partition();	
+	space_grid_->init(MPI_COMM_WORLD, {N_x_, N_y_, N_z_}, {1, 1, 0},
+									 {mpi_size_x_, mpi_size_y_, mpi_size_z_}, use_ghost_layers_); 
+
+	// // TEST
+	// space_grid_->init(MPI_COMM_WORLD, {N_x_, N_y_, N_z_}, {1, 1, 0}, {}, use_ghost_layers_); 
+		
+	// init fields
+	allocate_fields();				
+
+	// init atmospheric quantities 
+	allocate_atmosphere();	
+
+	// load devices for parallel data structures
+	auto T_dev   = T_   ->view_device();
+	auto a_dev   = a_   ->view_device();
+	auto Nl_dev  = Nl_  ->view_device();
+	auto Cul_dev = Cul_ ->view_device();
+	auto B_dev   = B_   ->view_device();
+	auto v_b_dev = v_b_ ->view_device();
+	auto xi_dev  = xi_  ->view_device();
+	auto Qel_dev = Qel_ ->view_device();
+	auto D2_dev  = D2_  ->view_device();
+
+	auto sigma_dev    = sigma_    ->view_device();
+	auto k_c_dev      = k_c_      ->view_device();
+	auto eps_c_th_dev = eps_c_th_ ->view_device();
+	auto epsilon_dev  = epsilon_  ->view_device();
+
+	auto Doppler_width_dev = Doppler_width_->view_device();
+
+	auto g_dev = space_grid_->view_device();
+
+	if (mpi_rank_ == 0) std::cout << "WARNING: sigma continuum = 0 HARDCODED!" << std::endl;
+
+	// fill field 
+	sgrid::parallel_for("READ-ATM1D", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
+
+		// get global indeces form local ones
+		const int i_global  = g_dev.start[0] + i - g_dev.margin[0];
+		const int j_global  = g_dev.start[1] + j - g_dev.margin[1];
+		const int k_global  = g_dev.start[2] + k - g_dev.margin[2];
+		
+		// reversing z index because of input ordering 
+		const int k_reverse = (N_z_ - k_global - 1);  
+
+		auto tmp_vector = read_single_node(fh,i_global,j_global,k_reverse);			
+
+		// epsilon_dev.ref(i,j,k) = tmp_vector[0];		
+		// Cul_dev.ref(i,j,k)     = tmp_vector[1];		
+		T_dev.ref(i,j,k)       = tmp_vector[2];			
+		Nl_dev.ref(i,j,k)      = tmp_vector[9];		
+		// a_dev.ref(i,j,k)       = tmp_vector[10];		
+		D2_dev.ref(i,j,k)      = tmp_vector[11];
+
+		// hardcoding xi to zero
+		xi_dev.ref(i,j,k) = 0; 
+		
+		// compute Qel and Cul
+		Qel_dev.ref(i,j,k) = read_single_node_single_field(filename_qel,i_global,j_global,k_reverse);					
+		Cul_dev.ref(i,j,k) = read_single_node_single_field(filename_cul,i_global,j_global,k_reverse);					
+		
+		// convert to spherical coordinates
+		auto B_spherical = convert_cartesian_to_spherical(tmp_vector[3], 
+														  tmp_vector[4],
+														  tmp_vector[5]);	
+		if (use_magnetic_field_)
+		{								
+			B_dev.block(i, j, k)[0] = B_spherical[0] * 1399600.0; // converting to Larmor frequency					
+			B_dev.block(i, j, k)[1] = B_spherical[1]; 					
+			B_dev.block(i, j, k)[2] = B_spherical[2]; 
+
+			// // /*  hardcoded B field */ ////////////////////
+			/*
+			const double B_field_hardcoded = 1000.0; // [Gauss]
+			const double theta_B_field = 1.5707963268; // [rad]
+			const double chi_B_field = 0.0; // [rad]
+			if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD: of:    " <<  B_field_hardcoded << " Gauss" << std::endl;
+			if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD, theta: " <<  theta_B_field << " rad" << std::endl;
+			if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD, chi:   " <<  chi_B_field << " rad" << std::endl;
+
+			B_dev.block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(B_field_hardcoded) ; // converting to Larmor frequency					
+			B_dev.block(i, j, k)[1] = theta_B_field;
+			B_dev.block(i, j, k)[2] = chi_B_field; 
+			*/
+			// // end hardcoded B field ////////////////////
+
+		}
+		else
+		{
+			B_dev.block(i, j, k)[0] = 0.0;
+			B_dev.block(i, j, k)[1] = 0.0;
+			B_dev.block(i, j, k)[2] = 0.0;
+		}
+		
+		
+		if (zero_velocities)
+		{
+			v_b_dev.block(i, j, k)[0] = 0.0;					
+			v_b_dev.block(i, j, k)[1] = 0.0;					
+			v_b_dev.block(i, j, k)[2] = 0.0;	
+		}
+		else
+		{
+			// convert to spherical coordinates
+			auto v_spherical = convert_cartesian_to_spherical(tmp_vector[6], 
+														      tmp_vector[7], 
+														      tmp_vector[8]);		
+			v_b_dev.block(i, j, k)[0] = v_spherical[0];					
+			v_b_dev.block(i, j, k)[1] = v_spherical[1];					
+			v_b_dev.block(i, j, k)[2] = v_spherical[2];	
+		}
+				
+		// continuum 
+		for (int n = 0; n < N_nu_; ++n)
+		{			
+			// hardcoded to 0.0 as in PORTA
+			sigma_dev.block(   i, j, k)[n] = 0.0;		
+			k_c_dev.block(     i, j, k)[n] = tmp_vector[12];		
+			eps_c_th_dev.block(i, j, k)[n] = tmp_vector[13];	
+
+			// TODO: read sigma from file .back, da controllare nell'input (solo un valore)
+			// read_single_node_single_field(filename_qel,i_global,j_global,k_reverse);				
+		}			
+	});
+	
+	// close files
+	MPI_CHECK(MPI_File_close(&fh));		
+	MPI_CHECK(MPI_File_close(&f_cul));		
+	MPI_CHECK(MPI_File_close(&f_qel));		
+}
+
+
+Real RT_problem::read_single_node_single_field(MPI_File input_file, const int i, const int j, const int k){
+
+	// Output
+    Real output;
+
+    // Compute jump
+    const int jump = N_x_ * (N_y_ * k + j) + i;
+
+    // Jump to data of interest
+    MPI_CHECK(MPI_File_seek(input_file, jump, MPI_SEEK_SET));	
+
+    // 0 // epsilon
+    MPI_CHECK(MPI_File_read(input_file, &output, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); 
+    
+    return output;
+}
+
+
+// read atom and grid quantities 
 void RT_problem::read_3D(const char* filename){
 
 	if (mpi_rank_ == 0) std::cout << "Reading PORTA input from " << filename << std::endl;
@@ -360,6 +631,7 @@ std::vector<Real> RT_problem::read_single_node(MPI_File fh, const int i, const i
 
     return output;
 }
+
 
 void RT_problem::read_atom(input_string filename){
 
