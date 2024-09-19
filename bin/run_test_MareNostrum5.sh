@@ -14,7 +14,7 @@
 export MAIN_INPUT_PROBLEMS_SERIES_DIR=PORTA
 
 ### set here the input and output data directories
-export IN_DATA_DIR=/home/usi/usi441290/git/solar_3d/input/${MAIN_INPUT_PROBLEMS_SERIES_DIR}
+export IN_DATA_DIR=${HOME}/git/solar_3d/input/${MAIN_INPUT_PROBLEMS_SERIES_DIR}
 
 ### the main output directory
 export OUT_DATA_DIR=/gpfs/projects/iac90/output_test/${MAIN_INPUT_PROBLEMS_SERIES_DIR}

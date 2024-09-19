@@ -274,7 +274,7 @@ Real RT_problem::read_single_node_single_field(MPI_File input_file, const int i,
     const int jump = N_x_ * (N_y_ * k + j) + i;
 
     // Jump to data of interest
-    MPI_CHECK(MPI_File_seek(input_file, jump, MPI_SEEK_SET));	
+    MPI_CHECK(MPI_File_seek(input_file, jump * sizeof(Real), MPI_SEEK_SET));
 
     // 0 // epsilon
     MPI_CHECK(MPI_File_read(input_file, &output, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); 
