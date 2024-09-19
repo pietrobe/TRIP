@@ -26,7 +26,7 @@ std::string getCurrentDateTime() {
 
 // WARNING: if you want to use command line options, you need to set USE_CMD_LINE_OPTIONS = 1
 // otherwise, it will use the default and hard-coded values
-#define USE_CMD_LINE_OPTIONS 1
+#define USE_CMD_LINE_OPTIONS 0
 //////////////////////////////////////////////////////////////////////////
 
 std::string getOptionArgument(int argc, char *argv[], const std::string &option) {
@@ -98,8 +98,6 @@ int main(int argc, char *argv[]) {
   PetscInitialize(&argc, &argv, (char *)0, NULL);
   Kokkos::initialize(argc, argv);
 
-
-
   {
     const bool output   = true;
     const bool output_overwrite_prevention = true; // if true the application stops (with an MPI_Abort) if the output directory already exists
@@ -117,10 +115,10 @@ int main(int argc, char *argv[]) {
 
   // Set here the main input and output directories //////////////////////////
 #if USE_CMD_LINE_OPTIONS == 1
-  const std::filesystem::path main_input_dir = getOptionArgument(argc, argv, "--input_dir");
-  const std::filesystem::path  main_output_dir = getOptionArgument(argc, argv, "--output_dir");
+  const std::filesystem::path main_input_dir  = getOptionArgument(argc, argv, "--input_dir");
+  const std::filesystem::path main_output_dir = getOptionArgument(argc, argv, "--output_dir");
 #else
-  const std::filesystem::path main_input_dir = "../input/PORTA";
+  const std::filesystem::path main_input_dir  = "../input/PORTA";
   const std::filesystem::path main_output_dir = "output";
 #endif
   ////////////////////////////////////////////////////////////////////////////
@@ -131,7 +129,10 @@ int main(int argc, char *argv[]) {
   #if USE_CMD_LINE_OPTIONS == 1
     const std::string problem_input_file_string = getOptionArgument(argc, argv, "--problem_input_file");
   #else
-    const std::string problem_input_file_string = std::string("cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd");
+    const std::string problem_input_file_string = std::string("AR_385_Cut_32x32-CRD_I_V0_conv.pmd");
+    
+    const std::string input_cul_string = std::string("AR_385_Cut_32x32-CRD_I_V0.cul");
+    const std::string input_qel_string = std::string("AR_385_Cut_32x32-CRD_I_V0.qel");
   #endif
   /////////////////////////////////////////////////////////////
 
@@ -151,7 +152,17 @@ int main(int argc, char *argv[]) {
 
     auto PORTA_input_path =  main_input_dir / problem_input_file;
 
-    auto rt_problem_ptr = std::make_shared<RT_problem>(PORTA_input_path.string().c_str(), frequencies_input_path.string() , use_CRD, use_B);
+    // auto rt_problem_ptr = std::make_shared<RT_problem>(PORTA_input_path.string().c_str(), frequencies_input_path.string() , use_CRD, use_B);
+
+    // create cul and qel input path
+    const auto input_cul_file = std::filesystem::path(input_cul_string);
+    const auto input_qel_file = std::filesystem::path(input_qel_string);
+    auto input_cul_path =  main_input_dir / problem_input_file;
+    auto input_qel_path =  main_input_dir / problem_input_file;
+
+    auto rt_problem_ptr = std::make_shared<RT_problem>(PORTA_input_path.string().c_str(),
+                                                         input_cul_path.string().c_str(),
+                                                         input_qel_path.string().c_str(), frequencies_input_path.string() , use_CRD, use_B);
     
     const int N_theta = rt_problem_ptr->N_theta_;
     const int N_chi   = rt_problem_ptr->N_chi_; 

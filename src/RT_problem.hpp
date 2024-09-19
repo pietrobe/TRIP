@@ -17,6 +17,48 @@ class RT_problem
 
 public:
 
+	// constructor for PORTA input file with additional inputs
+	RT_problem(const char* filename_pmd,
+			   const char* filename_cul,
+			   const char* filename_qel, input_string input_path_frequency, 
+			   const bool use_CRD_limit = false, 
+			   const bool use_magnetic_field = false)
+	{				
+		Real start = MPI_Wtime();
+
+		// assign MPI varaibles 
+    	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank_);
+    	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size_);
+
+    	if (mpi_rank_ == 0) std::cout << "\n~~~~~~ MPI size = " << mpi_size_ << " ~~~~~~" << std::endl;		
+
+		// set flags    	
+    	use_PORTA_input_    = true;
+    	use_magnetic_field_ = use_magnetic_field;
+    	use_CRD_limit_      = use_CRD_limit;    	    	
+
+    	// frequency grid is not contained in PORTA input (but can be computed from T_ref)
+    	// const bool use_wavelength = false; // TEST
+    	read_frequency(input_path_frequency + "/frequency.dat");
+    	read_3D(filename_pmd, filename_cul, filename_qel);
+
+    	// timing
+    	// MPI_Barrier(space_grid_->raw_comm());
+    	Real end = MPI_Wtime(); 	    
+	    if (mpi_rank_ == 0) printf("Reading input time:\t\t%g (seconds)\n", end - start);	      		
+    	start = MPI_Wtime();
+
+		// precompute
+		set_up();
+
+		print_info();	    
+	
+	   	// MPI_Barrier(space_grid_->raw_comm()); 
+	   	end = MPI_Wtime(); 	    
+	    if (mpi_rank_ == 0) printf("Set up time:\t\t%g (seconds)\n", end - start);	      		
+	}
+
+
 	// constructor for PORTA input file
 	RT_problem(const char* PORTA_input, input_string input_path_frequency, 
 			   const bool use_CRD_limit = false, const bool use_magnetic_field = false)

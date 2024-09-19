@@ -11,7 +11,10 @@
 // read atom and grid quantities 
 void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, const char* filename_qel)
 {
-	if (mpi_rank_ == 0) std::cout << "Reading PORTA input from " << filename_pmd << std::endl;
+	if (mpi_rank_ == 0) std::cout << "Reading PORTA input..."   << std::endl;
+	if (mpi_rank_ == 0) std::cout << "Reading .pmd input from " << filename_pmd << std::endl;
+	if (mpi_rank_ == 0) std::cout << "Reading .cul input from " << filename_cul << std::endl;
+	if (mpi_rank_ == 0) std::cout << "Reading .qel input from " << filename_qel << std::endl;
 
 	const bool zero_velocities = false;
 	if (mpi_rank_ == 0 and zero_velocities) std::cout << "WARNING: ZERO velocities HARDCODED!" << std::endl;
@@ -187,8 +190,9 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 		xi_dev.ref(i,j,k) = 0; 
 		
 		// compute Qel and Cul
-		Qel_dev.ref(i,j,k) = read_single_node_single_field(filename_qel,i_global,j_global,k_reverse);					
-		Cul_dev.ref(i,j,k) = read_single_node_single_field(filename_cul,i_global,j_global,k_reverse);					
+		Cul_dev.ref(i,j,k) = read_single_node_single_field(f_cul,i_global,j_global,k_reverse);					
+		Qel_dev.ref(i,j,k) = read_single_node_single_field(f_qel,i_global,j_global,k_reverse);					
+		
 		
 		// convert to spherical coordinates
 		auto B_spherical = convert_cartesian_to_spherical(tmp_vector[3], 
