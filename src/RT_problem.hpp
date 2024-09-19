@@ -20,8 +20,10 @@ public:
 	// constructor for PORTA input file with additional inputs
 	RT_problem(const char* filename_pmd,
 			   const char* filename_cul,
-			   const char* filename_qel, input_string input_path_frequency, 
-			   const bool use_CRD_limit = false, 
+			   const char* filename_qel, 
+			   const char* filename_llp, 
+			   input_string input_path_frequency, 
+			   const bool use_CRD_limit      = false, 
 			   const bool use_magnetic_field = false)
 	{				
 		Real start = MPI_Wtime();
@@ -40,7 +42,7 @@ public:
     	// frequency grid is not contained in PORTA input (but can be computed from T_ref)
     	// const bool use_wavelength = false; // TEST
     	read_frequency(input_path_frequency + "/frequency.dat");
-    	read_3D(filename_pmd, filename_cul, filename_qel);
+    	read_3D(filename_pmd, filename_cul, filename_qel, filename_llp);
 
     	// timing
     	// MPI_Barrier(space_grid_->raw_comm());
@@ -421,7 +423,7 @@ private:
 
 	// read 3D input from pmd file 
 	void read_3D(const char* filename);
-	void read_3D(const char* filename_pmd, const char* filename_cul, const char* filename_qel);
+	void read_3D(const char* filename_pmd, const char* filename_cul, const char* filename_qel, const char* filename_llp);
 	std::vector<Real> read_single_node(MPI_File fh, const int i, const int j, const int k);
 	Real read_single_node_single_field(MPI_File fh, const int i, const int j, const int k);
 

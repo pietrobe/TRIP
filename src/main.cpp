@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
 
   {
     const bool output   = true;
-    const bool output_overwrite_prevention = true; // if true the application stops (with an MPI_Abort) if the output directory already exists
+    const bool output_overwrite_prevention = false; // if true the application stops (with an MPI_Abort) if the output directory already exists
 
     const bool use_B    = true;
 
@@ -133,36 +133,34 @@ int main(int argc, char *argv[]) {
     
     const std::string input_cul_string = std::string("AR_385_Cut_32x32-CRD_I_V0.cul");
     const std::string input_qel_string = std::string("AR_385_Cut_32x32-CRD_I_V0.qel");
+    const std::string input_llp_string = std::string("AR_385_Cut_32x32-CRD_I_V0_conv.llp");
   #endif
   /////////////////////////////////////////////////////////////
-
-//    auto PORTA_input_path = main_input_dir / std::filesystem::path("PORTA/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd");
-    // auto PORTA_input_path =  main_input_dir / std::filesystem::path("PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_32x32x133.pmd");
-    // auto PORTA_input_path =  main_input_dir / std::filesystem::path("PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_64x64x133.pmd");
 
     const auto problem_input_file = std::filesystem::path(problem_input_file_string);
 
     auto frequencies_input_path =  main_input_dir / std::filesystem::path("frequency/96F");
 
-//    auto PORTA_input_path =  main_input_dir / std::filesystem::path("PORTA/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd");
-    // // const char* PORTA_input_path = "/users/pietrob/solar_3d/input/PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_32x32x133.pmd";
-    // auto PORTA_input_path =  main_input_dir / std::filesystem::path("PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_64x64x133.pmd");
-    // auto PORTA_input_path =  main_input_dir / std::filesystem::path("PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_32x32x133.pmd");
-    // auto PORTA_input_path =  main_input_dir / std::filesystem::path("PORTA/cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_16x16x133.pmd");
-
     auto PORTA_input_path =  main_input_dir / problem_input_file;
 
-    // auto rt_problem_ptr = std::make_shared<RT_problem>(PORTA_input_path.string().c_str(), frequencies_input_path.string() , use_CRD, use_B);
+    ///// VEECHIO
+    auto rt_problem_ptr = std::make_shared<RT_problem>(PORTA_input_path.string().c_str(), frequencies_input_path.string() , use_CRD, use_B);
 
-    // create cul and qel input path
-    const auto input_cul_file = std::filesystem::path(input_cul_string);
-    const auto input_qel_file = std::filesystem::path(input_qel_string);
-    auto input_cul_path =  main_input_dir / problem_input_file;
-    auto input_qel_path =  main_input_dir / problem_input_file;
+    ///// NUOVO
+    // // create cul and qel input path
+    // const auto input_cul_file = std::filesystem::path(input_cul_string);
+    // const auto input_qel_file = std::filesystem::path(input_qel_string);
+    // const auto input_llp_file = std::filesystem::path(input_llp_string);
 
-    auto rt_problem_ptr = std::make_shared<RT_problem>(PORTA_input_path.string().c_str(),
-                                                         input_cul_path.string().c_str(),
-                                                         input_qel_path.string().c_str(), frequencies_input_path.string() , use_CRD, use_B);
+    // auto input_cul_path =  main_input_dir / input_cul_file;
+    // auto input_qel_path =  main_input_dir / input_qel_file;
+    // auto input_llp_path =  main_input_dir / input_llp_file;
+
+
+    // auto rt_problem_ptr = std::make_shared<RT_problem>(PORTA_input_path.string().c_str(),
+    //                                                      input_cul_path.string().c_str(),
+    //                                                      input_qel_path.string().c_str(),
+    //                                                      input_llp_path.string().c_str(), frequencies_input_path.string() , use_CRD, use_B);
     
     const int N_theta = rt_problem_ptr->N_theta_;
     const int N_chi   = rt_problem_ptr->N_chi_; 

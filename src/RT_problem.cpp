@@ -9,21 +9,23 @@
 #define GAUSS_TO_LARMOR_FREQUENCY(BB__) ((BB__) * 1399600.0) // [Gauss] -> [Hz]
 
 // read atom and grid quantities 
-void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, const char* filename_qel)
+void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, const char* filename_qel, const char* filename_llp)
 {
 	if (mpi_rank_ == 0) std::cout << "Reading PORTA input..."   << std::endl;
 	if (mpi_rank_ == 0) std::cout << "Reading .pmd input from " << filename_pmd << std::endl;
 	if (mpi_rank_ == 0) std::cout << "Reading .cul input from " << filename_cul << std::endl;
 	if (mpi_rank_ == 0) std::cout << "Reading .qel input from " << filename_qel << std::endl;
+	if (mpi_rank_ == 0) std::cout << "Reading .llp input from " << filename_llp << std::endl;
 
 	const bool zero_velocities = false;
 	if (mpi_rank_ == 0 and zero_velocities) std::cout << "WARNING: ZERO velocities HARDCODED!" << std::endl;
 
 	// reading atom and grids from file
-	MPI_File fh, f_cul, f_qel;
+	MPI_File fh, f_cul, f_qel, f_llp;
 	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_pmd, MPI_MODE_RDONLY, MPI_INFO_NULL, &fh));
 	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_cul, MPI_MODE_RDONLY, MPI_INFO_NULL, &f_cul));
 	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_qel, MPI_MODE_RDONLY, MPI_INFO_NULL, &f_qel));
+	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_llp, MPI_MODE_RDONLY, MPI_INFO_NULL, &f_llp));
 
 	// buffers
 	Real entry;
@@ -182,7 +184,7 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 		// epsilon_dev.ref(i,j,k) = tmp_vector[0];		
 		// Cul_dev.ref(i,j,k)     = tmp_vector[1];		
 		T_dev.ref(i,j,k)       = tmp_vector[2];			
-		Nl_dev.ref(i,j,k)      = tmp_vector[9];		
+		// Nl_dev.ref(i,j,k)      = tmp_vector[9];		
 		// a_dev.ref(i,j,k)       = tmp_vector[10];		
 		D2_dev.ref(i,j,k)      = tmp_vector[11];
 
@@ -191,8 +193,8 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 		
 		// compute Qel and Cul
 		Cul_dev.ref(i,j,k) = read_single_node_single_field(f_cul,i_global,j_global,k_reverse);					
-		Qel_dev.ref(i,j,k) = read_single_node_single_field(f_qel,i_global,j_global,k_reverse);					
-		
+		Qel_dev.ref(i,j,k) = read_single_node_single_field(f_qel,i_global,j_global,k_reverse);		
+		Nl_dev.ref(i,j,k)  = read_single_node_single_field(f_llp,i_global,j_global,k_reverse);							
 		
 		// convert to spherical coordinates
 		auto B_spherical = convert_cartesian_to_spherical(tmp_vector[3], 
