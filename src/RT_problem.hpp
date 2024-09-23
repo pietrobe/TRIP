@@ -22,6 +22,7 @@ public:
 			   const char* filename_cul,
 			   const char* filename_qel, 
 			   const char* filename_llp, 
+			   const char* filename_back,
 			   input_string input_path_frequency, 
 			   const bool use_CRD_limit      = false, 
 			   const bool use_magnetic_field = false)
@@ -42,7 +43,7 @@ public:
     	// frequency grid is not contained in PORTA input (but can be computed from T_ref)
     	// const bool use_wavelength = false; // TEST
     	read_frequency(input_path_frequency + "/frequency.dat");
-    	read_3D(filename_pmd, filename_cul, filename_qel, filename_llp);
+    	read_3D(filename_pmd, filename_cul, filename_qel, filename_llp, filename_back);
 
     	// timing
     	// MPI_Barrier(space_grid_->raw_comm());
@@ -423,9 +424,10 @@ private:
 
 	// read 3D input from pmd file 
 	void read_3D(const char* filename);
-	void read_3D(const char* filename_pmd, const char* filename_cul, const char* filename_qel, const char* filename_llp);
+	void read_3D(const char* filename_pmd, const char* filename_cul, const char* filename_qel, const char* filename_llp, const char* filename_back);
 	std::vector<Real> read_single_node(MPI_File fh, const int i, const int j, const int k);
 	Real read_single_node_single_field(MPI_File fh, const int i, const int j, const int k);
+	void read_single_node_triple_field(MPI_File input_file, const int i, const int j, const int k, Real &kappa, Real &sigma, Real &epsilon);
 
 	// compute polarization tensors (vector of six components)
 	std::vector<std::complex<Real> > compute_T_KQ(const int stokes_i, const Real theta, const Real chi);
