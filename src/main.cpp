@@ -102,6 +102,7 @@ int main(int argc, char *argv[]) {
     const std::string input_cul_string = std::string("AR_385_Cut_32x32-CRD_I_V0.cul");
     const std::string input_qel_string = std::string("AR_385_Cut_32x32-CRD_I_V0.qel");
     const std::string input_llp_string = std::string("AR_385_Cut_32x32-CRD_I_V0_conv.llp");
+    const std::string input_back_string = std::string("AR_385_Cut_32x32-CRD_I_V0.back");
   #endif
   /////////////////////////////////////////////////////////////
 
@@ -125,11 +126,13 @@ int main(int argc, char *argv[]) {
             auto input_cul_path = main_input_dir / std::filesystem::path(input_cul_string);
             auto input_qel_path = main_input_dir / std::filesystem::path(input_qel_string);
             auto input_llp_path = main_input_dir / std::filesystem::path(input_llp_string);
+            auto input_back_path = main_input_dir / std::filesystem::path(input_back_string);
 
             return std::make_shared<RT_problem>(PORTA_input_pmd.string().c_str(),
                                                 input_cul_path.string().c_str(),
                                                 input_qel_path.string().c_str(),
                                                 input_llp_path.string().c_str(),
+                                                input_back_path.string().c_str(),
                                                 frequencies_input_path.string(), use_CRD, use_B);
         }
     }; // end lambda create_rt_problem
