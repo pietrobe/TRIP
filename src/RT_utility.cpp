@@ -7,15 +7,30 @@
 #include <sstream>
 #include <string>
 
+// std::string get_arg(const std::string &input, const std::string &word) {
+//   std::regex pattern("^\\s+" + word + ":\\s+(.*)$", std::regex::multiline);
+//   std::smatch match;
+
+//   if (std::regex_search(input, match, pattern)) {
+//     return match.str(1);
+//   }
+
+//   return std::string();
+// }
+
 std::string get_arg(const std::string &input, const std::string &word) {
-  std::regex pattern("^\\s+" + word + ":\\s+(.*)$", std::regex::multiline);
-  std::smatch match;
+    std::regex pattern("^\\s*" + word + ":\\s*(.*)$");
+    std::smatch match;
+    std::istringstream stream(input);
+    std::string line;
 
-  if (std::regex_search(input, match, pattern)) {
-    return match.str(1);
-  }
+    while (std::getline(stream, line)) {
+        if (std::regex_search(line, match, pattern)) {
+            return match.str(1);
+        }
+    }
 
-  return std::string();
+    return std::string();
 }
 
 std::map<std::string, std::string>
