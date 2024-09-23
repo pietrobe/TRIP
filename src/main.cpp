@@ -16,7 +16,7 @@
 
 // WARNING: if you want to use command line options, you need to set USE_CMD_LINE_OPTIONS = 1
 // otherwise, it will use the default and hard-coded values
-#define USE_CMD_LINE_OPTIONS 1
+#define USE_CMD_LINE_OPTIONS 0
 //////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////
@@ -67,8 +67,9 @@ int main(int argc, char *argv[]) {
   const std::filesystem::path main_input_dir  = getOptionArgument(argc, argv, "--input_dir");
   const std::filesystem::path main_output_dir = getOptionArgument(argc, argv, "--output_dir");
 #else
-  const std::filesystem::path main_input_dir  = "../input/PORTA";
-  const std::filesystem::path main_output_dir = "output";
+//  const std::filesystem::path main_input_dir  = "../input/PORTA";
+  const std::filesystem::path main_input_dir  = "/users/sriva/out_data/a32";
+  const std::filesystem::path main_output_dir = "/users/sriva/out_data/a32/output";
 #endif
   ////////////////////////////////////////////////////////////////////////////
 
