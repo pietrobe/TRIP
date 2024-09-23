@@ -105,8 +105,10 @@ void print_help() {
   std::cout << "  --CRD: use CRD" << std::endl;
   std::cout << "  --input_dir <input_dir>: input directory" << std::endl;
   std::cout << "  --output_dir <output_dir>: output directory" << std::endl;
-  std::cout << "  --problem_input_file <problem_input_file>: problem input file"
+  std::cout << "  --problem_pmd_file <problem_pmd_file>: problem pmd input file"
             << std::endl;
+  std::cout << "  --problem_input_config <problem_input_config>: problem input "
+               "config file";
   std::cout << "  --help: print help and exit" << std::endl << std::endl;
 
   std::cout
@@ -128,5 +130,14 @@ void print_help() {
       << "If the results output directory already exists, the code will stop."
       << std::endl;
   std::cout << "Default solver is the PRD." << std::endl;
+  std::cout << std::endl;
+  std::cout << "The config file is a text file in the input directory with the "
+               "following format:"
+            << std::endl
+            << std::endl;
+  std::cout << "  pmd: problem.pmd" << std::endl;
+  std::cout << "  cul: cul_file.cul" << std::endl;
+  std::cout << "  qel: qel_file.qel" << std::endl;
+  std::cout << "  llp: llp_file.llp" << std::endl;
   std::cout << std::endl;
 }
