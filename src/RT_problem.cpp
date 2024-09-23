@@ -248,23 +248,23 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 		}
 				
 		{
-		// continuum 
-		Real kappa, sigma, epsilon;
-		read_single_node_triple_field(f_cul, i_global, j_global, k_reverse, kappa, sigma, epsilon);
-		for (int n = 0; n < N_nu_; ++n)
-		{			
-			// hardcoded to 0.0 as in PORTA
-			// sigma_dev.block(   i, j, k)[n] = 0.0;		
-			// k_c_dev.block(     i, j, k)[n] = tmp_vector[12];		
-			// eps_c_th_dev.block(i, j, k)[n] = tmp_vector[13];
+			// continuum 
+			Real kappa, sigma, epsilon;
+			read_single_node_triple_field(f_cul, i_global, j_global, k_reverse, kappa, sigma, epsilon);
+			for (int n = 0; n < N_nu_; ++n)
+			{			
+				// hardcoded to 0.0 as in PORTA
+				// sigma_dev.block(   i, j, k)[n] = 0.0;		
+				// k_c_dev.block(     i, j, k)[n] = tmp_vector[12];		
+				// eps_c_th_dev.block(i, j, k)[n] = tmp_vector[13];
 
-			sigma_dev.block(   i, j, k)[n] = sigma;
-			k_c_dev.block(     i, j, k)[n] = kappa;
-			eps_c_th_dev.block(i, j, k)[n] = epsilon;	
+				sigma_dev.block(   i, j, k)[n] = sigma;
+				k_c_dev.block(     i, j, k)[n] = kappa;
+				eps_c_th_dev.block(i, j, k)[n] = epsilon;	
 
-			// TODO: read sigma from file .back, da controllare nell'input (solo un valore)
-			// read_single_node_single_field(filename_qel,i_global,j_global,k_reverse);				
-		}		
+				// TODO: read sigma from file .back, da controllare nell'input (solo un valore)
+				// read_single_node_single_field(filename_qel,i_global,j_global,k_reverse);				
+			}		
 		}	
 	});
 	
