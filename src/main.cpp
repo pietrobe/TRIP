@@ -154,9 +154,9 @@ int main(int argc, char *argv[]) {
       ss_a << "PORTA 3D input file: " << PORTA_input_pmd << std::endl;
       ss_a << "Frequencies input path: " << frequencies_input_path << std::endl;
       
-      ss_a << "input_cul_string: " << input_cul_string.empty() : "not provided" ? input_cul_string << std::endl;
-      ss_a << "input_qel_string: " << input_qel_string.empty() : "not provided" ? input_qel_string << std::endl;
-      ss_a << "input_llp_string: " << input_llp_string.empty() : "not provided" ? input_llp_string << std::endl;
+      ss_a << "input_cul_string: " << (input_cul_string.empty() ? std::string("not provided") : input_cul_string) << std::endl;
+      ss_a << "input_qel_string: " << (input_qel_string.empty() ? std::string("not provided") : input_qel_string) << std::endl;
+      ss_a << "input_llp_string: " << (input_llp_string.empty() ? std::string("not provided") : input_llp_string) << std::endl;
 
       ss_a << "N_theta =            " << N_theta << std::endl;
       ss_a << "N_chi =              " << N_chi << std::endl << std::endl;
