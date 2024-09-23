@@ -1,23 +1,13 @@
 #include "RT_solver.hpp"
 #include "Test_rii_include.hpp"
+#include "RT_utility.hpp"
+
 #include <chrono>
 #include "tools.h"
 #include <string>
 #include <filesystem>
 #include <iomanip>
 #include <sstream>
-
-std::string getCurrentDateTime() {
-    auto now = std::chrono::system_clock::now();
-    auto in_time_t = std::chrono::system_clock::to_time_t(now);
-
-    std::stringstream ss;
-    ss << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d %H:%M:%S");
-    return ss.str();
-}
-
-// compile and run with:
-// make -j 32 && srun -n 4 ./main
 
 // WARNING: if you want to use PORTA input for 3D setup, you need to set USE_PORTA_INPUT = 1
 // otherwise, it will use FAL-C input for 1D setup
@@ -26,51 +16,8 @@ std::string getCurrentDateTime() {
 
 // WARNING: if you want to use command line options, you need to set USE_CMD_LINE_OPTIONS = 1
 // otherwise, it will use the default and hard-coded values
-#define USE_CMD_LINE_OPTIONS 0
+#define USE_CMD_LINE_OPTIONS 1
 //////////////////////////////////////////////////////////////////////////
-
-std::string getOptionArgument(int argc, char *argv[], const std::string &option) {
-  for (int i = 1; i < argc; ++i) {
-    std::string arg = argv[i];
-    if (arg == option && i + 1 < argc) {
-      return argv[i + 1];
-    }
-  }
-  return std::string();  // Option not found or argument missing
-}
-
-bool getOptionFlag(int argc, char *argv[], const std::string &option) {
-  for (int i = 1; i < argc; ++i) {
-    std::string arg = argv[i];
-    if (arg == option) {
-      return true;
-    }
-  }
-  return false;
-}
-
-void print_help() {
-  std::cout << "----------------------------------------------------------------" << std::endl << std::endl;
-  std::cout << "Usage: mpirun ./solar_3D [options] [PETSC options]" << std::endl;
-  std::cout << "Options:" << std::endl;
-  std::cout << "  --CRD: use CRD" << std::endl;
-  std::cout << "  --input_dir <input_dir>: input directory" << std::endl;
-  std::cout << "  --output_dir <output_dir>: output directory" << std::endl;
-  std::cout << "  --problem_input_file <problem_input_file>: problem input file" << std::endl;
-  std::cout << "  --help: print help and exit" << std::endl << std::endl;
-
-  std::cout << "----------------------------------------------------------------" << std::endl << std::endl;
-
-  std::cout << "Example: mpirun ./solar_3D --CRD --input_dir /path/to/input --output_dir /path/to/output --problem_input_file problem_input_file.pmd  -ksp_type gmres -ksp_max_it 100 -ksp_rtol 1e-10" << std::endl;
-  std::cout << std::endl;
-  std::cout << "In the output directory, the code creates a results directory with the name of the problem input file and the extension \".CRD\" or \".PRD\", depending on the --CRD option." << std::endl;
-  std::cout << "If the results output directory already exists, the code will stop." << std::endl;
-  std::cout << "Default solver is the PRD." << std::endl;
-  std::cout << std::endl;
-}
-
-
-
 
 //////////////////////////////////////////////////////////////////////////
 int main(int argc, char *argv[]) {
@@ -83,10 +30,12 @@ int main(int argc, char *argv[]) {
   int mpi_size;
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 
+  int mpi_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+
   { // check if the user wants to print the help message
     // if yes, print the help message and return
-    int mpi_rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    
     if (getOptionFlag(argc, argv, "--help")) {
        if (mpi_rank == 0) 
           print_help();
@@ -127,9 +76,27 @@ int main(int argc, char *argv[]) {
 
   // Set here the problem input file //////////////////////////
   #if USE_CMD_LINE_OPTIONS == 1
-    const std::string problem_input_file_string = getOptionArgument(argc, argv, "--problem_input_file");
+    std::string input_pmd_string = getOptionArgument(argc, argv, "--problem_pmd_file");
+    
+    std::string input_cul_string;
+    std::string input_qel_string;
+    std::string input_llp_string;
+
+    const std::string input_config_string = getOptionArgument(argc, argv, "--problem_input_config");
+
+    if (not input_config_string.empty()) {
+      
+      const auto config_map = get_input_PORTA(main_input_dir / std::filesystem::path(input_config_string), mpi_rank);
+
+      input_pmd_string = config_map.at("pmd");
+
+      input_cul_string = config_map.at("cul");
+      input_qel_string = config_map.at("qel");
+      input_llp_string = config_map.at("llp");
+    }
+
   #else
-    const std::string problem_input_file_string = std::string("AR_385_Cut_32x32-CRD_I_V0_conv.pmd");
+    const std::string input_pmd_string = std::string("AR_385_Cut_32x32-CRD_I_V0_conv.pmd");
     
     const std::string input_cul_string = std::string("AR_385_Cut_32x32-CRD_I_V0.cul");
     const std::string input_qel_string = std::string("AR_385_Cut_32x32-CRD_I_V0.qel");
@@ -137,31 +104,37 @@ int main(int argc, char *argv[]) {
   #endif
   /////////////////////////////////////////////////////////////
 
-    const auto problem_input_file = std::filesystem::path(problem_input_file_string);
+    // const auto input_pmd_file = std::filesystem::path(input_pmd_string);
 
     auto frequencies_input_path =  main_input_dir / std::filesystem::path("frequency/96F");
 
-    auto PORTA_input_path =  main_input_dir / problem_input_file;
+    auto PORTA_input_pmd =  main_input_dir / std::filesystem::path(input_pmd_string);
 
-    ///// VEECHIO
-    auto rt_problem_ptr = std::make_shared<RT_problem>(PORTA_input_path.string().c_str(), frequencies_input_path.string() , use_CRD, use_B);
+    // lambda to build the RT_problem object
+    auto create_rt_problem = [&]() {
 
-    ///// NUOVO
-    // // create cul and qel input path
-    // const auto input_cul_file = std::filesystem::path(input_cul_string);
-    // const auto input_qel_file = std::filesystem::path(input_qel_string);
-    // const auto input_llp_file = std::filesystem::path(input_llp_string);
+        if (input_cul_string.empty() or input_qel_string.empty() or input_llp_string.empty()) {
+        // VEECHIO  // solo PMD input at least one of the cul, qel, llp is missing
+            return std::make_shared<RT_problem>(PORTA_input_pmd.string().c_str(), frequencies_input_path.string(), use_CRD, use_B);
 
-    // auto input_cul_path =  main_input_dir / input_cul_file;
-    // auto input_qel_path =  main_input_dir / input_qel_file;
-    // auto input_llp_path =  main_input_dir / input_llp_file;
+        } else {
 
+        // NUOVO // PMD + CUL + QEL + LLP input
+            // create cul and qel input path
+            auto input_cul_path = main_input_dir / std::filesystem::path(input_cul_string);
+            auto input_qel_path = main_input_dir / std::filesystem::path(input_qel_string);
+            auto input_llp_path = main_input_dir / std::filesystem::path(input_llp_string);
 
-    // auto rt_problem_ptr = std::make_shared<RT_problem>(PORTA_input_path.string().c_str(),
-    //                                                      input_cul_path.string().c_str(),
-    //                                                      input_qel_path.string().c_str(),
-    //                                                      input_llp_path.string().c_str(), frequencies_input_path.string() , use_CRD, use_B);
-    
+            return std::make_shared<RT_problem>(PORTA_input_pmd.string().c_str(),
+                                                input_cul_path.string().c_str(),
+                                                input_qel_path.string().c_str(),
+                                                input_llp_path.string().c_str(),
+                                                frequencies_input_path.string(), use_CRD, use_B);
+        }
+    }; // end lambda create_rt_problem
+
+    auto rt_problem_ptr = create_rt_problem();  /// CALL LAMBDA to create RT_problem object
+
     const int N_theta = rt_problem_ptr->N_theta_;
     const int N_chi   = rt_problem_ptr->N_chi_; 
 
@@ -178,7 +151,13 @@ int main(int argc, char *argv[]) {
       }
       ss_a << std::endl << std::endl;
 
-      ss_a << "PORTA 3D input file: " << PORTA_input_path << std::endl;
+      ss_a << "PORTA 3D input file: " << PORTA_input_pmd << std::endl;
+      ss_a << "Frequencies input path: " << frequencies_input_path << std::endl;
+      
+      ss_a << "input_cul_string: " << input_cul_string.empty() : "not provided" ? input_cul_string << std::endl;
+      ss_a << "input_qel_string: " << input_qel_string.empty() : "not provided" ? input_qel_string << std::endl;
+      ss_a << "input_llp_string: " << input_llp_string.empty() : "not provided" ? input_llp_string << std::endl;
+
       ss_a << "N_theta =            " << N_theta << std::endl;
       ss_a << "N_chi =              " << N_chi << std::endl << std::endl;
 
@@ -191,7 +170,7 @@ int main(int argc, char *argv[]) {
     
 
 #else 
-    //FAL-C input for 1D setup
+    //FAL-C input for 1D input setup
 
     // inputs
     auto problem_input_file = std::filesystem::path("FAL-C/B20_V0_12T_8C_99F_1Pi4_9Pi8");
@@ -203,7 +182,6 @@ int main(int argc, char *argv[]) {
     const int N_theta = 8;
     const int N_chi   = 16;
     auto rt_problem_ptr = std::make_shared<RT_problem>(problem_input_FAL.string(), N_theta, N_chi, use_CRD, use_B);    
-
 #endif
 
     RT_solver rt_solver(rt_problem_ptr, "BESSER", use_prec);
@@ -216,7 +194,7 @@ int main(int argc, char *argv[]) {
     std::string output_file;
     if (output)
     {            
-        const std::filesystem::path output_path = main_output_dir / std::filesystem::path(problem_input_file_string + ((use_CRD) ? ".CRD" : ".PRD"));
+        const std::filesystem::path output_path = main_output_dir / std::filesystem::path(input_pmd_string + ((use_CRD) ? ".CRD" : ".PRD"));
 
         //  if (rt_problem_ptr->mpi_rank_ == 0) 
         //    std::cout << "Output path: " << output_path << std::endl;
@@ -334,11 +312,10 @@ int main(int argc, char *argv[]) {
         //    }
         // }
 
-        std::vector<Real> mus = {0.1, 1.0};
-        // write is arbitriary direction     
+
+        std::vector<Real> mus = {0.1, 1.0}; //// ATTENTION: arbitrary beam directions
         Real chi   = 0.19635;
-        //Real mu    = 0.930568;
-        //Real theta = acos(mu);
+    
         for (auto mu : mus)
         {
           compute_arbitrary_beam(mu, chi, output_file);
@@ -400,7 +377,7 @@ int main(int argc, char *argv[]) {
 }
 
 
-// TODO use Real insted of double
+// TODO use Real instead of double
 
 // output
 // python ../../sgrid/scripts/transpose_data.py -x 4 -y 4 -z 70 -b 99 -
