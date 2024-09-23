@@ -9,7 +9,7 @@
 #define GAUSS_TO_LARMOR_FREQUENCY(BB__) ((BB__) * 1399600.0) // [Gauss] -> [Hz]
 
 // read atom and grid quantities 
-void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, const char* filename_qel, const char* filename_llp)
+void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, const char* filename_qel, const char* filename_llp, const char* filename_back)
 {
 	if (mpi_rank_ == 0) std::cout << "Reading PORTA input..."   << std::endl;
 	if (mpi_rank_ == 0) std::cout << "Reading .pmd input from " << filename_pmd << std::endl;
@@ -21,7 +21,7 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	if (mpi_rank_ == 0 and zero_velocities) std::cout << "WARNING: ZERO velocities HARDCODED!" << std::endl;
 
 	// reading atom and grids from file
-	MPI_File fh, f_cul, f_qel, f_llp;
+	MPI_File fh, f_cul, f_qel, f_llp, f_back;
 	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_pmd, MPI_MODE_RDONLY, MPI_INFO_NULL, &fh));
 	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_cul, MPI_MODE_RDONLY, MPI_INFO_NULL, &f_cul));
 	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_qel, MPI_MODE_RDONLY, MPI_INFO_NULL, &f_qel));
@@ -247,17 +247,25 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 			v_b_dev.block(i, j, k)[2] = v_spherical[2];	
 		}
 				
+		{
 		// continuum 
+		Real kappa, sigma, epsilon;
+		read_single_node_triple_field(f_cul, i_global, j_global, k_reverse, kappa, sigma, epsilon);
 		for (int n = 0; n < N_nu_; ++n)
 		{			
 			// hardcoded to 0.0 as in PORTA
-			sigma_dev.block(   i, j, k)[n] = 0.0;		
-			k_c_dev.block(     i, j, k)[n] = tmp_vector[12];		
-			eps_c_th_dev.block(i, j, k)[n] = tmp_vector[13];	
+			// sigma_dev.block(   i, j, k)[n] = 0.0;		
+			// k_c_dev.block(     i, j, k)[n] = tmp_vector[12];		
+			// eps_c_th_dev.block(i, j, k)[n] = tmp_vector[13];
+
+			sigma_dev.block(   i, j, k)[n] = sigma;
+			k_c_dev.block(     i, j, k)[n] = kappa;
+			eps_c_th_dev.block(i, j, k)[n] = epsilon;	
 
 			// TODO: read sigma from file .back, da controllare nell'input (solo un valore)
 			// read_single_node_single_field(filename_qel,i_global,j_global,k_reverse);				
-		}			
+		}		
+		}	
 	});
 	
 	// close files
@@ -282,6 +290,34 @@ Real RT_problem::read_single_node_single_field(MPI_File input_file, const int i,
     MPI_CHECK(MPI_File_read(input_file, &output, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); 
     
     return output;
+}
+
+void RT_problem::read_single_node_triple_field(MPI_File input_file, const int i, const int j, const int k, Real &kappa, Real &sigma, Real &epsilon){
+
+	// Output
+    Real output;
+
+    // Compute jump
+    const int jump = N_x_ * (N_y_ * k + j) + i;
+
+    // Jump to data of interest
+    MPI_CHECK(MPI_File_seek(input_file, 3 * jump * sizeof(Real), MPI_SEEK_SET));
+    MPI_CHECK(MPI_File_read(input_file, &output, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); 
+    
+    kappa = output;
+
+	// Jump to data of interest
+	MPI_CHECK(MPI_File_seek(input_file,  (3 * jump + 1) * sizeof(Real) , MPI_SEEK_SET));
+	MPI_CHECK(MPI_File_read(input_file, &output, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); 
+	
+	sigma = output;
+
+	// Jump to data of interest
+	MPI_CHECK(MPI_File_seek(input_file,  (3 * jump + 2) * sizeof(Real), MPI_SEEK_SET));
+	MPI_CHECK(MPI_File_read(input_file, &output, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+
+	epsilon = output;
+
 }
 
 
