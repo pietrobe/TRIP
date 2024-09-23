@@ -26,6 +26,7 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_cul, MPI_MODE_RDONLY, MPI_INFO_NULL, &f_cul));
 	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_qel, MPI_MODE_RDONLY, MPI_INFO_NULL, &f_qel));
 	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_llp, MPI_MODE_RDONLY, MPI_INFO_NULL, &f_llp));
+	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_back, MPI_MODE_RDONLY, MPI_INFO_NULL, &f_back));
 
 	// buffers
 	Real entry;
@@ -250,7 +251,7 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 		{
 			// continuum 
 			Real kappa, sigma, epsilon;
-			read_single_node_triple_field(f_cul, i_global, j_global, k_reverse, kappa, sigma, epsilon);
+			read_single_node_triple_field(f_back, i_global, j_global, k_reverse, kappa, sigma, epsilon);
 			for (int n = 0; n < N_nu_; ++n)
 			{			
 				// hardcoded to 0.0 as in PORTA
@@ -271,7 +272,9 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	// close files
 	MPI_CHECK(MPI_File_close(&fh));		
 	MPI_CHECK(MPI_File_close(&f_cul));		
-	MPI_CHECK(MPI_File_close(&f_qel));		
+	MPI_CHECK(MPI_File_close(&f_qel));	
+	MPI_CHECK(MPI_File_close(&f_back));
+
 }
 
 
