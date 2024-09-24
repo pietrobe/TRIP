@@ -327,10 +327,21 @@ int main(int argc, char *argv[]) {
         // }
 
 
-        std::vector<Real> mus = {0.1, 1.0}; //// ATTENTION: arbitrary beam directions
+        // std::vector<Real> mus = {0.1, 1.0}; //// ATTENTION: arbitrary beam directions
+        std::vector<Real> mus = {}; //// ATTENTION: arbitrary beam directions NO ARBITRARY BEAMS
         Real chi   = 0.19635;
     
-        for (auto mu : mus)
+        if (rt_problem_ptr->mpi_rank_ == 0 and mus.size() ==0 ){
+          std::cout << "WARNING: no arbitrary beams" << std::endl;
+        } else if (rt_problem_ptr->mpi_rank_ == 0) {
+          std::cout << "Arbitrary beams: ";
+          for (auto mu : mus) {
+            std::cout << mu << " ";
+          }
+          std::cout << std::endl;
+        }
+         
+        for (Real mu : mus)
         {
           compute_arbitrary_beam(mu, chi, output_file);
         }
