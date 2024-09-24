@@ -3,7 +3,7 @@
 #SBATCH --ntasks=12288
 #SBATCH --cpus-per-task=1
 #SBATCH --constrain=gpu
-#SBATCH --time=01:30:00
+#SBATCH --time=00:30:00
 #SBATCH --account=u0
 #SBATCH --job-name="TRIP"
 

@@ -16,6 +16,7 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	if (mpi_rank_ == 0) std::cout << "Reading .cul input from " << filename_cul << std::endl;
 	if (mpi_rank_ == 0) std::cout << "Reading .qel input from " << filename_qel << std::endl;
 	if (mpi_rank_ == 0) std::cout << "Reading .llp input from " << filename_llp << std::endl;
+	if (mpi_rank_ == 0) std::cout << "Reading .back input from " << filename_back << std::endl;
 
 	const bool zero_velocities = false;
 	if (mpi_rank_ == 0 and zero_velocities) std::cout << "WARNING: ZERO velocities HARDCODED!" << std::endl;

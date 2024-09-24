@@ -69,7 +69,9 @@ int main(int argc, char *argv[]) {
 #else
 //  const std::filesystem::path main_input_dir  = "../input/PORTA";
   const std::filesystem::path main_input_dir  = "/users/sriva/out_data/a32";
-  const std::filesystem::path main_output_dir = "/users/sriva/out_data/a32/output";
+
+  // const std::filesystem::path main_output_dir = "../output";
+  const std::filesystem::path main_output_dir = "/scratch/snx3000/sriva/out/a32/output";
 #endif
   ////////////////////////////////////////////////////////////////////////////
 
@@ -97,7 +99,7 @@ int main(int argc, char *argv[]) {
     }
 
   #else
-    const std::string input_pmd_string = std::string("AR_385_Cut_32x32-CRD_I_V0_conv.pmd");
+    const std::string input_pmd_string = std::string("AR_385_Cut_32x32-CRD_I_V0-B0_V0_conv.pmd");
     
     const std::string input_cul_string = std::string("AR_385_Cut_32x32-CRD_I_V0.cul");
     const std::string input_qel_string = std::string("AR_385_Cut_32x32-CRD_I_V0.qel");
@@ -117,9 +119,17 @@ int main(int argc, char *argv[]) {
 
         if (input_cul_string.empty() or input_qel_string.empty() or input_llp_string.empty()) {
         // VEECHIO  // solo PMD input at least one of the cul, qel, llp is missing
+            if (mpi_rank == 0) {
+              std::cout << "WARNING: using ONLY PMD input file" << std::endl;
+            }
+
             return std::make_shared<RT_problem>(PORTA_input_pmd.string().c_str(), frequencies_input_path.string(), use_CRD, use_B);
 
         } else {
+
+          if (mpi_rank == 0) {
+            std::cout << "WARNING: using PMD + CUL + QEL + LLP + BACK input files" << std::endl;
+          }
 
         // NUOVO // PMD + CUL + QEL + LLP input
             // create cul and qel input path
