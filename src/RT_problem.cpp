@@ -251,8 +251,19 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 				
 		{
 			// continuum 
+
+		// back: Continuum quantities. For each node, total absorption
+        // coefficient [cm^-1], scattering coefficient [cm^-1] and thermal
+        // emissivity [cgs]. Binary file with double precision numbers.
+        // Order (z > y > x > [kappa,sigma,epsilon]).
+
 			Real kappa, sigma, epsilon;
 			read_single_node_triple_field(f_back, i_global, j_global, k_reverse, kappa, sigma, epsilon);
+
+			const double sigma_flag = 0.0; // hardcoded to 0.0 as in PORTA
+
+			if (mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: sigma continuum = 0 HARDCODED!" << std::endl;
+
 			for (int n = 0; n < N_nu_; ++n)
 			{			
 				// hardcoded to 0.0 as in PORTA
@@ -260,7 +271,7 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 				// k_c_dev.block(     i, j, k)[n] = tmp_vector[12];		
 				// eps_c_th_dev.block(i, j, k)[n] = tmp_vector[13];
 
-				sigma_dev.block(   i, j, k)[n] = sigma;
+				sigma_dev.block(   i, j, k)[n] = sigma * sigma_flag;
 				k_c_dev.block(     i, j, k)[n] = kappa;
 				eps_c_th_dev.block(i, j, k)[n] = epsilon;	
 
