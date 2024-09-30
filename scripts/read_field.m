@@ -12,7 +12,7 @@ i_chi = 1;
 %path_prd = "/home/sriva/hero_scratch/TRIP_test/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd.PRD.1000G.RII";
 %path_prd = "/home/sriva/hero_scratch/TRIP_test/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd.PRD.1000G.RII_FAST/"
 
-path_crd = "/home/sriva/ms5prj/output_test/PORTA/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd.CRD/";
+path_crd = "/home/sriva/hero_scratch/TRIP_test/test32/AR_385_Cut_32x32-CRD_I_V0_conv.pmd.CRD/";
 
 %path_n = '/home/sriva/hero_scratch/TRIP_test/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd.PRD';
 %path_f = '/home/sriva/hero_scratch/TRIP_test/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd_RII_CONTRIB_FAST';
@@ -21,10 +21,30 @@ path_crd = "/home/sriva/ms5prj/output_test/PORTA/cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4
 plot_profiles(path_crd, ...
     i_theta, i_chi)
 
+% Add Porta result
+t = readmatrix("file:///home/sriva/Downloads/AR_385_Cut_32x32-CRD_I_V0_quad0.txt");
+subplot(2,2,1)
+plot(t(:,1) , t(:,2), Marker="o")
+hold off
+
+subplot(2,2,2)
+plot(t(:,1) , 100*t(:,3)./t(:,2), Marker="o")
+hold off
+
+
+subplot(2,2,3)
+plot(t(:,1) , 100*t(:,4)./t(:,2), Marker="o")
+hold off
+
+subplot(2,2,4)
+plot(t(:,1) , 100*t(:,5)./t(:,2), Marker="o")
+hold off
+
+
 function plot_profiles(data_path, i_theta, i_chi)
     addpath(data_path)
     
-    profiles_CRD_4_4;
+    profiles_CRD_0_0;
     
     if i_theta <= size(Field,2)/2
         disp('WARNING: mu < 0! Setting i_theta to the first emerging direction:')    
@@ -37,14 +57,18 @@ function plot_profiles(data_path, i_theta, i_chi)
     % load_nu_grid;
     % nu_grid = nu_grid_(:,1);
     nu_grid = vacuum_to_air(freq_to_angstrom(nu_grid_));
+    nu_grid = freq_to_angstrom(nu_grid_);
     
     mu  = mu_grid(i_theta);
     chi = chi_grid(i_chi);
+
+    fprintf("mu = %f, acos nu = %f = %f deg \n", mu, acos(mu), rad2deg(acos(mu)));
+    fprintf("chi = %f = %f deg\n", chi, rad2deg(chi));
     
-    xmin = 4224.5;
+    xmin = 4227.3;
     xmax = 4228.5;
     
-    M = "+"; % Marker
+    M = "none"; % Marker
     % Use one of these values: '+' | 'o' | '*' | '.' | 'x' |
     % 'square' | 'diamond' | 'v' | '^' | '>' | '<' | 
     % 'pentagram' | 'hexagram' | '|' |
