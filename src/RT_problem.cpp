@@ -309,30 +309,44 @@ Real RT_problem::read_single_node_single_field(MPI_File input_file, const int i,
 
 void RT_problem::read_single_node_triple_field(MPI_File input_file, const int i, const int j, const int k, Real &kappa, Real &sigma, Real &epsilon){
 
-	// Output
-    Real output;
+
+	// back: Continuum quantities. For each node, total absorption
+	// coefficient [cm^-1], scattering coefficient [cm^-1] and thermal
+	// emissivity [cgs]. Binary file with double precision numbers.
+	// Order (z > y > x > [kappa,sigma,epsilon]).
 
     // Compute jump
     const int jump = N_x_ * (N_y_ * k + j) + i;
 
-    // Jump to data of interest
-    MPI_CHECK(MPI_File_seek(input_file, 3 * jump * sizeof(Real), MPI_SEEK_SET));
-    MPI_CHECK(MPI_File_read(input_file, &output, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); 
-    
-    kappa = output;
+	{
+		// Output
+		Real output;
+		// Jump to data of interest
+		MPI_CHECK(MPI_File_seek(input_file, 3 * jump * sizeof(Real), MPI_SEEK_SET));
+		MPI_CHECK(MPI_File_read(input_file, &output, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); 
+		
+		kappa = output;
+	}
 
-	// Jump to data of interest
-	MPI_CHECK(MPI_File_seek(input_file,  (3 * jump + 1) * sizeof(Real) , MPI_SEEK_SET));
-	MPI_CHECK(MPI_File_read(input_file, &output, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); 
-	
-	sigma = output;
+	{
+		// Output
+		Real output;
+		// Jump to data of interest
+		MPI_CHECK(MPI_File_seek(input_file,  (3 * jump + 1) * sizeof(Real) , MPI_SEEK_SET));
+		MPI_CHECK(MPI_File_read(input_file, &output, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); 
+		
+		sigma = output;
+	}
 
-	// Jump to data of interest
-	MPI_CHECK(MPI_File_seek(input_file,  (3 * jump + 2) * sizeof(Real), MPI_SEEK_SET));
-	MPI_CHECK(MPI_File_read(input_file, &output, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	{
+		// Output
+		Real output;
+		// Jump to data of interest
+		MPI_CHECK(MPI_File_seek(input_file,  (3 * jump + 2) * sizeof(Real), MPI_SEEK_SET));
+		MPI_CHECK(MPI_File_read(input_file, &output, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 
-	epsilon = output;
-
+		epsilon = output;
+	}
 }
 
 
