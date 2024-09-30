@@ -68,10 +68,8 @@ int main(int argc, char *argv[]) {
   const std::filesystem::path main_output_dir = getOptionArgument(argc, argv, "--output_dir");
 #else
 //  const std::filesystem::path main_input_dir  = "../input/PORTA";
-  const std::filesystem::path main_input_dir  = "/users/sriva/out_data/a32";
-
-  // const std::filesystem::path main_output_dir = "../output";
-  const std::filesystem::path main_output_dir = "/scratch/snx3000/sriva/out/a32/output";
+  const std::filesystem::path main_input_dir  = "/users/pietrob/solar_3d/input/PORTA";  
+  const std::filesystem::path main_output_dir = "/users/pietrob/solar_3d/output";
 #endif
   ////////////////////////////////////////////////////////////////////////////
 
@@ -99,12 +97,12 @@ int main(int argc, char *argv[]) {
     }
 
   #else
-    const std::string input_pmd_string = std::string("AR_385_Cut_32x32-CRD_I_V0-B0_V0_conv.pmd");
+    const std::string input_pmd_string = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0-B0_V0_conv.pmd");
+    const std::string input_llp_string = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0-B0_V0_conv.llp");
     
-    const std::string input_cul_string = std::string("AR_385_Cut_32x32-CRD_I_V0.cul");
-    const std::string input_qel_string = std::string("AR_385_Cut_32x32-CRD_I_V0.qel");
-    const std::string input_llp_string = std::string("AR_385_Cut_32x32-CRD_I_V0_conv.llp");
-    const std::string input_back_string = std::string("AR_385_Cut_32x32-CRD_I_V0.back");
+    const std::string input_cul_string  = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0.cul");
+    const std::string input_qel_string  = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0.qel");
+    const std::string input_back_string = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0.back");
   #endif
   /////////////////////////////////////////////////////////////
 
@@ -133,9 +131,9 @@ int main(int argc, char *argv[]) {
 
         // NUOVO // PMD + CUL + QEL + LLP input
             // create cul and qel input path
-            auto input_cul_path = main_input_dir / std::filesystem::path(input_cul_string);
-            auto input_qel_path = main_input_dir / std::filesystem::path(input_qel_string);
-            auto input_llp_path = main_input_dir / std::filesystem::path(input_llp_string);
+            auto input_cul_path  = main_input_dir / std::filesystem::path(input_cul_string);
+            auto input_qel_path  = main_input_dir / std::filesystem::path(input_qel_string);
+            auto input_llp_path  = main_input_dir / std::filesystem::path(input_llp_string);
             auto input_back_path = main_input_dir / std::filesystem::path(input_back_string);
 
             return std::make_shared<RT_problem>(PORTA_input_pmd.string().c_str(),
@@ -264,24 +262,24 @@ int main(int argc, char *argv[]) {
 
     // write output
     if (output){
-        const int N_x = rt_problem_ptr->N_x_;
-        const int N_y = rt_problem_ptr->N_y_; 
+        // const int N_x = rt_problem_ptr->N_x_;
+        // const int N_y = rt_problem_ptr->N_y_; 
 
-        for (int i = 0; i < N_x; ++i)
-        {
-           for (int j = 0; j < N_y; ++j)
-           {
-            rt_problem_ptr->write_surface_point_profiles(output_file, i, j);
-           }
-        }
+        // for (int i = 0; i < N_x; ++i)
+        // {
+        //    for (int j = 0; j < N_y; ++j)
+        //    {
+        //     rt_problem_ptr->write_surface_point_profiles(output_file, i, j);
+        //    }
+        // }      
 
-        // free some memory    
-        rt_problem_ptr->free_fields_memory(); 
-        rt_solver.free_fields_memory();
+        rt_problem_ptr->write_surface_point_profiles(output_file, 0, 0);
 
+        // // free some memory    
+        // rt_problem_ptr->free_fields_memory(); 
+        // rt_solver.free_fields_memory();
 
-
-        std::string output_file_Omega;
+        // std::string output_file_Omega;
 
         // rt_solver.apply_formal_solver_Omega(theta, chi);
         
@@ -327,24 +325,24 @@ int main(int argc, char *argv[]) {
         // }
 
 
-        // std::vector<Real> mus = {0.1, 1.0}; //// ATTENTION: arbitrary beam directions
-        std::vector<Real> mus = {}; //// ATTENTION: arbitrary beam directions NO ARBITRARY BEAMS
-        Real chi   = 0.19635;
+        // // std::vector<Real> mus = {0.1, 1.0}; //// ATTENTION: arbitrary beam directions
+        // std::vector<Real> mus = {}; //// ATTENTION: arbitrary beam directions NO ARBITRARY BEAMS
+        // Real chi   = 0.19635;
     
-        if (rt_problem_ptr->mpi_rank_ == 0 and mus.size() ==0 ){
-          std::cout << "WARNING: no arbitrary beams" << std::endl;
-        } else if (rt_problem_ptr->mpi_rank_ == 0) {
-          std::cout << "Arbitrary beams: ";
-          for (auto mu : mus) {
-            std::cout << mu << " ";
-          }
-          std::cout << std::endl;
-        }
+        // if (rt_problem_ptr->mpi_rank_ == 0 and mus.size() ==0 ){
+        //   std::cout << "WARNING: no arbitrary beams" << std::endl;
+        // } else if (rt_problem_ptr->mpi_rank_ == 0) {
+        //   std::cout << "Arbitrary beams: ";
+        //   for (auto mu : mus) {
+        //     std::cout << mu << " ";
+        //   }
+        //   std::cout << std::endl;
+        // }
          
-        for (Real mu : mus)
-        {
-          compute_arbitrary_beam(mu, chi, output_file);
-        }
+        // for (Real mu : mus)
+        // {
+        //   compute_arbitrary_beam(mu, chi, output_file);
+        // }
 
 	
 

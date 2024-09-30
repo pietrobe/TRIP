@@ -11,12 +11,15 @@
 // read atom and grid quantities 
 void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, const char* filename_qel, const char* filename_llp, const char* filename_back)
 {
-	if (mpi_rank_ == 0) std::cout << "Reading PORTA input..."   << std::endl;
-	if (mpi_rank_ == 0) std::cout << "Reading .pmd input from " << filename_pmd << std::endl;
-	if (mpi_rank_ == 0) std::cout << "Reading .cul input from " << filename_cul << std::endl;
-	if (mpi_rank_ == 0) std::cout << "Reading .qel input from " << filename_qel << std::endl;
-	if (mpi_rank_ == 0) std::cout << "Reading .llp input from " << filename_llp << std::endl;
+	if (mpi_rank_ == 0) std::cout << "Reading PORTA input..."    << std::endl;
+	if (mpi_rank_ == 0) std::cout << "Reading .pmd input from "  << filename_pmd << std::endl;
+	if (mpi_rank_ == 0) std::cout << "Reading .cul input from "  << filename_cul << std::endl;
+	if (mpi_rank_ == 0) std::cout << "Reading .qel input from "  << filename_qel << std::endl;
+	if (mpi_rank_ == 0) std::cout << "Reading .llp input from "  << filename_llp << std::endl;
 	if (mpi_rank_ == 0) std::cout << "Reading .back input from " << filename_back << std::endl;
+
+	// use two quadrature intervals for the theta grid
+	const bool double_GL = false;
 
 	const bool zero_velocities = false;
 	if (mpi_rank_ == 0 and zero_velocities) std::cout << "WARNING: ZERO velocities HARDCODED!" << std::endl;
@@ -122,8 +125,8 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	skip_size = (N_x_ * N_y_) * sizeof(double);
 	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));		
 
-	// set angualr grids and sizes and print
-	set_theta_chi_grids(N_theta_, N_chi_);
+	// set angualr grids and sizes and print	
+	set_theta_chi_grids(N_theta_, N_chi_, double_GL);
 	set_sizes();
 
 	/////////////////// set sizes
@@ -166,9 +169,7 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 
 	auto Doppler_width_dev = Doppler_width_->view_device();
 
-	auto g_dev = space_grid_->view_device();
-
-	if (mpi_rank_ == 0) std::cout << "WARNING: sigma continuum = 0 HARDCODED!" << std::endl;
+	auto g_dev = space_grid_->view_device();	
 
 	// fill field 
 	sgrid::parallel_for("READ-ATM1D", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
@@ -187,7 +188,7 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 		// Cul_dev.ref(i,j,k)     = tmp_vector[1];		
 		T_dev.ref(i,j,k)       = tmp_vector[2];			
 		// Nl_dev.ref(i,j,k)      = tmp_vector[9];		
-		// a_dev.ref(i,j,k)       = tmp_vector[10];		
+		a_dev.ref(i,j,k)       = tmp_vector[10];		
 		D2_dev.ref(i,j,k)      = tmp_vector[11];
 
 		// hardcoding xi to zero
@@ -2049,7 +2050,7 @@ void RT_problem::set_up(){
 		
 		Doppler_width_dev.ref(i,j,k) = dE * std::sqrt(xi * xi + 2 * k_B_ * T / mass_real);			
 
-		if (use_PORTA_input_) a_dev.ref(i,j,k) = (Aul_ + Cul + Qel_dev.ref(i,j,k)) / (4 * PI * Doppler_width_dev.ref(i,j,k));
+		// if (use_PORTA_input_) a_dev.ref(i,j,k) = (Aul_ + Cul + Qel_dev.ref(i,j,k)) / (4 * PI * Doppler_width_dev.ref(i,j,k));
 
 		W_T_dev.ref(i,j,k) = tmp_const2 * std::exp(- h_ * nu_0_ / (k_B_ * T));		
 		
