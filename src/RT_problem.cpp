@@ -263,7 +263,7 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 
 			const int sigma_flag = 0; // hardcoded to 0.0 as in PORTA
 
-			if (mpi_rank_ == 0 and i == 0 and j == 0 and k == 0 and sigma_flag == 0) std::cout << "WARNING: sigma continuum = 0 HARDCODED!" << std::endl;
+			if (mpi_rank_ == 0 and i == 0 and j == 0 and k == 0 and sigma_flag == 0) std::cout << "WARNING: sigma continuum = 0 HARDCODED! " << __FILE__ << ":" << __LINE__ << std::endl;
 
 			for (int n = 0; n < N_nu_; ++n)
 			{			
@@ -272,7 +272,7 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 				// k_c_dev.block(     i, j, k)[n] = tmp_vector[12];		
 				// eps_c_th_dev.block(i, j, k)[n] = tmp_vector[13];
 
-				sigma_dev.block(   i, j, k)[n] = sigma * Real(sigma_flag);
+				sigma_dev.block(   i, j, k)[n] = 0.0; // double(sigma * double(sigma_flag));
 				k_c_dev.block(     i, j, k)[n] = kappa;
 				eps_c_th_dev.block(i, j, k)[n] = epsilon;	
 

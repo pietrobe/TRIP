@@ -262,87 +262,39 @@ int main(int argc, char *argv[]) {
 
     // write output
     if (output){
-        // const int N_x = rt_problem_ptr->N_x_;
-        // const int N_y = rt_problem_ptr->N_y_; 
+        const int N_x = rt_problem_ptr->N_x_;
+        const int N_y = rt_problem_ptr->N_y_; 
 
-        // for (int i = 0; i < N_x; ++i)
-        // {
-        //    for (int j = 0; j < N_y; ++j)
-        //    {
-        //     rt_problem_ptr->write_surface_point_profiles(output_file, i, j);
-        //    }
-        // }      
+        for (int i = 0; i < N_x; ++i)
+        {
+           for (int j = 0; j < N_y; ++j)
+           {
+            rt_problem_ptr->write_surface_point_profiles(output_file, i, j);
+           }
+        }      
 
-        rt_problem_ptr->write_surface_point_profiles(output_file, 0, 0);
-
-        // // free some memory    
-        // rt_problem_ptr->free_fields_memory(); 
-        // rt_solver.free_fields_memory();
-
-        // std::string output_file_Omega;
-
-        // rt_solver.apply_formal_solver_Omega(theta, chi);
+        // rt_problem_ptr->write_surface_point_profiles(output_file, 0, 0);
         
-        // output_file_Omega = output_file + "_control";
-
-        // // for (int i = 0; i < N_x; ++i)
-        // // {
-        // //    for (int j = 0; j < N_y; ++j)
-        // //    {
-        //       rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, 0, 0);
-        // //    }
-        // // }
-
-        // mu = 0.1;
-        // theta = acos(mu);
-
-        // // allocate new data structure and compute I_Field_Omega
-        // rt_solver.apply_formal_solver_Omega(theta, chi);
-
-        // output_file_Omega = output_file + "_mu01";
-        // for (int i = 0; i < N_x; ++i)
-        // {
-        //    for (int j = 0; j < N_y; ++j)
-        //    {
-        //         rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, i, j);
-        //    }
-        // }
-
-        // mu = 1.0;
-        // theta = acos(mu);
-
-        // // allocate new data structure and compute I_Field_Omega
-        // rt_solver.apply_formal_solver_Omega(theta, chi);
-
-        // output_file_Omega = output_file + "_mu1";
-
-        // for (int i = 0; i < N_x; ++i)
-        // {
-        //    for (int j = 0; j < N_y; ++j)
-        //    {
-        //         rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, i, j);
-        //    }
-        // }
-
+        // old code: copied below .....
 
         // // std::vector<Real> mus = {0.1, 1.0}; //// ATTENTION: arbitrary beam directions
-        // std::vector<Real> mus = {}; //// ATTENTION: arbitrary beam directions NO ARBITRARY BEAMS
-        // Real chi   = 0.19635;
+        std::vector<Real> mus = {}; //// ATTENTION: arbitrary beam directions NO ARBITRARY BEAMS
+        Real chi   = 0.19635;
     
-        // if (rt_problem_ptr->mpi_rank_ == 0 and mus.size() ==0 ){
-        //   std::cout << "WARNING: no arbitrary beams" << std::endl;
-        // } else if (rt_problem_ptr->mpi_rank_ == 0) {
-        //   std::cout << "Arbitrary beams: ";
-        //   for (auto mu : mus) {
-        //     std::cout << mu << " ";
-        //   }
-        //   std::cout << std::endl;
-        // }
+        if (rt_problem_ptr->mpi_rank_ == 0 and mus.size() ==0 ){
+          std::cout << "WARNING: no arbitrary beams" << std::endl;
+        } else if (rt_problem_ptr->mpi_rank_ == 0) {
+          std::cout << "Arbitrary beams: ";
+          for (auto mu : mus) {
+            std::cout << mu << " ";
+          }
+          std::cout << std::endl;
+        }
          
-        // for (Real mu : mus)
-        // {
-        //   compute_arbitrary_beam(mu, chi, output_file);
-        // }
+        for (Real mu : mus)
+        {
+          compute_arbitrary_beam(mu, chi, output_file);
+        }
 
 	
 
@@ -404,3 +356,56 @@ int main(int argc, char *argv[]) {
 
 // output
 // python ../../sgrid/scripts/transpose_data.py -x 4 -y 4 -z 70 -b 99 -
+
+
+/// il vecchio codice per scrivere i profili 
+/// e per calcolare i profili in una direzione arbitraria
+
+        // // free some memory    
+        // rt_problem_ptr->free_fields_memory(); 
+        // rt_solver.free_fields_memory();
+
+        // std::string output_file_Omega;
+
+        // rt_solver.apply_formal_solver_Omega(theta, chi);
+        
+        // output_file_Omega = output_file + "_control";
+
+        // // for (int i = 0; i < N_x; ++i)
+        // // {
+        // //    for (int j = 0; j < N_y; ++j)
+        // //    {
+        //       rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, 0, 0);
+        // //    }
+        // // }
+
+        // mu = 0.1;
+        // theta = acos(mu);
+
+        // // allocate new data structure and compute I_Field_Omega
+        // rt_solver.apply_formal_solver_Omega(theta, chi);
+
+        // output_file_Omega = output_file + "_mu01";
+        // for (int i = 0; i < N_x; ++i)
+        // {
+        //    for (int j = 0; j < N_y; ++j)
+        //    {
+        //         rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, i, j);
+        //    }
+        // }
+
+        // mu = 1.0;
+        // theta = acos(mu);
+
+        // // allocate new data structure and compute I_Field_Omega
+        // rt_solver.apply_formal_solver_Omega(theta, chi);
+
+        // output_file_Omega = output_file + "_mu1";
+
+        // for (int i = 0; i < N_x; ++i)
+        // {
+        //    for (int j = 0; j < N_y; ++j)
+        //    {
+        //         rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega, i, j);
+        //    }
+        // }
