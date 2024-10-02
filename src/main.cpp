@@ -16,7 +16,7 @@
 
 // WARNING: if you want to use command line options, you need to set USE_CMD_LINE_OPTIONS = 1
 // otherwise, it will use the default and hard-coded values
-#define USE_CMD_LINE_OPTIONS 0
+#define USE_CMD_LINE_OPTIONS 1
 //////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////
@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
 
   {
     const bool output   = true;
-    const bool output_overwrite_prevention = false; // if true the application stops (with an MPI_Abort) if the output directory already exists
+    const bool output_overwrite_prevention = true; // if true the application stops (with an MPI_Abort) if the output directory already exists
 
     const bool use_B    = true;
 
@@ -82,6 +82,7 @@ int main(int argc, char *argv[]) {
     std::string input_cul_string;
     std::string input_qel_string;
     std::string input_llp_string;
+    std::string input_back_string;
 
     const std::string input_config_string = getOptionArgument(argc, argv, "--problem_input_config");
 
@@ -94,6 +95,7 @@ int main(int argc, char *argv[]) {
       input_cul_string = config_map.at("cul");
       input_qel_string = config_map.at("qel");
       input_llp_string = config_map.at("llp");
+      input_back_string = config_map.at("back");
     }
 
   #else

@@ -51,6 +51,7 @@ get_input_PORTA(const std::filesystem::path &config_file, int mpi_rank) {
     std::string cul_file = get_arg(input_string, "cul");
     std::string qel_file = get_arg(input_string, "qel");
     std::string llp_file = get_arg(input_string, "llp");
+    std::string back_file = get_arg(input_string, "back");
 
     if (pmd_file.empty()) {
       if (mpi_rank == 0)
@@ -63,6 +64,7 @@ get_input_PORTA(const std::filesystem::path &config_file, int mpi_rank) {
     input_PORTA_map["cul"] = cul_file;
     input_PORTA_map["qel"] = qel_file;
     input_PORTA_map["llp"] = llp_file;
+    input_PORTA_map["back"] = back_file;
 
   } else {
 
