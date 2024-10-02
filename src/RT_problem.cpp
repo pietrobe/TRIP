@@ -356,7 +356,7 @@ void RT_problem::read_3D(const char* filename){
 
 	if (mpi_rank_ == 0) std::cout << "Reading PORTA input from " << filename << std::endl;
 
-	const bool zero_velocities = true;
+	const bool zero_velocities = false;
 	if (mpi_rank_ == 0 and zero_velocities) std::cout << "ZERO velocities HARDCODED!" << std::endl;
 
 	// reading atom and grids from file
