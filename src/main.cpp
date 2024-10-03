@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 
   int mpi_rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
   { // check if the user wants to print the help message
     // if yes, print the help message and return
@@ -82,6 +82,7 @@ int main(int argc, char *argv[]) {
     std::string input_cul_string;
     std::string input_qel_string;
     std::string input_llp_string;
+    std::string input_back_string;
 
     const std::string input_config_string = getOptionArgument(argc, argv, "--problem_input_config");
 
@@ -94,6 +95,7 @@ int main(int argc, char *argv[]) {
       input_cul_string = config_map.at("cul");
       input_qel_string = config_map.at("qel");
       input_llp_string = config_map.at("llp");
+      input_back_string = config_map.at("back");
     }
 
   #else
