@@ -16,7 +16,7 @@
 
 // WARNING: if you want to use command line options, you need to set USE_CMD_LINE_OPTIONS = 1
 // otherwise, it will use the default and hard-coded values
-#define USE_CMD_LINE_OPTIONS 0
+#define USE_CMD_LINE_OPTIONS 1
 //////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////
@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
 
   {
     const bool output   = true;
-    const bool output_overwrite_prevention = false; // if true the application stops (with an MPI_Abort) if the output directory already exists
+    const bool output_overwrite_prevention = true; // if true the application stops (with an MPI_Abort) if the output directory already exists
 
     const bool use_B    = true;
 
