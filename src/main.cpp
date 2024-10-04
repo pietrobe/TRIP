@@ -138,6 +138,18 @@ int main(int argc, char *argv[]) {
             auto input_llp_path  = main_input_dir / std::filesystem::path(input_llp_string);
             auto input_back_path = main_input_dir / std::filesystem::path(input_back_string);
 
+            if (mpi_rank == 0) {
+
+                const auto file_name_provided = [](const std::string &s) { return (s.empty()) ? std::string("not provided") : s; };
+
+                ss_a << "PMD input file:   " << file_name_provided(PORTA_input_pmd.string()) << std::endl;
+                ss_a << "CUL input file:   " << file_name_provided(input_cul_path.string()) << std::endl;
+                ss_a << "QEL input file:   " << file_name_provided(input_qel_path.string()) << std::endl;
+                ss_a << "LLP input file:   " << file_name_provided(input_llp_path.string()) << std::endl;
+                ss_a << "BACK input file:  " << file_name_provided(input_back_path.string()) << std::endl;
+                std::cout << ss_a.str();
+            }
+
             return std::make_shared<RT_problem>(PORTA_input_pmd.string().c_str(),
                                                 input_cul_path.string().c_str(),
                                                 input_qel_path.string().c_str(),
@@ -166,12 +178,8 @@ int main(int argc, char *argv[]) {
       ss_a << std::endl << std::endl;
 
       ss_a << "PORTA 3D input file: " << PORTA_input_pmd << std::endl;
-      ss_a << "Frequencies input path: " << frequencies_input_path << std::endl;
+      ss_a << "Frequencies input path: " << frequencies_input_path << std::endl << std::endl;
       
-      ss_a << "input_cul_string: " << (input_cul_string.empty() ? std::string("not provided") : input_cul_string) << std::endl;
-      ss_a << "input_qel_string: " << (input_qel_string.empty() ? std::string("not provided") : input_qel_string) << std::endl;
-      ss_a << "input_llp_string: " << (input_llp_string.empty() ? std::string("not provided") : input_llp_string) << std::endl;
-
       ss_a << "N_theta =            " << N_theta << std::endl;
       ss_a << "N_chi =              " << N_chi << std::endl << std::endl;
 
