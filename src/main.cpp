@@ -250,6 +250,9 @@ int main(int argc, char *argv[]) {
     ///////////////////////////////////////////////////
     // solve //////////////////////////////////////////
     rt_solver.solve(); 
+    ///////////////////////////////////////////////////
+    // rt_solver.apply_formal_solver();
+
     // rt_solver.solve_checkpoint("../output/surface_profiles_5x5x133/", 20); 
     
     // lambda to compute arbitrary beam

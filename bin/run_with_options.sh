@@ -1,6 +1,6 @@
 #!/bin/bash -l
 
-#SBATCH --ntasks=2048
+#SBATCH --ntasks=4096
 #SBATCH --cpus-per-task=1
 #SBATCH --constrain=gpu
 #SBATCH --time=00:15:00
@@ -31,7 +31,10 @@ export OUTPUT_DIR=${MAIN_DATA_DIR}/output/${SERIES_DIR}/a${GRID_SIZE}
 ## For 32 x 32 grid size
 # export INPUT_CONFIG=AR_385_Cut_32x32-CRD_I_B0_V0.conf
 
-export INPUT_CONFIG=AR_385_Cut_64x64_mirrorxy-CRD_I_B0_V0.conf
+# export INPUT_CONFIG=AR_385_Cut_64x64_mirrorxy-CRD_I_B0_V0.conf
+
+export INPUT_CONFIG=AR_385_Cut_64x64_mirrorxy-CRD_I_B_V_KQ.conf
+
 
 # export INPUT_CONFIG=AR_385_Cut_32x32-CRD_I_B_V0.conf
 # export INPUT_CONFIG=AR_385_Cut_32x32-CRD_I_B_V.conf
