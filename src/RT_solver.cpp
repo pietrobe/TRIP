@@ -2227,7 +2227,15 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
         if (j >= j_end) std::cout << "ERROR with counters in update_emission(), j = " << j << std::endl;
         if (k >= k_end) std::cout << "ERROR with counters in update_emission(), k = " << k << std::endl;
 
-        // set input field         
+        // set input field        
+        // Added the option "CONTINUUM" to include only the continuum 
+        // With the "continuum" the scattering the include_continuum is set to true by default
+        // compute_node_3D_function_arbitrary_direction_type                                       //
+        // make_computation_function_arbitrary_direction(const std::string prd_crd,                //
+        //                                               const bool include_continuum   = false,   //
+        //                                               const bool include_epsilon_lth = false);  //
+        //
+        
         const std::string scattering_model = (RT_problem_->use_CRD_limit_) ? "CRD" : "PRD";        
         auto epsilon_computation_Omega = ecc_sh_ptr_->make_computation_function_arbitrary_direction(scattering_model, include_eps_lth, include_continuum);
 
