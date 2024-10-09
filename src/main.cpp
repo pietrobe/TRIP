@@ -121,6 +121,7 @@ int main(int argc, char *argv[]) {
         // VEECHIO  // solo PMD input at least one of the cul, qel, llp is missing
             if (mpi_rank == 0) {
               std::cout << "WARNING: using ONLY PMD input file" << std::endl;
+              std::cout << "Input PMD file: " << PORTA_input_pmd << std::endl;
             }
 
             return std::make_shared<RT_problem>(PORTA_input_pmd.string().c_str(), frequencies_input_path.string(), use_CRD, use_B);
