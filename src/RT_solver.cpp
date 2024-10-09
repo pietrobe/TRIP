@@ -2236,8 +2236,9 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
         //                                               const bool include_epsilon_lth = false);  //
         //
         
-        const std::string scattering_model = (RT_problem_->use_CRD_limit_) ? "CRD" : "PRD";        
-        auto epsilon_computation_Omega = ecc_sh_ptr_->make_computation_function_arbitrary_direction(scattering_model, include_eps_lth, include_continuum);
+         std::string scattering_model = (RT_problem_->use_CRD_limit_) ? "CRD" : "PRD";   
+        scattering_model = "CONTINUUM"; // for continuum only   // DANGER: this is a hack to TEST and debug the continuum only
+        auto epsilon_computation_Omega = ecc_sh_ptr_->make_computation_function_arbitrary_direction(scattering_model, include_continuum, include_eps_lth);
 
         ecc_sh_ptr_->update_incoming_field(i, j, k, offset_fun_, input.data());
 
