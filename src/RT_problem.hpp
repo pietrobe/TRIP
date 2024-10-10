@@ -12,6 +12,68 @@ using Field_ptr_t = std::shared_ptr<Field_t>;
 
 typedef const std::string input_string;
 
+enum class emissivity_model { NONE,        //
+	                          CRD_limit,   //
+							  PRD,         //
+							  PRD_NORMAL,  //
+							  PRD_FAST,    //
+							  ZERO};       //
+
+
+inline std::string emissivity_model_to_string(const emissivity_model& model)
+{
+	switch (model)
+	{
+		case emissivity_model::NONE:
+			return "NONE";
+			break;
+		case emissivity_model::CRD_limit:
+			return "CRD";
+			break;
+		case emissivity_model::PRD:
+		case emissivity_model::PRD_NORMAL:
+		case emissivity_model::PRD_FAST:
+			return "PRD";
+			break;
+		case emissivity_model::ZERO:
+			return "CONTINUUM";
+			break;
+		default:
+			return "UNKNOWN";
+			break;
+
+	}
+}
+
+
+inline std::string emissivity_model_to_string_long(const emissivity_model& model)
+{
+	switch (model)
+	{
+		case emissivity_model::NONE:
+			return "NONE";
+			break;
+		case emissivity_model::CRD_limit:
+			return "CRD limit";
+			break;
+		case emissivity_model::PRD:
+			return "PRD";
+			break;
+		case emissivity_model::PRD_NORMAL:
+			return "PRD_NORMAL";
+			break;
+		case emissivity_model::PRD_FAST:
+			return "PRD_FAST";
+			break;
+		case emissivity_model::ZERO:
+			return "CONTINUUM";
+			break;
+		default:
+			return "UNKNOWN";
+			break;
+	}
+}
+
 class RT_problem
 {
 
@@ -24,7 +86,7 @@ public:
 			   const char* filename_llp, 
 			   const char* filename_back,
 			   input_string input_path_frequency, 
-			   const bool use_CRD_limit      = false, 
+			   const emissivity_model emissivity_model_arg, 
 			   const bool use_magnetic_field = false)
 	{				
 		Real start = MPI_Wtime();
@@ -38,7 +100,8 @@ public:
 		// set flags    	
     	use_PORTA_input_    = true;
     	use_magnetic_field_ = use_magnetic_field;
-    	use_CRD_limit_      = use_CRD_limit;    	    	
+    	// use_CRD_limit_      = use_CRD_limit;    	    
+		emissivity_model_   = emissivity_model_arg;
 
     	// frequency grid is not contained in PORTA input (but can be computed from T_ref)
     	// const bool use_wavelength = false; // TEST
@@ -64,7 +127,8 @@ public:
 
 	// constructor for PORTA input file
 	RT_problem(const char* PORTA_input, input_string input_path_frequency, 
-			   const bool use_CRD_limit = false, const bool use_magnetic_field = false)
+			   const emissivity_model emissivity_model_arg, 
+			   const bool use_magnetic_field = false)
 	{				
 		Real start = MPI_Wtime();
 
@@ -77,7 +141,11 @@ public:
 		// set flags    	
     	use_PORTA_input_    = true;
     	use_magnetic_field_ = use_magnetic_field;
-    	use_CRD_limit_      = use_CRD_limit;    	    	
+    	// use_CRD_limit_      = use_CRD_limit;
+		emissivity_model_   = emissivity_model_arg;
+
+		// New method to set the emissivity model
+		// emissivity_model emissivity_model_ = emissivity_model::NONE;
 
     	// frequency grid is not contained in PORTA input (but can be computed from T_ref)
     	// const bool use_wavelength = false; // TEST
@@ -105,7 +173,7 @@ public:
 			   const bool use_CRD_limit = false, const bool use_magnetic_field = false)			   
 	{
 		// set CRD flag
-		use_CRD_limit_      = use_CRD_limit;  
+		// use_CRD_limit_      = use_CRD_limit;  
 		use_magnetic_field_ = use_magnetic_field;  	
 
 		if (use_magnetic_field_ and mpi_rank_ == 0) std::cout << "\nWARNING: B is hardcoded!\n" << std::endl;				
@@ -252,7 +320,10 @@ public:
 	bool enable_continuum_ = true;
 	
 	// flag to use CRD
-	bool use_CRD_limit_;		  
+	// bool use_CRD_limit_;	
+	bool use_ZERO_epsilon_ = false;	 
+
+	emissivity_model emissivity_model_ = emissivity_model::NONE; 
 
 	// spatial grid
 	Grid_ptr_t space_grid_; 	

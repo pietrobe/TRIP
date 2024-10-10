@@ -48,18 +48,34 @@ int main(int argc, char *argv[]) {
   Kokkos::initialize(argc, argv);
 
   {
+    //////////////////////////////////////////////////////////////////////////
+    // list of emissivity models
+    // NONE: no emissivity
+    // CRD_limit: CRD limit
+    // PRD: partial redistribution default grid (FAST).
+    // PRD_NORMAL: partial redistribution with standard grid.
+    // PRD_FAST: partial redistribution with fast grid.
+    // ZERO: continuum
+    emissivity_model emissivity_model_var = emissivity_model::PRD;
+
     const bool output   = true;
     const bool output_overwrite_prevention = true; // if true the application stops (with an MPI_Abort) if the output directory already exists
 
     const bool use_B    = true;
+    const bool use_ZERO_epsilon = false;
 
 #if USE_CMD_LINE_OPTIONS == 1
     const bool use_CRD  = getOptionFlag(argc, argv, "--CRD");
+    const bool use_continuum = getOptionFlag(argc, argv, "--continuum");
     const bool use_prec = (not use_CRD);
 #else
+    const bool use_continuum = false;
     const bool use_CRD  = true;
     const bool use_prec = (not use_CRD);
 #endif
+
+    if (use_CRD) emissivity_model_var = emissivity_model::CRD_limit;
+    if (use_continuum) emissivity_model_var = emissivity_model::ZERO;
 
 
   // Set here the main input and output directories //////////////////////////
@@ -124,7 +140,10 @@ int main(int argc, char *argv[]) {
               std::cout << "Input PMD file: " << PORTA_input_pmd << std::endl;
             }
 
-            return std::make_shared<RT_problem>(PORTA_input_pmd.string().c_str(), frequencies_input_path.string(), use_CRD, use_B);
+            return std::make_shared<RT_problem>(PORTA_input_pmd.string().c_str(), 
+                                                frequencies_input_path.string(), 
+                                                emissivity_model_var,
+                                                use_B);
 
         } else {
 
@@ -156,7 +175,9 @@ int main(int argc, char *argv[]) {
                                                 input_qel_path.string().c_str(),
                                                 input_llp_path.string().c_str(),
                                                 input_back_path.string().c_str(),
-                                                frequencies_input_path.string(), use_CRD, use_B);
+                                                frequencies_input_path.string(), 
+                                                emissivity_model_var,
+                                                use_B);
         }
     }; // end lambda create_rt_problem
 
@@ -217,7 +238,7 @@ int main(int argc, char *argv[]) {
     std::string output_file;
     if (output)
     {            
-        const std::filesystem::path output_path = main_output_dir / std::filesystem::path(input_pmd_string + ((use_CRD) ? ".CRD" : ".PRD"));
+        const std::filesystem::path output_path = main_output_dir / std::filesystem::path(input_pmd_string + emissivity_model_to_string_long(emissivity_model_var));
 
         //  if (rt_problem_ptr->mpi_rank_ == 0) 
         //    std::cout << "Output path: " << output_path << std::endl;
