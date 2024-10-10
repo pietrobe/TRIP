@@ -257,16 +257,17 @@ int main(int argc, char *argv[]) {
     // rt_solver.solve_checkpoint("../output/surface_profiles_5x5x133/", 20); 
     
     // lambda to compute arbitrary beam
-      const auto compute_arbitrary_beam = [&] (const Real mu, const Real chi, const std::string output_file) {
+      const auto compute_arbitrary_beam = [&, Nx = rt_problem_ptr->N_x_, 
+                                              Ny = rt_problem_ptr->N_y_] (const Real mu, const Real chi, const std::string output_file) {
 
         std::string output_file_Omega_mu = output_file + "_mu" + std::to_string(mu);
         
         const Real theta = acos(mu);
         rt_solver.apply_formal_solver_Omega(theta, chi);
 
-        for (int i = 0; i < N_theta; ++i)
+        for (int i = 0; i < Nx; ++i)
         {
-          for (int j = 0; j < N_chi; ++j)
+          for (int j = 0; j < Ny; ++j)
           {
                 rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega_mu, i, j);
           }
