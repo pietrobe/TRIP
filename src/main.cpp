@@ -50,11 +50,17 @@ int main(int argc, char *argv[]) {
   {
     //////////////////////////////////////////////////////////////////////////
     // list of emissivity models
-    // NONE: no emissivity
+    // NONE: undefined 
     // CRD_limit: CRD limit
+    // CRD_limit_VHP: CRD limit with VHP approximation
+    //
     // PRD: partial redistribution default grid (FAST).
     // PRD_NORMAL: partial redistribution with standard grid.
     // PRD_FAST: partial redistribution with fast grid.
+    // 
+    // PRD_AA: partial redistribution Angle averaged method.
+    // PRD_AA_MAPV: same as PRD_AA but it store the map of the values (ATTENTION: it uses a lot of memory)
+    // 
     // ZERO: continuum
     emissivity_model emissivity_model_var = emissivity_model::PRD;
 
@@ -238,7 +244,7 @@ int main(int argc, char *argv[]) {
     std::string output_file;
     if (output)
     {            
-        const std::filesystem::path output_path = main_output_dir / std::filesystem::path(input_pmd_string + emissivity_model_to_string_long(emissivity_model_var));
+        const std::filesystem::path output_path = main_output_dir / std::filesystem::path(input_pmd_string + "." + emissivity_model_to_string_long(emissivity_model_var));
 
         //  if (rt_problem_ptr->mpi_rank_ == 0) 
         //    std::cout << "Output path: " << output_path << std::endl;

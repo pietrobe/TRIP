@@ -1999,7 +1999,7 @@ void MF_context::set_up_emission_module(){
         {
         case emissivity_model::PRD:
         case emissivity_model::PRD_FAST:
-
+            // Default PRD model
             components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB_FAST);
             components.push_back(emission_coefficient_components::epsilon_R_III_GL);
             components.push_back(emission_coefficient_components::epsilon_csc);  
@@ -2024,6 +2024,35 @@ void MF_context::set_up_emission_module(){
             components.push_back(emission_coefficient_components::epsilon_csc);      
 
             if (mpi_rank_ == 0) std::cout << "\nUsing CRD emission, components:"<< std::endl;
+
+            break;
+
+        case emissivity_model::CRD_limit_VHP:
+
+            components.push_back(emission_coefficient_components::epsilon_pCRD_VHP_limit);
+            components.push_back(emission_coefficient_components::epsilon_csc);      
+
+            if (mpi_rank_ == 0) std::cout << "\nUsing CRD emission (VHP version), components:"<< std::endl;
+
+            break;
+
+        case emissivity_model::PRD_AA:
+
+            components.push_back(emission_coefficient_components::epsilon_R_II_AA_FAST);
+            components.push_back(emission_coefficient_components::epsilon_R_III_GL);
+            components.push_back(emission_coefficient_components::epsilon_csc);  
+
+            if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA emission, components:"<< std::endl;
+
+            break;
+
+        case emissivity_model::PRD_AA_MAPV:
+
+            components.push_back(emission_coefficient_components::epsilon_R_II_AA_FAST_MAPV);
+            components.push_back(emission_coefficient_components::epsilon_R_III_GL);
+            components.push_back(emission_coefficient_components::epsilon_csc);  
+
+            if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_MAPV emission, components:"<< std::endl;
 
             break;
 

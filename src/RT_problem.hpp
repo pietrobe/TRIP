@@ -12,12 +12,15 @@ using Field_ptr_t = std::shared_ptr<Field_t>;
 
 typedef const std::string input_string;
 
-enum class emissivity_model { NONE,        //
-	                          CRD_limit,   //
-							  PRD,         //
-							  PRD_NORMAL,  //
-							  PRD_FAST,    //
-							  ZERO};       //
+enum class emissivity_model { NONE,        	 //
+	                          CRD_limit,   	 //
+							  CRD_limit_VHP, //
+							  PRD,           //
+							  PRD_NORMAL,    //
+							  PRD_FAST,      //
+							  PRD_AA,	     //
+							  PRD_AA_MAPV,   //
+							  ZERO};         //
 
 
 inline std::string emissivity_model_to_string(const emissivity_model& model)
@@ -27,6 +30,7 @@ inline std::string emissivity_model_to_string(const emissivity_model& model)
 		case emissivity_model::NONE:
 			return "NONE";
 			break;
+		case emissivity_model::CRD_limit_VHP:
 		case emissivity_model::CRD_limit:
 			return "CRD";
 			break;
@@ -34,6 +38,10 @@ inline std::string emissivity_model_to_string(const emissivity_model& model)
 		case emissivity_model::PRD_NORMAL:
 		case emissivity_model::PRD_FAST:
 			return "PRD";
+			break;
+		case emissivity_model::PRD_AA:
+		case emissivity_model::PRD_AA_MAPV:
+			return "PRD_AA";
 			break;
 		case emissivity_model::ZERO:
 			return "CONTINUUM";
@@ -54,7 +62,10 @@ inline std::string emissivity_model_to_string_long(const emissivity_model& model
 			return "NONE";
 			break;
 		case emissivity_model::CRD_limit:
-			return "CRD limit";
+			return "CRD_limit";
+			break;
+		case emissivity_model::CRD_limit_VHP:
+			return "CRD_limit_VHP";
 			break;
 		case emissivity_model::PRD:
 			return "PRD";
@@ -64,6 +75,12 @@ inline std::string emissivity_model_to_string_long(const emissivity_model& model
 			break;
 		case emissivity_model::PRD_FAST:
 			return "PRD_FAST";
+			break;
+		case emissivity_model::PRD_AA:
+			return "PRD_AA";
+			break;
+		case emissivity_model::PRD_AA_MAPV:
+			return "PRD_AA_MAPV";
 			break;
 		case emissivity_model::ZERO:
 			return "CONTINUUM";
