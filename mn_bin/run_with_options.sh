@@ -35,20 +35,21 @@ export RTOL=1e-8
 
 # export INPUT_CONFIG=AR_385_Cut_64x64_mirrorxy-CRD_I_B0_V0.conf
 
+######################################################
 ########### Jobs for the first serie of runs #########
-## 1
+## 1 TODO
 ## For 64 x 64 grid size in the absence of Magnetic and bulk velocity fields
 export INPUT_CONFIG=AR_385_Cut_64x64_mirrorxy-CRD_I_B0_V0.conf
 
-## 2
+## 2 TODO
 ## For 64 x 64 grid size in the presence of Magnetic and absence of bulk velocity fields
 # export INPUT_CONFIG=AR_385_Cut_64x64_mirrorxy-CRD_I_B_V0.conf
 
-## 3
+## 3 TODO
 ## For 64 x 64 grid size in the presence of Magnetic and bulk velocity fields
 # export INPUT_CONFIG=AR_385_Cut_64x64_mirrorxy-CRD_I_B_V.conf
 
-## 4
+## 4 TODO
 ## For 64 x 64 grid size in the absence of Magnetic and presence of bulk velocity fields
 # export INPUT_CONFIG=AR_385_Cut_64x64_mirrorxy-CRD_I_B0_V.conf
 ######################################################

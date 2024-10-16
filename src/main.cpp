@@ -319,8 +319,8 @@ int main(int argc, char *argv[]) {
         
         // old code: copied below .....
 
-        // // std::vector<Real> mus = {0.1, 1.0}; //// ATTENTION: arbitrary beam directions
-        std::vector<Real> mus = {1.0}; //// ATTENTION: arbitrary beam directions NO ARBITRARY BEAMS
+        std::vector<Real> mus = {0.1, 1.0}; //// ATTENTION: arbitrary beam directions
+        // std::vector<Real> mus = {1.0}; //// ATTENTION: arbitrary beam directions NO ARBITRARY BEAMS
         Real chi   = 0.19635;
     
         if (rt_problem_ptr->mpi_rank_ == 0 and mus.size() ==0 ){
