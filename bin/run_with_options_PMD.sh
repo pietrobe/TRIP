@@ -2,17 +2,17 @@
 
 #SBATCH --ntasks=2048
 #SBATCH --cpus-per-task=1
-#SBATCH --constrain=mc
-#SBATCH --time=02:00:00
+#SBATCH --constrain=gpu
+#SBATCH --time=0:13:00
 #SBATCH --account=u0
 #SBATCH --job-name="TRIP"
 
 export CRD="--CRD"
 
 ### CSCS
-export MAIN_DATA_DIR=/scratch/snx3000/sriva/test_3d/input/orig
-export SERIES_DIR=Comparison-TRIP-PORTA-20240827T115438Z-001-CRD
-export GRID_SIZE=32
+export MAIN_DATA_DIR=/scratch/snx3000/sriva/test_3d/input_new/Comparison-TRIP-PORTA
+# export SERIES_DIR=Comparison-TRIP-PORTA-20240827T115438Z-001-CRD
+# export GRID_SIZE=64
 
 ### MareNostrum5
 #export MAIN_DATA_DIR=/gpfs/projects/iac90
@@ -23,7 +23,7 @@ export INPUT_DIR=${MAIN_DATA_DIR}/
 export OUTPUT_DIR=${MAIN_DATA_DIR}/output/
 
 ## For 32 x 32 grid size
-export INPUT_PMD=cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_32x32x133.pmd
+export INPUT_PMD=AR_385_Cut_64x64_mirrorxy-CRD_I_V0_conv_KQ.pmd
 # export INPUT_CONFIG=AR_385_Cut_32x32-CRD_I_B_V0.conf
 # export INPUT_CONFIG=AR_385_Cut_32x32-CRD_I_B_V.conf
 # export INPUT_CONFIG=AR_385_Cut_32x32-CRD_I_B0_V.conf

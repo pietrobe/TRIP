@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 
   int mpi_rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
   { // check if the user wants to print the help message
     // if yes, print the help message and return
@@ -48,18 +48,40 @@ int main(int argc, char *argv[]) {
   Kokkos::initialize(argc, argv);
 
   {
+    //////////////////////////////////////////////////////////////////////////
+    // list of emissivity models
+    // NONE: undefined 
+    // CRD_limit: CRD limit
+    // CRD_limit_VHP: CRD limit with VHP approximation
+    //
+    // PRD: partial redistribution default grid (FAST).
+    // PRD_NORMAL: partial redistribution with standard grid.
+    // PRD_FAST: partial redistribution with fast grid.
+    // 
+    // PRD_AA: partial redistribution Angle averaged method.
+    // PRD_AA_MAPV: same as PRD_AA but it store the map of the values (ATTENTION: it uses a lot of memory)
+    // 
+    // ZERO: continuum
+    emissivity_model emissivity_model_var = emissivity_model::PRD;
+
     const bool output   = true;
     const bool output_overwrite_prevention = false; // if true the application stops (with an MPI_Abort) if the output directory already exists
 
     const bool use_B    = true;
+    const bool use_ZERO_epsilon = false;
 
 #if USE_CMD_LINE_OPTIONS == 1
     const bool use_CRD  = getOptionFlag(argc, argv, "--CRD");
+    const bool use_continuum = getOptionFlag(argc, argv, "--continuum");
     const bool use_prec = (not use_CRD);
 #else
+    const bool use_continuum = false;
     const bool use_CRD  = true;
     const bool use_prec = (not use_CRD);
 #endif
+
+    if (use_CRD) emissivity_model_var = emissivity_model::CRD_limit;
+    if (use_continuum) emissivity_model_var = emissivity_model::ZERO;
 
 
   // Set here the main input and output directories //////////////////////////
@@ -119,9 +141,16 @@ int main(int argc, char *argv[]) {
 
         if (input_cul_string.empty() or input_qel_string.empty() or input_llp_string.empty()) {
         // VEECHIO  // solo PMD input at least one of the cul, qel, llp is missing
-            if (mpi_rank == 0) std::cout << "INPUT reading: using ONLY PMD input file" << std::endl;                          
+            if (mpi_rank == 0) {
+              std::cout << "WARNING: using ONLY PMD input file" << std::endl;
+              std::cout << "Input PMD file: " << PORTA_input_pmd << std::endl;
+            }
 
-            return std::make_shared<RT_problem>(PORTA_input_pmd.string().c_str(), frequencies_input_path.string(), use_CRD, use_B);
+
+            return std::make_shared<RT_problem>(PORTA_input_pmd.string().c_str(), 
+                                                frequencies_input_path.string(), 
+                                                emissivity_model_var,
+                                                use_B);
 
         } else {
 
@@ -134,12 +163,26 @@ int main(int argc, char *argv[]) {
             auto input_llp_path  = main_input_dir / std::filesystem::path(input_llp_string);
             auto input_back_path = main_input_dir / std::filesystem::path(input_back_string);
 
+            if (mpi_rank == 0) {
+
+                const auto file_name_provided = [](const std::string &s) { return (s.empty()) ? std::string("not provided") : s; };
+
+                ss_a << "PMD input file:   " << file_name_provided(PORTA_input_pmd.string()) << std::endl;
+                ss_a << "CUL input file:   " << file_name_provided(input_cul_path.string()) << std::endl;
+                ss_a << "QEL input file:   " << file_name_provided(input_qel_path.string()) << std::endl;
+                ss_a << "LLP input file:   " << file_name_provided(input_llp_path.string()) << std::endl;
+                ss_a << "BACK input file:  " << file_name_provided(input_back_path.string()) << std::endl;
+                std::cout << ss_a.str();
+            }
+
             return std::make_shared<RT_problem>(PORTA_input_pmd.string().c_str(),
                                                 input_cul_path.string().c_str(),
                                                 input_qel_path.string().c_str(),
                                                 input_llp_path.string().c_str(),
                                                 input_back_path.string().c_str(),
-                                                frequencies_input_path.string(), use_CRD, use_B);
+                                                frequencies_input_path.string(), 
+                                                emissivity_model_var,
+                                                use_B);
         }
     }; // end lambda create_rt_problem
 
@@ -162,12 +205,8 @@ int main(int argc, char *argv[]) {
       ss_a << std::endl << std::endl;
 
       ss_a << "PORTA 3D input file: " << PORTA_input_pmd << std::endl;
-      ss_a << "Frequencies input path: " << frequencies_input_path << std::endl;
+      ss_a << "Frequencies input path: " << frequencies_input_path << std::endl << std::endl;
       
-      ss_a << "input_cul_string: " << (input_cul_string.empty() ? std::string("not provided") : input_cul_string) << std::endl;
-      ss_a << "input_qel_string: " << (input_qel_string.empty() ? std::string("not provided") : input_qel_string) << std::endl;
-      ss_a << "input_llp_string: " << (input_llp_string.empty() ? std::string("not provided") : input_llp_string) << std::endl;
-
       ss_a << "N_theta =            " << N_theta << std::endl;
       ss_a << "N_chi =              " << N_chi << std::endl << std::endl;
 
@@ -204,7 +243,7 @@ int main(int argc, char *argv[]) {
     std::string output_file;
     if (output)
     {            
-        const std::filesystem::path output_path = main_output_dir / std::filesystem::path(input_pmd_string + ((use_CRD) ? ".CRD" : ".PRD"));
+        const std::filesystem::path output_path = main_output_dir / std::filesystem::path(input_pmd_string + "." + emissivity_model_to_string_long(emissivity_model_var));
 
         //  if (rt_problem_ptr->mpi_rank_ == 0) 
         //    std::cout << "Output path: " << output_path << std::endl;
@@ -239,19 +278,19 @@ int main(int argc, char *argv[]) {
     // solve //////////////////////////////////////////
     rt_solver.solve();
     // rt_solver.apply_formal_solver();
-    // rt_solver.solve_checkpoint("../output/surface_profiles_5x5x133/", 20); 
     
     // lambda to compute arbitrary beam
-      const auto compute_arbitrary_beam = [&] (const Real mu, const Real chi, const std::string output_file) {
+      const auto compute_arbitrary_beam = [&, Nx = rt_problem_ptr->N_x_, 
+                                              Ny = rt_problem_ptr->N_y_] (const Real mu, const Real chi, const std::string output_file) {
 
         std::string output_file_Omega_mu = output_file + "_mu" + std::to_string(mu);
         
         const Real theta = acos(mu);
         rt_solver.apply_formal_solver_Omega(theta, chi);
 
-        for (int i = 0; i < N_theta; ++i)
+        for (int i = 0; i < Nx; ++i)
         {
-          for (int j = 0; j < N_chi; ++j)
+          for (int j = 0; j < Ny; ++j)
           {
                 rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega_mu, i, j);
           }
@@ -280,7 +319,7 @@ int main(int argc, char *argv[]) {
         
         // old code: copied below .....
 
-        std::vector<Real> mus = {}; //// ATTENTION: arbitrary beam directions        
+        std::vector<Real> mus = {0.1, 0.3, 0.7, 1.0}; //// ATTENTION: arbitrary beam directions
         Real chi   = 0.19635;
     
         if (rt_problem_ptr->mpi_rank_ == 0 and mus.size() ==0 ){
@@ -292,13 +331,20 @@ int main(int argc, char *argv[]) {
           }
           std::cout << std::endl;
         }
-         
+        
+        double tick = MPI_Wtime();
+
         for (Real mu : mus)
         {
           compute_arbitrary_beam(mu, chi, output_file);
         }
 
-	
+        double tock = MPI_Wtime();
+
+        if (rt_problem_ptr->mpi_rank_ == 0) {
+          std::cout << "Arbitrary beams time (s) = " << tock - tick << std::endl;
+          std::cout << "Time per beam (s) =        " << (tock - tick) / double(mus.size()) << std::endl;
+        }
 
         // if (save_raw) rt_problem_ptr->I_field_->write("/scratch/snx3000/pietrob/I_field.raw");          
           

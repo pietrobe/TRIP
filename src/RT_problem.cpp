@@ -19,7 +19,7 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	if (mpi_rank_ == 0) std::cout << "Reading .back input from " << filename_back << std::endl;
 
 	// use two quadrature intervals for the theta grid
-	const bool double_GL = false;
+	const bool double_GL = false; ////////// DANGER: HARDCODED 
 
 	const bool zero_velocities = false;
 	if (mpi_rank_ == 0 and zero_velocities) std::cout << "WARNING: ZERO velocities HARDCODED!" << std::endl;

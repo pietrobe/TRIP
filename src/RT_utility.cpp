@@ -19,7 +19,7 @@
 // }
 
 std::string get_arg(const std::string &input, const std::string &word) {
-    std::regex pattern("^\\s*" + word + ":\\s*(.*)$");
+    std::regex pattern("^\\s*" + word + ":\\s*([^\\s]*)\\s*$");
     std::smatch match;
     std::istringstream stream(input);
     std::string line;

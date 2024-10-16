@@ -1965,23 +1965,104 @@ void MF_context::set_up_emission_module(){
 
     std::list<emission_coefficient_components> components;    
 
-    if (RT_problem_->use_CRD_limit_)
-    {
-        components.push_back(emission_coefficient_components::epsilon_pCRD_GL_limit);             
-        components.push_back(emission_coefficient_components::epsilon_csc);      
+    // if (RT_problem_->use_CRD_limit_)
+    // {
+    // //    components.push_back(emission_coefficient_components::epsilon_pCRD_GL_limit);             
+    // //    components.push_back(emission_coefficient_components::epsilon_csc);      
+    //     components.push_back(emission_coefficient_components::epsilon_zero);
 
-        if (mpi_rank_ == 0) std::cout << "\nUsing CRD emission, components:"<< std::endl;
-    }
-    else
-    {
-        components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB_FAST);
-        // components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB);
+    //     if (mpi_rank_ == 0) std::cout << "\nUsing CRD emission, components:"<< std::endl;
+    // }
+    // else
+    // {
+    //     components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB_FAST);
+    //     // components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB);
 
-        components.push_back(emission_coefficient_components::epsilon_R_III_GL);
-        components.push_back(emission_coefficient_components::epsilon_csc);      
+    //     components.push_back(emission_coefficient_components::epsilon_R_III_GL);
+    //     components.push_back(emission_coefficient_components::epsilon_csc);      
 
-        if (mpi_rank_ == 0) std::cout << "\nUsing PRD emission, components:"<< std::endl;        
-    }
+    //     if (mpi_rank_ == 0) std::cout << "\nUsing PRD emission, components:"<< std::endl;        
+    // }
+
+    // if (RT_problem_->emissivity_model_ != emissivity_model::NONE){
+
+        components.clear();
+
+        switch (RT_problem_->emissivity_model_)
+        {
+        case emissivity_model::PRD:
+        case emissivity_model::PRD_FAST:
+            // Default PRD model
+            components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB_FAST);
+            components.push_back(emission_coefficient_components::epsilon_R_III_GL);
+            components.push_back(emission_coefficient_components::epsilon_csc);  
+
+            if (mpi_rank_ == 0) std::cout << "\nUsing PRD emission, components:"<< std::endl;
+
+            break;
+
+        case emissivity_model::PRD_NORMAL:
+
+            components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB);
+            components.push_back(emission_coefficient_components::epsilon_R_III_GL);
+            components.push_back(emission_coefficient_components::epsilon_csc);  
+
+            if (mpi_rank_ == 0) std::cout << "\nUsing PRD_NORMAL emission, components:"<< std::endl;
+
+            break;
+        
+        case emissivity_model::CRD_limit:
+            
+            components.push_back(emission_coefficient_components::epsilon_pCRD_GL_limit);             
+            components.push_back(emission_coefficient_components::epsilon_csc);      
+
+            if (mpi_rank_ == 0) std::cout << "\nUsing CRD emission, components:"<< std::endl;
+
+            break;
+
+        case emissivity_model::CRD_limit_VHP:
+
+            components.push_back(emission_coefficient_components::epsilon_pCRD_VHP_limit);
+            components.push_back(emission_coefficient_components::epsilon_csc);      
+
+            if (mpi_rank_ == 0) std::cout << "\nUsing CRD emission (VHP version), components:"<< std::endl;
+
+            break;
+
+        case emissivity_model::PRD_AA:
+
+            components.push_back(emission_coefficient_components::epsilon_R_II_AA_FAST);
+            components.push_back(emission_coefficient_components::epsilon_R_III_GL);
+            components.push_back(emission_coefficient_components::epsilon_csc);  
+
+            if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA emission, components:"<< std::endl;
+
+            break;
+
+        case emissivity_model::PRD_AA_MAPV:
+
+            components.push_back(emission_coefficient_components::epsilon_R_II_AA_FAST_MAPV);
+            components.push_back(emission_coefficient_components::epsilon_R_III_GL);
+            components.push_back(emission_coefficient_components::epsilon_csc);  
+
+            if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_MAPV emission, components:"<< std::endl;
+
+            break;
+
+        case emissivity_model::ZERO:
+            
+            components.push_back(emission_coefficient_components::epsilon_zero);             
+            if (mpi_rank_ == 0) std::cout << "\nUsing ZERO emission, components:"<< std::endl;
+    
+            break;
+
+        default:
+            if (mpi_rank_ == 0) std::cout << "ERROR: emissivity model not recognized!" << std::endl;
+            MPI_Abort(MPI_COMM_WORLD, 1);
+            break;
+        }
+    // }
+
 
     epsilon_fun_ = ecc_sh_ptr_->make_computation_function(components);    
 
@@ -2219,11 +2300,19 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
         if (j >= j_end) std::cout << "ERROR with counters in update_emission(), j = " << j << std::endl;
         if (k >= k_end) std::cout << "ERROR with counters in update_emission(), k = " << k << std::endl;
 
-        // set input field         
-        const std::string scattering_model = (RT_problem_->use_CRD_limit_) ? "CRD" : "PRD";        
-        // auto epsilon_computation_Omega = ecc_sh_ptr_->make_computation_function_arbitrary_direction(scattering_model, include_eps_lth, include_continuum);
-        auto epsilon_computation_Omega = ecc_sh_ptr_->make_computation_function_arbitrary_direction(scattering_model, include_continuum, include_eps_lth);
+        // set input field        
+        // Added the option "CONTINUUM" to include only the continuum 
+        // With the "continuum" the scattering the include_continuum is set to true by default
+        // compute_node_3D_function_arbitrary_direction_type                                       //
+        // make_computation_function_arbitrary_direction(const std::string prd_crd,                //
+        //                                               const bool include_continuum   = false,   //
+        //                                               const bool include_epsilon_lth = false);  //
+        //
         
+        std::string scattering_model = emissivity_model_to_string(RT_problem_->emissivity_model_);
+        // scattering_model = "CONTINUUM"; // for continuum only   // DANGER: this is a hack to TEST and debug the continuum only
+        auto epsilon_computation_Omega = ecc_sh_ptr_->make_computation_function_arbitrary_direction(scattering_model, include_continuum, include_eps_lth);
+
         ecc_sh_ptr_->update_incoming_field(i, j, k, offset_fun_, input.data());
 
         // get IQUV for (theta, chi direction)
