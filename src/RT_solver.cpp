@@ -367,7 +367,7 @@ std::vector<t_intersect> MF_context::find_prolongation(double theta, double chi,
     sort(xyi.begin(), xyi.end(), intersComp);
 
     #ifdef DEBUG_MODE
-    if (xyi[xyi.size()-1].plane != I_XY) std::cout << "WARNING: the last intersation is not in the XY plane!" << std::endl;
+    if (xyi[xyi.size()-1].plane != I_XY) std::cout << "WARNING: the last intersection is not in the XY plane!" << std::endl;
     #endif
 
     for (unsigned int i=0; i<xyi.size(); i++) {
@@ -464,7 +464,7 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
 
 	double eta_I_1, weight, dtau;
 
-	std::vector<double> I1(4), I2(4), S1(4), S2(4), etas(4), rhos(4), K1(16), K2(16);
+	std::vector<double> I1(4), I2(4), S1(4), S2(4), etas(4), rhos(4), K1(16), K2(16);    
 
 	for (int cell = 0; cell < N; ++cell)
 	{							
@@ -494,7 +494,7 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
 
 			    // correction for periodic BC 
                 i_intersect = apply_periodic_bc(i_intersect, N_x);
-                j_intersect = apply_periodic_bc(j_intersect, N_y);                
+                j_intersect = apply_periodic_bc(j_intersect, N_y);               
 
 				weight = T[cell].w[face_vertices];	               
 
@@ -543,7 +543,7 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
 
     			// correction for periodic boundary
                 i_intersect = apply_periodic_bc(i_intersect, N_x);
-                j_intersect = apply_periodic_bc(j_intersect, N_y);                
+                j_intersect = apply_periodic_bc(j_intersect, N_y);              
 
     			weight = T[cell + 1].w[face_vertices];	
 
@@ -590,14 +590,15 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
         
 		formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);
 
-        // // test
-        // // get indeces
-        // std::vector<int> local_idx;
-        // local_idx = RT_problem_->block_to_local(tile_size_* mpi_rank_ + block_index);
+        /*
+        // test
+        // get indeces
+        std::vector<int> local_idx;
+        local_idx = RT_problem_->block_to_local(tile_size_* mpi_rank_ + block_index);
         
-        // const int j_theta = local_idx[0];
-        // const int k_chi   = local_idx[1];
-        // const int n_nu    = local_idx[2];
+        const int j_theta = local_idx[0];
+        const int k_chi   = local_idx[1];
+        const int n_nu    = local_idx[2];
 
         // const auto mu_grid    = RT_problem_->mu_grid_;
         // const auto theta_grid = RT_problem_->theta_grid_;   
@@ -612,36 +613,31 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
         // std::cout << "k_chi = "   << k_chi << std::endl;
         // std::cout << "n_nu = "    << n_nu << std::endl;
 
-        //if (j_theta == 4 and k_chi == 0 and n_nu == 45)
-        //{                                                                            
+        if (i == 0 and j == 0 and j_theta == 4 and k_chi == 0 and n_nu == 0)
+        {                                                                            
             // if (long_ray) std::cout << "WARNING LONG RAY: look at long ray routines for data!" << std::endl;                                               
-            // std::cout << "\nk = " << k << std::endl;                                                          
-            // std::cout << "cell = "  << cell << std::endl;
-            // std::cout << "mu = " << mu << std::endl;
-            // std::cout << "chi = "   << chi << std::endl;
-            // std::cout << "n_nu = " << n_nu << std::endl;
+            std::cout << "\nk = " << k << std::endl;                                                          
+            std::cout << "cell = "  << cell << std::endl;
+            // std::cout << "mu = "  << mu << std::endl;
+            // std::cout << "chi = " << chi << std::endl;
+            // // std::cout << "n_nu = " << n_nu << std::endl;
             // std::cout << "mu = " << mu << std::endl;
             // std::cout << "n = "  << n << std::endl;                                            
             // std::cout << "dz = "<< dz << std::endl;
             
             // std::cout << "mpi_rank_ = " << mpi_rank_ << std::endl;   
-            // std::cout << "k_global = " << g_dev.global_coord(2, k_aux) << std::endl;                                                          
+            // std::cout << "k_global = " << g_dev.global_coord(2, k) << std::endl;                                                          
 
-            // std::cout << "I1 = "   << I1[0] << std::endl;   
+            std::cout << "I1 = "   << I1[0] << std::endl;   
             // std::cout << "Q1 = "   << I1[1] << std::endl;   
             // std::cout << "U1 = "   << I1[2] << std::endl;   
             // std::cout << "V1 = "   << I1[3] << std::endl;   
 
-            // // std::cout << "I2 = "   << I2[0] << std::endl;    
-            // // std::cout << "Q2 = "   << I2[1] << std::endl;   
+            std::cout << "I2 = "   << I2[0] << std::endl;    
+            // std::cout << "Q2 = "   << I2[1] << std::endl;   
             // std::cout << "U2 = "   << I2[2] << std::endl;   
             // std::cout << "V2 = "   << I2[3] << std::endl;   
 
-            // std::cout << "S1[2] = "   << S1[2] << std::endl;   
-            // std::cout << "S2[2] = "   << S2[2] << std::endl;   
-
-            // std::cout << "S1[3] = "   << S1[3] << std::endl;   
-            // std::cout << "S2[3] = "   << S2[3] << std::endl;   
 
             // std::cout << "S1 = " << std::endl;
             // for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S1[i_stokes] << std::endl;
@@ -659,7 +655,9 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
             // std::cout << "etas[0] = " << etas[0] << std::endl;  
             // std::cout << "eta_I_1 = " << eta_I_1 << std::endl;                     
             // std::cout << "distance = " << cell_distance << std::endl; 
-        //}       
+        } 
+
+        */      
 	}	
                                                                                                                     
     return I2;
@@ -672,7 +670,7 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
                                                          const int i, const int j, const int k, const int block_index,
                                                          bool print_flag) // to test
 {                         
-    if (not use_always_long_ray_) std::cout << "WARNING: short ray in long_ray_steps_quadratic()!" << std::endl;    
+    // if (not use_always_long_ray_) std::cout << "WARNING: short ray in long_ray_steps_quadratic()!" << std::endl;    
 
     const auto N_x = RT_problem_->N_x_;
     const auto N_y = RT_problem_->N_y_;
@@ -695,8 +693,11 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
 
     double distance_test, etas_1_print;
 
-    std::vector<double> I1(4), I2(4), S1(4), S2(4), S3(4), etas(4), rhos(4), K1(16), K2(16), K3(16);     
-   
+    std::vector<double> I1(4), I2(4), S1(4), S2(4), S3(4), etas(4), rhos(4), K1(16), K2(16), K3(16);   
+
+    // TEST
+    auto T_dev = RT_problem_->T_ ->view_device();  
+
     for (int cell = 0; cell < N; ++cell)
     {                           
         // quantities in (1)
@@ -734,15 +735,29 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
                     // set S1 and I1 
                     S1[i_stokes] += weight * S_dev.block(i_intersect,j_intersect,k_intersect)[b_index];                                             
                     I1[i_stokes] += weight * I_dev.block(i_intersect,j_intersect,k_intersect)[b_index];                                                                                                 
+
+
+                    if (print_flag and i_stokes == 0)
+                    {
+                        std::cout << "face_vertices = " << face_vertices  << std::endl;                
+                        std::cout << "weight = " << weight  << std::endl;                
+                        std::cout << "I = " << I_dev.block(i_intersect,j_intersect,k_intersect)[b_index]  << std::endl;                
+
+                        std::cout << "i_intersect = " << i_intersect  << std::endl;                
+                        std::cout << "j_intersect = " << j_intersect  << std::endl;                
+                        std::cout << "k_intersect = " << k_intersect  << std::endl;  
+
+                        std::cout << "ix = " << T[cell].ix[face_vertices]  << std::endl;                
+                        std::cout << "iy = " << T[cell].iy[face_vertices]  << std::endl;                
+                        std::cout << "iz = " << T[cell].iz[face_vertices]  << std::endl;                                     
+                    }
                 }   
             }
 
             K1 = assemble_propagation_matrix_scaled(etas, rhos);     
 
             // save for later use
-            eta_I_1 = etas[0];
-
-            if (print_flag) etas_1_print =  etas[0];
+            eta_I_1 = etas[0];            
         }
         else // reuse quantities in (2) 
         {
@@ -771,7 +786,7 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
                 }               
 
                 // compute current interval distance (different formula for last cell)
-                cell_distance = T[cell].distance;
+                cell_distance = T[cell].distance;         
             }
             else 
             {
@@ -791,8 +806,8 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
 
                     // correction for periodic boundary
                     i_intersect = apply_periodic_bc(i_intersect, N_x);
-                    j_intersect = apply_periodic_bc(j_intersect, N_y);                
-
+                    j_intersect = apply_periodic_bc(j_intersect, N_y);
+                 
                     weight = T[cell + 1].w[face_vertices];                     
 
                     for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
@@ -806,10 +821,10 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
                         // set S2
                         S2[i_stokes] += weight * S_dev.block(i_intersect,j_intersect,k_intersect)[b_index];                                                         
                     }               
-                }
+                }                
 
                 // compute current interval distance
-                cell_distance = T[cell].distance - T[cell + 1].distance;
+                cell_distance = T[cell].distance - T[cell + 1].distance;            
             }
 
             K2 = assemble_propagation_matrix_scaled(etas, rhos);     
@@ -850,7 +865,7 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
             }     
 
             // compute current interval distance 
-            cell_distance = T[cell + 1].distance;          
+            cell_distance = T[cell + 1].distance;                     
         }
         else
         {
@@ -872,7 +887,7 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
 
                 // correction for periodic boundary
                 i_intersect = apply_periodic_bc(i_intersect, N_x);
-                j_intersect = apply_periodic_bc(j_intersect, N_y);                
+                j_intersect = apply_periodic_bc(j_intersect, N_y);                               
 
                 weight = T[next_cell].w[face_vertices];  
 
@@ -897,7 +912,7 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
             else //different mechanism in last cell
             {
                 cell_distance = T[cell + 1].distance;         
-            }            
+            }                       
         }
 
         K3 = assemble_propagation_matrix_scaled(etas, rhos);
@@ -910,64 +925,63 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
         
         formal_solver_.one_step_quadratic(dtau_1, dtau_2, K1, K2, K3, S1, S2, S3, I1, I2);       
 
+        
+        ////////////////////////////////
         // TEST
         bool print_flag2 = true;
 
+        if (print_flag)         
+        {
+        
         // Real mu, chi;
 
-        // if (not formal_solution_Omega_)
-        // {            
-        //     // get indeces
-        //     std::vector<int> local_idx;
-        //     local_idx = RT_problem_->block_to_local(tile_size_* mpi_rank_ + block_index);
+        // // // if (not formal_solution_Omega_)
+        // // {            
+            // // get indeces
+            // std::vector<int> local_idx;
+            // local_idx = RT_problem_->block_to_local(tile_size_* mpi_rank_ + block_index);
             
-        //     const int j_theta = local_idx[0];
-        //     const int k_chi   = local_idx[1];            
-        //     const int n_nu    = local_idx[2];
+            // const int j_theta = local_idx[0];
+            // const int k_chi   = local_idx[1];            
+            // const int n_nu    = local_idx[2];
 
-        //     if (j_theta == 7 and k_chi == 15 and n_nu == 20)
-        //     {
-        //         print_flag2 = true;
+        //     // if (j_theta == 7 and k_chi == 15 and n_nu == 20)
+        //     // {
+        //     //     print_flag2 = true;
 
-        //         const auto mu_grid  = RT_problem_->mu_grid_;        
-        //         const auto chi_grid = RT_problem_->chi_grid_; 
+        //     //     const auto mu_grid  = RT_problem_->mu_grid_;        
+        //     //     const auto chi_grid = RT_problem_->chi_grid_; 
                     
-        //         mu  = mu_grid[j_theta];     
-        //         chi = chi_grid[k_chi];  
-        //     }            
-        // }
-        // else
-        // {
-        //     print_flag2 = true;
-        // }        
+        //     //     mu  = mu_grid[j_theta];     
+        //     //     chi = chi_grid[k_chi];  
+        //     // }            
+        // // }
+       
         
         // const auto N_theta = RT_problem_->N_theta_;               
 
-        // bool nu_n_equal_zero = (block_index == tile_size_/2);
+        // // bool nu_n_equal_zero = (block_index == tile_size_/2);
         
-        if (print_flag and print_flag2)            
-        {
-            std::cout << "mpi_rank_ = " << mpi_rank_ << std::endl;   
-        //  std::cout << "j_theta = " << j_theta << std::endl;
-        //  std::cout << "k_chi = "   << k_chi << std::endl;         
+            //     std::cout << "mpi_rank_ = " << mpi_rank_ << std::endl;   
+            // //  std::cout << "j_theta = " << j_theta << std::endl;
+            // //  std::cout << "k_chi = "   << k_chi << std::endl;         
 
-            // // }
-        
-
-        // if (j_theta == N_theta - 1 and k_chi == 0 and n_nu == 0 and i == 0 and j == 0)
-        // {                                                                            
-            // if (not formal_solution_Omega_)
-            // {
-            //     // std::cout << "theta = " << theta << std::endl;
-            //     std::cout << "mu = "   << mu << std::endl;
-            //     std::cout << "chi = "  << chi << std::endl;            
             // }
-        //     // std::cout << "n = "  << n << std::endl;                                            
-        //     // std::cout << "dz = "<< dz << std::endl;           
-           
-            // std::cout << "mpi_rank_ = " << mpi_rank_ << std::endl;   
-            std::cout << "k = " << k << std::endl;                                              
-            std::cout << "block_index = " << block_index << std::endl;                                              
+            
+
+            // if (j_theta == N_theta - 1 and k_chi == 0 and n_nu == 0 and i == 0 and j == 0)
+            // {                                                                            
+            //     if (not formal_solution_Omega_)
+            //     {
+            //         // std::cout << "theta = " << theta << std::endl;
+            //         std::cout << "mu = "   << mu << std::endl;
+            //         std::cout << "chi = "  << chi << std::endl;            
+            //     }
+            //     // std::cout << "n = "  << n << std::endl;                                            
+            //     // std::cout << "dz = "<< dz << std::endl;           
+               
+            //     // std::cout << "mpi_rank_ = " << mpi_rank_ << std::endl;                   
+            // std::cout << "block_index = " << block_index << std::endl;                                              
             
 
                 // const auto T_dev = RT_problem_->T_->view_device();
@@ -978,28 +992,35 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
 
                 // std::cout << "T = "   << T_dev.ref(i,j,k)  << std::endl;                   
                 
-                std::cout << "I1 = "   << I1[0] << std::endl;   
-                // std::cout << "Q1 = "   << I1[1] << std::endl;   
-                // std::cout << "U1 = "   << I1[2] << std::endl;   
-                // std::cout << "V1 = "   << I1[3] << std::endl;   
+                // if (mpi_rank_ == 0)
+                // {
+                    std::cout << "N cells= " << N << std::endl;                                                                                 
+                    std::cout << "cell = " << cell << std::endl;                                              
+                    std::cout << "I1 = "   << I1[0] << std::endl;   
+                    // std::cout << "Q1 = "   << I1[1] << std::endl;   
+                    // std::cout << "U1 = "   << I1[2] << std::endl;   
+                    // std::cout << "V1 = "   << I1[3] << std::endl;   
 
-                std::cout << "I2 = "   << I2[0] << std::endl;    
-                // std::cout << "Q2 = "   << I2[1] << std::endl;   
-                // std::cout << "U2 = "   << I2[2] << std::endl;   
-                // std::cout << "V2 = "   << I2[3] << std::endl; 
+                    std::cout << "I2 = "   << I2[0] << std::endl;    
+                    // std::cout << "Q2 = "   << I2[1] << std::endl;   
+                    // std::cout << "U2 = "   << I2[2] << std::endl;   
+                    // std::cout << "V2 = "   << I2[3] << std::endl; 
 
-                // std::cout << "dtau_1 = " << dtau_1  << std::endl;    
-                // std::cout << "dtau_2 = " << dtau_2  << std::endl;   
+                    std::cout << "dtau_1 = " << dtau_1  << std::endl;    
+                    std::cout << "dtau_2 = " << dtau_2  << std::endl;   
 
-                // std::cout << "distance_1 = " << distance_test << std::endl;
-                // std::cout << "distance_2 = " << cell_distance << std::endl;             
+                    std::cout << "distance_1 = " << distance_test << std::endl;
+                    std::cout << "distance_2 = " << cell_distance << std::endl;             
 
-                std::cout << "S1[0] = " <<  S1[0] << std::endl;
-                std::cout << "S2[0] = " <<  S2[0] << std::endl;
-                std::cout << "S3[0] = " <<  S3[0] << std::endl;            
-                std::cout << "K1[0] = " <<  K1[0] << std::endl;
-                std::cout << "K2[0] = " <<  K2[0] << std::endl;
-                std::cout << "K3[0] = " <<  K3[0] << std::endl;            
+                    std::cout << "S1[0] = " <<  S1[0] << std::endl;
+                    std::cout << "S2[0] = " <<  S2[0] << std::endl;
+                    std::cout << "S3[0] = " <<  S3[0] << std::endl;
+                            
+                    // std::cout << "K1[0] = " <<  K1[0] << std::endl;
+                    // std::cout << "K2[0] = " <<  K2[0] << std::endl;
+                    // std::cout << "K3[0] = " <<  K3[0] << std::endl;           
+                    std::cout << std::endl;    
+                // } 
 
 
             // std::cout << "S1 = " << std::endl;
@@ -1224,10 +1245,11 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
 
     ////////////////////////////////////////////////
 
-    // const bool idle_proc = (mpi_rank_ * local_block_size_ > block_size - 1);
-
     // TODO FIX
     const bool idle_proc = (eta_dev.block(i_start,j_start,k_start)[0] == 0);
+
+    // // TODO to TEST this more safe
+    // const bool idle_proc = (mpi_rank_ * local_block_size_ > block_size - 1);    
                          
     // communication timer                 
     if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
@@ -1237,43 +1259,6 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
     
     if (not idle_proc)
     {                       
-        // /////////// TEST //////////////            
-        // if (g_dev.global_coord(0, i_start) == 0 and
-        //     g_dev.global_coord(1, j_start) == 0 and 
-        //     g_dev.global_coord(2, k_start) == 0)
-        // {                    
-        //     std::cout << "--------------- mpi_rank_ = " << mpi_rank_ << std::endl;
-
-        //     // for (int bb = 0; bb < local_block_size_; +bb)
-        //     // {
-        //         std::cout << "eta_serial = " << eta_dev.block(i_start,j_start,k_start)[0] << std::endl;
-        //     // }
-
-        //     std::cout << "---------------"<< std::endl;
-        // }
-
-        // const auto eta_dev_par = RT_problem_->eta_field_Omega_->view_device();     
-        // const auto g_dev_par   = RT_problem_->space_grid_->view_device();   
-
-        // const int i_s = g_dev_par.margin[0];
-        // const int j_s = g_dev_par.margin[1];
-        // const int k_s = g_dev_par.margin[2];
-        
-        // if (g_dev_par.global_coord(0, i_s) == 0 and g_dev_par.global_coord(1, j_s) == 0 and g_dev_par.global_coord(2, k_s) == 0)
-        // {        
-        //     std::cout << "---------------"<< std::endl;
-
-        //     for (int bb = 0; bb < 4*N_nu; bb = bb + 4)
-        //     {
-        //         std::cout << "eta = " << eta_dev_par.block(i_s,j_s,k_s)[bb] << std::endl;
-        //     }
-
-        //     std::cout << "---------------"<< std::endl;
-        // }
-
-        ////////////////////
-
-
         // loops over spatial points
         for (int k = k_start; k < k_end; ++k)                   
         {                                                  
@@ -1373,11 +1358,13 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
                                 // for debug
                                 bool print_flag = false;
 
-                                // if (mpi_rank_ == 48 and g_dev.global_coord(0, i_aux) == 0 and g_dev.global_coord(1, j_aux) == 0) print_flag = true;
-                           
+                                // if (g_dev.global_coord(0, i_aux) == 0 and g_dev.global_coord(1, j_aux) == 0 and b == 0) print_flag = true;                           
                                 
                                 I2 = long_ray_steps_quadratic(intersection_data_long_ray, I_field_serial_Omega_, S_field_serial_Omega_,
-                                                                                            i_aux, j_aux, k_aux, b, print_flag);                                            
+                                                                                            i_aux, j_aux, k_aux, b, print_flag); 
+
+                                // TODO add here use_single_long_step_ case                                      
+                                // transform intersection_data_long_ray to have only 3
                             }
                             else if (long_ray)
                             {          
@@ -1677,7 +1664,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     						k_global = g_dev.global_coord(2, k_aux);	                         
 
     						boundary = (k_global == 0 and mu < 0) or (k_global == N_z - 1 and mu > 0);
-    						
+
     						if (not boundary)
     						{						
     							// set vertical box size
@@ -1688,7 +1675,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     								chi = chi_grid[k_chi]; 
     								
     								i_aux = (cos(chi) < 0.0) ? i_end - 1 - i + g_dev.margin[0]: i;	
-    								j_aux = (sin(chi) < 0.0) ? j_end - 1 - j + g_dev.margin[1]: j;		                                
+    								j_aux = (sin(chi) < 0.0) ? j_end - 1 - j + g_dev.margin[1]: j;		                                                               
                                     
     								find_intersection(theta, chi, dz, dz, L, &intersection_data); 
 
@@ -1740,7 +1727,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
                                     }                                    
                                     
                                     // set intersection indeces 
-                                    if (not long_ray) // TODO include  and use_linear_method
+                                    if (not long_ray) // TODO include and use_linear_method
                                     {
                                         for (int face_v = 0; face_v < 4; ++face_v)
                                         {
@@ -1765,27 +1752,22 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 
     									// solve ODE
                                         if (not use_linear_method)
-                                        {
-                                            if (use_single_long_step_ and mpi_rank_ == 0) std::cerr << "WARNING: use_single_long_step_ not supported with BESSER" << std::endl;
-
+                                        {                                            
                                             // for debug
                                             bool print_flag = false;
 
-                                            // if (g_dev.global_coord(0, i_aux) == 0 and g_dev.global_coord(1, j_aux) == 0) print_flag = true;
+                                           // if (g_dev.global_coord(0, i_aux) == 0 and 
+                                           //     g_dev.global_coord(1, j_aux) == 0 and                                                 
+                                           //     n == 0 and k_chi == 0 and j_theta == N_theta/2)
+                                           //  {   
+                                           //      std::cout << "k = " << g_dev.global_coord(2, k_aux) << std::endl;                                                       
+                                           //      std::cout << "mu = " << mu << std::endl;          
+                                           //      std::cout << "chi = "<< chi << std::endl;                                                                                                    
+                                           //      if (long_ray) std::cout << " --- LONG RAY ---" << std::endl;                                                    
 
-                                           // if (j_theta ==  N_theta/2 + 1 and k_chi == 0 and n == 0  and i_aux == 0 and j_aux == 0)                                                                                            
-                                            //{
-                                              //  std::cout << "\nk = " << k << std::endl;
-                                               // std::cout << "theta = " << theta << std::endl;
-                                                //std::cout << "mu = " << mu << std::endl;          
-                                                //std::cout << "chi = "<< chi << std::endl;      
-                                                //std::cout << "i = " << g_dev.global_coord(0, i_aux) << std::endl;   
-                                                //std::cout << "j = " << g_dev.global_coord(1, j_aux) << std::endl;   
-                                                //std::cout << "k = " << g_dev.global_coord(2, k_aux) << std::endl;   
-
-                                                //print_flag = true;                                          
-                                            //}
-        
+                                           //      print_flag = true;  
+                                           //  } 
+                                            
                                             // std::cout << "cells = "   << intersection_data_long_ray.size() << std::endl;         
                                             // std::cout << "b_start = " << b_start << std::endl;
                                             // std::cout << "tile_size_ = " << tile_size_ << std::endl;
@@ -1794,7 +1776,16 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
                                             // if (use_linear_method)  std::cout << "LM"  << std::endl;       
                                             // std::cout << "stencil_size = " << stencil_size << std::endl;                                                                  
 
-                                            
+                                            if (use_single_long_step_)
+                                            {
+                                                if (mpi_rank_ == 0) std::cerr << "WARNING: use_single_long_step_ not fully tested with BESSER" << std::endl;
+
+                                                // Keep the first element and the last two
+                                                int N_cells = intersection_data_long_ray.size();
+                                                auto temp = {intersection_data_long_ray.front(), intersection_data_long_ray[N_cells- 2], intersection_data_long_ray.back()};
+                                                intersection_data_long_ray = std::move(temp); // Assign the new vector back                                                
+                                            }                                            
+
                                             I2 = long_ray_steps_quadratic(intersection_data_long_ray, I_field_serial_, S_field_serial_, i_aux, j_aux, k_aux, b_start, print_flag);                                            
                                         }
     									else if (long_ray)
@@ -1870,14 +1861,16 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     										formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);
 
                                             // // test
-                                            // if (j_theta ==  N_theta - 1 and k_chi == N_chi - 1 and n == 48 and i == i_start and j == j_start)                                                
+                                            // if (j_theta ==  N_theta - 1 and k_chi == 0 and n == 0 and i == i_start and j == j_start)                                                
                                             // {                                                                                                                         
                                             //     // std::cout << "\nk = " << k << std::endl;                                              
-                                            //     std::cout << "\nk_global = " << g_dev.global_coord(2, k_aux) << std::endl;                                              
+                                            //     std::cout << "\ni_global = " << g_dev.global_coord(0, i_aux) << std::endl;                                              
+                                            //     std::cout << "\nj_global = " << g_dev.global_coord(1, j_aux) << std::endl;         
+                                            //     std::cout << "\nk_global = " << g_dev.global_coord(2, k_aux) << std::endl;         
                                             //     // std::cout << "theta = " << theta << std::endl;
                                             //     std::cout << "mu = "  << mu  << std::endl;                                                
                                             //     std::cout << "chi = " << chi << std::endl;                                                
-                                            //     // std::cout << "n = "  << n << std::endl;                                                                                            
+                                            //     std::cout << "n = "   << n << std::endl;                                                                                            
                                                 
                                             //     // std::cout << "dtau = "     << dtau  << std::endl;   
                                             //     // std::cout << "coeff = "    << coeff << std::endl;   
@@ -2228,8 +2221,9 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
 
         // set input field         
         const std::string scattering_model = (RT_problem_->use_CRD_limit_) ? "CRD" : "PRD";        
-        auto epsilon_computation_Omega = ecc_sh_ptr_->make_computation_function_arbitrary_direction(scattering_model, include_eps_lth, include_continuum);
-
+        // auto epsilon_computation_Omega = ecc_sh_ptr_->make_computation_function_arbitrary_direction(scattering_model, include_eps_lth, include_continuum);
+        auto epsilon_computation_Omega = ecc_sh_ptr_->make_computation_function_arbitrary_direction(scattering_model, include_continuum, include_eps_lth);
+        
         ecc_sh_ptr_->update_incoming_field(i, j, k, offset_fun_, input.data());
 
         // get IQUV for (theta, chi direction)
@@ -2269,7 +2263,6 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
         }
     }  
 }
-
 
 
 void MF_context::init_serial_fields(const int n_tiles){
@@ -2345,7 +2338,10 @@ void MF_context::init_serial_fields(const int n_tiles){
     const bool use_ghost_layers = false;
 
     space_grid_serial_ = std::make_shared<Grid_t>();    
-    space_grid_serial_->init(MPI_COMM_SELF, {N_x, N_y, N_z}, {1, 1, 0}, {}, use_ghost_layers); 
+    space_grid_serial_->init(MPI_COMM_SELF, {N_x, N_y, N_z}, {1, 1, 0}, {}, use_ghost_layers);
+
+    // // TEST 
+    // space_grid_serial_->init(MPI_COMM_SELF, {N_x, N_y, N_z}, {0, 0, 0}, {}, use_ghost_layers); 
 
     // create serial fields 
     I_field_serial_   = std::make_shared<Field_t>("I_serial", space_grid_serial_, tile_size_); 

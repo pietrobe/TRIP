@@ -68,7 +68,7 @@ inline double* convert_cartesian_to_spherical(const double x, const double y, co
 
 // TODO: this one is not necessary anymore with size_t -> int?
 inline int apply_periodic_bc(const int i, const int N)
-{
+{    
     int i_new;
 
     if (i > 0)

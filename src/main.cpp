@@ -16,7 +16,7 @@
 
 // WARNING: if you want to use command line options, you need to set USE_CMD_LINE_OPTIONS = 1
 // otherwise, it will use the default and hard-coded values
-#define USE_CMD_LINE_OPTIONS 1
+#define USE_CMD_LINE_OPTIONS 0
 //////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////
@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
 
   {
     const bool output   = true;
-    const bool output_overwrite_prevention = true; // if true the application stops (with an MPI_Abort) if the output directory already exists
+    const bool output_overwrite_prevention = false; // if true the application stops (with an MPI_Abort) if the output directory already exists
 
     const bool use_B    = true;
 
@@ -68,8 +68,8 @@ int main(int argc, char *argv[]) {
   const std::filesystem::path main_output_dir = getOptionArgument(argc, argv, "--output_dir");
 #else
 //  const std::filesystem::path main_input_dir  = "../input/PORTA";
-  const std::filesystem::path main_input_dir  = "/users/pietrob/solar_3d/input/PORTA";  
-  const std::filesystem::path main_output_dir = "/users/pietrob/solar_3d/output";
+  const std::filesystem::path main_input_dir  = "/scratch/snx3000/pietrob/Comparison-TRIP-PORTA/a63/";  
+  const std::filesystem::path main_output_dir = "/scratch/snx3000/pietrob/Comparison-TRIP-PORTA/a63/output";
 #endif
   ////////////////////////////////////////////////////////////////////////////
 
@@ -99,12 +99,12 @@ int main(int argc, char *argv[]) {
     }
 
   #else
-    const std::string input_pmd_string = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0-B0_V0_conv.pmd");
-    const std::string input_llp_string = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0-B0_V0_conv.llp");
+    const std::string input_pmd_string = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix_conv_KQ_MC.pmd");
+    const std::string input_llp_string = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix_conv_KQ_MC.llp");
     
-    const std::string input_cul_string  = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0.cul");
-    const std::string input_qel_string  = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0.qel");
-    const std::string input_back_string = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0.back");
+    const std::string input_cul_string  = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.cul");
+    const std::string input_qel_string  = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.qel");
+    const std::string input_back_string = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.back");
   #endif
   /////////////////////////////////////////////////////////////
 
@@ -119,17 +119,13 @@ int main(int argc, char *argv[]) {
 
         if (input_cul_string.empty() or input_qel_string.empty() or input_llp_string.empty()) {
         // VEECHIO  // solo PMD input at least one of the cul, qel, llp is missing
-            if (mpi_rank == 0) {
-              std::cout << "WARNING: using ONLY PMD input file" << std::endl;
-            }
+            if (mpi_rank == 0) std::cout << "INPUT reading: using ONLY PMD input file" << std::endl;                          
 
             return std::make_shared<RT_problem>(PORTA_input_pmd.string().c_str(), frequencies_input_path.string(), use_CRD, use_B);
 
         } else {
 
-          if (mpi_rank == 0) {
-            std::cout << "WARNING: using PMD + CUL + QEL + LLP + BACK input files" << std::endl;
-          }
+          if (mpi_rank == 0) std::cout << "INPUT reading: using PMD + CUL + QEL + LLP + BACK input files" << std::endl;                    
 
         // NUOVO // PMD + CUL + QEL + LLP input
             // create cul and qel input path
@@ -241,7 +237,8 @@ int main(int argc, char *argv[]) {
 
     ///////////////////////////////////////////////////
     // solve //////////////////////////////////////////
-    rt_solver.solve(); 
+    rt_solver.solve();
+    // rt_solver.apply_formal_solver();
     // rt_solver.solve_checkpoint("../output/surface_profiles_5x5x133/", 20); 
     
     // lambda to compute arbitrary beam
@@ -267,20 +264,23 @@ int main(int argc, char *argv[]) {
         const int N_x = rt_problem_ptr->N_x_;
         const int N_y = rt_problem_ptr->N_y_; 
 
-        for (int i = 0; i < N_x; ++i)
-        {
-           for (int j = 0; j < N_y; ++j)
-           {
-            rt_problem_ptr->write_surface_point_profiles(output_file, i, j);
-           }
-        }      
+    //    for (int i = 0; i < N_x; ++i)
+    //    {
+    //       for (int j = 0; j < N_y; ++j)
+    //       {
+    //        rt_problem_ptr->write_surface_point_profiles(output_file, i, j);
+    //       }
+    //    }      
 
-        // rt_problem_ptr->write_surface_point_profiles(output_file, 0, 0);
+        rt_problem_ptr->write_surface_point_profiles(output_file, 0, 0);
+        rt_problem_ptr->write_surface_point_profiles(output_file, 10, 10);
+        // rt_problem_ptr->write_surface_point_profiles(output_file, 3, 3);
+        // rt_problem_ptr->write_surface_point_profiles(output_file, 1, 2);
+        // rt_problem_ptr->write_surface_point_profiles(output_file, 1, 10);
         
         // old code: copied below .....
 
-        // // std::vector<Real> mus = {0.1, 1.0}; //// ATTENTION: arbitrary beam directions
-        std::vector<Real> mus = {}; //// ATTENTION: arbitrary beam directions NO ARBITRARY BEAMS
+        std::vector<Real> mus = {}; //// ATTENTION: arbitrary beam directions        
         Real chi   = 0.19635;
     
         if (rt_problem_ptr->mpi_rank_ == 0 and mus.size() ==0 ){

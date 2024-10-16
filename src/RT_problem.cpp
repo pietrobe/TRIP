@@ -13,9 +13,9 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 {
 	if (mpi_rank_ == 0) std::cout << "Reading PORTA input..."    << std::endl;
 	if (mpi_rank_ == 0) std::cout << "Reading .pmd input from "  << filename_pmd << std::endl;
-	if (mpi_rank_ == 0) std::cout << "Reading .cul input from "  << filename_cul << std::endl;
-	if (mpi_rank_ == 0) std::cout << "Reading .qel input from "  << filename_qel << std::endl;
 	if (mpi_rank_ == 0) std::cout << "Reading .llp input from "  << filename_llp << std::endl;
+	if (mpi_rank_ == 0) std::cout << "Reading .cul input from "  << filename_cul << std::endl;
+	if (mpi_rank_ == 0) std::cout << "Reading .qel input from "  << filename_qel << std::endl;	
 	if (mpi_rank_ == 0) std::cout << "Reading .back input from " << filename_back << std::endl;
 
 	// use two quadrature intervals for the theta grid
@@ -26,10 +26,10 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 
 	// reading atom and grids from file
 	MPI_File fh, f_cul, f_qel, f_llp, f_back;
-	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_pmd, MPI_MODE_RDONLY, MPI_INFO_NULL, &fh));
-	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_cul, MPI_MODE_RDONLY, MPI_INFO_NULL, &f_cul));
-	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_qel, MPI_MODE_RDONLY, MPI_INFO_NULL, &f_qel));
-	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_llp, MPI_MODE_RDONLY, MPI_INFO_NULL, &f_llp));
+	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_pmd,  MPI_MODE_RDONLY, MPI_INFO_NULL, &fh));
+	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_cul,  MPI_MODE_RDONLY, MPI_INFO_NULL, &f_cul));
+	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_qel,  MPI_MODE_RDONLY, MPI_INFO_NULL, &f_qel));
+	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_llp,  MPI_MODE_RDONLY, MPI_INFO_NULL, &f_llp));
 	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_back, MPI_MODE_RDONLY, MPI_INFO_NULL, &f_back));
 
 	// buffers
@@ -143,7 +143,9 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 									 {mpi_size_x_, mpi_size_y_, mpi_size_z_}, use_ghost_layers_); 
 
 	// // TEST
-	// space_grid_->init(MPI_COMM_WORLD, {N_x_, N_y_, N_z_}, {1, 1, 0}, {}, use_ghost_layers_); 
+	// space_grid_->init(MPI_COMM_WORLD, {N_x_, N_y_, N_z_}, {0, , 0},
+	// 								 {mpi_size_x_, mpi_size_y_, mpi_size_z_}, use_ghost_layers_); 
+
 		
 	// init fields
 	allocate_fields();				
@@ -2027,6 +2029,9 @@ void RT_problem::set_up(){
 	auto epsilon_dev       = epsilon_ ->view_device();
 	auto W_T_dev           = W_T_->view_device();
 
+	// TEST
+	const auto g_dev = space_grid_->view_device();
+
 	// compute atmospheric quantities 
     sgrid::parallel_for("INIT-ATM", space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
     {       	
@@ -2036,7 +2041,7 @@ void RT_problem::set_up(){
     	Real T   =   T_dev.ref(i,j,k);    	    	
     	Real xi  =  xi_dev.ref(i,j,k);
     	Real Cul = Cul_dev.ref(i,j,k);
-    	
+        
         // precompute quantities depening only on position
         if (not use_PORTA_input_) 
         {

@@ -49,7 +49,7 @@ struct MF_context {
 	
 	bool use_single_long_step_  = false; 
 	bool use_always_long_ray_   = true;
-
+	
 	// formal solution in arbitrary direction
 	bool formal_solution_Omega_ = false;
 	
