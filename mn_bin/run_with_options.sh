@@ -54,11 +54,11 @@ export INPUT_CONFIG=AR_385_Cut_64x64_mirrorxy-CRD_I_B0_V0.conf
 # export INPUT_CONFIG=AR_385_Cut_64x64_mirrorxy-CRD_I_B0_V.conf
 ######################################################
 
-echo "INPUT_DIR: $INPUT_DIR"
-echo "OUTPUT_DIR: $OUTPUT_DIR"
-echo "INPUT_CONFIG: $INPUT_CONFIG"
-echo "CRD: $CRD"
-echo "RTOL: $RTOL"
+echo "INPUT_DIR:     $INPUT_DIR"
+echo "OUTPUT_DIR:    $OUTPUT_DIR"
+echo "INPUT_CONFIG:  $INPUT_CONFIG"
+echo "CRD:           $CRD"
+echo "RTOL:          $RTOL"
 echo ""
 echo "Command to run: "
 echo "/home/usi/usi441290/git/solar_3d/build/solar_3D $CRD --input_dir $INPUT_DIR  --problem_input_config $INPUT_CONFIG --output_dir $OUTPUT_DIR -ksp_type fgmres -ksp_gmres_restart 30 -ksp_max_it 22 -ksp_monitor -ksp_view -ksp_rtol $RTOL"

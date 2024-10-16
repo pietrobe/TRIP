@@ -319,7 +319,7 @@ int main(int argc, char *argv[]) {
         
         // old code: copied below .....
 
-        std::vector<Real> mus = {0.1, 1.0}; //// ATTENTION: arbitrary beam directions
+        std::vector<Real> mus = {0.1, 0.3, 0.7, 1.0}; //// ATTENTION: arbitrary beam directions
         // std::vector<Real> mus = {1.0}; //// ATTENTION: arbitrary beam directions NO ARBITRARY BEAMS
         Real chi   = 0.19635;
     
@@ -332,13 +332,20 @@ int main(int argc, char *argv[]) {
           }
           std::cout << std::endl;
         }
-         
+        
+        double tick = MPI_Wtime();
+
         for (Real mu : mus)
         {
           compute_arbitrary_beam(mu, chi, output_file);
         }
 
-	
+        double tock = MPI_Wtime();
+
+        if (rt_problem_ptr->mpi_rank_ == 0) {
+          std::cout << "Arbitrary beams time (s) = " << tock - tick << std::endl;
+          std::cout << "Time per beam (s) =        " << (tock - tick) / double(mus.size()) << std::endl;
+        }
 
         // if (save_raw) rt_problem_ptr->I_field_->write("/scratch/snx3000/pietrob/I_field.raw");          
           
