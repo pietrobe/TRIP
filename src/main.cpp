@@ -16,7 +16,7 @@
 
 // WARNING: if you want to use command line options, you need to set USE_CMD_LINE_OPTIONS = 1
 // otherwise, it will use the default and hard-coded values
-#define USE_CMD_LINE_OPTIONS 0
+#define USE_CMD_LINE_OPTIONS 1
 //////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////
@@ -47,6 +47,9 @@ int main(int argc, char *argv[]) {
   PetscInitialize(&argc, &argv, (char *)0, NULL);
   Kokkos::initialize(argc, argv);
 
+
+
+
   {
     //////////////////////////////////////////////////////////////////////////
     // list of emissivity models
@@ -63,9 +66,10 @@ int main(int argc, char *argv[]) {
     // 
     // ZERO: continuum
     emissivity_model emissivity_model_var = emissivity_model::PRD;
+    // emissivity_model emissivity_model_var = emissivity_model::PRD_NORMAL; // Original grid over u'.
 
     const bool output   = true;
-    const bool output_overwrite_prevention = false; // if true the application stops (with an MPI_Abort) if the output directory already exists
+    const bool output_overwrite_prevention = true; // if true the application stops (with an MPI_Abort) if the output directory already exists
 
     const bool use_B    = true;
     const bool use_ZERO_epsilon = false;
@@ -264,6 +268,7 @@ int main(int argc, char *argv[]) {
        if (rt_problem_ptr->mpi_rank_ == 0)  {
         ss_b << "Output directory: " << output_path << std::endl;
         std::cout << ss_b.str();
+        std::cout.flush();
 
         const auto output_info_file = output_path / "info.txt";
         std::ofstream output_file_info(output_info_file);
@@ -298,30 +303,41 @@ int main(int argc, char *argv[]) {
     };
 
 
+        
+
     // write output
     if (output){
         const int N_x = rt_problem_ptr->N_x_;
         const int N_y = rt_problem_ptr->N_y_; 
 
-    //    for (int i = 0; i < N_x; ++i)
-    //    {
-    //       for (int j = 0; j < N_y; ++j)
-    //       {
-    //        rt_problem_ptr->write_surface_point_profiles(output_file, i, j);
-    //       }
-    //    }      
+       for (int i = 0; i < N_x; ++i)
+       {
+          for (int j = 0; j < N_y; ++j)
+          {
+           rt_problem_ptr->write_surface_point_profiles(output_file, i, j);
+          }
+       }      
 
-        rt_problem_ptr->write_surface_point_profiles(output_file, 0, 0);
-        rt_problem_ptr->write_surface_point_profiles(output_file, 10, 10);
+        // rt_problem_ptr->write_surface_point_profiles(output_file, 0, 0);
+        // rt_problem_ptr->write_surface_point_profiles(output_file, 10, 10);
         // rt_problem_ptr->write_surface_point_profiles(output_file, 3, 3);
         // rt_problem_ptr->write_surface_point_profiles(output_file, 1, 2);
         // rt_problem_ptr->write_surface_point_profiles(output_file, 1, 10);
         
         // old code: copied below .....
 
-        std::vector<Real> mus = {0.1, 0.3, 0.7, 1.0}; //// ATTENTION: arbitrary beam directions
-        Real chi   = 0.19635;
-    
+        // compute arbitrary beams
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        /// Set arbitrary beam directions
+        // free some memory    
+        rt_problem_ptr->free_fields_memory(); 
+        rt_solver.free_fields_memory();
+
+        const std::vector<Real> mus = {0.1, 0.3, 0.7, 1.0}; //// ATTENTION: arbitrary beam directions
+
+        // Real chi   = 0.19635;
+        const Real chi   = 0.0;
+
         if (rt_problem_ptr->mpi_rank_ == 0 and mus.size() ==0 ){
           std::cout << "WARNING: no arbitrary beams" << std::endl;
         } else if (rt_problem_ptr->mpi_rank_ == 0) {
@@ -331,6 +347,8 @@ int main(int argc, char *argv[]) {
           }
           std::cout << std::endl;
         }
+
+        std::cout.flush();
         
         double tick = MPI_Wtime();
 
