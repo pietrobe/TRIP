@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
     // PRD_AA_MAPV: same as PRD_AA but it store the map of the values (ATTENTION: it uses a lot of memory)
     // 
     // ZERO: continuum
-    emissivity_model emissivity_model_var = emissivity_model::PRD;
+    emissivity_model emissivity_model_var = emissivity_model::CRD_limit;
 
     const bool output   = true;
     const bool output_overwrite_prevention = false; // if true the application stops (with an MPI_Abort) if the output directory already exists
@@ -121,8 +121,8 @@ int main(int argc, char *argv[]) {
     }
 
   #else
-    const std::string input_pmd_string = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix_conv_KQ_MC.pmd");
-    const std::string input_llp_string = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix_conv_KQ_MC.llp");
+    const std::string input_pmd_string = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0-V0_fix_conv_KQ_MC.pmd");
+    const std::string input_llp_string = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0-V0_fix_conv_KQ_MC.llp");
     
     const std::string input_cul_string  = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.cul");
     const std::string input_qel_string  = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.qel");
@@ -283,7 +283,7 @@ int main(int argc, char *argv[]) {
       const auto compute_arbitrary_beam = [&, Nx = rt_problem_ptr->N_x_, 
                                               Ny = rt_problem_ptr->N_y_] (const Real mu, const Real chi, const std::string output_file) {
 
-        std::string output_file_Omega_mu = output_file + "_mu" + std::to_string(mu);
+        std::string output_file_Omega_mu = output_file + "_mu" + std::to_string(mu) + "_chi" + std::to_string(chi);
         
         const Real theta = acos(mu);
         rt_solver.apply_formal_solver_Omega(theta, chi);
@@ -303,31 +303,28 @@ int main(int argc, char *argv[]) {
         const int N_x = rt_problem_ptr->N_x_;
         const int N_y = rt_problem_ptr->N_y_; 
 
-    //    for (int i = 0; i < N_x; ++i)
-    //    {
-    //       for (int j = 0; j < N_y; ++j)
-    //       {
-    //        rt_problem_ptr->write_surface_point_profiles(output_file, i, j);
-    //       }
-    //    }      
+       for (int i = 0; i < N_x; ++i)
+       {
+          for (int j = 0; j < N_y; ++j)
+          {
+           rt_problem_ptr->write_surface_point_profiles(output_file, i, j);
+          }
+       }              
 
-        rt_problem_ptr->write_surface_point_profiles(output_file, 0, 0);
-        rt_problem_ptr->write_surface_point_profiles(output_file, 10, 10);
-        // rt_problem_ptr->write_surface_point_profiles(output_file, 3, 3);
-        // rt_problem_ptr->write_surface_point_profiles(output_file, 1, 2);
-        // rt_problem_ptr->write_surface_point_profiles(output_file, 1, 10);
-        
-        // old code: copied below .....
-
-        std::vector<Real> mus = {0.1, 0.3, 0.7, 1.0}; //// ATTENTION: arbitrary beam directions
-        Real chi   = 0.19635;
+        std::vector<Real> mus  = {0.1, 0.3, 0.7, 1.0}; //// ATTENTION: arbitrary beam directions        
+        std::vector<Real> chis = {0.0, 0.1963};
     
-        if (rt_problem_ptr->mpi_rank_ == 0 and mus.size() ==0 ){
+        if (rt_problem_ptr->mpi_rank_ == 0 and mus.size() == 0 ){
           std::cout << "WARNING: no arbitrary beams" << std::endl;
         } else if (rt_problem_ptr->mpi_rank_ == 0) {
-          std::cout << "Arbitrary beams: ";
+          std::cout << "Arbitrary beams mu: ";
           for (auto mu : mus) {
             std::cout << mu << " ";
+          }
+          std::cout << std::endl;
+          std::cout << "Arbitrary beams chi: ";
+          for (auto chi : chis) {
+            std::cout << chi << " ";
           }
           std::cout << std::endl;
         }
@@ -336,7 +333,10 @@ int main(int argc, char *argv[]) {
 
         for (Real mu : mus)
         {
-          compute_arbitrary_beam(mu, chi, output_file);
+          for (Real chi : chis)
+          {
+            compute_arbitrary_beam(mu, chi, output_file);
+          }          
         }
 
         double tock = MPI_Wtime();

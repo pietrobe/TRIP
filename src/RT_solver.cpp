@@ -296,7 +296,7 @@ std::vector<t_intersect> MF_context::find_prolongation(double theta, double chi,
         }
         if (fabs(theta)<small || fabs(theta-PI/2)<small || fabs(theta-PI)<small ||
             fabs(chi)<small || fabs(chi-PI/2)<small || fabs(chi-PI)<small || fabs(chi-3.*PI/2)<small || fabs(chi-2.*PI)<small) {
-            std::cout << "WARNING: ray direction not supported!" << std::endl;
+            // std::cout << "WARNING: ray direction not supported!" << std::endl;
             theta += small;
             chi   += small;                 
         }
@@ -734,23 +734,7 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
 
                     // set S1 and I1 
                     S1[i_stokes] += weight * S_dev.block(i_intersect,j_intersect,k_intersect)[b_index];                                             
-                    I1[i_stokes] += weight * I_dev.block(i_intersect,j_intersect,k_intersect)[b_index];                                                                                                 
-
-
-                    if (print_flag and i_stokes == 0)
-                    {
-                        std::cout << "face_vertices = " << face_vertices  << std::endl;                
-                        std::cout << "weight = " << weight  << std::endl;                
-                        std::cout << "I = " << I_dev.block(i_intersect,j_intersect,k_intersect)[b_index]  << std::endl;                
-
-                        std::cout << "i_intersect = " << i_intersect  << std::endl;                
-                        std::cout << "j_intersect = " << j_intersect  << std::endl;                
-                        std::cout << "k_intersect = " << k_intersect  << std::endl;  
-
-                        std::cout << "ix = " << T[cell].ix[face_vertices]  << std::endl;                
-                        std::cout << "iy = " << T[cell].iy[face_vertices]  << std::endl;                
-                        std::cout << "iz = " << T[cell].iz[face_vertices]  << std::endl;                                     
-                    }
+                    I1[i_stokes] += weight * I_dev.block(i_intersect,j_intersect,k_intersect)[b_index];                                                                                                                     
                 }   
             }
 
@@ -829,9 +813,7 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
 
             K2 = assemble_propagation_matrix_scaled(etas, rhos);     
             
-            dtau_1 = coeff * (eta_I_1 + etas[0]) * cell_distance;                  
-
-            // distance_test = cell_distance;
+            dtau_1 = coeff * (eta_I_1 + etas[0]) * cell_distance;                              
             
             if (dtau_1 > 0)  std::cout << "ERROR in dtau_1 sign, dtau_1 = " << dtau_1 << std::endl;   
             if (dtau_1 == 0) std::cout << "WARNING: dtau_1 = 0, possible e.g. for N_chi = 4" << std::endl;                                                         
@@ -2428,10 +2410,7 @@ void MF_context::init_serial_fields(const int n_tiles){
 
     space_grid_serial_ = std::make_shared<Grid_t>();    
     space_grid_serial_->init(MPI_COMM_SELF, {N_x, N_y, N_z}, {1, 1, 0}, {}, use_ghost_layers);
-
-    // // TEST 
-    // space_grid_serial_->init(MPI_COMM_SELF, {N_x, N_y, N_z}, {0, 0, 0}, {}, use_ghost_layers); 
-
+    
     // create serial fields 
     I_field_serial_   = std::make_shared<Field_t>("I_serial", space_grid_serial_, tile_size_); 
     S_field_serial_   = std::make_shared<Field_t>("S_serial", space_grid_serial_, tile_size_);
