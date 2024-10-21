@@ -1503,6 +1503,13 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
 void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0)
 {
 	if (mpi_rank_ == 0) std::cout << "\nStart global formal solution..." << std::endl;
+
+    // // TEST
+    // auto Cul_dev = RT_problem_->Cul_ ->view_device();
+    // auto Qel_dev = RT_problem_->Qel_ ->view_device();
+    // auto Nl_dev  = RT_problem_->Nl_  ->view_device();
+
+    // ///////
     
 	// init some quantities 	    
     const auto N_x = RT_problem_->N_x_;
@@ -1643,8 +1650,8 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     						k_aux = (mu > 0.0) ? k_end - 1 - k + g_dev.margin[2]: k; 
 
     						// depth index
-    						k_global = g_dev.global_coord(2, k_aux);	                         
-
+    						k_global = g_dev.global_coord(2, k_aux);	                             
+                            
     						boundary = (k_global == 0 and mu < 0) or (k_global == N_z - 1 and mu > 0);
 
     						if (not boundary)
@@ -1655,7 +1662,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     							for (int k_chi = k_chi_start; k_chi < k_chi_end; ++k_chi)
     							{	                                
     								chi = chi_grid[k_chi]; 
-    								
+    							
     								i_aux = (cos(chi) < 0.0) ? i_end - 1 - i + g_dev.margin[0]: i;	
     								j_aux = (sin(chi) < 0.0) ? j_end - 1 - j + g_dev.margin[1]: j;		                                                               
                                     
