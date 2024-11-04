@@ -172,9 +172,9 @@ int main(int argc, char *argv[]) {
                 const auto file_name_provided = [](const std::string &s) { return (s.empty()) ? std::string("not provided") : s; };
 
                 ss_a << "PMD input file:   " << file_name_provided(PORTA_input_pmd.string()) << std::endl;
+                ss_a << "LLP input file:   " << file_name_provided(input_llp_path.string()) << std::endl;
                 ss_a << "CUL input file:   " << file_name_provided(input_cul_path.string()) << std::endl;
                 ss_a << "QEL input file:   " << file_name_provided(input_qel_path.string()) << std::endl;
-                ss_a << "LLP input file:   " << file_name_provided(input_llp_path.string()) << std::endl;
                 ss_a << "BACK input file:  " << file_name_provided(input_back_path.string()) << std::endl;
                 std::cout << ss_a.str();
             }
@@ -288,9 +288,22 @@ int main(int argc, char *argv[]) {
       const auto compute_arbitrary_beam = [&, Nx = rt_problem_ptr->N_x_, 
                                               Ny = rt_problem_ptr->N_y_] (const Real mu, const Real chi, const std::string output_file) {
 
-        std::string output_file_Omega_mu = output_file + "_mu" + std::to_string(mu);
+
+        char mu_charv[40];
+        char chi_charv[40];
+
+        std::snprintf(&mu_charv[0], 40, "%.4f", mu);
+        std::snprintf(&chi_charv[0], 40, "%.4f", chi);
+
+        std::string mu_str(mu_charv);
+        std::string chi_str(chi_charv);
+
+        mu_str.erase(std::remove(mu_str.begin(), mu_str.end(), '.'), mu_str.end());
+        chi_str.erase(std::remove(chi_str.begin(), chi_str.end(), '.'), chi_str.end());
+
+        std::string output_file_Omega_mu = output_file + "_mu" + mu_str + "_chi" + chi_str;
         
-        const Real theta = acos(mu);
+        const Real theta = std::acos(mu);
         rt_solver.apply_formal_solver_Omega(theta, chi);
 
         for (int i = 0; i < Nx; ++i)
@@ -333,35 +346,67 @@ int main(int argc, char *argv[]) {
         rt_problem_ptr->free_fields_memory(); 
         rt_solver.free_fields_memory();
 
-        const std::vector<Real> mus = {0.1, 0.3, 0.7, 1.0}; //// ATTENTION: arbitrary beam directions
 
-        // Real chi   = 0.19635;
-        const Real chi   = 0.0;
 
-        if (rt_problem_ptr->mpi_rank_ == 0 and mus.size() ==0 ){
+        std::vector<Real> mus_vec = {0.1, 0.3, 0.7, 1.0}; //// ATTENTION: arbitrary beam directions
+        const std::vector<Real> chi_vec = {0.0, 1.963495408493621e-01};
+
+        if (rt_problem_ptr->mpi_rank_ == 0 and mus_vec.size() == 0 ){
           std::cout << "WARNING: no arbitrary beams" << std::endl;
         } else if (rt_problem_ptr->mpi_rank_ == 0) {
-          std::cout << "Arbitrary beams: ";
-          for (auto mu : mus) {
-            std::cout << mu << " ";
-          }
+
+#define MU_EXTRA
+#ifdef MU_EXTRA // extra beams
+#pragma message "ATTENTION: using hardcoded extra arbitrary beams"
+        {
+          // const std::vector<Real> mus_extra = {0.183434642495650, 0.960289856497537, 0.99};
+          const std::vector<Real> mus_extra = {0.98, 0.99, 0.997};
+
+          for (auto mux : mus_extra) mus_vec.push_back(mux);
+          std::sort(mus_vec.begin(), mus_vec.end());
+        }
+#endif
+
+          std::cout << "Arbitrary beams: [mu] ";
+          for (auto mu : mus_vec) { std::cout << mu << ", "; }
+          std::cout << std::endl;
+
+          // if (mus_extra.size() > 0) {
+          //   std::cout << "Extra beams: [mu] ";
+          //   for (auto mu : mus_extra) { std::cout << mu << ", "; }
+          //   std::cout << std::endl;
+          // }
+
+          std::cout << "Arbitrary beams: [chi] ";
+          for ( auto chi : chi_vec ) std::cout << chi << ", ";
           std::cout << std::endl;
         }
 
         std::cout.flush();
         
-        double tick = MPI_Wtime();
+        const double tick = MPI_Wtime();
+        int beams_counter = 0;
 
-        for (Real mu : mus)
+        for (Real chi : chi_vec)
         {
-          compute_arbitrary_beam(mu, chi, output_file);
+          for (Real mu : mus_vec)
+          {
+
+            if (rt_problem_ptr->mpi_rank_ == 0) {
+             std::cout << getCurrentDateTime() << " - Computing arbitrary beam: mu = " << mu << ", chi = " << chi << std::endl;
+            }
+
+            compute_arbitrary_beam(mu, chi, output_file);
+            beams_counter++;
+          }
         }
 
-        double tock = MPI_Wtime();
+        const double tock = MPI_Wtime();
 
         if (rt_problem_ptr->mpi_rank_ == 0) {
           std::cout << "Arbitrary beams time (s) = " << tock - tick << std::endl;
-          std::cout << "Time per beam (s) =        " << (tock - tick) / double(mus.size()) << std::endl;
+          std::cout << "Number of beams          = " << beams_counter << std::endl;
+          std::cout << "Time per beam (s)        = " << (tock - tick) / double(beams_counter) << std::endl;
         }
 
         // if (save_raw) rt_problem_ptr->I_field_->write("/scratch/snx3000/pietrob/I_field.raw");          

@@ -342,15 +342,35 @@ public:
 		// set eta and rhos 
 	    RT_problem_->set_eta_and_rhos_Omega(theta, chi);
 	
-		Real start = MPI_Wtime();				
+		const Real clock_start = MPI_Wtime();				
 
 		// update emissivity with current I_field (in all directions)
 		mf_ctx_.update_emission_Omega(RT_problem_->I_vec_, theta, chi);
 		
-		if (mpi_rank_ == 0) std::cout << "Computing emission took (s) = " << MPI_Wtime() - start << std::endl;	
+
+		const Real clock_end = MPI_Wtime();
+		const Real clock_diff = clock_end - clock_start;
+
+		if (mpi_rank_ == 0){ 
+			std::cout << "Computing emission took (s) = " << clock_diff << "    file: " << __FILE__ << ":" << __LINE__ << std::endl;
+			std::cout.flush();
+		}
 		
 		// formal solve
-		mf_ctx_.formal_solve_ray(theta, chi);		
+		MPI_Barrier(MPI_COMM_WORLD);
+
+
+		if (mpi_rank_ == 0) std::cout << "Start formal solve in Omega..." << "    file: " << __FILE__ << ":" << __LINE__ << std::endl;
+
+		
+		Real clock_start_formal = MPI_Wtime();
+		mf_ctx_.formal_solve_ray(theta, chi);
+
+		MPI_Barrier(MPI_COMM_WORLD);
+		Real clock_end_formal = MPI_Wtime();
+
+		Real clock_diff_formal = clock_end_formal - clock_start_formal;
+		if (mpi_rank_ == 0) std::cout << "Formal solve time (s) = " << clock_diff_formal << "    file: " << __FILE__ << ":" << __LINE__ << std::endl;
 	}
 	
 

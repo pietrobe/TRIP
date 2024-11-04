@@ -296,7 +296,7 @@ std::vector<t_intersect> MF_context::find_prolongation(double theta, double chi,
         }
         if (fabs(theta)<small || fabs(theta-PI/2)<small || fabs(theta-PI)<small ||
             fabs(chi)<small || fabs(chi-PI/2)<small || fabs(chi-PI)<small || fabs(chi-3.*PI/2)<small || fabs(chi-2.*PI)<small) {
-            std::cout << "WARNING: ray direction not supported!" << std::endl;
+            // std::cout << "WARNING: ray direction not supported!" << std::endl;
             theta += small;
             chi   += small;                 
         }
@@ -2131,7 +2131,9 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
     std::vector<double>  input(block_size);        
     std::vector<double> output(block_size); 
 
-    PetscInt ix[block_size];
+    // PetscInt ix[block_size];
+    std::vector<PetscInt> ix;
+    ix.resize(block_size);
 
     PetscInt istart, iend; 
     ierr = VecGetOwnershipRange(I_vec, &istart, &iend);CHKERRV(ierr);	
@@ -2149,10 +2151,11 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
     for (int i_vec = istart_local; i_vec < iend_local; ++i_vec)
     {
     	// set indeces
-    	std::iota(ix, ix + block_size, i_vec * block_size);
+    	// std::iota(ix, ix + block_size, i_vec * block_size);
+        std::iota(ix.begin(), ix.end(), i_vec * block_size);
 
         // get I field 
-        ierr = VecGetValues(I_vec, block_size, ix, &input[0]);CHKERRV(ierr);   
+        ierr = VecGetValues(I_vec, block_size, ix.data(), &input[0]);CHKERRV(ierr);
 
         // compute grid indeces from Vec index i_vec
         i = i_start + counter_i;
@@ -2166,8 +2169,9 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
     	// set input field
         ecc_sh_ptr_->update_incoming_field(i, j, k, offset_fun_, input.data());
 
+#define CLOCK_EPSILON
 #ifdef CLOCK_EPSILON
-        if (this->mpi_rank_ == 0 and not approx) {
+        if (this->mpi_rank_ == 0 and not approx and i == i_start and j == j_start and k == k_start) {
             std::cout << "Start epsilon_computation_function [MAIN], rank: " << this->mpi_rank_ << std::endl;
         }
    
@@ -2188,7 +2192,7 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
 
 #ifdef CLOCK_EPSILON
 	    clock.stop_clock();
-        if (this->mpi_rank_ == 0 and not approx) {
+        if (this->mpi_rank_ == 0 and not approx and i == i_start and j == j_start and k == k_start) {
               clock.print_clock_h("Execution time of Epsilon emissivity");
         }
 #endif
@@ -2236,7 +2240,7 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
 
     if (mpi_rank_ == 0)
     {
-        std::cout << "\nUpdating emission for theta = " << theta << " and chi = " << chi << std::endl;
+        std::cout << "\nUpdating emission for theta = " << theta << ", mu = " << std::cos(theta) <<  ", and chi = " << chi << std::endl;
 
         if (include_continuum)
         {
@@ -2268,7 +2272,9 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
 
     std::vector<double>  input(block_size);        
 
-    PetscInt ix[block_size];
+    // PetscInt ix[block_size];
+    std::vector<PetscInt> ix;
+    ix.resize(block_size);
 
     PetscInt istart, iend; 
     ierr = VecGetOwnershipRange(I_vec, &istart, &iend);CHKERRV(ierr);   
@@ -2286,10 +2292,12 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
     for (int i_vec = istart_local; i_vec < iend_local; ++i_vec)
     {
         // set indeces
-        std::iota(ix, ix + block_size, i_vec * block_size);
+        // std::iota(ix, ix + block_size, i_vec * block_size);
+        std::iota(ix.begin(), ix.end(), i_vec * block_size);
 
         // get I field 
-        ierr = VecGetValues(I_vec, block_size, ix, &input[0]);CHKERRV(ierr);   
+        // ierr = VecGetValues(I_vec, block_size, ix, &input[0]);CHKERRV(ierr);
+        ierr = VecGetValues(I_vec, block_size, ix.data(), &input[0]);CHKERRV(ierr);   
 
         // compute grid indeces from Vec index i_vec
         i = i_start + counter_i;
@@ -2310,13 +2318,38 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
         //
         
         std::string scattering_model = emissivity_model_to_string(RT_problem_->emissivity_model_);
+
+// #define DEBUG_MU_ARBITRARY
+#ifdef DEBUG_MU_ARBITRARY
+
+        if (mpi_rank_ == 0 and i == i_start and j == j_start and k == k_start)
+        {
+            std::cout << "scattering_model (for arbitrary direction) = " << scattering_model << " file: " << __FILE__ << ":" << __LINE__ << std::endl;
+        }
+#endif
+
         // scattering_model = "CONTINUUM"; // for continuum only   // DANGER: this is a hack to TEST and debug the continuum only
         auto epsilon_computation_Omega = ecc_sh_ptr_->make_computation_function_arbitrary_direction(scattering_model, include_continuum, include_eps_lth);
 
         ecc_sh_ptr_->update_incoming_field(i, j, k, offset_fun_, input.data());
 
         // get IQUV for (theta, chi direction)
-        auto IQUV_matrix_sh_ptr = epsilon_computation_Omega(i, j, k, theta, chi);           
+        auto IQUV_matrix_sh_ptr = epsilon_computation_Omega(i, j, k, theta, chi);
+
+#ifdef DEBUG_MU_ARBITRARY
+        if (mpi_rank_ == 0 and i == i_start and j == j_start and k == k_start)
+        {
+            std::cout << "IQUV_matrix_sh_ptr = " << IQUV_matrix_sh_ptr << " file: " << __FILE__ << ":" << __LINE__ << std::endl;
+        }
+
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        if (mpi_rank_ == 0 and i == i_start and j == j_start and k == k_start)
+        {
+            std::cout << "Start update_incoming_field [MAIN], passed: MPI_Barrier(MPI_COMM_WORLD); rank: " << mpi_rank_ << std::endl;
+        }
+#endif
+
                 
         // update S_field_ from output scaling by eta_I
         double eta_I_inv; 
@@ -2336,6 +2369,20 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
             }                                    
         }
 
+#ifdef DEBUG_MU_ARBITRARY
+        if (mpi_rank_ == 0 and i == i_start and j == j_start and k == k_start)
+        {
+            std::cout << "End update_incoming_field [MAIN], rank: " << mpi_rank_ << " file: " << __FILE__ << ":" << __LINE__ << std::endl;
+        }
+
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        if (mpi_rank_ == 0 and i == i_start and j == j_start and k == k_start)
+        {
+            std::cout << "End update_incoming_field passed: MPI_Barrier(MPI_COMM_WORLD) [MAIN], rank: " << mpi_rank_ << " file: " << __FILE__ << ":" << __LINE__ << std::endl;
+        }
+#endif
+
         // update counters
         counter_i++;
 
@@ -2350,7 +2397,24 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
             counter_j = 0;
             counter_k++;
         }
+
+        // IQUV_matrix_sh_ptr = nullptr;
     }  
+
+#ifdef DEBUG_MU_ARBITRARY
+    if (mpi_rank_ == 0)
+    {
+        std::cout << "done: updating emission for theta = " << theta << ", mu = " << std::cos(theta) <<  ", and chi = " << chi << std::endl;
+        std::cout << "Entering MPI_Barrier(MPI_COMM_WORLD) [MAIN], rank: " << mpi_rank_ << " file: " << __FILE__ << ":" << __LINE__ << std::endl;
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    if (mpi_rank_ == 0 and i == i_start and j == j_start and k == k_start)
+    {
+        std::cout << "Exit update_incoming_field [MAIN], passed: MPI_Barrier(MPI_COMM_WORLD); rank: " << mpi_rank_ << " file: " << __FILE__ << ":" << __LINE__ << std::endl;
+    }
+#endif
 }
 
 

@@ -112,7 +112,11 @@ public:
     	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank_);
     	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size_);
 
-    	if (mpi_rank_ == 0) std::cout << "\n~~~~~~ MPI size = " << mpi_size_ << " ~~~~~~" << std::endl;		
+    	if (mpi_rank_ == 0) {
+			std::cout << "\n~~~~~~ MPI size = " << mpi_size_ << " ~~~~~~" << std::endl << std::endl;
+			std::cout << "Emissivity Model long:  " << emissivity_model_to_string_long(emissivity_model_arg) << std::endl;
+			std::cout << "Emissivity Model short: " << emissivity_model_to_string(emissivity_model_arg) << std::endl;
+		}
 
 		// set flags    	
     	use_PORTA_input_    = true;
@@ -142,6 +146,7 @@ public:
 	}
 
 
+	/////////////////////////////////////////////////////////////////////////
 	// constructor for PORTA input file
 	RT_problem(const char* PORTA_input, input_string input_path_frequency, 
 			   const emissivity_model emissivity_model_arg, 
