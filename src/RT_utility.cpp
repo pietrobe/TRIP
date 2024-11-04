@@ -19,18 +19,18 @@
 // }
 
 std::string get_arg(const std::string &input, const std::string &word) {
-    std::regex pattern("^\\s*" + word + ":\\s*([^\\s]*)\\s*$");
-    std::smatch match;
-    std::istringstream stream(input);
-    std::string line;
+  std::regex pattern("^\\s*" + word + ":\\s*([^\\s]*)\\s*$");
+  std::smatch match;
+  std::istringstream stream(input);
+  std::string line;
 
-    while (std::getline(stream, line)) {
-        if (std::regex_search(line, match, pattern)) {
-            return match.str(1);
-        }
+  while (std::getline(stream, line)) {
+    if (std::regex_search(line, match, pattern)) {
+      return match.str(1);
     }
+  }
 
-    return std::string();
+  return std::string();
 }
 
 std::map<std::string, std::string>
@@ -112,49 +112,52 @@ bool getOptionFlag(int argc, char *argv[], const std::string &option) {
 }
 
 void print_help() {
-  std::cout
-      << "----------------------------------------------------------------"
-      << std::endl
-      << std::endl;
-  std::cout << "Usage: mpirun ./solar_3D [options] [PETSC options]"
-            << std::endl;
-  std::cout << "Options:" << std::endl;
-  std::cout << "  --CRD: use CRD" << std::endl;
-  std::cout << "  --input_dir <input_dir>: input directory" << std::endl;
-  std::cout << "  --output_dir <output_dir>: output directory" << std::endl;
-  std::cout << "  --problem_pmd_file <problem_pmd_file>: problem pmd input file"
-            << std::endl;
-  std::cout << "  --problem_input_config <problem_input_config>: problem input "
-               "config file";
-  std::cout << "  --help: print help and exit" << std::endl << std::endl;
 
-  std::cout
-      << "----------------------------------------------------------------"
-      << std::endl
-      << std::endl;
+  std::string help_string = R"(
+----------------------------------------------------------------
 
-  std::cout << "Example: mpirun ./solar_3D --CRD --input_dir /path/to/input "
-               "--output_dir /path/to/output --problem_input_file "
-               "problem_input_file.pmd  -ksp_type gmres -ksp_max_it 100 "
-               "-ksp_rtol 1e-10"
-            << std::endl;
-  std::cout << std::endl;
-  std::cout << "In the output directory, the code creates a results directory "
-               "with the name of the problem input file and the extension "
-               "\".CRD\" or \".PRD\", depending on the --CRD option."
-            << std::endl;
-  std::cout
-      << "If the results output directory already exists, the code will stop."
-      << std::endl;
-  std::cout << "Default solver is the PRD." << std::endl;
-  std::cout << std::endl;
-  std::cout << "The config file is a text file in the input directory with the "
-               "following format:"
-            << std::endl
-            << std::endl;
-  std::cout << "  pmd: problem.pmd" << std::endl;
-  std::cout << "  cul: cul_file.cul" << std::endl;
-  std::cout << "  qel: qel_file.qel" << std::endl;
-  std::cout << "  llp: llp_file.llp" << std::endl;
-  std::cout << std::endl;
+Usage: mpirun ./solar_3D [options] [PETSC options]
+
+Options:
+  --CRD:                                         Use CRD as line emissivity model (default PRD)
+
+  --epsilon_line:                                Set epsilon line model [PRD, CRD, PRD_AA, ZERO] (default PRD) (TODO)
+
+  --force_preconditioner:                        Enable the preconditioner in any case. 
+                                                 Default is to use the CRD preconditioner with PRD 
+                                                 and no preconditioner with CRD.
+
+  --input_dir <input_dir>:                       Input directory
+
+  --output_dir <output_dir>:                     Output directory
+
+  --problem_pmd_file <problem_pmd_file>:         Problem pmd input file
+
+  --problem_input_config <problem_input_config>: Problem input config file
+
+  --continuum:                                   Use continuum: namely Zero line emissivity model (default PRD)
+
+  --help:                                        Print this help message and exit
+
+----------------------------------------------------------------
+
+Example: 
+$ mpirun ./solar_3D --CRD --input_dir /path/to/input --output_dir /path/to/output --problem_input_file problem_input_file.pmd  -ksp_type gmres -ksp_max_it 100 -ksp_rtol 1e-10
+
+In the output directory, the code creates a results directory with the name of the problem input 
+file and the extension ".CRD" or ".PRD", depending on the --CRD or the --epsilon_line options.
+If the results output directory already exists, the code will stop.
+Default solver is the PRD.
+
+The config file set by the option --problem_input_config must be a text file in the input directory with the following format:
+
+  pmd: main_pmd_atmos_model.pmd
+  cul: cul_file.cul
+  qel: qel_file.qel
+  llp: llp_file.llp
+  back: back_file.back
+
+)";
+
+  std::cout << help_string << std::endl;
 }
