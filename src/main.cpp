@@ -53,16 +53,17 @@ int main(int argc, char *argv[]) {
   {
     //////////////////////////////////////////////////////////////////////////
     // list of emissivity models
-    // NONE: undefined 
-    // CRD_limit: CRD limit
-    // CRD_limit_VHP: CRD limit with VHP approximation
+    // NONE:          undefined 
+    // CRD_limit:     CRD limit (Default set to CRD_GL)
+    // CRD_limit_VHP: CRD limit with VHP (Very hight precision) approximation
     //
-    // PRD: partial redistribution default grid (FAST).
-    // PRD_NORMAL: partial redistribution with standard grid.
-    // PRD_FAST: partial redistribution with fast grid.
+    // PRD:        default (PRD_FAST) partial redistribution. Default grid (PRD_FAST).
+    // PRD_NORMAL: force partial redistribution with original grid.
+    // PRD_FAST:   force partial redistribution with fast grid.
     // 
-    // PRD_AA: partial redistribution Angle averaged method.
-    // PRD_AA_MAPV: same as PRD_AA but it store the map of the values (ATTENTION: it uses a lot of memory)
+    // PRD_AA:      partial redistribution Angle averaged method.
+    // PRD_AA_MAPV: same as PRD_AA but it store the map of the values for a fast computation 
+    //              (DANGER it uses a lot of memory)
     // 
     // ZERO: continuum
     emissivity_model emissivity_model_var = emissivity_model::PRD;
@@ -125,8 +126,8 @@ int main(int argc, char *argv[]) {
     }
 
   #else
-    const std::string input_pmd_string = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix_conv_KQ_MC.pmd");
-    const std::string input_llp_string = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix_conv_KQ_MC.llp");
+    const std::string input_pmd_string = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0-V0_fix_conv_KQ_MC.pmd");
+    const std::string input_llp_string = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0-V0_fix_conv_KQ_MC.llp");
     
     const std::string input_cul_string  = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.cul");
     const std::string input_qel_string  = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.qel");
@@ -298,6 +299,7 @@ int main(int argc, char *argv[]) {
         std::string mu_str(mu_charv);
         std::string chi_str(chi_charv);
 
+        // remove the dot from the output file name
         mu_str.erase(std::remove(mu_str.begin(), mu_str.end(), '.'), mu_str.end());
         chi_str.erase(std::remove(chi_str.begin(), chi_str.end(), '.'), chi_str.end());
 
@@ -379,6 +381,11 @@ int main(int argc, char *argv[]) {
 
           std::cout << "Arbitrary beams: [chi] ";
           for ( auto chi : chi_vec ) std::cout << chi << ", ";
+          std::cout << std::endl;
+          std::cout << "Arbitrary beams chi: ";
+          for (auto chi : chis) {
+            std::cout << chi << " ";
+          }
           std::cout << std::endl;
         }
 

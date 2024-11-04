@@ -141,11 +141,6 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	set_grid_partition();	
 	space_grid_->init(MPI_COMM_WORLD, {N_x_, N_y_, N_z_}, {1, 1, 0},
 									 {mpi_size_x_, mpi_size_y_, mpi_size_z_}, use_ghost_layers_); 
-
-	// // TEST
-	// space_grid_->init(MPI_COMM_WORLD, {N_x_, N_y_, N_z_}, {0, , 0},
-	// 								 {mpi_size_x_, mpi_size_y_, mpi_size_z_}, use_ghost_layers_); 
-
 		
 	// init fields
 	allocate_fields();				
