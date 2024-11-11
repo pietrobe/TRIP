@@ -1,9 +1,9 @@
 #!/bin/bash -l
 
-#SBATCH --ntasks=12288
+#SBATCH --ntasks=16384
 #SBATCH --cpus-per-task=1
 #SBATCH --constrain=gpu
-#SBATCH --time=01:00:00
+#SBATCH --time=08:00:00
 #SBATCH --account=u0
 #SBATCH --job-name="TRIP"
 

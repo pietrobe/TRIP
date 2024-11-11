@@ -85,6 +85,13 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	N_theta_ *= 2;
 	N_chi_   *= 4;
 
+	// TEST
+	if (mpi_rank_ == 0) std::cout << "WARNING: N_theta and N_chi HARDCODED!" << std::endl;
+	N_theta_ = 6;
+	N_chi_   = 12;
+	//////////////////
+
+
 	if (mpi_rank_ == 0) std::cout << "N_theta = " << N_theta_ << ", N_chi = " << N_chi_ << ", from PORTA input." << std::endl;
 		
 	// some irrelevant data	
@@ -2845,11 +2852,17 @@ void RT_problem::set_grid_partition() // TODO remove hardcoding
 			mpi_size_x_ = 16;
 			mpi_size_y_ = 12;			
 		}
+		else if (mpi_size_ == 6912)
+		{
+			mpi_size_z_ = 27;
+            mpi_size_x_ = 16;
+            mpi_size_y_ = 16;
+		}
 		else if (mpi_size_ == 8192) // HARDCODED
 		{
-			mpi_size_z_ = 128;
-			mpi_size_x_ = 8;
-			mpi_size_y_ = 8;			
+			mpi_size_z_ = 32;
+			mpi_size_x_ = 16;
+			mpi_size_y_ = 16;			
 		}
 		else if (mpi_size_ == 12288) // HARDCODED
 		{
@@ -2861,6 +2874,12 @@ void RT_problem::set_grid_partition() // TODO remove hardcoding
 		{
 			mpi_size_z_ = 16;
 			mpi_size_x_ = 32;
+			mpi_size_y_ = 32;
+		}
+		else if (mpi_size_ == 19200) 
+		{
+			mpi_size_z_ = 25;
+			mpi_size_x_ = 24;
 			mpi_size_y_ = 32;
 		}
 		else

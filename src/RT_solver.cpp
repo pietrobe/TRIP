@@ -1137,6 +1137,11 @@ std::vector<double> MF_context::single_long_ray_step(const std::vector<t_interse
 
 void MF_context::formal_solve_ray(const Real theta, const Real chi)
 {       
+    // timers
+    const bool timing_debug = false;
+    if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
+    const Real start_total = MPI_Wtime(); 
+
     const Real mu = cos(theta);
 
     if (mpi_rank_ == 0) std::cout << "\nStart formal solution for mu = " << mu << 
@@ -1202,15 +1207,12 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
     // minus for optical depth conversion, trap rule and conversion to cm (- 0.5 * 1e5)
     const double coeff = -50000;
     
+    // timers
     double comm_timer     = 0;
-    double one_step_timer = 0;
-    double total_timer    = 0;
+    double one_step_timer = 0;    
 
-    const bool timing_debug = false;
-
-    if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
-    Real start_total = MPI_Wtime(); 
-
+    if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);    
+    Real start_comm  = MPI_Wtime();                                 
     ///////////// data movement ////////////////////
     
     // write eta and rhos to the serial grid
@@ -1225,19 +1227,15 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
     // write S to the serial grid
     S_remap_Omega_.from_pgrid_to_pblock(*RT_problem_->S_field_Omega_, *S_field_serial_Omega_, 0);                                    
 
+    comm_timer += MPI_Wtime() - start_comm;          
+
     ////////////////////////////////////////////////
 
     // TODO FIX
     const bool idle_proc = (eta_dev.block(i_start,j_start,k_start)[0] == 0);
 
     // // TODO to TEST this more safe
-    // const bool idle_proc = (mpi_rank_ * local_block_size_ > block_size - 1);    
-                         
-    // communication timer                 
-    if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
-    Real start_comm = MPI_Wtime();                                    
-            
-    comm_timer += MPI_Wtime() - start_comm;          
+    // const bool idle_proc = (mpi_rank_ * local_block_size_ > block_size - 1);                                        
     
     if (not idle_proc)
     {                       
@@ -1466,16 +1464,16 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
 
                                 //     // std::cout << "K2 = " << std::endl;
                                 //     // for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K2[i_stokes] << std::endl;
-                                // }
-                            
-                                one_step_timer += MPI_Wtime() - start_one;                                                                                                                                                      
+                                // }                                                            
                             }   
                                                                       
                             // write result
                             for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
                             {                                                           
                                 I_dev.block(i_aux,j_aux,k_aux)[b + i_stokes] = I2[i_stokes];                                      
-                            }                                 
+                            }       
+
+                            one_step_timer += MPI_Wtime() - start_one;
                         }                                                   
                     }
                 }                
@@ -1488,14 +1486,20 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
     
     I_remap_Omega_.from_pblock_to_pgrid(*I_field_serial_Omega_, *RT_problem_->I_field_Omega_, 0); 
 
-    comm_timer  += MPI_Wtime() - start_comm;     
-    total_timer += MPI_Wtime() - start_total;                     
-    
+    comm_timer += MPI_Wtime() - start_comm;      
+
+    // print timers    
+    const double total_timer = MPI_Wtime() - start_total;
+    double comm_timer_max, one_step_timer_max, total_timer_max;
+    MPI_Reduce(&comm_timer,     &comm_timer_max,     1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&one_step_timer, &one_step_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&total_timer,    &total_timer_max,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+       
     if (mpi_rank_ == 0)
     {
-        printf("comm_timer:\t\t%g seconds\n", comm_timer);
-        printf("one_step_timer:\t\t%g seconds\n", one_step_timer);                        
-        printf("total_timer:\t\t%g seconds\n", total_timer);                        
+        printf("comm_timer:\t\t%g seconds\n",     comm_timer_max);
+        printf("one_step_timer:\t\t%g seconds\n", one_step_timer_max);                        
+        printf("total_timer:\t\t%g seconds\n",    total_timer_max);                        
     }           
 }
       
@@ -1504,12 +1508,10 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 {
 	if (mpi_rank_ == 0) std::cout << "\nStart global formal solution..." << std::endl;
 
-    // // TEST
-    // auto Cul_dev = RT_problem_->Cul_ ->view_device();
-    // auto Qel_dev = RT_problem_->Qel_ ->view_device();
-    // auto Nl_dev  = RT_problem_->Nl_  ->view_device();
-
-    // ///////
+    // timers
+    const bool timing_debug = false;
+    if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
+    const Real start_total = MPI_Wtime();                                    
     
 	// init some quantities 	    
     const auto N_x = RT_problem_->N_x_;
@@ -1578,13 +1580,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 	const double coeff = -50000;
 	
     double comm_timer     = 0;
-    double one_step_timer = 0;
-    double total_timer    = 0;
-
-    const bool timing_debug = false;
-
-    if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
-    Real start_total = MPI_Wtime();                                    
+    double one_step_timer = 0;    
 
     // impose boundary conditions 
     apply_bc(I_field, I0);  
@@ -1894,16 +1890,16 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 
                                             //     // std::cout << "K2 = " << std::endl;
                                             //     // for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K2[i_stokes] << std::endl;
-        									// }
-                                        
-                                            one_step_timer += MPI_Wtime() - start_one;                           									                                        												
+        									// }                                                                                    
     									}	
                                                                                   
     									// write result
     									for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
     									{							
     										I_dev.block(i_aux,j_aux,k_aux)[b_start + i_stokes] = I2[i_stokes];										
-    									}                                                                        
+    									}       
+
+                                        one_step_timer += MPI_Wtime() - start_one;
     								}						
     							}
     						}
@@ -1920,16 +1916,21 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
         I_remap_.from_pblock_to_pgrid(*I_field_serial_, *I_field, tile_number); 
 
         comm_timer += MPI_Wtime() - start_comm; 
-    }
-
-    total_timer += MPI_Wtime() - start_total;                     
+    }                
+    
+    // print timers
+    const double total_timer = MPI_Wtime() - start_total;
+    double comm_timer_max, one_step_timer_max, total_timer_max;
+    MPI_Reduce(&comm_timer,     &comm_timer_max,     1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&one_step_timer, &one_step_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&total_timer,    &total_timer_max,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     
     if (mpi_rank_ == 0)
     {
-        printf("comm_timer:\t\t%g seconds\n", comm_timer);
-        printf("one_step_timer:\t\t%g seconds\n", one_step_timer);                        
-        printf("total_timer:\t\t%g seconds\n", total_timer);                        
-    }        
+        printf("comm_timer:\t\t%g seconds\n",     comm_timer_max);
+        printf("one_step_timer:\t\t%g seconds\n", one_step_timer_max);                        
+        printf("total_timer:\t\t%g seconds\n",    total_timer_max);                        
+    }           
 }
 
 	
@@ -2668,15 +2669,16 @@ PetscErrorCode UserMult(Mat mat, Vec x, Vec y){
     // compute new emission in S_field_ 
     mf_ctx_->update_emission(x);  
 
-    if (RT_problem->mpi_rank_ == 0) printf("update_emission:\t\t%g seconds\n", MPI_Wtime() - start);              
-    start = MPI_Wtime();      
+    // timer
+    double emission_timer = MPI_Wtime() - start;
+    double emission_timer_max;
+    MPI_Reduce(&emission_timer, &emission_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    if (RT_problem->mpi_rank_ == 0) printf("update_emission:\t\t%g seconds\n", emission_timer_max);                  
   	    
   	// fill rhs_ from formal solve with zero bc  	
     mf_ctx_->formal_solve_global(RT_problem->I_field_, RT_problem->S_field_, 0.0); 
       
-    if (RT_problem->mpi_rank_ == 0) printf("formal_solve_global:\t\t%g seconds\n", MPI_Wtime() - start);              
-    
-	// copy intensity into petscvec format
+    // copy intensity into petscvec format
 	mf_ctx_->field_to_vec(RT_problem->I_field_, y);
 
 	// update I_out = I_in - I_fs (y = x - y)
@@ -2702,7 +2704,10 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
     // compute new emission in S_field_ 
     mf_ctx_->update_emission(x, true);  
    
-    if (RT_problem->mpi_rank_ == 0) printf("Update preconditioner emission:\t\t%g seconds\n", MPI_Wtime() - start);              
+    double emission_timer = MPI_Wtime() - start;
+    double emission_timer_max;
+    MPI_Reduce(&emission_timer, &emission_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    if (RT_problem->mpi_rank_ == 0) printf("Update preconditioner emission:\t\t%g seconds\n", emission_timer_max);              
 
     // fill rhs_ from formal solve with zero bc     
     mf_ctx_->formal_solve_global(RT_problem->I_field_, RT_problem->S_field_, 0.0);

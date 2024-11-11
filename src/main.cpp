@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
     const bool use_prec = (not use_CRD);
 #else    
     const bool use_CRD  = false;
-    const bool use_prec = (not use_CRD);
+    const bool use_prec = (not use_CRD);    
 #endif
 
     if (use_CRD) emissivity_model_var = emissivity_model::CRD_limit;    
@@ -86,8 +86,8 @@ int main(int argc, char *argv[]) {
   const std::filesystem::path main_output_dir = getOptionArgument(argc, argv, "--output_dir");
 #else
 //  const std::filesystem::path main_input_dir  = "../input/PORTA";
-  const std::filesystem::path main_input_dir  = "/gpfs/projects/iac90/input/DataSet_TRIP_PORTA/Input_Data_TRIP_PORTA_64x64/";  
-  const std::filesystem::path main_output_dir = "/gpfs/projects/iac90/output_pietro";
+  const std::filesystem::path main_input_dir  = "/gpfs/projects/iac90/input/64x64/";  
+  const std::filesystem::path main_output_dir = "/gpfs/projects/iac90/output_pietro/3x3";
 #endif
   ////////////////////////////////////////////////////////////////////////////
 
@@ -296,19 +296,23 @@ int main(int argc, char *argv[]) {
 
     // write output
     if (output){
-       const int N_x = rt_problem_ptr->N_x_;
-       const int N_y = rt_problem_ptr->N_y_; 
+       // const int N_x = rt_problem_ptr->N_x_;
+       // const int N_y = rt_problem_ptr->N_y_; 
 
-       for (int i = 0; i < N_x; ++i)
-       {
-           for (int j = 0; j < N_y; ++j)
-           {
-            rt_problem_ptr->write_surface_point_profiles(output_file, i, j);
-           }
-        }              
+       // for (int i = 0; i < N_x; ++i)
+       //{
+         //  for (int j = 0; j < N_y; ++j)
+           //{
+            // rt_problem_ptr->write_surface_point_profiles(output_file, 0, 0);
+           //}
+        //}   
 
-        std::vector<Real> mus  = {0.1, 0.3, 0.7, 1.0}; //// ATTENTION: arbitrary beam directions        
-        std::vector<Real> chis = {0.0, 0.1963};
+	      // free some memory    
+        rt_problem_ptr->free_fields_memory(); 
+        rt_solver.free_fields_memory();
+
+        std::vector<Real> mus  = {0.1488743389816314, 0.4333953941292472, 0.6794095682990243, 0.8650633666889843, 0.9739065285171714}; //// ATTENTION: arbitrary beam directions        
+        std::vector<Real> chis = {0.1570796326794897, 0.4712388980384690, 0.7853981633974483, 0.1099557428756428};
     
         if (rt_problem_ptr->mpi_rank_ == 0 and mus.size() == 0 ){
            std::cout << "WARNING: no arbitrary beams" << std::endl;
