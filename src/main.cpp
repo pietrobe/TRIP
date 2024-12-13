@@ -362,7 +362,8 @@ int main(int argc, char *argv[]) {
 #pragma message "ATTENTION: using hardcoded extra arbitrary beams"
         {
           // const std::vector<Real> mus_extra = {0.183434642495650, 0.960289856497537, 0.99};
-          const std::vector<Real> mus_extra = {0.98, 0.99, 0.997};
+          // const std::vector<Real> mus_extra = {0.98, 0.99, 0.997};
+          const std::vector<Real> mus_extra = {0.12, 0.3, 0.77}; // Test with different mu
 
           for (auto mux : mus_extra) mus_vec.push_back(mux);
           std::sort(mus_vec.begin(), mus_vec.end());

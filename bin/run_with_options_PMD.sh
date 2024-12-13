@@ -6,7 +6,7 @@
 #SBATCH --ntasks=2048
 
 ## to be defined !!!!!!!!! 
-#SBATCH --time=02:15:00
+## #SBATCH --time=02:15:00
 
 #### #SBATCH --cpus-per-task=1
 #### #SBATCH --account=iac90
@@ -18,7 +18,7 @@
 
 #SBATCH --cpus-per-task=1
 #SBATCH --constrain=gpu
-#SBATCH --time=02:30:00
+#SBATCH --time=00:15:00
 #SBATCH --account=u0
 ### #SBATCH --job-name="TRIP"
 
@@ -40,7 +40,7 @@ export MAIN_DATA_DIR=/scratch/snx3000/sriva/PORTA
 #export GRID_SIZE=32
 
 export INPUT_DIR=${MAIN_DATA_DIR}/
-export OUTPUT_DIR=${MAIN_DATA_DIR}/output_test_extra_mu_VIII/
+export OUTPUT_DIR=${MAIN_DATA_DIR}/output_test_extra_mu_XI_dmu/
 
 ## For 32 x 32 grid size
 export INPUT_PMD=cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd
