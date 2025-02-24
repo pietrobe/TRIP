@@ -383,7 +383,7 @@ int main(int argc, char *argv[]) {
           for ( auto chi : chi_vec ) std::cout << chi << ", ";
           std::cout << std::endl;
           std::cout << "Arbitrary beams chi: ";
-          for (auto chi : chis) {
+          for (auto chi : chi_vec) {
             std::cout << chi << " ";
           }
           std::cout << std::endl;

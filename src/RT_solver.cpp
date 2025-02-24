@@ -910,7 +910,7 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
         
         ////////////////////////////////
         // TEST
-        bool print_flag2 = true;
+        // bool print_flag2 = true;
 
         if (print_flag)         
         {
