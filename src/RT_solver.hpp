@@ -475,15 +475,22 @@ public:
 		mf_ctx_.eta_field_serial_.reset();
 		mf_ctx_.rho_field_serial_.reset();
 
-		mf_ctx_.I_unpol_field_serial_.reset();
-		mf_ctx_.S_unpol_field_serial_.reset();
-		
-		PetscErrorCode ierr; // TODO FIX
+		PetscErrorCode ierr;
 
-		ierr = VecDestroy(&(mf_ctx_.x_unpol_));CHKERRV(ierr);
-		ierr = VecDestroy(&(mf_ctx_.y_unpol_));CHKERRV(ierr);
-		ierr = VecDestroy(&(mf_ctx_.x_pol_));CHKERRV(ierr);
-		ierr = VecDestroy(&rhs_);CHKERRV(ierr);
+		if (unpolarized_prec_)
+		{			
+			mf_ctx_.I_unpol_field_serial_.reset();
+			mf_ctx_.S_unpol_field_serial_.reset();		
+
+			RT_problem_->I_unpol_field_.reset();
+    		RT_problem_->S_unpol_field_.reset();
+
+			ierr = VecDestroy(&(mf_ctx_.x_unpol_));CHKERRV(ierr);
+			ierr = VecDestroy(&(mf_ctx_.y_unpol_));CHKERRV(ierr);
+			ierr = VecDestroy(&(mf_ctx_.x_pol_));CHKERRV(ierr);
+			ierr = VecDestroy(&rhs_);CHKERRV(ierr);
+		}
+		
 		// ierr = MatDestroy(&MF_operator_);CHKERRV(ierr);
 		// ierr = MatDestroy(&MF_operator_approx_);CHKERRV(ierr);
 		// ierr = KSPDestroy(&ksp_solver_);CHKERRV(ierr);

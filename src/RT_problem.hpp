@@ -464,9 +464,6 @@ public:
     	// S_field_.reset();
     	rho_field_.reset();
     	eta_field_.reset();
-
-    	// I_unpol_field_.reset();
-    	// S_unpol_field_.reset();
 	}
 
 
