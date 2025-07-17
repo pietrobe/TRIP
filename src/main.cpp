@@ -2,12 +2,16 @@
 #include "Test_rii_include.hpp"
 #include "RT_utility.hpp"
 
-#include <chrono>
 #include "tools.h"
+#include <chrono>
 #include <string>
 #include <filesystem>
 #include <iomanip>
 #include <sstream>
+
+// TEST
+#include <unistd.h>
+#include <fstream>
 
 // WARNING: if you want to use PORTA input for 3D setup, you need to set USE_PORTA_INPUT = 1
 // otherwise, it will use FAL-C input for 1D setup
@@ -26,22 +30,18 @@ int main(int argc, char *argv[]) {
   std::filesystem::path output_info_file;
 
   MPI_CHECK(MPI_Init(&argc, &argv));
+  print_PETSc_mem();
 
-  int mpi_size;
+  int mpi_size, mpi_rank;
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-
-  int mpi_rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
-  { // check if the user wants to print the help message
-    // if yes, print the help message and return
-    
-    if (getOptionFlag(argc, argv, "--help")) {
-       if (mpi_rank == 0) 
-          print_help();
-          
-      return 0;
-    }
+  // check if the user wants to print the help message
+  // if yes, print the help message and return  
+  if (getOptionFlag(argc, argv, "--help")) 
+  {
+    if (mpi_rank == 0) print_help();                    
+    return 0;
   }
 
   PetscInitialize(&argc, &argv, (char *)0, NULL);
@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
     // PRD_AA_MAPV: same as PRD_AA but it store the map of the values (ATTENTION: it uses a lot of memory)
     // 
     // ZERO: continuum
-    emissivity_model emissivity_model_var = emissivity_model::PRD_FAST;
+    emissivity_model emissivity_model_var = emissivity_model::PRD_AA;
 
     const bool output = true;
     const bool use_B  = true;
@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
     const bool use_prec = (not use_CRD);
 #else    
     const bool use_CRD  = false;
-    const bool use_prec = (not use_CRD);    
+    const bool use_prec = true;    
 #endif
 
     if (use_CRD) emissivity_model_var = emissivity_model::CRD_limit;    
@@ -86,8 +86,8 @@ int main(int argc, char *argv[]) {
   const std::filesystem::path main_output_dir = getOptionArgument(argc, argv, "--output_dir");
 #else
 //  const std::filesystem::path main_input_dir  = "../input/PORTA";
-  const std::filesystem::path main_input_dir  = "/gpfs/projects/iac90/input/64x64/";  
-  const std::filesystem::path main_output_dir = "/gpfs/projects/iac90/output_pietro/3x3";
+  const std::filesystem::path main_input_dir  = "../input/PORTA/";  
+  const std::filesystem::path main_output_dir = "/gpfs/projects/ehpc238/output";
 #endif
   ////////////////////////////////////////////////////////////////////////////
 
@@ -117,32 +117,26 @@ int main(int argc, char *argv[]) {
     }
 
   #else
-    const std::string input_pmd_string = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix_conv_KQ_MC.pmd");
-    const std::string input_llp_string = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix_conv_KQ_MC.llp");
-    
-    const std::string input_cul_string  = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.cul");
-    const std::string input_qel_string  = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.qel");
-    const std::string input_back_string = std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.back");
+    const std::string input_pmd_string  = std::string("cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd");
+    const std::string input_llp_string  = ""; //std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix_conv_KQ_MC.llp");
+    const std::string input_cul_string  = ""; //std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.cul");
+    const std::string input_qel_string  = ""; //std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.qel");
+    const std::string input_back_string = ""; //std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.back");
   #endif
   /////////////////////////////////////////////////////////////
 
     // const auto input_pmd_file = std::filesystem::path(input_pmd_string);
 
-    auto frequencies_input_path =  main_input_dir / std::filesystem::path("frequency/96F");
-
-    auto PORTA_input_pmd =  main_input_dir / std::filesystem::path(input_pmd_string);
+    auto frequencies_input_path = main_input_dir / std::filesystem::path("frequency/96F");
+    auto PORTA_input_pmd        = main_input_dir / std::filesystem::path(input_pmd_string);
 
     // lambda to build the RT_problem object
     auto create_rt_problem = [&]() {
 
         if (input_cul_string.empty() or input_qel_string.empty() or input_llp_string.empty()) {
-        // VEECHIO  // solo PMD input at least one of the cul, qel, llp is missing
-            if (mpi_rank == 0) {
-              std::cout << "WARNING: using ONLY PMD input file" << std::endl;
-              std::cout << "Input PMD file: " << PORTA_input_pmd << std::endl;
-            }
-
-
+            // solo PMD input at least one of the cul, qel, llp is missing
+            if (mpi_rank == 0) std::cout << "Input PMD file: " << PORTA_input_pmd << std::endl;
+                          
             return std::make_shared<RT_problem>(PORTA_input_pmd.string().c_str(), 
                                                 frequencies_input_path.string(), 
                                                 emissivity_model_var,
@@ -184,10 +178,13 @@ int main(int argc, char *argv[]) {
 
     auto rt_problem_ptr = create_rt_problem();  /// CALL LAMBDA to create RT_problem object
 
+    // print mem usage
+    print_PETSc_mem();
+    
     const int N_theta = rt_problem_ptr->N_theta_;
     const int N_chi   = rt_problem_ptr->N_chi_; 
 
-    if (rt_problem_ptr->mpi_rank_ == 0) {
+    if (mpi_rank == 0) {
 
       // print the command line arguments
       ss_a << "MPI size = " << mpi_size << std::endl;
@@ -229,8 +226,11 @@ int main(int argc, char *argv[]) {
     auto rt_problem_ptr = std::make_shared<RT_problem>(problem_input_FAL.string(), N_theta, N_chi, use_CRD, use_B);    
 #endif
 
-    RT_solver rt_solver(rt_problem_ptr, "BESSER", use_prec);
+   RT_solver rt_solver(rt_problem_ptr, "BESSER", use_prec);
    // RT_solver rt_solver(rt_problem_ptr, "DELO_linear", use_prec);
+
+   // print mem usage
+   print_PETSc_mem(); 
 
     //////////////////////////////////////////////////////////////////////////
     // Prepare output directory
@@ -276,8 +276,8 @@ int main(int argc, char *argv[]) {
     // rt_solver.apply_formal_solver();
     
     // lambda to compute arbitrary beam
-      const auto compute_arbitrary_beam = [&, Nx = rt_problem_ptr->N_x_, 
-                                              Ny = rt_problem_ptr->N_y_] (const Real mu, const Real chi, const std::string output_file) {
+    const auto compute_arbitrary_beam = [&, Nx = rt_problem_ptr->N_x_, 
+                                            Ny = rt_problem_ptr->N_y_] (const Real mu, const Real chi, const std::string output_file) {
 
         std::string output_file_Omega_mu = output_file + "_mu" + std::to_string(mu) + "_chi" + std::to_string(chi);
         
@@ -303,48 +303,48 @@ int main(int argc, char *argv[]) {
        //{
          //  for (int j = 0; j < N_y; ++j)
            //{
-            // rt_problem_ptr->write_surface_point_profiles(output_file, 0, 0);
+            rt_problem_ptr->write_surface_point_profiles(output_file, 0, 0);
            //}
         //}   
 
-	      // free some memory    
-        rt_problem_ptr->free_fields_memory(); 
-        rt_solver.free_fields_memory();
+	      // // free some memory    
+        // rt_problem_ptr->free_fields_memory(); 
+        // rt_solver.free_fields_memory();
 
-        std::vector<Real> mus  = {0.1488743389816314, 0.4333953941292472, 0.6794095682990243, 0.8650633666889843, 0.9739065285171714}; //// ATTENTION: arbitrary beam directions        
-        std::vector<Real> chis = {0.1570796326794897, 0.4712388980384690, 0.7853981633974483, 0.1099557428756428};
+        // std::vector<Real> mus  = {0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0}; //// ATTENTION: arbitrary beam directions        
+        // std::vector<Real> chis = {0.1570796326794897, 0.4712388980384690, 0.7853981633974483, 0.1099557428756428};
     
-        if (rt_problem_ptr->mpi_rank_ == 0 and mus.size() == 0 ){
-           std::cout << "WARNING: no arbitrary beams" << std::endl;
-        } else if (rt_problem_ptr->mpi_rank_ == 0) {
-           std::cout << "Arbitrary beams mu: ";
-           for (auto mu : mus) {
-             std::cout << mu << " ";
-           }
-           std::cout << std::endl;
-           std::cout << "Arbitrary beams chi: ";
-           for (auto chi : chis) {
-             std::cout << chi << " ";
-           }
-           std::cout << std::endl;
-         }
+        // if (rt_problem_ptr->mpi_rank_ == 0 and mus.size() == 0 ){
+        //    std::cout << "WARNING: no arbitrary beams" << std::endl;
+        // } else if (rt_problem_ptr->mpi_rank_ == 0) {
+        //    std::cout << "Arbitrary beams mu: ";
+        //    for (auto mu : mus) {
+        //      std::cout << mu << " ";
+        //    }
+        //    std::cout << std::endl;
+        //    std::cout << "Arbitrary beams chi: ";
+        //    for (auto chi : chis) {
+        //      std::cout << chi << " ";
+        //    }
+        //    std::cout << std::endl;
+        //  }
         
-        double tick = MPI_Wtime();
+        // double tick = MPI_Wtime();
 
-        for (Real mu : mus)
-        {
-          for (Real chi : chis)
-          {
-            compute_arbitrary_beam(mu, chi, output_file);
-          }          
-        }
+        // for (Real mu : mus)
+        // {
+        //   for (Real chi : chis)
+        //   {
+        //     compute_arbitrary_beam(mu, chi, output_file);
+        //   }          
+        // }
 
-        double tock = MPI_Wtime();
+        // double tock = MPI_Wtime();
 
-        if (rt_problem_ptr->mpi_rank_ == 0) {
-          std::cout << "Arbitrary beams time (s) = " << tock - tick << std::endl;
-          std::cout << "Time per beam (s) =        " << (tock - tick) / double(mus.size()) << std::endl;
-        }
+        // if (rt_problem_ptr->mpi_rank_ == 0) {
+        //   std::cout << "Arbitrary beams time (s) = " << tock - tick << std::endl;
+        //   std::cout << "Time per beam (s) =        " << (tock - tick) / double(mus.size()) << std::endl;
+        // }
 
         // if (save_raw) rt_problem_ptr->I_field_->write("/scratch/snx3000/pietrob/I_field.raw");          
           
@@ -367,33 +367,51 @@ int main(int argc, char *argv[]) {
     } // end write output
   
     // print memory usage 
-    const double byte_to_GB = 1.0 / (1000 * 1024 * 1024);
+    const double byte_to_GB = 1e-9;
 
     unsigned long long vm_usage;
     unsigned long long resident_set;
     
     rii::process_mem_usage(vm_usage, resident_set);
     
-    if (rt_problem_ptr->mpi_rank_ == 0){
+    if (mpi_rank == 0)
+    {
       std::stringstream ss_mem;
       ss_mem << "Total memory usage (vm_usage) = "     <<  byte_to_GB * vm_usage     << " GB" << std::endl;
       ss_mem << "Total memory usage (resident_set) = " <<  byte_to_GB * resident_set << " GB" << std::endl;
     
-      std::string mem_petsc = rt_problem_ptr->print_PETSc_mem();        
-      ss_mem << mem_petsc << std::endl;
+      // std::string mem_petsc = rt_problem_ptr->print_PETSc_mem();        
+      // ss_mem << mem_petsc << std::endl;
 
       std::cout << ss_mem.str();
-
       
       std::ofstream output_file_info(output_info_file, std::ios::app);
       output_file_info << ss_mem.str();
-      output_file_info.close();
-      
-    }
+      output_file_info.close();            
+    }    
+
+    print_PETSc_mem(); 
+
+    // free some memory    
+    rt_problem_ptr->free_fields_memory(); 
+    rt_solver.free_fields_memory();  /// TODO check this
+
+    print_PETSc_mem(); 
+
+    // print_parallel_memory_usage();
+
+     // rt_problem_ptr->free_fields_memory(); 
+     // rt_solver.free_fields_memory();
+
+     // if (rt_problem_ptr->mpi_rank_ == 0) 
+     // {
+     //  std::string mem_petsc = rt_problem_ptr->print_PETSc_mem();    
+     //  std::cout << mem_petsc << std::endl;
+     // }     
   }
   
   Kokkos::finalize();
-  PetscFinalize(); //CHKERRQ(ierr);
+  PetscCall(PetscFinalize());
   MPI_CHECK(MPI_Finalize());
 
   return 0;

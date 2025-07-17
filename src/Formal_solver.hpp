@@ -9,6 +9,7 @@ typedef const std::vector<std::vector<Real> > input_field;
 typedef std::vector<Real> output_vec;
 typedef std::vector<std::vector<Real> > output_field;
 
+
 // base class
 class Formal_solver
 {
@@ -35,6 +36,16 @@ public:
 		{
 			if (mpi_rank_ == 0) std::cout << "Formal solver: DELO linear\n";	
 		}
+		else if (type_ == "SC_linear")
+		{
+			if (mpi_rank_ == 0) std::cout << "Unpolarized formal solver: linear SC\n";	
+		}
+		else if (type_ == "SC_parabolic")
+		{
+			if (mpi_rank_ == 0) std::cout << "Unpolarized formal solver: parabolic SC\n";	
+
+			stencil_size_ = 3;
+		}
 		else if (type_ == "BESSER")
 		{
 			if (mpi_rank_ == 0) std::cout << "Formal solver: BESSER\n";	
@@ -44,7 +55,7 @@ public:
 		else
 		{
 			if (mpi_rank_ == 0) std::cerr << "ERROR: " << type_ << " is not supported as formal solver.\n";
-			if (mpi_rank_ == 0) std::cerr << "Supported inputs: implicit_Euler, Crank–Nicolson, DELO_linear, and BESSER.\n";
+			if (mpi_rank_ == 0) std::cerr << "Supported inputs: implicit_Euler, Crank–Nicolson, DELO_linear, SC_linear, SC_parabolic, and BESSER.\n";
 		}
 
 		if (debug_mode_ and mpi_rank_ == 0) std::cout << "Formal solver bebug mode enabled.\n";				
@@ -60,10 +71,15 @@ public:
 	// solve, for one step (dt), I' = K * I - S with initial condition I_in and K = [K1 K2] and S = [S1 S2]
 	void one_step(const Real dt, input_vec &K1, input_vec &K2, input_vec &S1, input_vec &S2, input_vec &I_in, output_vec &I_out);
 
+
 	// one step method for quadratic stencils
 	void one_step_quadratic(const Real dt_1, const Real dt_2, input_vec &K1, input_vec &K2, input_vec &K3,
 								 						      input_vec &S1, input_vec &S2, input_vec &S3,
 								 							  input_vec &I_in, output_vec &I_out);
+
+	// in the case of scalar equations (just intensity)
+	Real one_step(const Real dt, const Real I_in, const Real S1, const Real S2);
+	Real one_step_quadratic(const Real dt1, const Real dt2, const Real I_in, const Real S1, const Real S2, const Real S3);
 
 private:
 

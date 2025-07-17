@@ -125,20 +125,16 @@ public:
     	read_frequency(input_path_frequency + "/frequency.dat");
     	read_3D(filename_pmd, filename_cul, filename_qel, filename_llp, filename_back);
 
-    	// timing
-    	// MPI_Barrier(space_grid_->raw_comm());
-    	Real end = MPI_Wtime(); 	    
-	    if (mpi_rank_ == 0) printf("Reading input time:\t\t%g (seconds)\n", end - start);	      		
+    	// timing    	    
+	    if (mpi_rank_ == 0) printf("Reading input time:\t\t%g (seconds)\n", MPI_Wtime() - start);	      		
     	start = MPI_Wtime();
 
 		// precompute
 		set_up();
 
 		print_info();	    
-	
-	   	// MPI_Barrier(space_grid_->raw_comm()); 
-	   	end = MPI_Wtime(); 	    
-	    if (mpi_rank_ == 0) printf("Set up time:\t\t%g (seconds)\n", end - start);	      		
+		   
+	    if (mpi_rank_ == 0) printf("Set up time:\t\t%g (seconds)\n", MPI_Wtime() - start);	      		
 	}
 
 
@@ -266,6 +262,7 @@ public:
 	inline std::vector<int> block_to_local(const int block_index)
 	{
 		std::vector<int> local_indeces;
+		local_indeces.reserve(4);
 
 		const int i_stokes =  block_index % 4;
 		const int n        = (block_index / 4) % N_nu_;
@@ -280,22 +277,29 @@ public:
 		return local_indeces;	
 	}
 
+	// convert block index to to local ones = [j_theta, k_chi, n_nu]
+	inline std::vector<int> block_to_local_unpol(const int block_index)
+	{
+		std::vector<int> local_indeces;
+		local_indeces.reserve(3);
+
+		const int n =  block_index % N_nu_;
+		const int k = (block_index / N_nu_) % N_chi_;
+		const int j = (block_index / (N_nu_ * N_chi_)) % N_theta_;
+				
+		local_indeces.push_back(j);
+		local_indeces.push_back(k);
+		local_indeces.push_back(n);		
+
+		return local_indeces;	
+	}
+
 	// convert local indeces to block one (of fields) for the first Stokes parameter and vice versa
 	inline int local_to_block(const int j, const int k, const int n) { return 4 * ( N_nu_ * ( N_chi_ * j + k ) + n); }
 
-	inline std::string print_PETSc_mem()
-	{
-		PetscLogDouble space;
-   		PetscMemoryGetCurrentUsage(&space);   
+	// convert local indeces to block one (of fields)
+	inline int local_to_block_unpol(const int j, const int k, const int n) { return N_nu_ * ( N_chi_ * j + k ) + n; }
 
-   		const double byte_to_GB = 1.0 / (1000 * 1024 * 1024);
-
-		std::stringstream ss;
-
-    	ss << "Memory used by PETSc = " << mpi_size_ * byte_to_GB * space << " GB" <<  std::endl;   
-
-		return ss.str();
-	}
 
 	// print I_field on surface 
 	void const print_surface_profile(const Field_ptr_t field, 
@@ -374,6 +378,11 @@ public:
 	PetscInt block_size_; // 4 * N_nu_ * N_theta_ * N_chi_;
 	PetscInt tot_size_;   // N_s_ * block_size;	
 
+	// unpolarized sizes (normal ones divided by 4)
+	PetscInt local_size_unpolarized_; // == tot_size_ con mpi_size_ = 1
+	PetscInt block_size_unpolarized_; // N_nu_ * N_theta_ * N_chi_;
+	PetscInt tot_size_unpolarized_;   // N_s_ * block_size;	
+
 	// unknown quantities 
 	Field_ptr_t I_field_; // intensity     
 	Field_ptr_t S_field_; // source function
@@ -384,6 +393,11 @@ public:
 	// propagation matrix entries 
 	Field_ptr_t eta_field_; 
 	Field_ptr_t rho_field_;
+
+	// reduced fields for unpolarized CRD or AA solutions 
+	Field_ptr_t J_KQ_field_;
+	Field_ptr_t I_unpol_field_;
+	Field_ptr_t S_unpol_field_;
 
 	// atmospheric quantities
 	// Field_ptr_t Nu_;   // upper level populations 
@@ -429,6 +443,14 @@ public:
 	void allocate_fields_Omega(); 
 	void set_eta_and_rhos_Omega(const Real theta, const Real chi);	
 
+	// allcoate reduced data structeres
+	void allocate_unpolarized_fields();	
+	void allocate_reduced_fields();	
+
+	// polarized_to_unpolarized
+	void polarized_to_unpolarized_field(const Field_ptr_t field, Field_ptr_t field_unpol);
+	
+
 	Field_ptr_t I_field_Omega_; // intensity     
 	Field_ptr_t S_field_Omega_; // source function
 	Field_ptr_t eta_field_Omega_; 
@@ -442,6 +464,9 @@ public:
     	// S_field_.reset();
     	rho_field_.reset();
     	eta_field_.reset();
+
+    	// I_unpol_field_.reset();
+    	// S_unpol_field_.reset();
 	}
 
 

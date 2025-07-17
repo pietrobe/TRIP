@@ -375,37 +375,50 @@ void RT_problem::read_3D(const char* filename){
 	char c;
 
     // some irrelevant data
-	for (int i = 0; i < PMD_MAIN_HEADER1 - 48; i++) { MPI_CHECK(MPI_File_read_all(fh, &c, 1, MPI_CHAR, MPI_STATUS_IGNORE)); }
+	MPI_Offset offset = PMD_MAIN_HEADER1 - 48;
+	MPI_CHECK(MPI_File_seek(fh, offset, MPI_SEEK_CUR));
 
-	// TODO there are not used 
-	double Lx, Ly, Lz, x_origin, y_origin, z_origin; // 48 in previuos line for these
-	
+	// read space grid params 
+	double Lx; 
 	MPI_CHECK(MPI_File_read_all(fh, &Lx, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-	MPI_CHECK(MPI_File_read_all(fh, &Ly, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-	MPI_CHECK(MPI_File_read_all(fh, &Lz, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 
-	MPI_CHECK(MPI_File_read_all(fh, &x_origin, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-	MPI_CHECK(MPI_File_read_all(fh, &y_origin, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-	MPI_CHECK(MPI_File_read_all(fh, &z_origin, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	//skip Ly, Lz, x_origin, y_origin, z_origin;
+	int skip_size = 5 * sizeof(double);
+	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));
+	// MPI_CHECK(MPI_File_read_all(fh, &Ly, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	// MPI_CHECK(MPI_File_read_all(fh, &Lz, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 
-	MPI_CHECK(MPI_File_read_all(fh, &N_x_, 1, MPI_INT, MPI_STATUS_IGNORE));
-	MPI_CHECK(MPI_File_read_all(fh, &N_y_, 1, MPI_INT, MPI_STATUS_IGNORE));
-	MPI_CHECK(MPI_File_read_all(fh, &N_z_, 1, MPI_INT, MPI_STATUS_IGNORE));
-	
+	// MPI_CHECK(MPI_File_read_all(fh, &x_origin, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	// MPI_CHECK(MPI_File_read_all(fh, &y_origin, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	// MPI_CHECK(MPI_File_read_all(fh, &z_origin, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+
+	// MPI_CHECK(MPI_File_read_all(fh, &N_x_, 1, MPI_INT, MPI_STATUS_IGNORE));
+	// MPI_CHECK(MPI_File_read_all(fh, &N_y_, 1, MPI_INT, MPI_STATUS_IGNORE));
+	// MPI_CHECK(MPI_File_read_all(fh, &N_z_, 1, MPI_INT, MPI_STATUS_IGNORE));
+		 
+	std::vector<int> spatial_grid_buffer(3);
+	MPI_CHECK(MPI_File_read_all(fh, spatial_grid_buffer.data(), 3, MPI_INT, MPI_STATUS_IGNORE));
+	N_x_ = spatial_grid_buffer[0];
+	N_y_ = spatial_grid_buffer[1];
+	N_z_ = spatial_grid_buffer[2];
+
 	// WARNING: valid for Lx = Ly = constant 
 	L_ = 1e-5 * Lx/N_x_; // conversion from cm to km
 
 	// some irrelevant data (x,y coordinates)	
-	int skip_size = 16384 * sizeof(double);
+	skip_size = 16384 * sizeof(double);
 	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));
 
+	depth_grid_.reserve(N_z_);
+
 	// get z grid (depth)
-	for (int i = 0; i < N_z_; ++i)
-	{		
-		MPI_CHECK(MPI_File_read_all(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-		 
-		entry *= 1e-5; // conversion from cm to km			
-		depth_grid_.push_back(entry);      		
+	std::vector<double> buffer(N_z_);
+	MPI_CHECK(MPI_File_read_all(fh, buffer.data(), N_z_, MPI_DOUBLE, MPI_STATUS_IGNORE));
+
+	for (auto entry : buffer)
+	{
+	    entry *= 1e-5;
+	    depth_grid_.push_back(entry);
 	}
 	
 	// reverse to get correct ordering
@@ -415,9 +428,15 @@ void RT_problem::read_3D(const char* filename){
 	skip_size = (8192 - N_z_) * sizeof(double);	
 	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));
 
-	// inclinations and azimuths per octant 	
-	MPI_CHECK(MPI_File_read_all(fh, &N_theta_, 1, MPI_INT , MPI_STATUS_IGNORE));
-	MPI_CHECK(MPI_File_read_all(fh, &N_chi_  , 1, MPI_INT , MPI_STATUS_IGNORE));
+	// // inclinations and azimuths per octant 	
+	// MPI_CHECK(MPI_File_read_all(fh, &N_theta_, 1, MPI_INT , MPI_STATUS_IGNORE));
+	// MPI_CHECK(MPI_File_read_all(fh, &N_chi_  , 1, MPI_INT , MPI_STATUS_IGNORE));
+
+	std::vector<int> angular_grid_buffer(2);
+	MPI_CHECK(MPI_File_read_all(fh, angular_grid_buffer.data(), 2, MPI_INT, MPI_STATUS_IGNORE));
+	N_theta_ = angular_grid_buffer[0];
+	N_chi_   = angular_grid_buffer[1];
+
 
 	// convert from octant to total 
 	N_theta_ *= 2;
@@ -444,14 +463,25 @@ void RT_problem::read_3D(const char* filename){
     MPI_CHECK(MPI_File_seek(fh, TWOLEVEL_HEADER1, MPI_SEEK_CUR));
 
 	// reading atomic data    
-    MPI_CHECK(MPI_File_read_all(fh, &mass_,  1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    MPI_CHECK(MPI_File_read_all(fh, &Aul_,   1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    MPI_CHECK(MPI_File_read_all(fh, &Eu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+    std::vector<double> atomic_buffer(3);
+    MPI_CHECK(MPI_File_read_all(fh, atomic_buffer.data(), 3, MPI_DOUBLE, MPI_STATUS_IGNORE));
+    mass_ = atomic_buffer[0];
+	Aul_  = atomic_buffer[1];
+	Eu_   = atomic_buffer[1];
+
+    // MPI_CHECK(MPI_File_read_all(fh, &mass_,  1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+    // MPI_CHECK(MPI_File_read_all(fh, &Aul_,   1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+    // MPI_CHECK(MPI_File_read_all(fh, &Eu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
     MPI_CHECK(MPI_File_read_all(fh, &Jl2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
     MPI_CHECK(MPI_File_read_all(fh, &Ju2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
-    MPI_CHECK(MPI_File_read_all(fh, &gl_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    MPI_CHECK(MPI_File_read_all(fh, &gu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    MPI_CHECK(MPI_File_read_all(fh, &T_ref_, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+    // MPI_CHECK(MPI_File_read_all(fh, &gl_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+    // MPI_CHECK(MPI_File_read_all(fh, &gu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+    // MPI_CHECK(MPI_File_read_all(fh, &T_ref_, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+
+    MPI_CHECK(MPI_File_read_all(fh, atomic_buffer.data(), 3, MPI_DOUBLE, MPI_STATUS_IGNORE));
+    gl_    = atomic_buffer[0];
+	gu_    = atomic_buffer[1];
+	T_ref_ = atomic_buffer[1];
 
     // // change Eu units to [cm-1]     
     // Eu_ /= c_ * h_; 
@@ -461,7 +491,7 @@ void RT_problem::read_3D(const char* filename){
     
   	// some irrelevant data double temp[ny][nx];    matrix of ground (iz=0) for Planckian boundary
 	skip_size = (N_x_ * N_y_) * sizeof(double);
-	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));		
+	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));	
 
 	// set angualr grids and sizes and print
 	set_theta_chi_grids(N_theta_, N_chi_);
@@ -477,8 +507,10 @@ void RT_problem::read_3D(const char* filename){
 	
 	// menage grid distribution and init
 	set_grid_partition();	
+
 	space_grid_->init(MPI_COMM_WORLD, {N_x_, N_y_, N_z_}, {1, 1, 0},
 									 {mpi_size_x_, mpi_size_y_, mpi_size_z_}, use_ghost_layers_); 	
+	
 	// init fields
 	allocate_fields();				
 
@@ -1291,35 +1323,92 @@ void const RT_problem::print_info(){
 	}
 }
 
+void RT_problem::polarized_to_unpolarized_field(const Field_ptr_t field, Field_ptr_t field_unpol){
+
+	auto field_dev       = field      ->view_device();
+	auto field_unpol_dev = field_unpol->view_device();
+
+    sgrid::parallel_for("UNPOL TO POL", space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
+    {         
+        auto *block       = field_dev.block(i, j, k);
+        auto *block_unpol = field_unpol_dev.block(i, j, k);
+         
+        for (int b = 0; b < block_size_; b = b + 4) 
+        {
+        	block_unpol[b/4] = block[b];        	       
+        }
+    });
+}
+
 
 void RT_problem::allocate_fields(){
 
-		// create fields 
-		I_field_ = std::make_shared<Field_t>("I", space_grid_, block_size_); 
-		S_field_ = std::make_shared<Field_t>("S", space_grid_, block_size_);
+	// create fields 
+	I_field_   = std::make_shared<Field_t>("I",   space_grid_, block_size_); 
+	S_field_   = std::make_shared<Field_t>("S",   space_grid_, block_size_);
+	eta_field_ = std::make_shared<Field_t>("eta", space_grid_, block_size_);
+	rho_field_ = std::make_shared<Field_t>("rho", space_grid_, block_size_);
 
-		eta_field_ = std::make_shared<Field_t>("eta", space_grid_, block_size_);
-		rho_field_ = std::make_shared<Field_t>("rho", space_grid_, block_size_);
+	I_field_->  allocate_on_device(); 
+	S_field_->  allocate_on_device(); 
+	eta_field_->allocate_on_device(); 
+	rho_field_->allocate_on_device(); 		
 
-		// necessary?
-		I_field_->  allocate_on_device(); 
-		S_field_->  allocate_on_device(); 
-		eta_field_->allocate_on_device(); 
-		rho_field_->allocate_on_device(); 		
+	///////////////////////
 
-		///////////////////////
+	if (mpi_rank_ == 0) std::cout << "\nCreating PETSc vector..." << std::endl;		
 
-		if (mpi_rank_ == 0) std::cout << "\nCreating PETSc vector..." << std::endl;		
+	PetscErrorCode ierr; 
 
-		PetscErrorCode ierr; 
+	auto g_dev = space_grid_->view_device();
+
+	local_size_ = block_size_ * g_dev.dim[0] * g_dev.dim[1] * g_dev.dim[2];
 	
-		auto g_dev = space_grid_->view_device();
+	ierr = VecCreate(PETSC_COMM_WORLD, &I_vec_);CHKERRV(ierr);	
+	ierr = VecSetSizes(I_vec_, local_size_, tot_size_);CHKERRV(ierr);			
+	ierr = VecSetFromOptions(I_vec_);CHKERRV(ierr);		
+}
 
-		local_size_ = block_size_ * g_dev.dim[0] * g_dev.dim[1] * g_dev.dim[2];
-		
-		ierr = VecCreate(PETSC_COMM_WORLD, &I_vec_);CHKERRV(ierr);	
-		ierr = VecSetSizes(I_vec_, local_size_, tot_size_);CHKERRV(ierr);			
-		ierr = VecSetFromOptions(I_vec_);CHKERRV(ierr);		
+
+void RT_problem::allocate_unpolarized_fields(){
+
+	if (mpi_rank_ == 0) std::cout << "\nAllocating unpolarized fields..." << std::endl;	
+	
+	// size of unpolarized radiation and emissivity fields
+	block_size_unpolarized_ = block_size_/4;
+	local_size_unpolarized_ = local_size_/4;
+	tot_size_unpolarized_   = tot_size_/4;	
+
+	// create unpolarized vectors
+	I_unpol_field_ = std::make_shared<Field_t>("I_unpolarized", space_grid_, block_size_unpolarized_); 
+	S_unpol_field_ = std::make_shared<Field_t>("S_unpolarized", space_grid_, block_size_unpolarized_);
+
+	// allocate	
+	I_unpol_field_-> allocate_on_device(); 
+	S_unpol_field_-> allocate_on_device(); 
+}
+
+
+
+void RT_problem::allocate_reduced_fields(){
+
+	// J_KQ_size = 2 real and 2 imaginary numbers
+	const int J_KQ_size = 6;
+
+	// create vector for J_KQ
+	J_KQ_field_ = std::make_shared<Field_t>("J_KQ", space_grid_, J_KQ_size); 
+
+	// size of unpolarized radiation and emissivity fields
+	block_size_unpolarized_ = block_size_/4;
+
+	// create unpolarized vectors
+	I_unpol_field_ = std::make_shared<Field_t>("I_unpolarized", space_grid_, block_size_unpolarized_); 
+	S_unpol_field_ = std::make_shared<Field_t>("S_unpolarized", space_grid_, block_size_unpolarized_);
+
+	// allocate
+	J_KQ_field_->     allocate_on_device(); 
+	I_unpol_field_->  allocate_on_device(); 
+	S_unpol_field_->  allocate_on_device(); 
 }
 
 
@@ -1329,13 +1418,11 @@ void RT_problem::allocate_fields_Omega(){
 	const PetscInt block_size_Omega = 4 * N_nu_;
 
 	// create fields 
-	I_field_Omega_ = std::make_shared<Field_t>("I_Omega", space_grid_, block_size_Omega); 
-	S_field_Omega_ = std::make_shared<Field_t>("S_Omega", space_grid_, block_size_Omega);
-
+	I_field_Omega_   = std::make_shared<Field_t>("I_Omega",   space_grid_, block_size_Omega); 
+	S_field_Omega_   = std::make_shared<Field_t>("S_Omega",   space_grid_, block_size_Omega);
 	eta_field_Omega_ = std::make_shared<Field_t>("eta_Omega", space_grid_, block_size_Omega);
 	rho_field_Omega_ = std::make_shared<Field_t>("rho_Omega", space_grid_, block_size_Omega);
 
-	// necessary?
 	I_field_Omega_->  allocate_on_device(); 
 	S_field_Omega_->  allocate_on_device(); 
 	eta_field_Omega_->allocate_on_device(); 
@@ -1349,13 +1436,13 @@ void RT_problem::allocate_atmosphere(){
 	D1_  = std::make_shared<Field_t>("D1",   space_grid_);
 	D2_  = std::make_shared<Field_t>("D2",   space_grid_);
 	Nl_  = std::make_shared<Field_t>("Nl",   space_grid_);
-	// Nu_   = std::make_shared<Field_t>("Nu",   space_grid);
 	T_   = std::make_shared<Field_t>("T",    space_grid_);
 	xi_  = std::make_shared<Field_t>("xi",   space_grid_);
 	Cul_ = std::make_shared<Field_t>("Cul",  space_grid_);
 	Qel_ = std::make_shared<Field_t>("Qel",  space_grid_);
 	a_   = std::make_shared<Field_t>("a",    space_grid_);
 	W_T_ = std::make_shared<Field_t>("W_T",  space_grid_);
+	// Nu_   = std::make_shared<Field_t>("Nu",   space_grid);
 
 	// magnetic field 
 	B_ = std::make_shared<Field_t>("B", space_grid_, 3); 	
@@ -1378,7 +1465,6 @@ void RT_problem::allocate_atmosphere(){
 	D1_  -> allocate_on_device(); 
 	D2_  -> allocate_on_device(); 
 	Nl_  -> allocate_on_device(); 
-	// Nu_  -> allocate_on_device(); 
 	T_   -> allocate_on_device(); 
 	xi_  -> allocate_on_device(); 	
 	Cul_ -> allocate_on_device(); 
@@ -1387,6 +1473,7 @@ void RT_problem::allocate_atmosphere(){
 	W_T_ -> allocate_on_device(); 	
 	B_   -> allocate_on_device(); 
 	v_b_ -> allocate_on_device(); 
+	// Nu_  -> allocate_on_device(); 
 		
 	Doppler_width_ -> allocate_on_device(); 
 	k_L_           -> allocate_on_device(); 

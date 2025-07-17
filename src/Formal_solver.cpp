@@ -26,6 +26,38 @@ inline int YBETWAB(Real y, Real a, Real b) {
     return (((a<=b && y>=a && y<=b) || (a>=b && y<=a && y>=b)) ? 1 : 0);
 }
 
+// some basic scalar functions for the SC method (Kunasz Auer 1988)
+inline Real SC_linear(const Real dt, const Real I_in, const Real S1, const Real S2)
+{	
+	const long double dt_aux = -dt;     
+	const long double e_dt = std::exp(-dt_aux); // TOD check this
+	const long double u0 = 1.0 - e_dt;
+	const long double u1 = dt_aux - u0;
+
+	const long double u1_dt_m = u1 / dt_aux;
+	    
+	return e_dt * I_in + S1 * (u0 - u1_dt_m) + S2 * u1_dt_m;  
+}
+
+
+inline Real SC_parabolic(const Real dt1, const Real dt2, const Real I_in, const Real S1, const Real S2, const Real S3)
+{
+	const long double dt_aux1 = -dt1;     
+	const long double dt_aux2 = -dt2;
+
+	const long double e_dt = std::exp(-dt_aux1);
+	const long double u0 = 1.0 - e_dt;
+	const long double u1 = dt_aux1 - u0;
+    const long double u2 = dt_aux1 * dt_aux1 - 2 * u1;              
+       
+    const long double phi1 = u0 + (u2 - (dt_aux2 + 2 * dt_aux1) * u1)/(dt_aux1 * (dt_aux1 + dt_aux2));
+    const long double phi2 = ((dt_aux1 + dt_aux2) * u1 - u2) / (dt_aux1 * dt_aux2);
+    const long double phi3 = (u2 - dt_aux1 * u1) / (dt_aux2 * (dt_aux1 + dt_aux2));
+   
+    return e_dt * I_in + S1 * phi1 + S2 * phi2 + S3 * phi3;  
+}
+
+
 Real CorrectYAB(Real y, Real a, Real b) {
     Real min = fmin(a,b), max = fmax(a,b);
     if (y < min) return min;
@@ -183,6 +215,20 @@ void Formal_solver::one_step(const Real dt, input_vec &K1, input_vec &K2, input_
 	// if (debug_mode_ and I_out[0] < 0 and I_in[0] >= 0 and S1[0] > 0  and S2[0] > 0) std::cout << "\nWARNING: negative intensity detected!\n";	
 
 	// if (I_out[0] < 0) I_out[0] = 0;		
+}
+
+// scalar equations
+Real Formal_solver::one_step(const Real dt, const Real I_in, const Real S1, const Real S2)
+{
+	// for now only SC_linear 	
+	return SC_linear(dt, I_in, S1, S2);
+}
+
+
+Real Formal_solver::one_step_quadratic(const Real dt1, const Real dt2, const Real I_in, const Real S1, const Real S2, const Real S3)
+{
+	// for now only SC_quadratic 
+	return SC_parabolic(dt1, dt2, I_in, S1, S2, S3);
 }
 
 

@@ -3,6 +3,7 @@
 
 #include <complex>
 #include <numeric>
+#include <map>
 #include "petsc.h" 
 #include "Legendre_rule.hpp"
 #include "Faddeeva.hpp"
@@ -51,6 +52,90 @@ using Real = double;
 // for pmd input
 #define ERR {fprintf(stderr,"ERROR reading PORTA input.\n"); exit(1);}
 
+inline void print_PETSc_mem(const std::string& tag = "")
+{
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    PetscLogDouble space;
+    PetscMemoryGetCurrentUsage(&space);   
+
+    // in GB
+    const double mem_usage = 1e-9 * space;
+    
+    double total_mem, max_mem, min_mem;
+    
+    MPI_Reduce(&mem_usage, &min_mem,   1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&mem_usage, &max_mem,   1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&mem_usage, &total_mem, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+            
+    if (rank == 0)
+    {
+        std::cout << "\n===== MPI Memory Usage Summary " << (tag.empty() ? "" : "(" + tag + ")") << " =====\n";
+        std::cout << "Min memory used by single processor: " << min_mem   << " GB"<< std::endl;
+        std::cout << "Max memory used by single processor: " << max_mem   << " GB"<< std::endl;
+        std::cout << "Total memory used: "                   << total_mem << " GB"<< std::endl;
+        std::cout << "===========================================\n";
+    }
+}
+
+inline void print_parallel_memory_usage(const std::string& tag = "") 
+{
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    // List of memory fields to parse
+    const std::vector<std::string> fields = {"VmSize", "VmRSS", "VmData", "VmSwap"};
+
+    std::map<std::string, long> local_values;
+
+    // Read local /proc/self/status
+    std::ifstream status("/proc/self/status");
+    std::string line;
+    while (std::getline(status, line)) {
+        for (const auto& field : fields) {
+            if (line.find(field + ":") == 0) {
+                std::istringstream iss(line);
+                std::string key;
+                long value_kb;
+                std::string unit;
+                iss >> key >> value_kb >> unit;
+                local_values[field] = value_kb;
+            }
+        }
+    }
+
+    // Gather local values into arrays
+    std::vector<long> local_array(fields.size());
+    for (size_t i = 0; i < fields.size(); ++i) {
+        local_array[i] = local_values[fields[i]];
+    }
+
+    std::vector<long> sum(fields.size()), min(fields.size()), max(fields.size());
+
+    MPI_Reduce(local_array.data(), sum.data(), fields.size(), MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(local_array.data(), min.data(), fields.size(), MPI_LONG, MPI_MIN, 0, MPI_COMM_WORLD);
+    MPI_Reduce(local_array.data(), max.data(), fields.size(), MPI_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
+
+    if (rank == 0) {
+        std::cout << "\n===== MPI Memory Usage Summary " << (tag.empty() ? "" : "(" + tag + ")") << " =====\n";
+        std::cout << "Field       |   Sum (MB)   |   Min (MB)   |   Max (MB)\n";
+        std::cout << "-------------------------------------------------------\n";
+        for (size_t i = 0; i < fields.size(); ++i) {
+            double sum_mb = sum[i] / 1024.0;
+            double min_mb = min[i] / 1024.0;
+            double max_mb = max[i] / 1024.0;
+            std::cout << std::left << std::setw(11) << fields[i] << " | "
+                      << std::setw(11) << sum_mb << " | "
+                      << std::setw(11) << min_mb << " | "
+                      << std::setw(11) << max_mb << "\n";
+        }
+        std::cout << "=======================================================\n" << std::endl;
+    }
+}
+
+
 inline double* convert_cartesian_to_spherical(const double x, const double y, const double z)
 {
     static double spherical_coordinates[3]; 
@@ -92,6 +177,8 @@ void save_mat(Mat &m, const char * filename, const char * name);
 void read_vec(std::string filename, std::vector<double> &vec);
 
 void print_vec(const std::vector<double> &vec);
+
+PetscErrorCode PrintVec(Vec &v);
 
 void print_local_sizes(const Mat &M);
 void print_global_sizes(const Mat &M);

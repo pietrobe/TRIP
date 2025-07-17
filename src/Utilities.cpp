@@ -58,6 +58,35 @@ static double g_fact[171] = {
 
 
 // I/O routines
+PetscErrorCode PrintVec(Vec &v)
+{
+    PetscErrorCode ierr;
+    PetscInt local_size;
+    const PetscScalar *array;
+
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    
+    ierr = VecGetLocalSize(v, &local_size); CHKERRQ(ierr);
+    ierr = VecGetArrayRead(v, &array); CHKERRQ(ierr);
+
+    // for (PetscInt i = 0; i < local_size; ++i) {
+    for (PetscInt i = 0; i < 4; ++i) {
+        PetscInt global_index;
+        ierr = VecGetOwnershipRange(v, &global_index, nullptr); CHKERRQ(ierr);
+        global_index += i;
+        std::cout << "Vec[" << global_index << "] = " << array[i] << std::endl;
+    }
+
+    ierr = VecRestoreArrayRead(v, &array); CHKERRQ(ierr);
+
+    // Ensure ordered output
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    return 0;
+}
+
 
 void save_vec(Vec &m, const char * filename, const char * name)
 {

@@ -36,9 +36,10 @@ typedef struct t_xyzinters {
 // matrix-free (MF) structure
 struct MF_context {
 
-	std::shared_ptr<RT_problem> RT_problem_;	
+	std::shared_ptr<RT_problem> RT_problem_;
 
 	Formal_solver formal_solver_;
+	Formal_solver formal_solver_unpol_;
 
 	// preconditioner data structures 
 	KSP pc_solver_;
@@ -47,9 +48,12 @@ struct MF_context {
 	int mpi_rank_;
 	int mpi_size_;
 	
-	bool use_single_long_step_  = false; 
-	bool use_always_long_ray_   = true;
-	
+	const bool use_single_long_step_ = false; 
+	const bool use_always_long_ray_  = true;
+
+	// unpolarized flag for preconditioner
+	const bool unpolarized_prec_ = true; 
+
 	// formal solution in arbitrary direction
 	bool formal_solution_Omega_ = false;
 	
@@ -64,6 +68,16 @@ struct MF_context {
 	Field_ptr_t eta_field_serial_;
 	Field_ptr_t rho_field_serial_;
 
+	// auxiliary unpolarized vecotors
+	Field_ptr_t   I_unpol_field_serial_;
+	Field_ptr_t   S_unpol_field_serial_;
+
+	Vec x_unpol_, y_unpol_, x_pol_;
+	IS pol_indeces_ = nullptr;
+
+	sgrid::ReMap<Field_t> I_unpol_remap_;
+	sgrid::ReMap<Field_t> S_unpol_remap_;
+
 	// data structures a single direction Omega (if needed)
 	sgrid::ReMap<Field_t> I_remap_Omega_;
 	sgrid::ReMap<Field_t> S_remap_Omega_;
@@ -75,6 +89,7 @@ struct MF_context {
 
 	// total number of rays a single processor will handle, n_local_rays_ = block_size/mpi_size
 	int n_local_rays_;
+	int n_local_rays_unpol_;
 	int local_block_size_;
 
 	// number of tiles each processor will handle, n_tiles_ = 1 default, to be increased to reduce memmory usage
@@ -90,8 +105,9 @@ struct MF_context {
 	rii_include::offset_function_cartesian offset_fun_;	
 	
 	// change data format
-	void field_to_vec(const Field_ptr_t field, Vec &v);
-	void vec_to_field(Field_ptr_t field, const Vec &v);
+	void field_to_vec(const Field_ptr_t field, Vec &v, const int block_size = -1);
+	void vec_to_field(Field_ptr_t field, const Vec &v, const int block_size = -1);
+	
 	
 	// find intersection
 	void find_intersection(double theta, double chi, const double Z_down, const double Z_top, const double L, t_intersect *T);
@@ -100,13 +116,19 @@ struct MF_context {
 	std::vector<double> long_ray_steps_quadratic(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index, bool print_flag);
 	std::vector<double> single_long_ray_step(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index);
 
+	// for the unpolarized case
+	double long_ray_steps_unpolarized(          const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index, bool print_flag);
+	double long_ray_steps_quadratic_unpolarized(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index, bool print_flag);
+
 	void get_2D_weigths(const double x, const double y, double *w);
 
 	// formal solver	
 	void formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
 	void formal_solve_ray(const Real mu, const Real chi);		
-	
-	void apply_bc(Field_ptr_t I_field, const Real I0);	
+	void formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
+
+	void apply_bc(Field_ptr_t I_field, const Real I0, const bool polarized = true);	
+	void apply_bc_serial(Field_ptr_t I_field, const Real I0, const bool polarized = true);	
 		
 	// emission module from Simone
 	void set_up_emission_module();
@@ -119,9 +141,14 @@ struct MF_context {
 
 	// init serial fields (serial eta and rho are filled)
 	void init_serial_fields(const int n_tiles);	
+	void init_unpol_fields();
 
 	// init serial fields (serial eta and rho are filled) in a single direction
 	void init_serial_fields_Omega();		
+
+	// moving from polarized and unpolarized vetors
+	void polarized_to_unpolarized(Vec &pol_v, Vec &unpol_v);
+	void unpolarized_to_polarized(Vec &unpol_v, Vec &pol_v);
 };
 
 class RT_solver
@@ -145,10 +172,18 @@ public:
     	
     	// init serial grids for formal solution
     	const int n_tiles = 1; // TODO: now fixed
-    	mf_ctx_.init_serial_fields(n_tiles);	
+    	mf_ctx_.init_serial_fields(n_tiles);	    	
+
+    	// init unpolarized formal solver and data structures
+    	if (mf_ctx_.unpolarized_prec_) 
+    	{
+    		mf_ctx_.RT_problem_->allocate_unpolarized_fields();
+    		mf_ctx_.init_unpol_fields();    		
+    		mf_ctx_.formal_solver_unpol_ = Formal_solver("SC_parabolic");	    		
+    	}
     	    	
     	mf_ctx_.set_up_emission_module();  	  
-
+    
     	// print some output 
     	print_info();
 
@@ -171,21 +206,45 @@ public:
     	// set Krylov solver
     	ierr = KSPCreate(PETSC_COMM_WORLD,&ksp_solver_);CHKERRV(ierr);
     	ierr = KSPSetOperators(ksp_solver_,MF_operator_,MF_operator_);CHKERRV(ierr);	    		
-    	ierr = KSPSetType(ksp_solver_,ksp_type_);CHKERRV(ierr);     	
+    	// ierr = KSPSetType(ksp_solver_,ksp_type_);CHKERRV(ierr);     	
+
+    	if (using_prec_)
+    	{
+    		ierr = KSPSetType(ksp_solver_,KSPFGMRES);CHKERRV(ierr);     	
+    	}
+    	else
+    	{
+    		ierr = KSPSetType(ksp_solver_,KSPGMRES);CHKERRV(ierr);     	
+    	}
 
     	// set preconditioner
     	ierr = KSPGetPC(ksp_solver_,&pc_);CHKERRV(ierr);    		    	    		
 
+    	// set MF_operator_approx_		
     	if (using_prec_)
     	{    	    		
-			// set MF_operator_approx_		
-			ierr = MatCreateShell(PETSC_COMM_WORLD,local_size,local_size,RT_problem_->tot_size_,RT_problem_->tot_size_,(void*)&mf_ctx_,&MF_operator_approx_);CHKERRV(ierr); 
+			if (mf_ctx_.unpolarized_prec_)
+			{				
+				ierr = MatCreateShell(PETSC_COMM_WORLD,RT_problem_->local_size_unpolarized_,RT_problem_->local_size_unpolarized_,
+													   RT_problem_->tot_size_unpolarized_,RT_problem_->tot_size_unpolarized_,
+													   (void*)&mf_ctx_,&MF_operator_approx_);CHKERRV(ierr); 
+			}
+			else
+			{
+				ierr = MatCreateShell(PETSC_COMM_WORLD,local_size,local_size,
+					                                   RT_problem_->tot_size_,RT_problem_->tot_size_,
+					                                   (void*)&mf_ctx_,&MF_operator_approx_);CHKERRV(ierr); 
+			}
+
 			ierr = MatShellSetOperation(MF_operator_approx_,MATOP_MULT,(void(*)(void))UserMult_approx);CHKERRV(ierr);		
 
 			// set PC solver 
 			ierr = KSPCreate(PETSC_COMM_WORLD,&mf_ctx_.pc_solver_);CHKERRV(ierr);
     		ierr = KSPSetOperators(mf_ctx_.pc_solver_,MF_operator_approx_,MF_operator_approx_);CHKERRV(ierr);	    		
     		ierr = KSPSetType(mf_ctx_.pc_solver_,KSPGMRES);CHKERRV(ierr); 
+
+    		// const PetscInt GMRES_restart = 10;
+    		// ierr = KSPGMRESSetRestart(mf_ctx_.pc_solver_, GMRES_restart);CHKERRV(ierr);	
 
     		// const int max_its = 10;
     		// const double r_tol = 1e-11;
@@ -214,7 +273,7 @@ public:
 		// ierr = MatMult(MF_operator_, rhs_, RT_problem_->I_vec_);CHKERRV(ierr);	        				
 		// const std::string filename =  "../output/rhs_" + std::to_string(mpi_size_) + ".m";
   		// const std::string varible  =  "rhs" + std::to_string(mpi_size_);
-  		// save_vec(rhs_, filename.c_str(), varible.c_str());                 	  		
+  		// save_vec(rhs_, filename.c_str(), varible.c_str());        
 	}
 
 	// solve linear system
@@ -415,6 +474,20 @@ public:
 		mf_ctx_.S_field_serial_.reset();
 		mf_ctx_.eta_field_serial_.reset();
 		mf_ctx_.rho_field_serial_.reset();
+
+		mf_ctx_.I_unpol_field_serial_.reset();
+		mf_ctx_.S_unpol_field_serial_.reset();
+		
+		PetscErrorCode ierr; // TODO FIX
+
+		ierr = VecDestroy(&(mf_ctx_.x_unpol_));CHKERRV(ierr);
+		ierr = VecDestroy(&(mf_ctx_.y_unpol_));CHKERRV(ierr);
+		ierr = VecDestroy(&(mf_ctx_.x_pol_));CHKERRV(ierr);
+		ierr = VecDestroy(&rhs_);CHKERRV(ierr);
+		// ierr = MatDestroy(&MF_operator_);CHKERRV(ierr);
+		// ierr = MatDestroy(&MF_operator_approx_);CHKERRV(ierr);
+		// ierr = KSPDestroy(&ksp_solver_);CHKERRV(ierr);
+		// ierr = PCDestroy(&pc_);CHKERRV(ierr);
 	}
 
 private:	
@@ -435,7 +508,7 @@ private:
 	Vec rhs_;
 	
 	KSP ksp_solver_;
-	KSPType ksp_type_ = KSPFGMRES; //KSPBCGS; // test KSPPIPEFGMRES
+	// KSPType ksp_type_ = KSPGMRES; //KSPBCGS; // test KSPPIPEFGMRES
 	PC pc_;
 	
 	bool using_prec_;	
