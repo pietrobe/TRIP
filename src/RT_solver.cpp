@@ -1957,6 +1957,8 @@ void MF_context::set_up_emission_module(){
 
     fsf_sh_ptr->make_formal_solver();
 
+    ecc_sh_ptr_->set_RII_contrib_block_size(get_RII_contrib_block_size());
+
     std::list<emission_coefficient_components> components;    
 
     // if (RT_problem_->use_CRD_limit_)

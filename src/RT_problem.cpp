@@ -2512,9 +2512,149 @@ void const RT_problem::write_surface_point_profiles(input_string file_name, cons
 	}  	
 }
 
+void const write_angular_grid(input_string file_name, const int i_space,
+                              const int j_space,
+                              const unsigned int precision = 14) {
+
+  const auto f_dev = I_field_->view_device();
+  const auto g_dev = space_grid_->view_device();
+
+  // indeces
+  const int i_start = g_dev.margin[0];
+  const int j_start = g_dev.margin[1];
+  const int k_start = g_dev.margin[2];
+
+  const int i_end = i_start + g_dev.dim[0];
+  const int j_end = j_start + g_dev.dim[1];
+
+  int i_global, j_global;
+
+  double I, QUV;
+
+  // write profiles
+  if (g_dev.global_coord(2, k_start) == 0) {
+    for (int i = i_start; i < i_end; ++i) {
+      i_global = g_dev.global_coord(0, i);
+
+      if (i_global == i_space) {
+        for (int j = j_start; j < j_end; ++j) {
+          j_global = g_dev.global_coord(1, j);
+
+          if (j_global == j_space) {
+            // Create a new file
+            input_string output_file = file_name + "_" +
+                                       std::to_string(i_space) + "_" +
+                                       std::to_string(j_space) + ".csv";
+            std::ofstream outputFile(output_file);
+
+            if (outputFile.is_open()) {
+              // write grids
+                            for (int j_theta = N_theta_ / 2; j_theta < N_theta_; ++j_theta) {
+                for (int k_chi = 0; k_chi < N_chi_; ++k_chi) {
+				}
+			}
+            } else {
+              if (mpi_rank_ == 0)
+                std::cout << "\nERROR: failed to create the output file."
+                          << std::endl;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+void const RT_problem::write_surface_point_profiles_csv(input_string file_name,
+                                                        const int i_space,
+                                                        const int j_space,
+													    const unsigned int precision) {
+  const auto f_dev = I_field_->view_device();
+  const auto g_dev = space_grid_->view_device();
+
+  // indeces
+  const int i_start = g_dev.margin[0];
+  const int j_start = g_dev.margin[1];
+  const int k_start = g_dev.margin[2];
+
+  const int i_end = i_start + g_dev.dim[0];
+  const int j_end = j_start + g_dev.dim[1];
+
+  int i_global, j_global;
+
+  double I, QUV;
+
+  // write profiles
+  if (g_dev.global_coord(2, k_start) == 0) {
+    for (int i = i_start; i < i_end; ++i) {
+      i_global = g_dev.global_coord(0, i);
+
+      if (i_global == i_space) {
+        for (int j = j_start; j < j_end; ++j) {
+          j_global = g_dev.global_coord(1, j);
+
+          if (j_global == j_space) {
+            // Create a new file
+            input_string output_file = file_name + "_" +
+                                       std::to_string(i_space) + "_" +
+                                       std::to_string(j_space) + ".csv";
+            std::ofstream outputFile(output_file);
+
+            if (outputFile.is_open()) {
+
+
+              for (int j_theta = N_theta_ / 2; j_theta < N_theta_; ++j_theta) {
+                for (int k_chi = 0; k_chi < N_chi_; ++k_chi) {
+
+                  const int b_start = local_to_block(j_theta, k_chi, 0);
+
+                  for (int i_stokes = 0; i_stokes < 4; ++i_stokes) {
+                    // outputFile << "\nField{" << i_stokes + 1 << ","
+                    //            << j_theta + 1 << "," << k_chi + 1 << "} = [ ";
+
+                    for (int b = 0; b < 4 * N_nu_; b = b + 4) {
+                      I = f_dev.block(i, j, k_start)[b_start + b];
+
+					  const std::string sep = b <  (4 * N_nu_ - 1) ? "," : "";
+
+                      if (i_stokes == 0) {
+                        outputFile << std::scientific << std::setprecision(precision)
+                                   << I << sep;
+                      } else {
+                        QUV =
+                            f_dev.block(i, j, k_start)[b_start + b + i_stokes];
+
+                        outputFile << std::scientific << std::setprecision(precision)
+                                   << 100.0 * QUV / I << sep;
+                      }
+                    }
+
+                    outputFile << "\n";
+                  }
+                }
+              }
+
+              // Close the file
+              outputFile.close();
+
+              if (mpi_rank_ == 0)
+                std::cout << "Output written in " << output_file << "\n"
+                          << std::endl;
+            } else {
+              if (mpi_rank_ == 0)
+                std::cout << "\nERROR: failed to create the output file."
+                          << std::endl;
+            }
+          }
+        }
+      }
+    }
+  }
+}
 
 // write surface profile in all surface
-void const RT_problem::write_surface_profiles(input_string file_name)
+void const write_surface_profiles(input_string file_name)
 {	
 	if (mpi_size_x_ > 1 or mpi_size_y_ > 1)
 	{
