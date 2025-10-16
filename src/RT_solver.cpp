@@ -2,6 +2,18 @@
 #include "cpu_clock.h"
 #include <string>
 
+
+namespace {
+unsigned int RII_contrib_block_size = 1;
+}
+
+void set_RII_contrib_block_size(const unsigned int block_size) {
+  RII_contrib_block_size = block_size;
+}
+
+unsigned int get_RII_contrib_block_size() { return RII_contrib_block_size; }
+
+
 //////////////////////////////////////////////////////
 // Jiri functions for find_prolongation
 static bool wError(const t_intersect &inters) {

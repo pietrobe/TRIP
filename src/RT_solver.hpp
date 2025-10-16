@@ -11,6 +11,9 @@ extern PetscErrorCode UserMult_approx(Mat mat,Vec x,Vec y);
 extern PetscErrorCode MF_pc_Destroy(PC pc);
 extern PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y);
 
+unsigned int get_RII_contrib_block_size();
+
+void set_RII_contrib_block_size(const unsigned int block_size);
 
 // structs for ray - grid intersection 
 typedef struct t_intersect {

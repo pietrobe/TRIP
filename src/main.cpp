@@ -47,8 +47,29 @@ int main(int argc, char *argv[]) {
   PetscInitialize(&argc, &argv, (char *)0, NULL);
   Kokkos::initialize(argc, argv);
 
+#if ACC_SOLAR_3D == _ON_
+  if (mpi_rank == 0) {
+    std::cout << "Using ACC version" << std::endl;
+  }
 
+  const int devices_per_node = 4; // for MareNostrum 5 ACC & Daint Alps.
+  int mpi_error = RII_epsilon_contrib::RII_contrib_MPI_Init(devices_per_node,
+                                                            MPI_COMM_WORLD);
 
+  if (RII_epsilon_contrib::RII_contrib_MPI_Is_Device_Handler()) {
+    RII_epsilon_contrib::RII_contrib_MPI_Init_Memory_Pool();
+  }
+
+  for (int i = 0; i < 160; i++) {
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (mpi_rank == i &&
+        RII_epsilon_contrib::RII_contrib_MPI_Is_Device_Handler()) {
+      std::cout << RII_epsilon_contrib::RII_contrib_MPI_Device_Info()
+                << std::endl;
+    }
+  }
+
+#endif // ACC_SOLAR_3D
 
   {
     //////////////////////////////////////////////////////////////////////////
@@ -266,19 +287,40 @@ int main(int argc, char *argv[]) {
         // const std::string output_path = "output/surface_profiles_64x64x133/B0V0/"; // TODO change
         output_file = (use_CRD) ? (output_path / "profiles_CRD").string() : (output_path / "profiles_PRD").string();
 
-       if (rt_problem_ptr->mpi_rank_ == 0)  {
-        ss_b << "Output directory: " << output_path << std::endl;
-        std::cout << ss_b.str();
-        std::cout.flush();
+#if ACC_SOLAR_3D == _ON_
+        {
+          if (RII_epsilon_contrib::RII_contrib_MPI_Is_Device_Handler()) {
+            std::string pool_info =
+                RII_epsilon_contrib::RII_contrib_MPI_Generate_DPool_Report(
+                    true, true);
 
-        const auto output_info_file = output_path / "info.txt";
-        std::ofstream output_file_info(output_info_file);
+            std::string file_name = (boost::format("%s/device_pool_info_rank_%d.txt") %
+                                     output_path % mpi_rank)
+                                        .str();
 
-        output_file_info << ss_a.str();
-        output_file_info << ss_b.str();
-        output_file_info.close();
-      }
-    }
+            std::ofstream myfile;
+            myfile.open(file_name);
+            if (myfile.is_open()) {
+              myfile << pool_info;
+              myfile.close();
+            }
+          }
+        }
+#endif // ACC_SOLAR_3D
+
+        if (rt_problem_ptr->mpi_rank_ == 0) {
+          ss_b << "Output directory: " << output_path << std::endl;
+          std::cout << ss_b.str();
+          std::cout.flush();
+
+          const auto output_info_file = output_path / "info.txt";
+          std::ofstream output_file_info(output_info_file);
+
+          output_file_info << ss_a.str();
+          output_file_info << ss_b.str();
+          output_file_info.close();
+        }
+    } // end if (output)
 
     ///////////////////////////////////////////////////
     // solve //////////////////////////////////////////
@@ -462,7 +504,36 @@ int main(int argc, char *argv[]) {
       
     }
   }
-  
+
+#if ACC_SOLAR_3D == _ON_
+  // for (int i = 0; i < mpi_size; i++)
+  // {
+  //   // MPI_Barrier(MPI_COMM_WORLD);
+  //   if (RII_epsilon_contrib::RII_contrib_MPI_Is_Device_Handler()) {
+  //     std::string pool_info =
+  //         RII_epsilon_contrib::RII_contrib_MPI_Generate_DPool_Report(true,
+  //                                                                    true);
+
+  //     std::string file_name =
+  //         (boost::format("%s/pool_info_rank_%d.txt") % output_path % mpi_rank)
+  //             .str();
+
+  //     std::ofstream myfile;
+  //     myfile.open(file_name);
+  //     if (myfile.is_open()) {
+  //       myfile << pool_info;
+  //       myfile.close();
+  //     }
+  //   }
+  // }
+
+  if (RII_epsilon_contrib::RII_contrib_MPI_Is_Device_Handler()) {
+    RII_epsilon_contrib::RII_contrib_MPI_Finalize_Memory_Pool();
+  }
+
+  RII_epsilon_contrib::RII_contrib_MPI_Finalize();
+#endif // ACC_SOLAR_3D
+
   Kokkos::finalize();
   PetscFinalize(); //CHKERRQ(ierr);
   MPI_CHECK(MPI_Finalize());

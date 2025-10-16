@@ -8,6 +8,11 @@
 #include "Faddeeva.hpp"
 #include "Rotation_matrix.hpp"
 
+#define _ON_ 1 
+#define _OFF_ 0
+
+#define ACC_SOLAR_3D _ON_ // TODO: remove this define and use CMake option instead
+
 using Real = double; 
 
 #ifndef MPI_CHECK
