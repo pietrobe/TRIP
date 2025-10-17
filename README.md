@@ -32,6 +32,7 @@ For ACC support, make sure that the RII library is compiled with ACC support as 
 
 first build the RII accelerated module in the 
 RII source directory:
+
 ```bash 
 cd ${RII_MAIN_DIR}/rii-c/src_acc;
 make clean;

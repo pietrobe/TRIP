@@ -145,9 +145,9 @@ configure_file(
 
 # we use one of our examples here
 add_executable(solar_3D ${CMAKE_SOURCE_DIR}/src/main.cpp)
-# set(CMAKE_CXX_FLAGS  " -O3 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option ")
+set(CMAKE_CXX_FLAGS  " -O3 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option ")
 
-set(CMAKE_CXX_FLAGS  " -Ofast -fno-signed-zeros -fno-trapping-math -fassociative-math -march=native -mtune=native -mprefer-vector-width=512 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option -pedantic ")
+#set(CMAKE_CXX_FLAGS  " -Ofast -fno-signed-zeros -fno-trapping-math -fassociative-math -march=native -mtune=native -mprefer-vector-width=512 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option -pedantic ")
 
 add_library(rii SHARED IMPORTED)
 set_property(TARGET rii PROPERTY IMPORTED_LOCATION "${RII_ROOT_PATH}/build/librii.so")
