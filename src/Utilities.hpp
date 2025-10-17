@@ -3,15 +3,13 @@
 
 #include <complex>
 #include <numeric>
-#include "petsc.h" 
-#include "Legendre_rule.hpp"
+
 #include "Faddeeva.hpp"
+#include "Legendre_rule.hpp"
 #include "Rotation_matrix.hpp"
+#include "configure.h"
+#include "petsc.h"
 
-#define _ON_ 1 
-#define _OFF_ 0
-
-#define ACC_SOLAR_3D _ON_ // TODO: remove this define and use CMake option instead
 #define RII_CONTRIB_BLOCK_SIZE  (250)
 
 using Real = double; 

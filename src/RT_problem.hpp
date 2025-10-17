@@ -332,8 +332,11 @@ public:
 	void const write_surface_point_profiles_csv(input_string file_name, const int i_space, const int j_space, 
 												const unsigned int precision = 14);
 
-	void const write_angular_grid(input_string file_name, const int i_space, const int j_space, 
-								  const unsigned int precision = 14);
+	void const write_angular_grid_csv(input_string file_name, const int i_space, const int j_space, 
+								      const unsigned int precision = 14);
+
+	void const write_frequencies_grid_csv(input_string file_name,  const int i_space, const int j_space,
+									    const unsigned int precision = 14);
 
 	// MPI varables
 	int mpi_rank_;

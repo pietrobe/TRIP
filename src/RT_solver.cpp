@@ -1961,27 +1961,6 @@ void MF_context::set_up_emission_module(){
 
     std::list<emission_coefficient_components> components;    
 
-    // if (RT_problem_->use_CRD_limit_)
-    // {
-    // //    components.push_back(emission_coefficient_components::epsilon_pCRD_GL_limit);             
-    // //    components.push_back(emission_coefficient_components::epsilon_csc);      
-    //     components.push_back(emission_coefficient_components::epsilon_zero);
-
-    //     if (mpi_rank_ == 0) std::cout << "\nUsing CRD emission, components:"<< std::endl;
-    // }
-    // else
-    // {
-    //     components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB_FAST);
-    //     // components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB);
-
-    //     components.push_back(emission_coefficient_components::epsilon_R_III_GL);
-    //     components.push_back(emission_coefficient_components::epsilon_csc);      
-
-    //     if (mpi_rank_ == 0) std::cout << "\nUsing PRD emission, components:"<< std::endl;        
-    // }
-
-    // if (RT_problem_->emissivity_model_ != emissivity_model::NONE){
-
         components.clear();
 
         switch (RT_problem_->emissivity_model_)
@@ -2143,10 +2122,39 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
     int counter_i = 0;
     int counter_j = 0;
     int counter_k = 0;
-    
-    for (int i_vec = istart_local; i_vec < iend_local; ++i_vec)
-    {
-    	// set indeces
+
+#if ACC_SOLAR_3D == _ON_
+
+	int		  size_local_all;
+	const int size_local = iend_local - istart_local;
+
+	MPI_Comm node_comm = MPI_COMM_NULL;
+	RII_epsilon_contrib::RII_contrib_MPI_Get_Node_Comm(node_comm);
+	MPI_Allreduce(&size_local, &size_local_all, 1, MPI_INT, MPI_MAX, node_comm);
+
+	for (int idx = 0; idx < size_local_all; ++idx)
+	{
+		const int i_vec = idx + istart_local;
+
+		if (i_vec < iend_local)
+		{
+			if (not approx)
+				RII_epsilon_contrib::RII_contrib_MPI_Set_Active();
+		}
+		else
+		{
+			if (not approx)
+				RII_epsilon_contrib::RII_contrib_MPI_Set_Idle();
+			continue;
+		}
+
+#else
+
+	for (int i_vec = istart_local; i_vec < iend_local; ++i_vec)
+	{
+
+#endif
+		// set indeces
     	// std::iota(ix, ix + block_size, i_vec * block_size);
         std::iota(ix.begin(), ix.end(), i_vec * block_size);
 
