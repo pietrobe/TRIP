@@ -3,9 +3,9 @@
 #SBATCH --ntasks=2048
 #SBATCH --cpus-per-task=1
 #SBATCH --constrain=gpu
-#SBATCH --time=00:15:00
+#SBATCH --time=02:15:00
 #SBATCH --account=u0
-#SBATCH --job-name="TRIP"
+#SBATCH --job-name="TRIP_3D"
 
 export CRD="--CRD"
 

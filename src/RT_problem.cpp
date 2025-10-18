@@ -1,4 +1,7 @@
 #include "RT_problem.hpp"
+#include <array>
+#include <thread>
+#include <chrono>
 
 // some bounds for the pmd file
 #define PMD_MAIN_HEADER1    89
@@ -1436,7 +1439,7 @@ void RT_problem::init_field(Field_ptr_t input_field, const Real input_value){
 
 	auto field_dev = input_field->view_device();
 
-    sgrid::parallel_for("INIT I", space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
+    sgrid::parallel_for("INIT I", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) 
     {         
         auto *block = field_dev.block(i, j, k);
          
@@ -2067,7 +2070,7 @@ void RT_problem::set_up(){
 	const auto g_dev = space_grid_->view_device();
 
 	// compute atmospheric quantities 
-    sgrid::parallel_for("INIT-ATM", space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
+    sgrid::parallel_for("INIT-ATM", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) 
     {       	
     	auto *u = u_dev.block(i, j, k);
 

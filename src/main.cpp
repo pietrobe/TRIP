@@ -27,7 +27,11 @@ main(int argc, char *argv[])
 	std::stringstream	  ss_a, ss_b;
 	std::filesystem::path output_info_file;
 
+// std::cout << "Starting solar_3D main ..." << std::endl;
+
 	MPI_CHECK(MPI_Init(&argc, &argv));
+
+	// return 0;
 
 	int mpi_size;
 	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
@@ -46,7 +50,7 @@ main(int argc, char *argv[])
 	}
 
 	PetscInitialize(&argc, &argv, (char *)0, NULL);
-	Kokkos::initialize(argc, argv);
+	// Kokkos::initialize(argc, argv);
 
 #if ACC_SOLAR_3D == _ON_
 
@@ -565,7 +569,7 @@ main(int argc, char *argv[])
 	RII_epsilon_contrib::RII_contrib_MPI_Finalize();
 #endif // ACC_SOLAR_3D
 
-	Kokkos::finalize();
+	// Kokkos::finalize();
 	PetscFinalize(); // CHKERRQ(ierr);
 	MPI_CHECK(MPI_Finalize());
 
