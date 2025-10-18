@@ -16,6 +16,8 @@
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=simone.riva@usi.ch
 
+#SBATCH --exclusive
+##### # SBATCH --mem_per_cpu=
 #SBATCH --cpus-per-task=1
 #SBATCH --time=00:30:00
 #SBATCH --account=u2
@@ -27,6 +29,14 @@ export CRD=" --CRD "
 
 export MPICH_GPU_SUPPORT_ENABLED=1
 ulimit -c 0
+ulimit -l unlimited
+ulimit -a
+
+# Set core dump path
+# export COREDUMP_DIR=/capstor/scratch/cscs/sriva/core_dumps
+# mkdir -p $COREDUMP_DIR
+# echo "$COREDUMP_DIR/core.%e.%p.%t" | sudo tee /proc/sys/kernel/core_pattern
+# ulimit -c unlimited
 
 ### CSCS
 
