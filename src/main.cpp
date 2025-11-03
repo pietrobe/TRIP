@@ -526,18 +526,23 @@ main(int argc, char *argv[])
 		{
 #if ACC_SOLAR_3D == _ON_
 			if (RII_epsilon_contrib::RII_contrib_MPI_Is_Device_Handler() and //
-				mpi_rank < LIMIT_OUT_DEVICE_MEMORY_USAGE)
+				mpi_rank < LIMIT_OUT_DEVICE_MEMORY_USAGE)					 //
 			{
 				std::string pool_info = RII_epsilon_contrib::RII_contrib_MPI_Generate_DPool_Report(true, true);
 
-				std::string file_name = (boost::format("%s/device_pool_info_rank_%d.txt") % output_path % mpi_rank).str();
+				const auto file_name_pool = output_path /													  //
+											(boost::format("device_pool_info_rank_%d.txt") % mpi_rank).str(); //
 
 				std::ofstream myfile;
-				myfile.open(file_name);
+				myfile.open(file_name_pool.string());
 				if (myfile.is_open())
 				{
 					myfile << pool_info;
 					myfile.close();
+				}
+				else
+				{
+					std::cerr << "Unable to open file: " << file_name_pool << std::endl;
 				}
 			}
 #endif // ACC_SOLAR_3D
@@ -553,20 +558,21 @@ main(int argc, char *argv[])
 			if (rt_problem_ptr->mpi_rank_ == 0)
 			{
 				std::stringstream ss_mem;
-				ss_mem << "Total memory usage (vm_usage) = " << byte_to_GB * vm_usage << " GB" << std::endl;
-				ss_mem << "Total memory usage (resident_set) = " << byte_to_GB * resident_set << " GB" << std::endl;
+				ss_mem << "Total memory usage (vm_usage):      " << byte_to_GB * vm_usage << " GB" << std::endl;
+				ss_mem << "Total memory usage (resident_set):  " << byte_to_GB * resident_set << " GB" << std::endl;
 
 				std::string mem_petsc = rt_problem_ptr->print_PETSc_mem();
 				ss_mem << mem_petsc << std::endl;
 
 #if ACC_SOLAR_3D == _ON_
-				ss_mem << "Total number of Devices (Accelerators) used = " << devices_cnt << std::endl;
+				ss_mem << "Total number of devices (accelerators) used: " << devices_cnt << std::endl;
 #endif // ACC_SOLAR_3D
 
 				ss_mem << std::fixed << std::setprecision(2);
 				ss_mem << "Setup time:           " << (main_setup_time - main_start_time) << " seconds." << std::endl;
-				ss_mem << "Post processing time: " << (main_end_time - main_solve_end_time) << " seconds." << std::endl;
 				ss_mem << "Solve time:           " << (main_solve_end_time - main_setup_time) << " seconds." << std::endl;
+				ss_mem << "Post processing time: " << (main_end_time - main_solve_end_time) << " seconds." << std::endl;
+				ss_mem << "----------------------------------------------" << std::endl;
 				ss_mem << "Total execution time: " << (main_end_time - main_start_time) << " seconds." << std::endl;
 
 				std::cout << ss_mem.str();

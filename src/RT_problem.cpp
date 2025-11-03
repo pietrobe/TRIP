@@ -2564,13 +2564,14 @@ RT_problem::write_angular_grid_csv(input_string file_name, const int i_space, co
 
 						if (outputFile.is_open())
 						{
-							outputFile << "theta,mu,chi" << std::endl;
+							outputFile << "theta_i,chi_i,theta,mu,chi" << std::endl;
 							// write grids
 							for (int j_theta = N_theta_ / 2; j_theta < N_theta_; ++j_theta)
 							{
 								for (int k_chi = 0; k_chi < N_chi_; ++k_chi)
 								{
-									outputFile << std::scientific << std::setprecision(precision)
+									outputFile << std::scientific << std::setprecision(precision) 
+											   << j_theta << "," << k_chi << ","
 											   << theta_grid_[j_theta] << "," << mu_grid_[j_theta] << ","
 											   << chi_grid_[k_chi] << std::endl;
 								}
