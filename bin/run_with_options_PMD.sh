@@ -55,7 +55,7 @@ export MAIN_DATA_DIR=/capstor/scratch/cscs/sriva/PORTA
 #export GRID_SIZE=32
 
 export INPUT_DIR=${MAIN_DATA_DIR}/
-export OUTPUT_DIR=${MAIN_DATA_DIR}/output_PRD_II/
+export OUTPUT_DIR=${MAIN_DATA_DIR}/output_PRD_T512/
 
 ## For 32 x 32 grid size
 export INPUT_PMD=cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd
@@ -64,9 +64,9 @@ export INPUT_PMD=cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd
 # export INPUT_CONFIG=AR_385_Cut_32x32-CRD_I_B_V.conf
 # export INPUT_CONFIG=AR_385_Cut_32x32-CRD_I_B0_V.conf
 
-export RTOL=1e-5
+export RTOL=1e-9
 export GMRES_RESTART0=30
-export MAX_ITERATIONS=10
+export MAX_ITERATIONS=15
 
 echo "INPUT_DIR: $INPUT_DIR"
 echo "OUTPUT_DIR: $OUTPUT_DIR"

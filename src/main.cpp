@@ -562,18 +562,20 @@ main(int argc, char *argv[])
 				ss_mem << "Total memory usage (resident_set):  " << byte_to_GB * resident_set << " GB" << std::endl;
 
 				std::string mem_petsc = rt_problem_ptr->print_PETSc_mem();
-				ss_mem << mem_petsc << std::endl;
+				ss_mem << mem_petsc << std::endl << std::endl;
 
 #if ACC_SOLAR_3D == _ON_
 				ss_mem << "Total number of devices (accelerators) used: " << devices_cnt << std::endl;
 #endif // ACC_SOLAR_3D
 
-				ss_mem << std::fixed << std::setprecision(2);
+				ss_mem << std::fixed << std::setprecision(2) << std::endl;
+				ss_mem << "----------------------------------------------" << std::endl;
 				ss_mem << "Setup time:           " << (main_setup_time - main_start_time) << " seconds." << std::endl;
 				ss_mem << "Solve time:           " << (main_solve_end_time - main_setup_time) << " seconds." << std::endl;
 				ss_mem << "Post processing time: " << (main_end_time - main_solve_end_time) << " seconds." << std::endl;
 				ss_mem << "----------------------------------------------" << std::endl;
-				ss_mem << "Total execution time: " << (main_end_time - main_start_time) << " seconds." << std::endl;
+				ss_mem << "Total execution time: " << (main_end_time - main_start_time) << " seconds." << std::endl
+					   << std::endl;
 
 				std::cout << ss_mem.str();
 
