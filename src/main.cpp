@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
     // ZERO: continuum
     emissivity_model emissivity_model_var = emissivity_model::PRD_AA;
 
-    const bool output = true;
+    const bool output = false;
     const bool use_B  = true;
     const bool output_overwrite_prevention = false; // if true the application stops (with an MPI_Abort) if the output directory already exists
   
@@ -85,7 +85,6 @@ int main(int argc, char *argv[]) {
   const std::filesystem::path main_input_dir  = getOptionArgument(argc, argv, "--input_dir");
   const std::filesystem::path main_output_dir = getOptionArgument(argc, argv, "--output_dir");
 #else
-//  const std::filesystem::path main_input_dir  = "../input/PORTA";
   const std::filesystem::path main_input_dir  = "../input/PORTA/";  
   const std::filesystem::path main_output_dir = "/gpfs/projects/ehpc238/output";
 #endif
@@ -117,7 +116,8 @@ int main(int argc, char *argv[]) {
     }
 
   #else
-    const std::string input_pmd_string  = std::string("cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd");
+    // const std::string input_pmd_string  = std::string("cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd");
+    const std::string input_pmd_string  = std::string("AR_385_Cut_128x128_mirrorxy-CRD_I_V0_fix_conv_KQ_MC.pmd");    
     const std::string input_llp_string  = ""; //std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix_conv_KQ_MC.llp");
     const std::string input_cul_string  = ""; //std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.cul");
     const std::string input_qel_string  = ""; //std::string("AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.qel");
@@ -129,6 +129,10 @@ int main(int argc, char *argv[]) {
 
     auto frequencies_input_path = main_input_dir / std::filesystem::path("frequency/96F");
     auto PORTA_input_pmd        = main_input_dir / std::filesystem::path(input_pmd_string);
+
+	if (mpi_rank == 0) std::cout << "input_pmd_string: " << input_pmd_string << std::endl;
+	        if (mpi_rank == 0) std::cout << "frequencies_input_path: " << frequencies_input_path << std::endl;
+
 
     // lambda to build the RT_problem object
     auto create_rt_problem = [&]() {
@@ -215,15 +219,15 @@ int main(int argc, char *argv[]) {
     //FAL-C input for 1D input setup
 
     // inputs
-    auto problem_input_file = std::filesystem::path("FAL-C/B20_V0_12T_8C_99F_1Pi4_9Pi8");
-    auto problem_input_FAL = main_input_dir / problem_input_file;
+    // auto problem_input_FAL = std::filesystem::path("../input/FAL-C/B20_V0_12T_8C_99F_1Pi4_9Pi8");
+    auto input_pmd_string = std::string("../input/FAL-C/B20_V0_12T_8C_99F_1Pi4_9Pi8");
     // const std::string FAL_input_path = "../input/FAL-C/1_B0_V0_12T_8C_64F";
     // const std::string FAL_input_path = "/users/pietrob/solar_3d/input/FAL-C/96F";
     // const std::string FAL_input_path = "/users/pietrob/solar_3d/input/FAL-C/64F";
 
     const int N_theta = 8;
     const int N_chi   = 16;
-    auto rt_problem_ptr = std::make_shared<RT_problem>(problem_input_FAL.string(), N_theta, N_chi, use_CRD, use_B);    
+    auto rt_problem_ptr = std::make_shared<RT_problem>(input_pmd_string, N_theta, N_chi, emissivity_model_var, use_B);    
 #endif
 
    RT_solver rt_solver(rt_problem_ptr, "BESSER", use_prec);
@@ -392,11 +396,11 @@ int main(int argc, char *argv[]) {
 
     print_PETSc_mem(); 
 
-    // free some memory    
-    rt_problem_ptr->free_fields_memory(); 
-    rt_solver.free_fields_memory();  /// TODO check this
+    // // free some memory    
+    // rt_problem_ptr->free_fields_memory(); 
+    // rt_solver.free_fields_memory();  /// TODO check this
 
-    print_PETSc_mem(); 
+    // print_PETSc_mem(); 
 
     // print_parallel_memory_usage();
 

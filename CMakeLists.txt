@@ -73,6 +73,7 @@ include_directories(${RII_INCLUDES}/src/tk_spline)
 include_directories(${RII_INCLUDES}/src/rii_aa_emission_coefficient)
 include_directories(${RII_INCLUDES}/src/utils)
 include_directories(${RII_INCLUDES}/src/rii_aa_emission_coefficient/)
+include_directories(${RII_INCLUDES}/src/acc_includes/)
 
 
 # we use one of our examples here

@@ -206,11 +206,12 @@ void MF_context::apply_bc(Field_ptr_t I_field, const Real I0, const bool polariz
 
 void MF_context::apply_bc_serial(Field_ptr_t I_field, const Real I0, const bool polarized){
          
-    
-    const auto N_z     = RT_problem_->N_z_;
-    const auto W_T_dev = RT_problem_->W_T_->view_device();
-    const auto g_dev   = space_grid_serial_->view_device();
-    auto I_field_dev   =            I_field->view_device();    
+    const auto N_z        = RT_problem_->N_z_;
+    const auto W_T_dev    = RT_problem_->W_T_->view_device();
+    const auto space_grid = RT_problem_->space_grid_;  
+
+    const auto g_dev = space_grid->view_device();
+    auto I_field_dev =    I_field->view_device();    
 
     // only intensity in the unpolarized case     
     PetscInt increment, block_size;
@@ -226,21 +227,25 @@ void MF_context::apply_bc_serial(Field_ptr_t I_field, const Real I0, const bool 
         block_size = n_local_rays_unpol_;
     }
 
-    sgrid::parallel_for("APPLY BC", space_grid_serial_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
-                                    
+    sgrid::parallel_for("APPLY BC", space_grid->md_range(), SGRID_LAMBDA(int i, int j, int k) {
+                                
+        const int k_global = g_dev.global_coord(2, k);
+
         // just in max depth
-        if (g_dev.global_coord(2, k) == (N_z - 1))        
+        if (k_global == (N_z - 1))        
         {       
-            const Real W_T_deep = I0 * W_T_dev.ref(i,j,k);
+            const Real W_T_deep = I0 * W_T_dev.ref(i,j,k); 
+
+            const int i_global = g_dev.global_coord(0, i);
+            const int j_global = g_dev.global_coord(1, j);           
                         
             for (int b = 0; b < block_size; b = b + increment) 
             {
-                I_field_dev.block(i,j,k)[b] = W_T_deep;                
+                I_field_dev.block(i_global,j_global,k_global)[b] = W_T_deep;                
             }                                                
         }
     }); 
 }
-
 
 
 void MF_context::find_intersection(double theta, double chi, const double Z_down, const double Z_top, const double L, t_intersect *T) 
@@ -1619,6 +1624,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 
     // impose boundary conditions 
     apply_bc_serial(I_field_serial_, I0);  
+    // apply_bc(I_field, I0);  
 
     for (int tile_number = 0; tile_number < n_tiles_; ++tile_number)  
 	{	
@@ -1955,20 +1961,19 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     // print timers
     const double total_timer = MPI_Wtime() - start_total;
     double comm_timer_max1, comm_timer_max2, one_step_timer_max, total_timer_max;
-    MPI_Reduce(&comm_timer1,     &comm_timer_max2,     1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    MPI_Reduce(&comm_timer2,     &comm_timer_max2,     1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    MPI_Reduce(&one_step_timer, &one_step_timer_max,   1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    MPI_Reduce(&total_timer,    &total_timer_max,      1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&comm_timer1,    &comm_timer_max1,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&comm_timer2,    &comm_timer_max2,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&one_step_timer, &one_step_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&total_timer,    &total_timer_max,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     
     if (mpi_rank_ == 0)
     {
-        printf("Comm. time (S):\t\t%g seconds\n",   comm_timer_max1);
+        printf("Comm. time (S):\t\t%g seconds\n", comm_timer_max1);
         printf("Comm. time (I):\t\t%g seconds\n", comm_timer_max2);
-        printf("ODE step time:\t\t%g seconds\n", one_step_timer_max);                        
-        printf("Total time:\t\t%g seconds\n",    total_timer_max);                        
+        printf("ODE step time:\t\t%g seconds\n",  one_step_timer_max);                        
+        printf("Total time:\t\t%g seconds\n",     total_timer_max);                        
     }           
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 
@@ -2674,104 +2679,80 @@ void MF_context::set_up_emission_module(){
 
     std::list<emission_coefficient_components> components;    
 
-    // if (RT_problem_->use_CRD_limit_)
-    // {
-    // //    components.push_back(emission_coefficient_components::epsilon_pCRD_GL_limit);             
-    // //    components.push_back(emission_coefficient_components::epsilon_csc);      
-    //     components.push_back(emission_coefficient_components::epsilon_zero);
+    // set emissivity module
+    switch (RT_problem_->emissivity_model_)
+    {
+    case emissivity_model::PRD:
+    case emissivity_model::PRD_FAST:
+        // Default PRD model
+        components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB_FAST);
+        components.push_back(emission_coefficient_components::epsilon_R_III_GL);
+        components.push_back(emission_coefficient_components::epsilon_csc);  
 
-    //     if (mpi_rank_ == 0) std::cout << "\nUsing CRD emission, components:"<< std::endl;
-    // }
-    // else
-    // {
-    //     components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB_FAST);
-    //     // components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB);
+        if (mpi_rank_ == 0) std::cout << "\nUsing PRD emission, components:"<< std::endl;
 
-    //     components.push_back(emission_coefficient_components::epsilon_R_III_GL);
-    //     components.push_back(emission_coefficient_components::epsilon_csc);      
+        break;
 
-    //     if (mpi_rank_ == 0) std::cout << "\nUsing PRD emission, components:"<< std::endl;        
-    // }
+    case emissivity_model::PRD_NORMAL:
 
-    // if (RT_problem_->emissivity_model_ != emissivity_model::NONE){
+        components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB);
+        components.push_back(emission_coefficient_components::epsilon_R_III_GL);
+        components.push_back(emission_coefficient_components::epsilon_csc);  
 
-        components.clear();
+        if (mpi_rank_ == 0) std::cout << "\nUsing PRD_NORMAL emission, components:"<< std::endl;
 
-        switch (RT_problem_->emissivity_model_)
-        {
-        case emissivity_model::PRD:
-        case emissivity_model::PRD_FAST:
-            // Default PRD model
-            components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB_FAST);
-            components.push_back(emission_coefficient_components::epsilon_R_III_GL);
-            components.push_back(emission_coefficient_components::epsilon_csc);  
-
-            if (mpi_rank_ == 0) std::cout << "\nUsing PRD emission, components:"<< std::endl;
-
-            break;
-
-        case emissivity_model::PRD_NORMAL:
-
-            components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB);
-            components.push_back(emission_coefficient_components::epsilon_R_III_GL);
-            components.push_back(emission_coefficient_components::epsilon_csc);  
-
-            if (mpi_rank_ == 0) std::cout << "\nUsing PRD_NORMAL emission, components:"<< std::endl;
-
-            break;
-        
-        case emissivity_model::CRD_limit:
-            
-            components.push_back(emission_coefficient_components::epsilon_pCRD_GL_limit);             
-            components.push_back(emission_coefficient_components::epsilon_csc);      
-
-            if (mpi_rank_ == 0) std::cout << "\nUsing CRD emission, components:"<< std::endl;
-
-            break;
-
-        case emissivity_model::CRD_limit_VHP:
-
-            components.push_back(emission_coefficient_components::epsilon_pCRD_VHP_limit);
-            components.push_back(emission_coefficient_components::epsilon_csc);      
-
-            if (mpi_rank_ == 0) std::cout << "\nUsing CRD emission (VHP version), components:"<< std::endl;
-
-            break;
-
-        case emissivity_model::PRD_AA:
-
-            components.push_back(emission_coefficient_components::epsilon_R_II_AA_FAST);
-            components.push_back(emission_coefficient_components::epsilon_R_III_GL);
-            components.push_back(emission_coefficient_components::epsilon_csc);  
-
-            if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA emission, components:"<< std::endl;
-
-            break;
-
-        case emissivity_model::PRD_AA_MAPV:
-
-            components.push_back(emission_coefficient_components::epsilon_R_II_AA_FAST_MAPV);
-            components.push_back(emission_coefficient_components::epsilon_R_III_GL);
-            components.push_back(emission_coefficient_components::epsilon_csc);  
-
-            if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_MAPV emission, components:"<< std::endl;
-
-            break;
-
-        case emissivity_model::ZERO:
-            
-            components.push_back(emission_coefficient_components::epsilon_zero);             
-            if (mpi_rank_ == 0) std::cout << "\nUsing ZERO emission, components:"<< std::endl;
+        break;
     
-            break;
+    case emissivity_model::CRD_limit:
+        
+        components.push_back(emission_coefficient_components::epsilon_pCRD_GL_limit);             
+        components.push_back(emission_coefficient_components::epsilon_csc);      
 
-        default:
-            if (mpi_rank_ == 0) std::cout << "ERROR: emissivity model not recognized!" << std::endl;
-            MPI_Abort(MPI_COMM_WORLD, 1);
-            break;
-        }
-    // }
+        if (mpi_rank_ == 0) std::cout << "\nUsing CRD emission, components:"<< std::endl;
 
+        break;
+
+    case emissivity_model::CRD_limit_VHP:
+
+        components.push_back(emission_coefficient_components::epsilon_pCRD_VHP_limit);
+        components.push_back(emission_coefficient_components::epsilon_csc);      
+
+        if (mpi_rank_ == 0) std::cout << "\nUsing CRD emission (VHP version), components:"<< std::endl;
+
+        break;
+
+    case emissivity_model::PRD_AA:
+
+        components.push_back(emission_coefficient_components::epsilon_R_II_AA_FAST);
+        components.push_back(emission_coefficient_components::epsilon_R_III_GL);
+        components.push_back(emission_coefficient_components::epsilon_csc);  
+
+        if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA emission, components:"<< std::endl;
+
+        break;
+
+    case emissivity_model::PRD_AA_MAPV:
+
+        components.push_back(emission_coefficient_components::epsilon_R_II_AA_FAST_MAPV);
+        components.push_back(emission_coefficient_components::epsilon_R_III_GL);
+        components.push_back(emission_coefficient_components::epsilon_csc);  
+
+        if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_MAPV emission, components:"<< std::endl;
+
+        break;
+
+    case emissivity_model::ZERO:
+        
+        components.push_back(emission_coefficient_components::epsilon_zero);             
+        if (mpi_rank_ == 0) std::cout << "\nUsing ZERO emission, components:"<< std::endl;
+
+        break;
+
+    default:
+        if (mpi_rank_ == 0) std::cout << "ERROR: emissivity model not recognized!" << std::endl;
+        MPI_Abort(MPI_COMM_WORLD, 1);
+        break;
+    }
 
     epsilon_fun_ = ecc_sh_ptr_->make_computation_function(components);    
 
@@ -2780,11 +2761,11 @@ void MF_context::set_up_emission_module(){
     
     // module for preconditioner 
     std::list<emission_coefficient_components> components_approx{    
-        emission_coefficient_components::epsilon_pCRD_limit,        
-        // emission_coefficient_components::epsilon_R_II_AA_PRECOND,
-        // emission_coefficient_components::epsilon_R_III,
-        // emission_coefficient_components::epsilon_R_II_CONTRIB_EXTREME_FAST,
-        emission_coefficient_components::epsilon_csc
+        emission_coefficient_components::epsilon_pCRD_limit       
+        // , emission_coefficient_components::epsilon_R_II_AA_PRECOND
+        // , emission_coefficient_components::epsilon_R_III
+        // , emission_coefficient_components::epsilon_R_II_CONTRIB_EXTREME_FAST
+        // , emission_coefficient_components::epsilon_csc ------------> ? TEST remove eps csc ------------------------------------------------
     };       
     
     epsilon_fun_approx_ = ecc_sh_ptr_->make_computation_function(components_approx);
@@ -2795,6 +2776,23 @@ void MF_context::set_up_emission_module(){
 
     // set threads number
     // ecc_sh_ptr_->set_threads_number(2);
+
+    // in case needed, set up the emission module for J_KQ input
+    if (use_J_KQ_)
+    {
+        if (mpi_rank_ == 0) std::cout << "Setting up emissiviity module for CRD using J_KQ tensors" << std::endl;
+
+        std::list<emission_coefficient_components> components_csc_only{emission_coefficient_components::epsilon_csc};       
+
+        // function for emissivity csc only 
+        epsilon_fun_csc_ = ecc_sh_ptr_->make_computation_function(components_csc_only);
+        
+        // function to get emissivity from JKQ, CRD by default 
+        epsilon_fun_J_KQ_ = ecc_sh_ptr_->make_computation_function_eps_from_JKQ();
+
+        // function to get JKQ, from input field
+        compute_JKQ_values_ = ecc_sh_ptr_->make_computation_JKQ_CRD_values();
+    }
 
     // print memory
     unsigned long long b;
@@ -2903,7 +2901,17 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
               clock.print_clock_h("Execution time of Epsilon emissivity");
         }
 #endif
+        /*
+        // TODO add eps_csc?        
+        if (RT_problem_->mpi_rank_ == 0 and i_vec == istart_local)
+        {
+            std::cout << "INPUT" << std::endl;
+            print_vec(std::cout, input);
 
+            std::cout << "OUTPUT" << std::endl;
+            print_vec(std::cout, output);
+        } 
+        */
 
         // update S_field_ from output scaling by eta_I
         double eta_I_inv; 
@@ -2916,7 +2924,7 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
             S_dev.block(i,j,k)[b + 1] = eta_I_inv * output[b + 1]; // TODO: remove these fot the unopolarized version
             S_dev.block(i,j,k)[b + 2] = eta_I_inv * output[b + 2];
             S_dev.block(i,j,k)[b + 3] = eta_I_inv * output[b + 3];                                                       
-        }
+        }        
 
         // update counters
         counter_i++;
@@ -2937,6 +2945,285 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
     ierr = PetscFree(ix);CHKERRV(ierr); 
 }
 
+
+// emissivity from scattering (line + continuum)
+void MF_context::update_emission_J_KQ(const Vec &J_KQ_vec){  
+
+    PetscErrorCode ierr; 
+           
+    const auto g_dev   = RT_problem_->space_grid_->view_device();  
+    const auto eta_dev = RT_problem_->eta_field_ ->view_device();
+    const auto S_dev   = RT_problem_->S_field_   ->view_device(); 
+
+    // field range indeces 
+    const int i_start = g_dev.margin[0]; 
+    const int j_start = g_dev.margin[1];
+    const int k_start = g_dev.margin[2];
+
+    const int i_end = i_start + g_dev.dim[0]; 
+    const int j_end = j_start + g_dev.dim[1];
+    const int k_end = k_start + g_dev.dim[2];   
+
+    const int block_size = RT_problem_->block_size_;     
+    
+    std::vector<double>  input(J_KQ_size_);        
+    std::vector<double> output(block_size); 
+
+    //PetscInt ix[block_size];
+    PetscInt *ix;
+    ierr = PetscMalloc1(J_KQ_size_, &ix);CHKERRV(ierr); 
+
+    PetscInt istart, iend; 
+    ierr = VecGetOwnershipRange(J_KQ_vec, &istart, &iend);CHKERRV(ierr);   
+    
+    const int istart_local = istart / J_KQ_size_;
+    const int iend_local   = iend   / J_KQ_size_;
+
+    // grid indeces
+    int i, j, k;    
+
+    int counter_i = 0;
+    int counter_j = 0;
+    int counter_k = 0;
+
+    auto J_KQ_ijk = rii_include::make_JKQ_CRD_values_shared_ptr();
+    
+    for (int i_vec = istart_local; i_vec < iend_local; ++i_vec)
+    {
+        // set indeces
+        std::iota(ix, ix + J_KQ_size_, i_vec * J_KQ_size_);
+
+        // get I field 
+        ierr = VecGetValues(J_KQ_vec, J_KQ_size_, ix, &input[0]);CHKERRV(ierr);   
+
+        // compute grid indeces from Vec index i_vec
+        i = i_start + counter_i;
+        j = j_start + counter_j;
+        k = k_start + counter_k;     
+
+        if (i >= i_end) std::cout << "ERROR with counters in update_emission(), i = " << i << std::endl;
+        if (j >= j_end) std::cout << "ERROR with counters in update_emission(), j = " << j << std::endl;
+        if (k >= k_end) std::cout << "ERROR with counters in update_emission(), k = " << k << std::endl;
+        
+        J_KQ_ijk->build_from_array(input.data());        
+
+        const auto out_epsilon = epsilon_fun_J_KQ_(i,j,k,J_KQ_ijk);
+
+        rii_include::make_indices_convertion_function<double>(out_epsilon, offset_fun_)(output.data());                    
+
+        if (RT_problem_->mpi_rank_ == 0 and i_vec == istart_local)
+        {
+            std::cout << "(i,j,k) = (" << i << ", " << j << ", " << k << ")" << std::endl;        
+            std::cout << "depth = " << RT_problem_->depth_grid_[k] << std::endl;
+            std::cout << "INPUT JKQ" << std::endl;
+            print_vec(std::cout, input);
+
+            std::cout << "OUTPUT JKQ" << std::endl;
+            print_vec(std::cout, output);
+        }
+
+        // update S_field_ from output scaling by eta_I
+        double eta_I_inv; 
+
+        for (int b = 0; b < block_size; b = b + 4)
+        {
+            eta_I_inv = 1.0 / (eta_dev.block(i,j,k)[b]);            
+            
+            S_dev.block(i,j,k)[b]     = eta_I_inv * output[b];                                                         
+            S_dev.block(i,j,k)[b + 1] = eta_I_inv * output[b + 1]; // TODO: remove these fot the unopolarized version
+            S_dev.block(i,j,k)[b + 2] = eta_I_inv * output[b + 2];
+            S_dev.block(i,j,k)[b + 3] = eta_I_inv * output[b + 3];                                                       
+        }
+
+        if (mpi_rank_ == 0 and i_vec == istart_local)        
+        {   std::cout << "eta inv" << std::endl;
+            std::cout <<  1.0 / (eta_dev.block(i,j,k)[0]) << std::endl;
+            std::cout <<  1.0 / (eta_dev.block(i,j,k)[1]) << std::endl;
+            std::cout <<  1.0 / (eta_dev.block(i,j,k)[2]) << std::endl;
+            std::cout <<  1.0 / (eta_dev.block(i,j,k)[3]) << std::endl;
+            std::cout << "S" << std::endl;
+            std::cout << S_dev.block(i,j,k)[0] << std::endl;
+            std::cout << S_dev.block(i,j,k)[1] << std::endl;
+            std::cout << S_dev.block(i,j,k)[2] << std::endl;
+            std::cout << S_dev.block(i,j,k)[3] << std::endl;
+        }
+    
+        // update counters
+        counter_i++;
+
+        if (counter_i == i_end - g_dev.margin[0])
+        {
+            counter_i = 0;
+            counter_j++;
+        }
+
+        if (counter_j == j_end - g_dev.margin[1])
+        {
+            counter_j = 0;
+            counter_k++;
+        }
+    }  
+
+    ierr = PetscFree(ix);CHKERRV(ierr); 
+}
+
+
+
+void MF_context::I_vec_to_J_KQ_vec(const Vec &I_vec, Vec &J_KQ_vec){
+
+    PetscErrorCode ierr; 
+           
+    const auto g_dev = RT_problem_->space_grid_->view_device();  
+
+    // field range indeces 
+    const int i_start = g_dev.margin[0]; 
+    const int j_start = g_dev.margin[1];
+    const int k_start = g_dev.margin[2];
+
+    const int i_end = i_start + g_dev.dim[0]; 
+    const int j_end = j_start + g_dev.dim[1];
+    const int k_end = k_start + g_dev.dim[2];   
+
+    const int block_size = RT_problem_->block_size_;   
+    
+    std::vector<double> input(block_size);        
+    std::vector<double> J_KQ_ijk_vec(J_KQ_size_);        
+
+    //PetscInt ix[block_size];
+    PetscInt *ix;
+    ierr = PetscMalloc1(block_size, &ix);CHKERRV(ierr); 
+
+    PetscInt istart, iend; 
+    ierr = VecGetOwnershipRange(I_vec, &istart, &iend);CHKERRV(ierr);   
+
+    const int istart_local = istart / block_size;
+    const int iend_local   = iend   / block_size;
+
+    // same for the J_KQ indices
+    PetscInt *ix_J_KQ;
+    ierr = PetscMalloc1(J_KQ_size_, &ix_J_KQ);CHKERRV(ierr); 
+
+    // grid indeces
+    int i, j, k;    
+
+    int counter_i = 0;
+    int counter_j = 0;
+    int counter_k = 0;
+    
+    for (int i_vec = istart_local; i_vec < iend_local; ++i_vec)
+    {
+        // set indeces
+        std::iota(ix, ix + block_size, i_vec * block_size);
+        std::iota(ix_J_KQ, ix_J_KQ + J_KQ_size_, i_vec * J_KQ_size_);
+
+        // get I field 
+        ierr = VecGetValues(I_vec, block_size, ix, &input[0]);CHKERRV(ierr);   
+
+        // compute grid indeces from Vec index i_vec
+        i = i_start + counter_i;
+        j = j_start + counter_j;
+        k = k_start + counter_k;     
+
+        if (i >= i_end) std::cout << "ERROR with counters in update_emission(), i = " << i << std::endl;
+        if (j >= j_end) std::cout << "ERROR with counters in update_emission(), j = " << j << std::endl;
+        if (k >= k_end) std::cout << "ERROR with counters in update_emission(), k = " << k << std::endl;                
+
+        // set input field
+        ecc_sh_ptr_->update_incoming_field(i, j, k, offset_fun_, input.data());
+        
+        // get the J_KQ object
+        const auto J_KQ_ijk = compute_JKQ_values_(i,j,k);
+
+        // transform the J_KQ object to a standard vector 
+        J_KQ_ijk->fill_array(J_KQ_ijk_vec.data());       
+        
+        // set J_KQ_vec        
+        ierr = VecSetValues(J_KQ_vec, J_KQ_size_, ix_J_KQ, J_KQ_ijk_vec.data(), INSERT_VALUES);CHKERRV(ierr); 
+    }  
+
+    ierr = VecAssemblyBegin(J_KQ_vec);CHKERRV(ierr); 
+    ierr = VecAssemblyEnd(J_KQ_vec);CHKERRV(ierr); 
+
+    ierr = PetscFree(ix);CHKERRV(ierr); 
+    ierr = PetscFree(ix_J_KQ);CHKERRV(ierr); 
+}
+
+
+
+void MF_context::I_field_to_J_KQ_vec(const Field_ptr_t field, Vec &J_KQ_vec){
+
+    if (mpi_rank_ == 0) std::cout << "\nCopying field to Vec...";
+
+    PetscErrorCode ierr; 
+        
+    const auto space_grid = RT_problem_->space_grid_;   
+
+    // block size
+    const int block_size = RT_problem_->block_size_;
+
+    auto g_dev = space_grid->view_device();
+    auto f_dev =      field->view_device(); 
+
+    // indeces
+    const int i_start = g_dev.margin[0]; 
+    const int j_start = g_dev.margin[1];
+    const int k_start = g_dev.margin[2];
+
+    const int i_end = i_start + g_dev.dim[0];
+    const int j_end = j_start + g_dev.dim[1];
+    const int k_end = k_start + g_dev.dim[2]; 
+
+    PetscInt *ix_J_KQ;
+    ierr = PetscMalloc1(J_KQ_size_, &ix_J_KQ);CHKERRV(ierr);   
+
+    std::vector<double> I_ijk_vec(block_size);
+    std::vector<double> J_KQ_ijk_vec(J_KQ_size_);
+
+    PetscInt istart, starting_index;
+    
+    ierr = VecGetOwnershipRange(J_KQ_vec, &istart, NULL);CHKERRV(ierr);    
+
+    int counter = 0;
+
+    for (int k = k_start; k < k_end; ++k)                   
+    {                                                           
+        for (int j = j_start; j < j_end; ++j)
+        {
+            for (int i = i_start; i < i_end; ++i)               
+            {
+                for (int b = 0; b < block_size; b++) 
+                {                    
+                    I_ijk_vec[b] = f_dev.block(i, j, k)[b];                                        
+                }   
+
+                // set input field
+                ecc_sh_ptr_->update_incoming_field(i, j, k, offset_fun_, I_ijk_vec.data());
+
+                // get the J_KQ object
+                const auto J_KQ_ijk = compute_JKQ_values_(i,j,k);
+
+                // transform the J_KQ object to a standard vector J_KQ_ijk_vec                
+                J_KQ_ijk->fill_array(J_KQ_ijk_vec.data());   
+
+                // set indeces
+                starting_index = istart + counter * J_KQ_size_;
+                std::iota(ix_J_KQ, ix_J_KQ + J_KQ_size_, starting_index);                
+
+                // now J_KQ_ijk_vec is filled and shoule be inserted in the PETSC Vec
+                ierr = VecSetValues(x_J_KQ_, J_KQ_size_, ix_J_KQ, J_KQ_ijk_vec.data(), INSERT_VALUES);CHKERRV(ierr); 
+
+                counter++;
+            }
+        }
+    }
+
+    ierr = VecAssemblyBegin(J_KQ_vec);CHKERRV(ierr); 
+    ierr = VecAssemblyEnd(J_KQ_vec);CHKERRV(ierr); 
+
+    ierr = PetscFree(ix_J_KQ);CHKERRV(ierr); 
+
+    if (mpi_rank_ == 0) std::cout << "done" << std::endl;
+}
 
 // emissivity from scattering (line + continuum)
 // emissivity block for a arbitrary direction (mu,chi) is saved in first N_nu block entries of S_field 
@@ -3214,6 +3501,25 @@ void MF_context::init_unpol_fields(){
 } 
 
 
+void MF_context::init_J_KQ_vectors(){
+
+    PetscErrorCode ierr;
+
+    // vectors for unpolarized data    
+    ierr = VecCreate(PETSC_COMM_WORLD, &x_J_KQ_);CHKERRV(ierr);  
+    ierr = VecCreate(PETSC_COMM_WORLD, &y_J_KQ_);CHKERRV(ierr);  
+
+    tot_J_KQ_size_   = J_KQ_size_ * (RT_problem_->N_s_);
+    local_J_KQ_size_ = J_KQ_size_ * ((RT_problem_->local_size_)/(RT_problem_->block_size_));
+
+    ierr = VecSetSizes(x_J_KQ_, local_J_KQ_size_, tot_J_KQ_size_);CHKERRV(ierr);    
+    ierr = VecSetSizes(y_J_KQ_, local_J_KQ_size_, tot_J_KQ_size_);CHKERRV(ierr);    
+    
+    ierr = VecSetFromOptions(x_J_KQ_);CHKERRV(ierr);
+    ierr = VecSetFromOptions(y_J_KQ_);CHKERRV(ierr);            
+}
+
+
 void MF_context::polarized_to_unpolarized(Vec &pol_v, Vec &unpol_v) {
 
   PetscErrorCode ierr;
@@ -3375,6 +3681,8 @@ void RT_solver::print_info(){
         std::cout << "tile_size    = " << mf_ctx_.tile_size_    << " (n_local_rays/n_tiles)" << std::endl;    
         std::cout << "n_tiles      = " << mf_ctx_.n_tiles_ << std::endl;                          
         std::cout << "===================================================" << std::endl;
+
+        std::cout << "P solver type = " << pc_ksp_type_ << std::endl;                                  
     } 
 }
 
@@ -3528,12 +3836,17 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
    	MatShellGetContext(mat,&ptr);
   	MF_context *mf_ctx_ = (MF_context *)ptr; 
 
-    auto RT_problem = mf_ctx_->RT_problem_; 
+    auto RT_problem = mf_ctx_->RT_problem_;     
 
     Real start = MPI_Wtime();       
     
     // TODO: create update_emission_unpol not needing in/out conversions 
-    if (mf_ctx_->unpolarized_prec_)
+    if (mf_ctx_->use_J_KQ_)
+    {
+        // compute new emission in S_field_ 
+        mf_ctx_->update_emission_J_KQ(x);          
+    }
+    else if (mf_ctx_->unpolarized_prec_)
     {                                        
         ierr = VecZeroEntries(mf_ctx_->x_pol_);CHKERRQ(ierr);     
 
@@ -3551,9 +3864,61 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
     double emission_timer = MPI_Wtime() - start;
     double emission_timer_max;
     MPI_Reduce(&emission_timer, &emission_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    if (RT_problem->mpi_rank_ == 0) printf("Update preconditioner emission:\t\t%g seconds\n", emission_timer_max);              
+    if (RT_problem->mpi_rank_ == 0) printf("Update preconditioner emission:\t\t%g seconds\n", emission_timer_max);          
+
+
+/*
+///////////////// TEST
+    if (RT_problem->mpi_rank_ == 0) 
+    {
+        const auto space_grid = RT_problem->space_grid_;   
+
+        // block size
+        const int block_size = RT_problem->block_size_;
+
+        auto g_dev = space_grid->view_device();
+        auto S_dev = RT_problem->S_field_->view_device(); 
+
+        // indeces
+        const int i_start = g_dev.margin[0]; 
+        const int j_start = g_dev.margin[1];
+        const int k_start = g_dev.margin[2];
+
+        const int i_end = i_start + g_dev.dim[0];
+        const int j_end = j_start + g_dev.dim[1];
+        const int k_end = k_start + g_dev.dim[2]; 
+
+        std::cout << "S = " << std::endl;
+        std::cout << S_dev.block(i_start, j_start, k_start)[0] << std::endl; 
+        std::cout << S_dev.block(i_start, j_start, k_start)[1] << std::endl; 
+        std::cout << S_dev.block(i_start, j_start, k_start)[2] << std::endl; 
+        std::cout << S_dev.block(i_start, j_start, k_start)[3] << std::endl; 
+
+        // for (int k = k_start; k < k_end; ++k)                   
+        // {                                                           
+        //     for (int j = j_start; j < j_end; ++j)
+        //     {
+        //         for (int i = i_start; i < i_end; ++i)               
+        //         {
+        //               S_dev.block(i, j, k)[b];                                        
+        //         }
+        //     }
+        // }
+    }
+    */
+
+    /////////////////
     
-    if (mf_ctx_->unpolarized_prec_)
+    if (mf_ctx_->use_J_KQ_)
+    {
+        // fill rhs_ from formal solve with zero bc     
+        mf_ctx_->formal_solve_global(RT_problem->I_field_, RT_problem->S_field_, 0.0);
+
+        // copy intensity into petscvec format 
+        mf_ctx_->I_field_to_J_KQ_vec(RT_problem->I_field_, y);
+        
+    }
+    else if (mf_ctx_->unpolarized_prec_)
     {
         mf_ctx_->formal_solve_unpolarized(RT_problem->I_unpol_field_, RT_problem->S_unpol_field_, 0.0);
 
@@ -3604,7 +3969,27 @@ PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y){
     auto RT_problem = mf_ctx->RT_problem_;
 
 	// apply	
-    if  (mf_ctx->unpolarized_prec_)
+    if (mf_ctx->use_J_KQ_)
+    {        
+        // Restrict full radiation field to J_KQ
+        mf_ctx->I_vec_to_J_KQ_vec(x, mf_ctx->x_J_KQ_);
+        
+        // J_KQ solve
+        ierr = KSPSolve(mf_ctx->pc_solver_, mf_ctx->x_J_KQ_, mf_ctx->y_J_KQ_);CHKERRQ(ierr);
+        
+        // Prolong back to full radiation field        
+
+        // (i) compute emissivity
+        mf_ctx->update_emission_J_KQ(mf_ctx->y_J_KQ_);
+
+        // (ii) perform a formal solution        
+        mf_ctx->formal_solve_global(RT_problem->I_field_, RT_problem->S_field_, 0.0); // BC?
+
+        // map back to y
+        mf_ctx->field_to_vec(RT_problem->I_field_, y);  
+
+    }
+    else if (mf_ctx->unpolarized_prec_)
     {           
         // identity in polarization 
         ierr = VecCopy(x, y);CHKERRQ(ierr); 
@@ -3612,6 +3997,7 @@ PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y){
         // Restriction
         mf_ctx->polarized_to_unpolarized(x, mf_ctx->x_unpol_);
         
+        // unpolarized solve
         ierr = KSPSolve(mf_ctx->pc_solver_, mf_ctx->x_unpol_, mf_ctx->y_unpol_);CHKERRQ(ierr);
 
         // Prolongation

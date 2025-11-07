@@ -1389,29 +1389,6 @@ void RT_problem::allocate_unpolarized_fields(){
 }
 
 
-
-void RT_problem::allocate_reduced_fields(){
-
-	// J_KQ_size = 2 real and 2 imaginary numbers
-	const int J_KQ_size = 6;
-
-	// create vector for J_KQ
-	J_KQ_field_ = std::make_shared<Field_t>("J_KQ", space_grid_, J_KQ_size); 
-
-	// size of unpolarized radiation and emissivity fields
-	block_size_unpolarized_ = block_size_/4;
-
-	// create unpolarized vectors
-	I_unpol_field_ = std::make_shared<Field_t>("I_unpolarized", space_grid_, block_size_unpolarized_); 
-	S_unpol_field_ = std::make_shared<Field_t>("S_unpolarized", space_grid_, block_size_unpolarized_);
-
-	// allocate
-	J_KQ_field_->     allocate_on_device(); 
-	I_unpol_field_->  allocate_on_device(); 
-	S_unpol_field_->  allocate_on_device(); 
-}
-
-
 // allocate fields in a single direction Omega
 void RT_problem::allocate_fields_Omega(){		
 
@@ -2151,8 +2128,17 @@ void RT_problem::set_up(){
 		for (int n = 0; n < N_nu_; ++n)
 		{
 			u[n] = (nu_0_ - nu_grid_[n]) / Doppler_width_dev.ref(i,j,k);						
-		}			
-    });			      
+		}		
+
+		// TEST
+		//if (mpi_rank_ == 0)
+	    //{
+	    //	std::cout << "i,j,k = " << i << ", " << j << ", " << k << std::endl;	    
+	    // 	std::cout << "k_L = "<<  k_L_dev.ref(i,j,k) << std::endl;	    
+	    //	std::cout << "Doppler_width_dev = "<< Doppler_width_dev.ref(i,j,k) << std::endl;	 
+	    //}	
+    });			 
+
 
 	// precompute polarization tensors T_KQ
 	set_TKQ_tensor();

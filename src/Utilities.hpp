@@ -4,6 +4,8 @@
 #include <complex>
 #include <numeric>
 #include <map>
+#include <ostream>
+#include <iomanip>
 #include "petsc.h" 
 #include "Legendre_rule.hpp"
 #include "Faddeeva.hpp"
@@ -176,7 +178,7 @@ void save_mat(Mat &m, const char * filename, const char * name);
 
 void read_vec(std::string filename, std::vector<double> &vec);
 
-void print_vec(const std::vector<double> &vec);
+void print_vec(std::ostream& os, const std::vector<double>& v);
 
 PetscErrorCode PrintVec(Vec &v);
 

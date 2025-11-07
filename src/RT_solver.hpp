@@ -51,8 +51,12 @@ struct MF_context {
 	const bool use_single_long_step_ = false; 
 	const bool use_always_long_ray_  = true;
 
-	// unpolarized flag for preconditioner
+	// reduced models flags for preconditioner
 	const bool unpolarized_prec_ = true; 
+	const bool use_J_KQ_         = false; 
+	const int J_KQ_size_         = 18;
+	int tot_J_KQ_size_; // e.g. N_s * J_KQ_size_
+	int local_J_KQ_size_; 
 
 	// formal solution in arbitrary direction
 	bool formal_solution_Omega_ = false;
@@ -74,6 +78,9 @@ struct MF_context {
 
 	Vec x_unpol_, y_unpol_, x_pol_;
 	IS pol_indeces_ = nullptr;
+
+	// auxiliary J_KQ vecotors
+	Vec x_J_KQ_, y_J_KQ_;
 
 	sgrid::ReMap<Field_t> I_unpol_remap_;
 	sgrid::ReMap<Field_t> S_unpol_remap_;
@@ -102,12 +109,17 @@ struct MF_context {
 	std::shared_ptr<rii_include::emission_coefficient_computation_3D> ecc_sh_ptr_;
 	rii_include::emission_coefficient_computation_3D::compute_node_3D_function_type epsilon_fun_; 
 	rii_include::emission_coefficient_computation_3D::compute_node_3D_function_type epsilon_fun_approx_; 
+	rii_include::emission_coefficient_computation_3D::compute_node_3D_function_type epsilon_fun_csc_; 
+	rii_include::emission_coefficient_computation_3D::compute_node_3D_function_eps_from_JKQ epsilon_fun_J_KQ_; 
+	rii_include::emission_coefficient_computation_3D::compute_node_3D_function_JKQ_vals_type compute_JKQ_values_;
 	rii_include::offset_function_cartesian offset_fun_;	
 	
 	// change data format
 	void field_to_vec(const Field_ptr_t field, Vec &v, const int block_size = -1);
 	void vec_to_field(Field_ptr_t field, const Vec &v, const int block_size = -1);
-	
+
+	void I_vec_to_J_KQ_vec(const Vec &I_vec, Vec &J_KQ_vec);
+	void I_field_to_J_KQ_vec(const Field_ptr_t field, Vec &J_KQ_vec);
 	
 	// find intersection
 	void find_intersection(double theta, double chi, const double Z_down, const double Z_top, const double L, t_intersect *T);
@@ -127,7 +139,7 @@ struct MF_context {
 	void formal_solve_ray(const Real mu, const Real chi);		
 	void formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
 
-	void apply_bc(Field_ptr_t I_field, const Real I0, const bool polarized = true);	
+	void apply_bc(       Field_ptr_t I_field, const Real I0, const bool polarized = true);	
 	void apply_bc_serial(Field_ptr_t I_field, const Real I0, const bool polarized = true);	
 		
 	// emission module from Simone
@@ -135,6 +147,7 @@ struct MF_context {
 		
 	// update emission in all spatial points (given the current I_field_, update S_field_)
 	void update_emission(const Vec &I_field, const bool approx = false);
+	void update_emission_J_KQ(const Vec &I_field);
 
 	// update emission in all spatial points (given the current I_field_, update S_field_) for an arbitrary direction 
 	void update_emission_Omega(const Vec &I_field, const Real theta, const Real chi);
@@ -142,6 +155,7 @@ struct MF_context {
 	// init serial fields (serial eta and rho are filled)
 	void init_serial_fields(const int n_tiles);	
 	void init_unpol_fields();
+	void init_J_KQ_vectors();
 
 	// init serial fields (serial eta and rho are filled) in a single direction
 	void init_serial_fields_Omega();		
@@ -175,7 +189,11 @@ public:
     	mf_ctx_.init_serial_fields(n_tiles);	    	
 
     	// init unpolarized formal solver and data structures
-    	if (mf_ctx_.unpolarized_prec_) 
+    	if (mf_ctx_.use_J_KQ_)
+    	{    		
+    		mf_ctx_.init_J_KQ_vectors();
+    	}
+    	else if (mf_ctx_.unpolarized_prec_) 
     	{
     		mf_ctx_.RT_problem_->allocate_unpolarized_fields();
     		mf_ctx_.init_unpol_fields();    		
@@ -210,7 +228,7 @@ public:
 
     	if (using_prec_)
     	{
-    		ierr = KSPSetType(ksp_solver_,KSPFGMRES);CHKERRV(ierr);     	
+    		ierr = KSPSetType(ksp_solver_,ksp_type_);CHKERRV(ierr);     	
     	}
     	else
     	{
@@ -223,7 +241,13 @@ public:
     	// set MF_operator_approx_		
     	if (using_prec_)
     	{    	    		
-			if (mf_ctx_.unpolarized_prec_)
+    		if (mf_ctx_.use_J_KQ_)
+    		{    			
+    			ierr = MatCreateShell(PETSC_COMM_WORLD,mf_ctx_.local_J_KQ_size_,mf_ctx_.local_J_KQ_size_,
+    												   mf_ctx_.tot_J_KQ_size_,mf_ctx_.tot_J_KQ_size_,
+													   (void*)&mf_ctx_,&MF_operator_approx_);CHKERRV(ierr); 
+    		}
+			else if (mf_ctx_.unpolarized_prec_)
 			{				
 				ierr = MatCreateShell(PETSC_COMM_WORLD,RT_problem_->local_size_unpolarized_,RT_problem_->local_size_unpolarized_,
 													   RT_problem_->tot_size_unpolarized_,RT_problem_->tot_size_unpolarized_,
@@ -231,8 +255,7 @@ public:
 			}
 			else
 			{
-				ierr = MatCreateShell(PETSC_COMM_WORLD,local_size,local_size,
-					                                   RT_problem_->tot_size_,RT_problem_->tot_size_,
+				ierr = MatCreateShell(PETSC_COMM_WORLD,local_size,local_size,RT_problem_->tot_size_,RT_problem_->tot_size_,
 					                                   (void*)&mf_ctx_,&MF_operator_approx_);CHKERRV(ierr); 
 			}
 
@@ -240,8 +263,9 @@ public:
 
 			// set PC solver 
 			ierr = KSPCreate(PETSC_COMM_WORLD,&mf_ctx_.pc_solver_);CHKERRV(ierr);
-    		ierr = KSPSetOperators(mf_ctx_.pc_solver_,MF_operator_approx_,MF_operator_approx_);CHKERRV(ierr);	    		
-    		ierr = KSPSetType(mf_ctx_.pc_solver_,KSPGMRES);CHKERRV(ierr); 
+    		ierr = KSPSetOperators(mf_ctx_.pc_solver_,MF_operator_approx_,MF_operator_approx_);CHKERRV(ierr);
+
+    		ierr = KSPSetType(mf_ctx_.pc_solver_,pc_ksp_type_);CHKERRV(ierr); 
 
     		// const PetscInt GMRES_restart = 10;
     		// ierr = KSPGMRESSetRestart(mf_ctx_.pc_solver_, GMRES_restart);CHKERRV(ierr);	
@@ -477,7 +501,7 @@ public:
 
 		PetscErrorCode ierr;
 
-		if (unpolarized_prec_)
+		if (mf_ctx_.unpolarized_prec_)
 		{			
 			mf_ctx_.I_unpol_field_serial_.reset();
 			mf_ctx_.S_unpol_field_serial_.reset();		
@@ -515,7 +539,8 @@ private:
 	Vec rhs_;
 	
 	KSP ksp_solver_;
-	// KSPType ksp_type_ = KSPGMRES; //KSPBCGS; // test KSPPIPEFGMRES
+	KSPType ksp_type_    = KSPFGMRES; //KSPFBCGS // KSPRICHARDSON; // test KSPPIPEFGMRES
+	KSPType pc_ksp_type_ = KSPBCGS; // test KSPPIPEFGMRES
 	PC pc_;
 	
 	bool using_prec_;	

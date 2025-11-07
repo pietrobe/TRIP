@@ -4,7 +4,7 @@
 #include "Utilities.hpp"
 #include "sgrid_Core.hpp"
 
-using Grid_t  = sgrid::Grid<Real, 3>; 
+using Grid_t  = sgrid::Grid<Real, 3>;  
 using Field_t = sgrid::Field<Grid_t>;
 
 using Grid_ptr_t  = std::shared_ptr<Grid_t>;
@@ -116,8 +116,7 @@ public:
 
 		// set flags    	
     	use_PORTA_input_    = true;
-    	use_magnetic_field_ = use_magnetic_field;
-    	// use_CRD_limit_      = use_CRD_limit;    	    
+    	use_magnetic_field_ = use_magnetic_field;    	
 		emissivity_model_   = emissivity_model_arg;
 
     	// frequency grid is not contained in PORTA input (but can be computed from T_ref)
@@ -154,7 +153,6 @@ public:
 		// set flags    	
     	use_PORTA_input_    = true;
     	use_magnetic_field_ = use_magnetic_field;
-    	// use_CRD_limit_      = use_CRD_limit;
 		emissivity_model_   = emissivity_model_arg;
 
 		// New method to set the emissivity model
@@ -182,16 +180,19 @@ public:
 	}
 
 	// constructor
-	RT_problem(input_string input_path, const int N_theta, const int N_chi, 
-			   const bool use_CRD_limit = false, const bool use_magnetic_field = false)			   
-	{
-		// set CRD flag
-		// use_CRD_limit_      = use_CRD_limit;  
-		use_magnetic_field_ = use_magnetic_field;  	
-
-		if (use_magnetic_field_ and mpi_rank_ == 0) std::cout << "\nWARNING: B is hardcoded!\n" << std::endl;				
-		
+	RT_problem(input_string input_path, 
+			   const int N_theta, 
+			   const int N_chi, 
+		       const emissivity_model emissivity_model_arg = emissivity_model::NONE,
+		       const bool use_magnetic_field = false)			   
+	{		
 		Real start = MPI_Wtime();
+
+		// set emissivity model
+		emissivity_model_ = emissivity_model_arg;
+		
+		// set CRD flag		
+		use_magnetic_field_ = use_magnetic_field;  	
 
 		// assign MPI varaibles 
     	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank_);
@@ -235,16 +236,8 @@ public:
 
 		// read atm data (needs grid object)
 		read_atmosphere_1D(    input_path + "/atmosphere.dat");    // NOTE: solar surface for space index k = 0
-		read_bulk_velocity_1D( input_path + "/bulk_velocity.dat");	
-
-		if (use_magnetic_field_)
-		{
-			read_magnetic_field_1D(input_path + "/magnetic_field_20.dat");
-		}
-		else
-		{
-			read_magnetic_field_1D(input_path + "/magnetic_field.dat");
-		}		
+		read_bulk_velocity_1D( input_path + "/bulk_velocity.dat");			
+		read_magnetic_field_1D(input_path + "/magnetic_field.dat");			
 		
 		read_continumm_1D(input_path + "/continuum/continuum_scat_opac.dat", 
 						  input_path + "/continuum/continuum_tot_opac.dat",
@@ -339,11 +332,7 @@ public:
 	
 	// flag to enable continuum 
 	bool enable_continuum_ = true;
-	
-	// flag to use CRD
-	// bool use_CRD_limit_;	
-	bool use_ZERO_epsilon_ = false;	 
-
+		
 	emissivity_model emissivity_model_ = emissivity_model::NONE; 
 
 	// spatial grid
@@ -395,7 +384,6 @@ public:
 	Field_ptr_t rho_field_;
 
 	// reduced fields for unpolarized CRD or AA solutions 
-	Field_ptr_t J_KQ_field_;
 	Field_ptr_t I_unpol_field_;
 	Field_ptr_t S_unpol_field_;
 
@@ -445,7 +433,7 @@ public:
 
 	// allcoate reduced data structeres
 	void allocate_unpolarized_fields();	
-	void allocate_reduced_fields();	
+	void allocate_J_KQ_field();	
 
 	// polarized_to_unpolarized
 	void polarized_to_unpolarized_field(const Field_ptr_t field, Field_ptr_t field_unpol);
@@ -474,9 +462,9 @@ private:
 		  bool use_magnetic_field_ = false;
 
 	// physical constants 
-	const Real c_   = 2.99792458e+10;
-	const Real k_B_ = 1.38065e-16;
-	const Real h_   = 6.62607e-27;
+	const double c_   = 2.99792458e+10;
+	const double k_B_ = 1.38065e-16;
+	const double h_   = 6.62607e-27;
 
 	// 2-level atom constants
 	double mass_;
@@ -552,7 +540,7 @@ private:
 	// precompute quantities
 	void set_up();
 
-	// free memory when not needed anymore ----> TODO? ask Simone
+	// free memory when not needed anymore 
 	void clean();
 
 	// print infos on screen

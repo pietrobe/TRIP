@@ -135,9 +135,11 @@ void read_vec(std::string filename, std::vector<double> &vec)
 	} 
 }
 
-void print_vec(const std::vector<double> &vec)
-{
-  for (auto x : vec) std::cout << x << std::endl;
+void print_vec(std::ostream& os, const std::vector<double>& v) {
+  os << std::setprecision(16); 
+  for (auto x : v)
+      os << x << ' ';
+  os << '\n';
 }
 
 void print_local_sizes(const Mat &M){
