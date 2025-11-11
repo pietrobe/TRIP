@@ -55,10 +55,10 @@ export MAIN_DATA_DIR=/capstor/scratch/cscs/sriva/PORTA
 #export GRID_SIZE=32
 
 export INPUT_DIR=${MAIN_DATA_DIR}/
-export OUTPUT_DIR=${MAIN_DATA_DIR}/output_PRD_T512/
+export OUTPUT_DIR=${MAIN_DATA_DIR}/output_PRD_T512_B/
 
 ## For 32 x 32 grid size
-export INPUT_PMD=cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd
+export INPUT_PMD=cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd
 
 # export INPUT_CONFIG=AR_385_Cut_32x32-CRD_I_B_V0.conf
 # export INPUT_CONFIG=AR_385_Cut_32x32-CRD_I_B_V.conf
@@ -73,6 +73,7 @@ echo "OUTPUT_DIR: $OUTPUT_DIR"
 echo "INPUT_CONFIG: $INPUT_CONFIG"
 echo "CRD: $CRD"
 
+export SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "srun --cpu-bind=socket
         ${PWD}/mps-wrapper.sh
