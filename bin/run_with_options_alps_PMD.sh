@@ -1,22 +1,31 @@
 #!/bin/bash -l
 
+### to be defined, 12288 is tested !!!!!!!!!
+### #SBATCH --ntasks=12288
+### #SBATCH --ntasks=16384
 #SBATCH --ntasks=512
 
 ## to be defined !!!!!!!!! 
+## #SBATCH --time=02:15:00
 
-#SBATCH --cpus-per-task=1
-#SBATCH --account=ehpc238
+#### #SBATCH --cpus-per-task=1
+#### #SBATCH --account=iac90
 #SBATCH --job-name="TRIP_PRD_3D"
-#SBATCH --qos=acc_debug
+### #SBATCH --qos=gp_resa
 
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=simone.riva@usi.ch
 
 #SBATCH --exclusive
+##### # SBATCH --mem_per_cpu=
 #SBATCH --cpus-per-task=1
-#SBATCH --time=00:36:27
-#SBATCH --gres=gpu:4
-##### #SBATCH --ntasks-per-socket=46
+#SBATCH --time=00:30:00
+#SBATCH --account=u2
+#SBATCH --partition=debug
+#SBATCH --ntasks-per-socket=46
+
+### #SBATCH --job-name="TRIP"
+
 
 echo ""
 echo "=========================================="
@@ -46,8 +55,12 @@ echo ""
 export CRD=" --CRD "
 export CRD="  "
 
-export OMPI_MCA_opal_cuda_support=1
-export MAIN_DATA_DIR=/gpfs/projects/ehpc238/PORTA
+export MPICH_GPU_SUPPORT_ENABLED=1
+ulimit -c 0
+ulimit -l unlimited
+ulimit -a
+
+export MAIN_DATA_DIR=/capstor/scratch/cscs/sriva/PORTA
 
 export INPUT_DIR=${MAIN_DATA_DIR}/
 export OUTPUT_DIR=${MAIN_DATA_DIR}/output_PRD_T512_B/
@@ -55,9 +68,14 @@ export OUTPUT_DIR=${MAIN_DATA_DIR}/output_PRD_T512_B/
 ## For 32 x 32 grid size
 export INPUT_PMD=cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd
 
-export RTOL=1e-6
+export RTOL=1e-9
 export GMRES_RESTART0=30
 export MAX_ITERATIONS=15
+
+echo "INPUT_DIR: $INPUT_DIR"
+echo "OUTPUT_DIR: $OUTPUT_DIR"
+echo "INPUT_CONFIG: $INPUT_CONFIG"
+echo "CRD: $CRD"
 
 export APP_PATH=/home/usi/usi441290/git/solar_3d/build
 export SCRIPT_DIR=/home/usi/usi441290/git/solar_3d/bin
@@ -67,7 +85,7 @@ echo "=========================================="
 echo "User-Defined Variables:"
 echo "=========================================="
 printf "%-30s %s\n" "CRD:" "$CRD"
-printf "%-30s %s\n" "OMPI_MCA_opal_cuda_support:" "$OMPI_MCA_opal_cuda_support"
+printf "%-30s %s\n" "MPICH_GPU_SUPPORT_ENABLED:" "$MPICH_GPU_SUPPORT_ENABLED"
 printf "%-30s %s\n" "MAIN_DATA_DIR:" "$MAIN_DATA_DIR"
 printf "%-30s %s\n" "INPUT_DIR:" "$INPUT_DIR"
 printf "%-30s %s\n" "OUTPUT_DIR:" "$OUTPUT_DIR"
@@ -85,8 +103,11 @@ echo "Starting TRIP ...... "
 echo ""
 
 
-mpirun --bind-to none  \
-      ${SCRIPT_DIR}/mnacc_wrapper.sh \
+export APP_PATH=/users/sriva/git/solar_3d/build
+
+
+srun --cpu-bind=socket   \
+      ${SCRIPT_DIR}/mps-wrapper.sh \
       ${APP_PATH}/solar_3D $CRD \
       --input_dir $INPUT_DIR  \
       --problem_pmd_file $INPUT_PMD \
