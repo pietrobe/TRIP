@@ -3,6 +3,7 @@
 #SBATCH --ntasks=512
 
 ## to be defined !!!!!!!!! 
+#SBATCH --time=00:36:27
 
 #SBATCH --cpus-per-task=1
 #SBATCH --account=ehpc238
@@ -14,9 +15,7 @@
 
 #SBATCH --exclusive
 #SBATCH --cpus-per-task=1
-#SBATCH --time=00:36:27
 #SBATCH --gres=gpu:4
-##### #SBATCH --ntasks-per-socket=46
 
 echo ""
 echo "=========================================="
@@ -39,6 +38,7 @@ printf "%-30s %s\n" "SLURM_LOCALID:" "$SLURM_LOCALID"
 printf "%-30s %s\n" "SLURM_GPUS:" "$SLURM_GPUS"
 printf "%-30s %s\n" "SLURM_GPUS_PER_NODE:" "$SLURM_GPUS_PER_NODE"
 printf "%-30s %s\n" "SLURM_OUTPUT_LOG:" "slurm-${SLURM_JOB_ID}.out"
+
 echo "=========================================="
 echo ""
 
@@ -56,11 +56,11 @@ export OUTPUT_DIR=${MAIN_DATA_DIR}/output_PRD_T512_B/
 export INPUT_PMD=cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd
 
 export RTOL=1e-6
-export GMRES_RESTART0=30
+export GMRES_RESTART=30
 export MAX_ITERATIONS=15
 
-export APP_PATH=/home/usi/usi441290/git/solar_3d/build
-export SCRIPT_DIR=/home/usi/usi441290/git/solar_3d/bin
+export APP_PATH=${HOME}/git/solar_3d/build
+export SCRIPT_DIR=${HOME}/git/solar_3d/bin
 
 echo ""
 echo "=========================================="
@@ -73,7 +73,7 @@ printf "%-30s %s\n" "INPUT_DIR:" "$INPUT_DIR"
 printf "%-30s %s\n" "OUTPUT_DIR:" "$OUTPUT_DIR"
 printf "%-30s %s\n" "INPUT_PMD:" "$INPUT_PMD"
 printf "%-30s %s\n" "RTOL:" "$RTOL"
-printf "%-30s %s\n" "GMRES_RESTART0:" "$GMRES_RESTART0"
+printf "%-30s %s\n" "GMRES_RESTART:" "$GMRES_RESTART"
 printf "%-30s %s\n" "MAX_ITERATIONS:" "$MAX_ITERATIONS"
 printf "%-30s %s\n" "APP_PATH:" "$APP_PATH"
 printf "%-30s %s\n" "SCRIPT_DIR:" "$SCRIPT_DIR"
@@ -84,16 +84,25 @@ echo ""
 echo "Starting TRIP ...... "
 echo ""
 
+# Define arguments as a bash array
+ARGS=(
+    "$CRD"
+    "--input_dir" "$INPUT_DIR"
+    "--problem_pmd_file" "$INPUT_PMD"
+    "--output_dir" "$OUTPUT_DIR"
+    "-ksp_type" "fgmres"
+    "-ksp_gmres_restart" "$GMRES_RESTART"
+    "-ksp_max_it" "$MAX_ITERATIONS"
+    "-ksp_monitor"
+    "-ksp_view"
+    "-ksp_rtol" "$RTOL"
+)
+
+echo "Executing command:"
+echo " srun --cpu-bind=socket  mpirun --bind-to none  ${SCRIPT_DIR}/mnacc_wrapper.sh ${APP_PATH}/solar_3D ${ARGS[@]}"
+echo ""
+
 
 mpirun --bind-to none  \
       ${SCRIPT_DIR}/mnacc_wrapper.sh \
-      ${APP_PATH}/solar_3D $CRD \
-      --input_dir $INPUT_DIR  \
-      --problem_pmd_file $INPUT_PMD \
-      --output_dir $OUTPUT_DIR \
-      -ksp_type fgmres \
-      -ksp_gmres_restart $GMRES_RESTART0 \
-      -ksp_max_it $MAX_ITERATIONS \
-      -ksp_monitor \
-      -ksp_view \
-      -ksp_rtol $RTOL
+      ${APP_PATH}/solar_3D "${ARGS[@]}"

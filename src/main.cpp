@@ -386,15 +386,6 @@ main(int argc, char *argv[])
 				{
 					rt_problem_ptr->write_surface_point_profiles_Omega(output_file_Omega_mu, i, j);
 					rt_problem_ptr->write_surface_point_profiles_Omega_csv(output_file_Omega_mu, i, j, 14);
-
-					// TESTING purpose: write the CSV files too
-					// rt_problem_ptr->write_surface_point_profiles_csv(output_file_Omega_mu, i, j);
-
-					// if (rt_problem_ptr->mpi_rank_ == 0 and i == 0 and j == 0)
-					// {
-					// 	rt_problem_ptr->write_angular_grid_csv(output_file_angular_grid, i, j);
-					// 	rt_problem_ptr->write_frequencies_grid_csv(output_file_frequencies, i, j);
-					// }
 				}
 			}
 		}; // end lambda compute_arbitrary_beam
@@ -410,8 +401,8 @@ main(int argc, char *argv[])
 				for (int j = 0; j < N_y; ++j)
 				{
 					// const std::string output_file_Omega_mu	   = output_file + "_mu" + mu_str + "_chi" + chi_str;
-					const std::string output_file_frequencies  = output_file + "_frequencies";
-					const std::string output_file_angular_grid = output_file + "_angular_grid";
+					const std::string output_file_frequencies  = "frequencies_grid_Hz";
+					const std::string output_file_angular_grid = "angular_grid";
 
 					rt_problem_ptr->write_surface_point_profiles(output_file, i, j);
 
@@ -445,8 +436,8 @@ main(int argc, char *argv[])
 		// std::vector<Real>		mus_vec = {0.1, 0.3, 0.7, 1.0}; //// ATTENTION: arbitrary beam directions
 		// const std::vector<Real> chi_vec = {0.0, 1.963495408493621e-01};
 
-		std::vector<Real>		mus_vec = {}; //// ATTENTION: arbitrary beam directions
-		const std::vector<Real> chi_vec = {};
+		std::vector<Real>		mus_vec = {0.1, 0.3, 0.7, 1.0}; //// ATTENTION: arbitrary beam directions
+		const std::vector<Real> chi_vec = {0.0};
 
 		if (rt_problem_ptr->mpi_rank_ == 0 and mus_vec.size() == 0)
 		{
@@ -468,28 +459,39 @@ main(int argc, char *argv[])
 			}
 #endif
 
-			std::cout << "Arbitrary beams: [mu] ";
-			for (auto mu : mus_vec)
-			{
-				std::cout << mu << ", ";
-			}
-			std::cout << std::endl;
+			std::stringstream ss_ad;
 
-			// if (mus_extra.size() > 0) {
-			//   std::cout << "Extra beams: [mu] ";
-			//   for (auto mu : mus_extra) { std::cout << mu << ", "; }
-			//   std::cout << std::endl;
-			// }
+			ss_ad << "\n" << std::string(50, '=') << std::endl;
+			ss_ad << "Arbitrary Beam Directions" << std::endl;
+			ss_ad << std::string(50, '=') << std::endl;
+			ss_ad << std::setw(8) << "Beam #" << std::setw(15) << "mu" << std::setw(15) << "chi" << std::setw(12)
+				  << "theta (rad)" << std::endl;
+			ss_ad << std::string(50, '-') << std::endl;
 
-			std::cout << "Arbitrary beams: [chi] ";
-			for (auto chi : chi_vec) std::cout << chi << ", ";
-			std::cout << std::endl;
-			std::cout << "Arbitrary beams chi: ";
-			for (auto chi : chi_vec)
+			int beam_count = 0;
+			for (Real chi : chi_vec)
 			{
-				std::cout << chi << " ";
+				for (Real mu : mus_vec)
+				{
+					Real theta = std::acos(mu);
+					ss_ad << std::setw(8) << beam_count++ << std::setw(15) << std::fixed << std::setprecision(6) << mu
+						  << std::setw(15) << std::fixed << std::setprecision(6) << chi << std::setw(12) << std::fixed
+						  << std::setprecision(6) << theta << std::endl;
+				}
 			}
-			std::cout << std::endl;
+			ss_ad << std::string(50, '-') << std::endl;
+			ss_ad << "Total number of beams: " << beam_count << std::endl;
+			ss_ad << std::string(50, '=') << std::endl << std::endl;
+
+			std::cout << ss_ad.str();
+
+			if (!output_info_file_name.empty()) // <-- Add this check
+			{
+				std::ofstream output_file_info_ad(output_info_file_name, std::ios::app);
+				output_file_info_ad << ss_ad.str();
+				output_file_info_ad.close();
+			} // end if !output_info_file_name.empty()
+
 		} // end if mpi_rank_ == 0
 
 		std::cout.flush();
@@ -558,8 +560,8 @@ main(int argc, char *argv[])
 			if (rt_problem_ptr->mpi_rank_ == 0)
 			{
 				std::stringstream ss_mem;
-				ss_mem << "Total memory usage (vm_usage):      " << byte_to_GB * vm_usage << " GB" << std::endl;
-				ss_mem << "Total memory usage (resident_set):  " << byte_to_GB * resident_set << " GB" << std::endl;
+				ss_mem << "Total memory usage (vm_usage):               " << byte_to_GB * vm_usage << " GB" << std::endl;
+				ss_mem << "Total memory usage (resident_set):           " << byte_to_GB * resident_set << " GB" << std::endl;
 
 				std::string mem_petsc = rt_problem_ptr->print_PETSc_mem();
 				ss_mem << mem_petsc << std::endl << std::endl;
@@ -567,15 +569,24 @@ main(int argc, char *argv[])
 #if ACC_SOLAR_3D == _ON_
 				ss_mem << "Total number of devices (accelerators) used: " << devices_cnt << std::endl;
 #endif // ACC_SOLAR_3D
+				ss_mem << "MPI size:                                    " << mpi_size << std::endl;
 
 				ss_mem << std::fixed << std::setprecision(2) << std::endl;
-				ss_mem << "----------------------------------------------" << std::endl;
-				ss_mem << "Setup time:           " << (main_setup_time - main_start_time) << " seconds." << std::endl;
-				ss_mem << "Solve time:           " << (main_solve_end_time - main_setup_time) << " seconds." << std::endl;
-				ss_mem << "Post processing time: " << (main_end_time - main_solve_end_time) << " seconds." << std::endl;
-				ss_mem << "----------------------------------------------" << std::endl;
-				ss_mem << "Total execution time: " << (main_end_time - main_start_time) << " seconds." << std::endl
-					   << std::endl;
+				ss_mem << std::endl;
+				ss_mem << "╔════════════════════════════════════════════════╗" << std::endl;
+				ss_mem << "║           EXECUTION TIME SUMMARY               ║" << std::endl;
+				ss_mem << "╠════════════════════════════════════════════════╣" << std::endl;
+				ss_mem << "║ Setup time:            " << std::setw(10) << (main_setup_time - main_start_time)
+					   << " seconds      ║" << std::endl;
+				ss_mem << "║ Solve time:            " << std::setw(10) << (main_solve_end_time - main_setup_time)
+					   << " seconds      ║" << std::endl;
+				ss_mem << "║ Post processing time:  " << std::setw(10) << (main_end_time - main_solve_end_time)
+					   << " seconds      ║" << std::endl;
+				ss_mem << "╠════════════════════════════════════════════════╣" << std::endl;
+				ss_mem << "║ Total execution time:  " << std::setw(10) << (main_end_time - main_start_time)
+					   << " seconds      ║" << std::endl;
+				ss_mem << "╚════════════════════════════════════════════════╝" << std::endl;
+				ss_mem << std::endl;
 
 				std::cout << ss_mem.str();
 

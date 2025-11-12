@@ -6,25 +6,19 @@
 #SBATCH --ntasks=512
 
 ## to be defined !!!!!!!!! 
-## #SBATCH --time=02:15:00
+#SBATCH --time=00:30:00
 
-#### #SBATCH --cpus-per-task=1
-#### #SBATCH --account=iac90
 #SBATCH --job-name="TRIP_PRD_3D"
-### #SBATCH --qos=gp_resa
 
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=simone.riva@usi.ch
 
 #SBATCH --exclusive
-##### # SBATCH --mem_per_cpu=
 #SBATCH --cpus-per-task=1
-#SBATCH --time=00:30:00
 #SBATCH --account=u2
 #SBATCH --partition=debug
-#SBATCH --ntasks-per-socket=46
+#SBATCH --ntasks-per-socket=48
 
-### #SBATCH --job-name="TRIP"
 
 
 echo ""
@@ -56,6 +50,7 @@ export CRD=" --CRD "
 export CRD="  "
 
 export MPICH_GPU_SUPPORT_ENABLED=1
+
 ulimit -c 0
 ulimit -l unlimited
 ulimit -a
@@ -63,13 +58,13 @@ ulimit -a
 export MAIN_DATA_DIR=/capstor/scratch/cscs/sriva/PORTA
 
 export INPUT_DIR=${MAIN_DATA_DIR}/
-export OUTPUT_DIR=${MAIN_DATA_DIR}/output_PRD_T512_B/
+export OUTPUT_DIR=${MAIN_DATA_DIR}/output_PRD_T512_AR/
 
 ## For 32 x 32 grid size
 export INPUT_PMD=cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd
 
-export RTOL=1e-9
-export GMRES_RESTART0=30
+export RTOL=1e-5
+export GMRES_RESTART=30
 export MAX_ITERATIONS=15
 
 echo "INPUT_DIR: $INPUT_DIR"
@@ -77,8 +72,8 @@ echo "OUTPUT_DIR: $OUTPUT_DIR"
 echo "INPUT_CONFIG: $INPUT_CONFIG"
 echo "CRD: $CRD"
 
-export APP_PATH=/home/usi/usi441290/git/solar_3d/build
-export SCRIPT_DIR=/home/usi/usi441290/git/solar_3d/bin
+export APP_PATH=${HOME}/git/solar_3d/build
+export SCRIPT_DIR=${HOME}/git/solar_3d/bin
 
 echo ""
 echo "=========================================="
@@ -91,30 +86,35 @@ printf "%-30s %s\n" "INPUT_DIR:" "$INPUT_DIR"
 printf "%-30s %s\n" "OUTPUT_DIR:" "$OUTPUT_DIR"
 printf "%-30s %s\n" "INPUT_PMD:" "$INPUT_PMD"
 printf "%-30s %s\n" "RTOL:" "$RTOL"
-printf "%-30s %s\n" "GMRES_RESTART0:" "$GMRES_RESTART0"
+printf "%-30s %s\n" "GMRES_RESTART:" "$GMRES_RESTART"
 printf "%-30s %s\n" "MAX_ITERATIONS:" "$MAX_ITERATIONS"
 printf "%-30s %s\n" "APP_PATH:" "$APP_PATH"
 printf "%-30s %s\n" "SCRIPT_DIR:" "$SCRIPT_DIR"
 echo "=========================================="
 echo ""
 
+
+# Define arguments as a bash array
+ARGS=(
+    "$CRD"
+    "--input_dir" "$INPUT_DIR"
+    "--problem_pmd_file" "$INPUT_PMD"
+    "--output_dir" "$OUTPUT_DIR"
+    "-ksp_type" "fgmres"
+    "-ksp_gmres_restart" "$GMRES_RESTART"
+    "-ksp_max_it" "$MAX_ITERATIONS"
+    "-ksp_monitor"
+    "-ksp_view"
+    "-ksp_rtol" "$RTOL"
+)
+
+echo "Running command with MPS wrapper:"
+echo " srun --cpu-bind=socket ${SCRIPT_DIR}/mps-wrapper.sh ${APP_PATH}/solar_3D ${ARGS[@]}"
+echo ""
 echo ""
 echo "Starting TRIP ...... "
 echo ""
 
-
-export APP_PATH=/users/sriva/git/solar_3d/build
-
-
-srun --cpu-bind=socket   \
+srun --cpu-bind=socket \
       ${SCRIPT_DIR}/mps-wrapper.sh \
-      ${APP_PATH}/solar_3D $CRD \
-      --input_dir $INPUT_DIR  \
-      --problem_pmd_file $INPUT_PMD \
-      --output_dir $OUTPUT_DIR \
-      -ksp_type fgmres \
-      -ksp_gmres_restart $GMRES_RESTART0 \
-      -ksp_max_it $MAX_ITERATIONS \
-      -ksp_monitor \
-      -ksp_view \
-      -ksp_rtol $RTOL
+      ${APP_PATH}/solar_3D "${ARGS[@]}"
