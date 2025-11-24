@@ -2039,11 +2039,14 @@ void MF_context::set_up_emission_module(){
     // }
 
 
-    epsilon_fun_ = ecc_sh_ptr_->make_computation_function(components);    
-
+    epsilon_fun_ = ecc_sh_ptr_->make_computation_function(components);
     // Print out emission module
-    if (mpi_rank_ == 0) std::cout << ecc_sh_ptr_->emission_components_to_string();    
-    
+    if (mpi_rank_ == 0) std::cout << ecc_sh_ptr_->emission_components_to_string();  
+
+#if ACC_SOLAR_3D == _ON_
+	start_device_handler_fun_ = ecc_sh_ptr_->make_strat_device_handler_function(components);
+#endif
+
     // module for preconditioner 
     std::list<emission_coefficient_components> components_approx{    
         emission_coefficient_components::epsilon_pCRD_limit,        
@@ -2125,29 +2128,58 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
 
 #if ACC_SOLAR_3D == _ON_
 
-	int		  size_local_all;
+	int		  size_local_all = 0;
 	const int size_local = iend_local - istart_local;
 
-	MPI_Comm node_comm = MPI_COMM_NULL;
-	RII_epsilon_contrib::RII_contrib_MPI_Get_Node_Comm(node_comm);
-	MPI_Allreduce(&size_local, &size_local_all, 1, MPI_INT, MPI_MAX, node_comm);
+	if (not approx)
+	{
+		MPI_Comm node_comm = MPI_COMM_NULL;
+		RII_epsilon_contrib::RII_contrib_MPI_Get_Node_Comm(node_comm);
+		MPI_Allreduce(&size_local, &size_local_all, 1, MPI_INT, MPI_MAX, node_comm);
+	}
+	else
+	{
+		size_local_all = size_local;
+	}
+
+	const int node_rank = RII_epsilon_contrib::RII_contrib_MPI_Get_Node_Rank();
+    const bool is_device_handler = RII_epsilon_contrib::RII_contrib_MPI_Is_Device_Handler();
+
+	// if (not approx and false)
+	// {
+	// 	for (int ii = 0; ii < this->mpi_size_; ii++)
+	// 	{
+	// 		MPI_Barrier(MPI_COMM_WORLD);
+	// 		if (this->mpi_rank_ == ii)
+	// 		{
+	// 			std::cout << "Rank " << this->mpi_rank_ << " node_rank " << node_rank
+	// 					  << " Device handler: " << RII_epsilon_contrib::RII_contrib_MPI_Is_Device_Handler()
+	// 					  << " has istart_local " << istart_local << ", iend_local " << iend_local << ", size_local "
+	// 					  << size_local << std::endl;
+	// 		}
+	// 	}
+	// }
 
 	for (int idx = 0; idx < size_local_all; ++idx)
 	{
 		const int i_vec = idx + istart_local;
 
-		if (i_vec < iend_local)
+		if (not approx)
 		{
-			if (not approx)
-				RII_epsilon_contrib::RII_contrib_MPI_Set_Active();
+			if (i_vec < iend_local)
+			{
+				if (not approx) RII_epsilon_contrib::RII_contrib_MPI_Set_Active();
+			}
+			else
+			{
+				if (not approx)
+				{
+					RII_epsilon_contrib::RII_contrib_MPI_Set_Idle();
+					if (is_device_handler) start_device_handler_fun_();
+				}
+				continue;
+			}
 		}
-		else
-		{
-			if (not approx)
-				RII_epsilon_contrib::RII_contrib_MPI_Set_Idle();
-			continue;
-		}
-
 #else
 
 	for (int i_vec = istart_local; i_vec < iend_local; ++i_vec)

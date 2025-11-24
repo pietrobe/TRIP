@@ -91,6 +91,10 @@ struct MF_context {
 	rii_include::emission_coefficient_computation_3D::compute_node_3D_function_type epsilon_fun_; 
 	rii_include::emission_coefficient_computation_3D::compute_node_3D_function_type epsilon_fun_approx_; 
 	rii_include::offset_function_cartesian offset_fun_;	
+
+#if ACC_SOLAR_3D == _ON_
+	rii_include::emission_coefficient_computation_3D::start_device_handler_function_type start_device_handler_fun_;
+#endif
 	
 	// change data format
 	void field_to_vec(const Field_ptr_t field, Vec &v);

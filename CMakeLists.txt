@@ -6,6 +6,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${SOLAR_3D_ROOT_PATH}/cmake")
 project(par_moonolith_usage VERSION 1.0.0)
 
 include(CMakeFindDependencyMacro)
+find_package(PkgConfig REQUIRED)
 
 find_package(sgrid 0 REQUIRED)
 find_package(Boost 1.61 COMPONENTS program_options regex serialization filesystem system atomic  REQUIRED)
@@ -89,48 +90,55 @@ if(USE_ACC)
 endif()
 
 # find dependencies
+message(STATUS "Search Petsc")
+
 set(PETSC_TEST_RUNS TRUE)
-find_package(Petsc)
+set(ENV{PKG_CONFIG_PATH} $ENV{PETSC_DIR}/lib/pkgconfig)
 
-if(PETSC_FOUND)
-    list(APPEND UTOPIA_THIRDPARTY_INCLUDES ${PETSC_INCLUDES})
-    list(APPEND UTOPIA_THIRDPARTY_LIBRARIES ${PETSC_LIBRARIES})
+pkg_check_modules(PETSC REQUIRED IMPORTED_TARGET PETSc)
 
-    set(CMAKE_C_COMPILER ${PETSC_COMPILER})
+message(STATUS "Check Petsc done")
 
-    if(NOT MPI_CXX_COMPILER)
-        set(MPI_CXX_COMPILER $ENV{MPI_CXX_COMPILER})
-        message(STATUS "compiler ${MPI_CXX_COMPILER}")
-    endif()
+# if(PETSC_FOUND)
+#     message(STATUS "Enter Petsc")
+#     list(APPEND UTOPIA_THIRDPARTY_INCLUDES ${PETSC_INCLUDES})
+#     list(APPEND UTOPIA_THIRDPARTY_LIBRARIES ${PETSC_LIBRARIES})
 
-    if(MPI_CXX_COMPILER)
-        set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
-        set(CMAKE_CXX_COMPILER_DEBUG ${MPI_CXX_COMPILER})
-    else()
-        execute_process(COMMAND mpicxx -v RESULT_VARIABLE MPICXX_FAILED)
+#     set(CMAKE_C_COMPILER ${PETSC_COMPILER})
 
-        if(MPICXX_FAILED)
-            message(
-                STATUS
-                    "Using CMAKE compiler, you can define MPI_CXX_COMPILER=<alias_or_path_to_your_compiler>"
-            )
-        else()
-            message(STATUS "-----------------------------------------------")
-            message(
-                STATUS
-                    "\n[MPI] using mpicxx for compiling c++ files.\nIf you want to use your own compiler define MPI_CXX_COMPILER=<alias_or_path_to_your_compiler>"
-            )
-            message(STATUS "-----------------------------------------------")
-            set(CMAKE_CXX_COMPILER mpicxx)
-            set(CMAKE_CXX_COMPILER_DEBUG mpicxx)
-        endif()
-    endif()
+#     if(NOT MPI_CXX_COMPILER)
+#         set(MPI_CXX_COMPILER $ENV{MPI_CXX_COMPILER})
+#         message(STATUS "compiler ${MPI_CXX_COMPILER}")
+#     endif()
 
-    set(UTOPIA_WITH_PETSC TRUE)
-else()
-    message(WARNING "[Warning] Petsc not found")
-    set(UTOPIA_WITH_PETSC FALSE)
-endif()
+#     if(MPI_CXX_COMPILER)
+#         set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
+#         set(CMAKE_CXX_COMPILER_DEBUG ${MPI_CXX_COMPILER})
+#     else()
+#         execute_process(COMMAND mpicxx -v RESULT_VARIABLE MPICXX_FAILED)
+
+#         if(MPICXX_FAILED)
+#             message(
+#                 STATUS
+#                     "Using CMAKE compiler, you can define MPI_CXX_COMPILER=<alias_or_path_to_your_compiler>"
+#             )
+#         else()
+#             message(STATUS "-----------------------------------------------")
+#             message(
+#                 STATUS
+#                     "\n[MPI] using mpicxx for compiling c++ files.\nIf you want to use your own compiler define MPI_CXX_COMPILER=<alias_or_path_to_your_compiler>"
+#             )
+#             message(STATUS "-----------------------------------------------")
+#             set(CMAKE_CXX_COMPILER mpicxx)
+#             set(CMAKE_CXX_COMPILER_DEBUG mpicxx)
+#         endif()
+#     endif()
+
+#     set(UTOPIA_WITH_PETSC TRUE)
+# else()
+#     message(WARNING "[Warning] Petsc not found")
+#     set(UTOPIA_WITH_PETSC FALSE)
+# endif()
 
 # Configure header file
 set(SOLAR_3D_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
@@ -145,9 +153,9 @@ configure_file(
 
 # we use one of our examples here
 add_executable(solar_3D ${CMAKE_SOURCE_DIR}/src/main.cpp)
-# set(CMAKE_CXX_FLAGS  " -O3 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option ")
+set(CMAKE_CXX_FLAGS  " -O3 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option ")
 
-set(CMAKE_CXX_FLAGS  " -Ofast -fno-signed-zeros -fno-trapping-math -fassociative-math -march=native -mtune=native -mprefer-vector-width=512 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option -pedantic ")
+#set(CMAKE_CXX_FLAGS  " -Ofast -fno-signed-zeros -fno-trapping-math -fassociative-math -march=native -mtune=native -mprefer-vector-width=512 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option -pedantic ")
 
 add_library(rii SHARED IMPORTED)
 set_property(TARGET rii PROPERTY IMPORTED_LOCATION "${RII_ROOT_PATH}/build/librii.so")
@@ -164,7 +172,8 @@ target_include_directories(solar_3D PUBLIC
 )
 
 target_include_directories(solar_3D SYSTEM PUBLIC ${PETSC_INCLUDES})
-target_link_libraries(solar_3D PUBLIC ${PETSC_LIBRARIES})
+# target_link_libraries(solar_3D PUBLIC ${PETSC_LIBRARIES})
+target_link_libraries(solar_3D PUBLIC PkgConfig::PETSC)
 target_compile_definitions(solar_3D PUBLIC ${PETSC_DEFINITIONS})
 
 
