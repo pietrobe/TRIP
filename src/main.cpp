@@ -15,7 +15,7 @@
 
 // WARNING: if you want to use PORTA input for 3D setup, you need to set USE_PORTA_INPUT = 1
 // otherwise, it will use FAL-C input for 1D setup
-#define USE_PORTA_INPUT 1
+#define USE_PORTA_INPUT 0
 //////////////////////////////////////////////////////////////////////////
 
 // WARNING: if you want to use command line options, you need to set USE_CMD_LINE_OPTIONS = 1
