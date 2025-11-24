@@ -48,6 +48,10 @@ make cuda_arch=90 CXX=/apps/ACC/GCC/11.4.0/bin/g++ -j12
 
 Then, in the *rii* configure step of RII, use the flag:
 ```bash
+
+mkdir -p ${RII_MAIN_DIR}/rii-c/build/;
+cd ${RII_MAIN_DIR}/rii-c/build/;
+
 cmake .. -DDYNAMIC_LIBRARY=ON \
          -DENABLE_MPI=ON \
          -DGPU_AWARE_MPI=ON \
