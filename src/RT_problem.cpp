@@ -12,11 +12,11 @@
 void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, const char* filename_qel, const char* filename_llp, const char* filename_back)
 {
 	if (mpi_rank_ == 0) std::cout << "Reading PORTA input..."    << std::endl;
-	if (mpi_rank_ == 0) std::cout << "Reading .pmd input from "  << filename_pmd << std::endl;
-	if (mpi_rank_ == 0) std::cout << "Reading .llp input from "  << filename_llp << std::endl;
-	if (mpi_rank_ == 0) std::cout << "Reading .cul input from "  << filename_cul << std::endl;
-	if (mpi_rank_ == 0) std::cout << "Reading .qel input from "  << filename_qel << std::endl;	
-	if (mpi_rank_ == 0) std::cout << "Reading .back input from " << filename_back << std::endl;
+	if (mpi_rank_ == 0) std::cout << "Reading .pmd input from:  "  << filename_pmd << std::endl;
+	if (mpi_rank_ == 0) std::cout << "Reading .llp input from:  "  << filename_llp << std::endl;
+	if (mpi_rank_ == 0) std::cout << "Reading .cul input from:  "  << filename_cul << std::endl;
+	if (mpi_rank_ == 0) std::cout << "Reading .qel input from:  "  << filename_qel << std::endl;	
+	if (mpi_rank_ == 0) std::cout << "Reading .back input from: "  << filename_back << std::endl;
 
 	// use two quadrature intervals for the theta grid
 	const bool double_GL = false; ////////// DANGER: HARDCODED 
@@ -173,6 +173,8 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 
 	auto Doppler_width_dev = Doppler_width_->view_device();
 
+	
+
 	auto g_dev = space_grid_->view_device();	
 
 	// fill field 
@@ -201,7 +203,16 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 		// compute Qel and Cul
 		Cul_dev.ref(i,j,k) = read_single_node_single_field(f_cul,i_global,j_global,k_reverse);					
 		Qel_dev.ref(i,j,k) = read_single_node_single_field(f_qel,i_global,j_global,k_reverse);		
-		Nl_dev.ref(i,j,k)  = read_single_node_single_field(f_llp,i_global,j_global,k_reverse);			
+		Nl_dev.ref(i,j,k)  = read_single_node_single_field(f_llp,i_global,j_global,k_reverse);		
+
+        // compute thermalization param 
+     // epsilon_dev.ref(i,j,k) = Cul_dev.ref(i,j,k)/(Cul_dev.ref(i,j,k) + Aul_);
+        epsilon_dev.ref(i,j,k) = Cul_dev.ref(i,j,k)/(Cul_dev.ref(i,j,k) + Aul_);
+
+		// /// Hardcoded Qel
+		// const double C_lu = 0.0; // hardcoded to zero
+		// // const double Pi = 3.1415926535897932384626433;
+		// Qel_dev.ref(i,j,k) =  (4.0 * PI * Doppler_width_dev.ref(i,j,k)) * a_dev.ref(i,j,k)  - Aul_ - Cul_dev.ref(i,j,k) - C_lu;
 		
 		// compute thermalization param 
 		epsilon_dev.ref(i,j,k) = Cul_dev.ref(i,j,k)/(Cul_dev.ref(i,j,k) + Aul_);		
@@ -217,18 +228,18 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 			B_dev.block(i, j, k)[2] = B_spherical[2]; 
 
 			// // /*  hardcoded B field */ ////////////////////
-			/*
-			const double B_field_hardcoded = 1000.0; // [Gauss]
-			const double theta_B_field = 1.5707963268; // [rad]
-			const double chi_B_field = 0.0; // [rad]
-			if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD: of:    " <<  B_field_hardcoded << " Gauss" << std::endl;
-			if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD, theta: " <<  theta_B_field << " rad" << std::endl;
-			if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD, chi:   " <<  chi_B_field << " rad" << std::endl;
+			
+			// const double B_field_hardcoded = 16.0; // [Gauss]
+			// const double theta_B_field = 1.5707963268; // [rad]
+			// const double chi_B_field = 0.0; // [rad]
+			// if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD: of:    " <<  B_field_hardcoded << " Gauss" << std::endl;
+			// if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD, theta: " <<  theta_B_field << " rad" << std::endl;
+			// if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD, chi:   " <<  chi_B_field << " rad" << std::endl;
 
-			B_dev.block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(B_field_hardcoded) ; // converting to Larmor frequency					
-			B_dev.block(i, j, k)[1] = theta_B_field;
-			B_dev.block(i, j, k)[2] = chi_B_field; 
-			*/
+			// B_dev.block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(B_field_hardcoded) ; // converting to Larmor frequency					
+			// B_dev.block(i, j, k)[1] = theta_B_field;
+			// B_dev.block(i, j, k)[2] = chi_B_field; 
+			
 			// // end hardcoded B field ////////////////////
 
 		}
@@ -268,18 +279,21 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 			Real kappa, sigma, epsilon;
 			read_single_node_triple_field(f_back, i_global, j_global, k_reverse, kappa, sigma, epsilon);
 
-			const int sigma_flag = 0; // hardcoded to 0.0 as in PORTA
+			const bool sigma_flag = false; // hardcoded to 0.0 as in PORTA // TODO add a specific option.
+			double sigma_mult = 0.0;
 
-			if (mpi_rank_ == 0 and i == 0 and j == 0 and k == 0 and sigma_flag == 0) std::cout << "WARNING: sigma continuum = 0 HARDCODED! " << __FILE__ << ":" << __LINE__ << std::endl;
+			if (mpi_rank_ == 0 and i == 0 and j == 0 and k == 0 and sigma_flag == false) {
+				std::cout << "WARNING: sigma continuum = 0 HARDCODED! " << __FILE__ << ":" << __LINE__ << std::endl;
+				sigma_mult = 0.0;
+			}
+			else if (mpi_rank_ == 0 and i == 0 and j == 0 and k == 0 and sigma_flag == true) {
+				std::cout << "WARNING: sigma continuum = " << sigma << " from back file " << __FILE__ << ":" << __LINE__ << std::endl;
+				sigma_mult = 1.0;
+			}
 
 			for (int n = 0; n < N_nu_; ++n)
 			{			
-				// hardcoded to 0.0 as in PORTA
-				// sigma_dev.block(   i, j, k)[n] = 0.0;		
-				// k_c_dev.block(     i, j, k)[n] = tmp_vector[12];		
-				// eps_c_th_dev.block(i, j, k)[n] = tmp_vector[13];
-
-				sigma_dev.block(   i, j, k)[n] = 0.0; // double(sigma * double(sigma_flag));
+				sigma_dev.block(   i, j, k)[n] = double(sigma * sigma_mult);
 				k_c_dev.block(     i, j, k)[n] = kappa;
 				eps_c_th_dev.block(i, j, k)[n] = epsilon;	
 
@@ -442,6 +456,9 @@ void RT_problem::read_3D(const char* filename){
 	N_theta_ *= 2;
 	N_chi_   *= 4;
 
+    // N_theta_ = 10; // HARDCODED // DANGER 
+	// N_chi_   = 20; // HARDCODED
+
 	if (mpi_rank_ == 0) std::cout << "N_theta = " << N_theta_ << ", N_chi = " << N_chi_ << ", from PORTA input." << std::endl;
 		
 	// some irrelevant data	
@@ -570,11 +587,14 @@ void RT_problem::read_3D(const char* filename){
 
 		// RH Doppler_width to compute Qel
 		const double xi = 1e5 * xi_vec[k_reverse];; // with conversion to cm/s
-		const double Dw_RH = Eu_ * std::sqrt(xi * xi + 2 * k_B_ * T_dev.ref(i,j,k) / mass_real_RH);		
+		const double Dw_RH = Eu_ * std::sqrt(xi * xi + 2 * k_B_ * T_dev.ref(i,j,k) / mass_real_RH);	
 
 		// compute Qel
 		Qel_dev.ref(i,j,k) = a_dev.ref(i,j,k) * (4 * PI * Dw_RH) - Aul_RH;
 
+		// compute thermalization param 
+      // epsilon_dev.ref(i,j,k) = Cul_dev.ref(i,j,k)/(Cul_dev.ref(i,j,k) + Aul_RH);
+		
 		// convert to spherical coordinates
 		auto B_spherical = convert_cartesian_to_spherical(tmp_vector[3], 
 														  tmp_vector[4],
@@ -586,18 +606,19 @@ void RT_problem::read_3D(const char* filename){
 			B_dev.block(i, j, k)[2] = B_spherical[2]; 
 
 			// // /*  hardcoded B field */ ////////////////////
-			/*
-			const double B_field_hardcoded = 1000.0; // [Gauss]
-			const double theta_B_field = 1.5707963268; // [rad]
-			const double chi_B_field = 0.0; // [rad]
-			if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD: of:    " <<  B_field_hardcoded << " Gauss" << std::endl;
-			if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD, theta: " <<  theta_B_field << " rad" << std::endl;
-			if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD, chi:   " <<  chi_B_field << " rad" << std::endl;
+			
+			// const double B_field_hardcoded = 17.0; // [Gauss]
+			// const double theta_B_field = 1.5707963268; // [rad]
+			// const double chi_B_field = 0.0; // [rad]
+			// if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD: of:    " <<  B_field_hardcoded << " Gauss" << std::endl;
+			// if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD, theta: " <<  theta_B_field << " rad" << std::endl;
+			// if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD, chi:   " <<  chi_B_field << " rad" << std::endl;
 
-			B_dev.block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(B_field_hardcoded) ; // converting to Larmor frequency					
-			B_dev.block(i, j, k)[1] = theta_B_field;
-			B_dev.block(i, j, k)[2] = chi_B_field; 
-			*/
+			// B_dev.block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(B_field_hardcoded) ; // converting to Larmor frequency					
+			// B_dev.block(i, j, k)[1] = theta_B_field;
+			// B_dev.block(i, j, k)[2] = chi_B_field; 
+			
+		
 			// // end hardcoded B field ////////////////////
 
 		}
@@ -624,6 +645,24 @@ void RT_problem::read_3D(const char* filename){
 			v_b_dev.block(i, j, k)[0] = v_spherical[0];					
 			v_b_dev.block(i, j, k)[1] = v_spherical[1];					
 			v_b_dev.block(i, j, k)[2] = v_spherical[2];	
+			
+			//////// hardcoded velocities DANDGER !!!!!!!
+			/*
+			const double Vx = 500000.0; // hardcoded to zero
+			const double Vy = 0.0; // hardcoded to zero
+			const double Vz = 0.0; // hardcoded to zero
+
+			if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED Vx: " <<  Vx << " km/s" << std::endl;
+			if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED Vy: " <<  Vy << " km/s" << std::endl;
+			if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED Vz: " <<  Vz << " km/s" << std::endl;
+                        
+
+			v_b_dev.block(i, j, k)[0] = Vx;
+			v_b_dev.block(i, j, k)[1] = Vy;
+			v_b_dev.block(i, j, k)[2] = Vz;
+			*/
+			/////////// end hardcoded velocities
+
 		}
 		
 		
@@ -2118,7 +2157,14 @@ void RT_problem::set_up(){
 
 		k_L_dev.ref(i,j,k) = tmp_const * Nl_dev.ref(i,j,k);		
 		
-		Doppler_width_dev.ref(i,j,k) = dE * std::sqrt(xi * xi + 2 * k_B_ * T / mass_real);			
+		Doppler_width_dev.ref(i,j,k) = dE * std::sqrt(xi * xi + 2 * k_B_ * T / mass_real);	
+
+		// const double C_lu = 0.0; // hardcoded to zero?
+		// const double Pi = 3.1415926535897932384626433;
+		// Qel_dev.ref(i,j,k) =  (4.0 * PI * Doppler_width_dev.ref(i,j,k)) * a_dev.ref(i,j,k)  - Aul_ - Cul_dev.ref(i,j,k) - C_lu;		
+		// Qel_dev.ref(i,j,k) =  (4.0 * PI * Doppler_width_dev.ref(i,j,k)) * a_dev.ref(i,j,k)  - Aul_ - Cul;
+		// Qel_dev.ref(i,j,k) = 0.0; // DANGER - hardcoded to zero
+ 
 
 		// if (use_PORTA_input_) a_dev.ref(i,j,k) = (Aul_ + Cul + Qel_dev.ref(i,j,k)) / (4 * PI * Doppler_width_dev.ref(i,j,k));
 
@@ -2953,7 +2999,7 @@ void RT_problem::set_grid_partition() // TODO remove hardcoding
 		{
 			mpi_size_z_ = 25;
 			mpi_size_x_ = 24;
-			mpi_size_y_ = 32;
+			mpi_size_y_ = 32;			
 		}
 		else
 		{
