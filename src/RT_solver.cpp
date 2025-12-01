@@ -2,6 +2,18 @@
 #include "cpu_clock.h"
 #include <string>
 
+
+namespace {
+unsigned int RII_contrib_block_size = 1;
+}
+
+void set_RII_contrib_block_size(const unsigned int block_size) {
+  RII_contrib_block_size = block_size;
+}
+
+unsigned int get_RII_contrib_block_size() { return RII_contrib_block_size; }
+
+
 //////////////////////////////////////////////////////
 // Jiri functions for find_prolongation
 static bool wError(const t_intersect &inters) {
@@ -2677,6 +2689,8 @@ void MF_context::set_up_emission_module(){
 
     fsf_sh_ptr->make_formal_solver();
 
+    ecc_sh_ptr_->set_RII_contrib_block_size(get_RII_contrib_block_size());
+
     std::list<emission_coefficient_components> components;    
 
     // set emissivity module
@@ -2754,11 +2768,14 @@ void MF_context::set_up_emission_module(){
         break;
     }
 
-    epsilon_fun_ = ecc_sh_ptr_->make_computation_function(components);    
-
+    epsilon_fun_ = ecc_sh_ptr_->make_computation_function(components);
     // Print out emission module
-    if (mpi_rank_ == 0) std::cout << ecc_sh_ptr_->emission_components_to_string();    
-    
+    if (mpi_rank_ == 0) std::cout << ecc_sh_ptr_->emission_components_to_string();  
+
+#if ACC_SOLAR_3D == _ON_
+	start_device_handler_fun_ = ecc_sh_ptr_->make_strat_device_handler_function(components);
+#endif
+
     // module for preconditioner 
     std::list<emission_coefficient_components> components_approx{    
         emission_coefficient_components::epsilon_pCRD_limit       
@@ -2854,11 +2871,70 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
     int counter_i = 0;
     int counter_j = 0;
     int counter_k = 0;
-    
-    for (int i_vec = istart_local; i_vec < iend_local; ++i_vec)
-    {
-    	// set indeces
+
+#if ACC_SOLAR_3D == _ON_
+
+	int		  size_local_all = 0;
+	const int size_local = iend_local - istart_local;
+
+	if (not approx)
+	{
+		MPI_Comm node_comm = MPI_COMM_NULL;
+		RII_epsilon_contrib::RII_contrib_MPI_Get_Node_Comm(node_comm);
+		MPI_Allreduce(&size_local, &size_local_all, 1, MPI_INT, MPI_MAX, node_comm);
+	}
+	else
+	{
+		size_local_all = size_local;
+	}
+
+	const int node_rank = RII_epsilon_contrib::RII_contrib_MPI_Get_Node_Rank();
+    const bool is_device_handler = RII_epsilon_contrib::RII_contrib_MPI_Is_Device_Handler();
+
+	// if (not approx and false)
+	// {
+	// 	for (int ii = 0; ii < this->mpi_size_; ii++)
+	// 	{
+	// 		MPI_Barrier(MPI_COMM_WORLD);
+	// 		if (this->mpi_rank_ == ii)
+	// 		{
+	// 			std::cout << "Rank " << this->mpi_rank_ << " node_rank " << node_rank
+	// 					  << " Device handler: " << RII_epsilon_contrib::RII_contrib_MPI_Is_Device_Handler()
+	// 					  << " has istart_local " << istart_local << ", iend_local " << iend_local << ", size_local "
+	// 					  << size_local << std::endl;
+	// 		}
+	// 	}
+	// }
+
+	for (int idx = 0; idx < size_local_all; ++idx)
+	{
+		const int i_vec = idx + istart_local;
+
+		if (not approx)
+		{
+			if (i_vec < iend_local)
+			{
+				if (not approx) RII_epsilon_contrib::RII_contrib_MPI_Set_Active();
+			}
+			else
+			{
+				if (not approx)
+				{
+					RII_epsilon_contrib::RII_contrib_MPI_Set_Idle();
+					if (is_device_handler) this->start_device_handler_fun_();
+				}
+				continue;
+			}
+		}
+#else
+
+	for (int i_vec = istart_local; i_vec < iend_local; ++i_vec)
+	{
+
+#endif
+		// set indeces
     	std::iota(ix, ix + block_size, i_vec * block_size);
+        // std::iota(ix.begin(), ix.end(), i_vec * block_size);
 
         // get I field 
         ierr = VecGetValues(I_vec, block_size, ix, &input[0]);CHKERRV(ierr);   
@@ -3269,8 +3345,8 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
     std::vector<double> input(block_size);        
 
     // PetscInt ix[block_size];
-    std::vector<PetscInt> ix;
-    ix.resize(block_size);
+    PetscInt *ix = nullptr;
+    ierr = PetscMalloc1(block_size, &ix);CHKERRV(ierr);
 
     PetscInt istart, iend; 
     ierr = VecGetOwnershipRange(I_vec, &istart, &iend);CHKERRV(ierr);   
@@ -3289,11 +3365,11 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
     {
         // set indeces
         // std::iota(ix, ix + block_size, i_vec * block_size);
-        std::iota(ix.begin(), ix.end(), i_vec * block_size);
+        std::iota(ix, ix + block_size, i_vec * block_size);
 
         // get I field 
         // ierr = VecGetValues(I_vec, block_size, ix, &input[0]);CHKERRV(ierr);
-        ierr = VecGetValues(I_vec, block_size, ix.data(), &input[0]);CHKERRV(ierr);   
+        ierr = VecGetValues(I_vec, block_size, ix, &input[0]);CHKERRV(ierr);   
 
         // compute grid indeces from Vec index i_vec
         i = i_start + counter_i;
@@ -3403,9 +3479,10 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
             counter_k++;
         }
 
-    ierr = PetscFree(ix);CHKERRV(ierr);   
         // IQUV_matrix_sh_ptr = nullptr;
     }  
+
+    ierr = PetscFree(ix);CHKERRV(ierr);
 
 #ifdef DEBUG_MU_ARBITRARY
     if (mpi_rank_ == 0)

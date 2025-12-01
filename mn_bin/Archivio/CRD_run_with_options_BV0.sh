@@ -15,7 +15,7 @@
 #SBATCH --qos=gp_resa
 
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=simone.riva@usi.ch
+#SBATCH --mail-user=my.email
 
 #### #SBATCH --constraint=highmem
 

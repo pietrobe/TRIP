@@ -11,6 +11,9 @@ extern PetscErrorCode UserMult_approx(Mat mat,Vec x,Vec y);
 extern PetscErrorCode MF_pc_Destroy(PC pc);
 extern PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y);
 
+unsigned int get_RII_contrib_block_size();
+
+void set_RII_contrib_block_size(const unsigned int block_size);
 
 // structs for ray - grid intersection 
 typedef struct t_intersect {
@@ -113,6 +116,10 @@ struct MF_context {
 	rii_include::emission_coefficient_computation_3D::compute_node_3D_function_eps_from_JKQ epsilon_fun_J_KQ_; 
 	rii_include::emission_coefficient_computation_3D::compute_node_3D_function_JKQ_vals_type compute_JKQ_values_;
 	rii_include::offset_function_cartesian offset_fun_;	
+
+#if ACC_SOLAR_3D == _ON_
+	rii_include::emission_coefficient_computation_3D::start_device_handler_function_type start_device_handler_fun_;
+#endif
 	
 	// change data format
 	void field_to_vec(const Field_ptr_t field, Vec &v, const int block_size = -1);
