@@ -2175,7 +2175,7 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
 				if (not approx)
 				{
 					RII_epsilon_contrib::RII_contrib_MPI_Set_Idle();
-					if (is_device_handler) start_device_handler_fun_();
+					if (is_device_handler) this->start_device_handler_fun_();
 				}
 				continue;
 			}
