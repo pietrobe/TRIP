@@ -2933,8 +2933,8 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
 
 #endif
 		// set indeces
-    	// std::iota(ix, ix + block_size, i_vec * block_size);
-        std::iota(ix.begin(), ix.end(), i_vec * block_size);
+    	std::iota(ix, ix + block_size, i_vec * block_size);
+        // std::iota(ix.begin(), ix.end(), i_vec * block_size);
 
         // get I field 
         ierr = VecGetValues(I_vec, block_size, ix, &input[0]);CHKERRV(ierr);   
@@ -3345,8 +3345,8 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
     std::vector<double> input(block_size);        
 
     // PetscInt ix[block_size];
-    std::vector<PetscInt> ix;
-    ix.resize(block_size);
+    PetscInt *ix = nullptr;
+    ierr = PetscMalloc1(block_size, &ix);CHKERRV(ierr);
 
     PetscInt istart, iend; 
     ierr = VecGetOwnershipRange(I_vec, &istart, &iend);CHKERRV(ierr);   
@@ -3365,11 +3365,11 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
     {
         // set indeces
         // std::iota(ix, ix + block_size, i_vec * block_size);
-        std::iota(ix.begin(), ix.end(), i_vec * block_size);
+        std::iota(ix, ix + block_size, i_vec * block_size);
 
         // get I field 
         // ierr = VecGetValues(I_vec, block_size, ix, &input[0]);CHKERRV(ierr);
-        ierr = VecGetValues(I_vec, block_size, ix.data(), &input[0]);CHKERRV(ierr);   
+        ierr = VecGetValues(I_vec, block_size, ix, &input[0]);CHKERRV(ierr);   
 
         // compute grid indeces from Vec index i_vec
         i = i_start + counter_i;
@@ -3479,9 +3479,10 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
             counter_k++;
         }
 
-    ierr = PetscFree(ix);CHKERRV(ierr);   
         // IQUV_matrix_sh_ptr = nullptr;
     }  
+
+    ierr = PetscFree(ix);CHKERRV(ierr);
 
 #ifdef DEBUG_MU_ARBITRARY
     if (mpi_rank_ == 0)

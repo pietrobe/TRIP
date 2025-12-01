@@ -570,8 +570,8 @@ main(int argc, char *argv[])
 				ss_mem << "Total memory usage (vm_usage):               " << byte_to_GB * vm_usage << " GB" << std::endl;
 				ss_mem << "Total memory usage (resident_set):           " << byte_to_GB * resident_set << " GB" << std::endl;
 
-				std::string mem_petsc = rt_problem_ptr->print_PETSc_mem();
-				ss_mem << mem_petsc << std::endl << std::endl;
+				print_PETSc_mem();
+				// ss_mem << mem_petsc << std::endl << std::endl;
 
 #if ACC_SOLAR_3D == _ON_
 				ss_mem << "Total number of devices (accelerators) used: " << devices_cnt << std::endl;
