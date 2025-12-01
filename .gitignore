@@ -59,3 +59,4 @@ output/surface_profiles_test/profiles_PRD_0_0.m
 scripts/read_field.asv
 prove_cpp/a.out
 prove_cpp/readbin.cpp
+src/configure.h

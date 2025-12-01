@@ -1,0 +1,32 @@
+#ifndef SOLAR_3D_CONFIGURE_H
+#define SOLAR_3D_CONFIGURE_H
+
+#define _ON_ 1
+#define _OFF_ 0
+
+// Version information
+#define SOLAR_3D_VERSION_MAJOR @SOLAR_3D_VERSION_MAJOR@
+#define SOLAR_3D_VERSION_MINOR @SOLAR_3D_VERSION_MINOR@
+#define SOLAR_3D_VERSION_PATCH @SOLAR_3D_VERSION_PATCH@
+#define SOLAR_3D_VERSION "@PROJECT_VERSION@"
+
+// Build paths
+#define SOLAR_3D_ROOT_PATH "@SOLAR_3D_ROOT_PATH@"
+#define RII_ROOT_PATH "@RII_ROOT_PATH@"
+
+// Feature flags
+#cmakedefine UTOPIA_WITH_PETSC
+#cmakedefine PETSC_FOUND
+
+// Compiler information
+#define CMAKE_CXX_COMPILER "@CMAKE_CXX_COMPILER@"
+#define CMAKE_BUILD_TYPE "@CMAKE_BUILD_TYPE@"
+
+// Boost configuration
+#define BOOST_VERSION "@Boost_VERSION@"
+#define BOOST_ROOT "@BOOST_ROOT@"
+
+#define ACC_SOLAR_3D @ACC_SOLAR_3D@
+#define LIMIT_OUT_DEVICE_MEMORY_USAGE 320
+
+#endif // SOLAR_3D_CONFIGURE_H

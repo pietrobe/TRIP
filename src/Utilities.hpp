@@ -10,6 +10,10 @@
 #include "Legendre_rule.hpp"
 #include "Faddeeva.hpp"
 #include "Rotation_matrix.hpp"
+#include "configure.h"
+
+
+#define RII_CONTRIB_BLOCK_SIZE  (250)
 
 using Real = double; 
 
