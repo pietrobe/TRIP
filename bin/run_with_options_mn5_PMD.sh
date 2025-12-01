@@ -11,7 +11,7 @@
 #SBATCH --qos=acc_debug
 
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=simone.riva@usi.ch
+#SBATCH --mail-user=my.email
 
 #SBATCH --exclusive
 #SBATCH --cpus-per-task=1
