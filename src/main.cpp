@@ -401,8 +401,8 @@ main(int argc, char *argv[])
 				for (int j = 0; j < N_y; ++j)
 				{
 					// const std::string output_file_Omega_mu	   = output_file + "_mu" + mu_str + "_chi" + chi_str;
-					const std::string output_file_frequencies  = "frequencies_grid_Hz";
-					const std::string output_file_angular_grid = "angular_grid";
+					const std::string output_file_frequencies  = (output_path / "frequencies_grid_Hz").string();
+					const std::string output_file_angular_grid = (output_path / "angular_grid").string();
 
 					rt_problem_ptr->write_surface_point_profiles(output_file, i, j);
 
