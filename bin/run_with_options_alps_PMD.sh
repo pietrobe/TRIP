@@ -3,20 +3,20 @@
 ### to be defined, 12288 is tested !!!!!!!!!
 ### #SBATCH --ntasks=12288
 ### #SBATCH --ntasks=16384
-#SBATCH --ntasks=512
+#SBATCH --ntasks=6144
 
 ## to be defined !!!!!!!!! 
-#SBATCH --time=00:30:00
+#SBATCH --time=01:30:00
 
 #SBATCH --job-name="TRIP_PRD_3D"
 
-#SBATCH --mail-type=ALL
-#SBATCH --mail-user=my.email
+## #SBATCH --mail-type=ALL
+## #SBATCH --mail-user=my.email
 
 #SBATCH --exclusive
 #SBATCH --cpus-per-task=1
-#SBATCH --account=u2
-#SBATCH --partition=debug
+#SBATCH --account=c40
+#SBATCH --partition=normal
 #SBATCH --ntasks-per-socket=48
 
 
@@ -58,14 +58,14 @@ ulimit -a
 export MAIN_DATA_DIR=/capstor/scratch/cscs/sriva/PORTA
 
 export INPUT_DIR=${MAIN_DATA_DIR}/
-export OUTPUT_DIR=${MAIN_DATA_DIR}/output_PRD_T512_AR/
+export OUTPUT_DIR=${MAIN_DATA_DIR}/output_PRD_T32x32_AR/
 
 ## For 32 x 32 grid size
-export INPUT_PMD=cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd
+export INPUT_PMD=cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_32x32x133.pmd
 
 export RTOL=1e-5
 export GMRES_RESTART=30
-export MAX_ITERATIONS=15
+export MAX_ITERATIONS=2
 
 echo "INPUT_DIR: $INPUT_DIR"
 echo "OUTPUT_DIR: $OUTPUT_DIR"
