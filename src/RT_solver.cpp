@@ -2910,27 +2910,20 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
 	{
 		const int i_vec = idx + istart_local;
 
-		if (not approx)
-		{
-			if (i_vec < iend_local)
-			{
-				if (not approx) RII_epsilon_contrib::RII_contrib_MPI_Set_Active();
-			}
-			else
-			{
-				if (not approx)
-				{
-					RII_epsilon_contrib::RII_contrib_MPI_Set_Idle();
-					if (is_device_handler) this->start_device_handler_fun_();
-				}
-				continue;
-			}
-		}
-        else 
+        if (not approx)
         {
-            // approx case, all ranks active
-            if (i_vec >= iend_local) break;
+            if (i_vec < iend_local)
+            {
+                RII_epsilon_contrib::RII_contrib_MPI_Set_Active();
+            }
+            else
+            {
+                RII_epsilon_contrib::RII_contrib_MPI_Set_Idle();
+                if (is_device_handler) this->start_device_handler_fun_();
+                continue;
+            }
         }
+
 #else
 
 	for (int i_vec = istart_local; i_vec < iend_local; ++i_vec)
