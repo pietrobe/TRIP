@@ -2925,12 +2925,10 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
 				}
 				continue;
 			}
-		}
-        else 
-        {
+		} else {
             // approx case, all ranks active
-            if (i_vec >= iend_local) break;
-        }
+	            if (i_vec >= iend_local) break;
+        	}
 #else
 
 	for (int i_vec = istart_local; i_vec < iend_local; ++i_vec)
