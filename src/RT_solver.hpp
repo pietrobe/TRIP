@@ -55,7 +55,7 @@ struct MF_context {
 	const bool use_always_long_ray_  = true;
 
 	// reduced models flags for preconditioner
-	const bool unpolarized_prec_ = true; 
+	const bool unpolarized_prec_ = false;
 	const bool use_J_KQ_         = false; 
 	const int J_KQ_size_         = 18;
 	int tot_J_KQ_size_; // e.g. N_s * J_KQ_size_

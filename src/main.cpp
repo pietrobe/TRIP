@@ -3,14 +3,12 @@
 #include "Test_rii_include.hpp"
 #include "tools.h"
 
-#include "tools.h"
-#include <chrono>
-#include <string>
 #include <chrono>
 #include <filesystem>
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include "tools.h"
 
 // WARNING: if you want to use PORTA input for 3D setup, you need to set
 // USE_PORTA_INPUT = 1 otherwise, it will use FAL-C input for 1D setup
@@ -143,8 +141,8 @@ main(int argc, char *argv[])
 		// const std::filesystem::path main_input_dir	= "/scratch/snx3000/pietrob/Comparison-TRIP-PORTA/a63/";
 		// const std::filesystem::path main_output_dir = "/scratch/snx3000/pietrob/Comparison-TRIP-PORTA/a63/output";
 
-		  const std::filesystem::path main_input_dir  = "../input/PORTA/";  
-  const std::filesystem::path main_output_dir = "/gpfs/projects/ehpc238/output";
+		const std::filesystem::path main_input_dir	= "../input/PORTA/";
+		const std::filesystem::path main_output_dir = "/gpfs/projects/ehpc238/output";
 #endif
 		////////////////////////////////////////////////////////////////////////////
 
@@ -564,11 +562,14 @@ main(int argc, char *argv[])
 
 			rii::process_mem_usage(vm_usage, resident_set);
 
+			print_PETSc_mem();
+
 			if (rt_problem_ptr->mpi_rank_ == 0)
 			{
 				std::stringstream ss_mem;
 				ss_mem << "Total memory usage (vm_usage):               " << byte_to_GB * vm_usage << " GB" << std::endl;
-				ss_mem << "Total memory usage (resident_set):           " << byte_to_GB * resident_set << " GB" << std::endl;
+				ss_mem << "Total memory usage (resident_set):           " << byte_to_GB * resident_set << " GB"
+					   << std::endl;
 
 				print_PETSc_mem();
 				// ss_mem << mem_petsc << std::endl << std::endl;

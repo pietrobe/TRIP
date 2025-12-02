@@ -2856,7 +2856,7 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
     std::vector<double> output(block_size); 
 
     //PetscInt ix[block_size];
-    PetscInt *ix;
+    PetscInt *ix = nullptr;
     ierr = PetscMalloc1(block_size, &ix);CHKERRV(ierr); 
 
     PetscInt istart, iend; 
@@ -2926,6 +2926,11 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
 				continue;
 			}
 		}
+        else 
+        {
+            // approx case, all ranks active
+            if (i_vec >= iend_local) break;
+        }
 #else
 
 	for (int i_vec = istart_local; i_vec < iend_local; ++i_vec)
