@@ -90,7 +90,8 @@ if(USE_ACC)
 endif()
 
 # find dependencies
-message(STATUS "Search Petsc")
+message(STATUS "Search Petsc:")
+message(STATUS "*  PETSC_DIR: "  $ENV{PETSC_DIR})
 
 set(PETSC_TEST_RUNS TRUE)
 set(ENV{PKG_CONFIG_PATH} $ENV{PETSC_DIR}/lib/pkgconfig)
