@@ -58,7 +58,7 @@ ulimit -a
 export MAIN_DATA_DIR=/capstor/scratch/cscs/sriva/PORTA
 
 export INPUT_DIR=${MAIN_DATA_DIR}/
-export OUTPUT_DIR=${MAIN_DATA_DIR}/output_PRD_T32x32_AR/
+iexport OUTPUT_DIR=${MAIN_DATA_DIR}/output_PRD_T32x32_AR_VII/
 
 ## For 32 x 32 grid size
 export INPUT_PMD=cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_32x32x133.pmd
