@@ -2850,14 +2850,15 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
     const int j_end = j_start + g_dev.dim[1];
     const int k_end = k_start + g_dev.dim[2];   
 
-    const int block_size = RT_problem_->block_size_;   
+    const PetscInt block_size = RT_problem_->block_size_;   
 	
     std::vector<double>  input(block_size);        
     std::vector<double> output(block_size); 
 
     //PetscInt ix[block_size];
-    PetscInt *ix = nullptr;
-    ierr = PetscMalloc1(block_size, &ix);CHKERRV(ierr); 
+    // PetscInt *ix = nullptr;
+    // ierr = PetscMalloc1(block_size, &ix);CHKERRV(ierr); 
+    std::vector<PetscInt> ix(block_size);
 
     PetscInt istart, iend; 
     ierr = VecGetOwnershipRange(I_vec, &istart, &iend);CHKERRV(ierr);	
@@ -2908,43 +2909,59 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
 
 	for (int idx = 0; idx < size_local_all; ++idx)
 	{
-		const int i_vec = idx + istart_local;
+		const PetscInt i_vec = PetscInt(idx) + PetscInt(istart_local);
 
-		if (not approx)
-		{
-			if (i_vec < iend_local)
-			{
-				if (not approx) RII_epsilon_contrib::RII_contrib_MPI_Set_Active();
-			}
-			else
-			{
-				if (not approx)
-				{
-					RII_epsilon_contrib::RII_contrib_MPI_Set_Idle();
-					if (is_device_handler) this->start_device_handler_fun_();
-				}
-				continue;
-			}
-		}
-        else 
+        if (not approx)
         {
-            // approx case, all ranks active
-            if (i_vec >= iend_local) break;
+            if (i_vec < iend_local)
+            {
+                RII_epsilon_contrib::RII_contrib_MPI_Set_Active();
+            }
+            else
+            {
+                RII_epsilon_contrib::RII_contrib_MPI_Set_Idle();
+                if (is_device_handler) this->start_device_handler_fun_();
+                continue;
+            }
         }
+
 #else
 
-	for (int i_vec = istart_local; i_vec < iend_local; ++i_vec)
+	for (PetscInt i_vec = istart_local; i_vec < iend_local; ++i_vec)
 	{
 
 #endif
 		// set indeces
-    	std::iota(ix, ix + block_size, i_vec * block_size);
+    	std::iota(ix.begin(), ix.end(), i_vec * block_size);
         // std::iota(ix.begin(), ix.end(), i_vec * block_size);
 
-        // get I field 
-        ierr = VecGetValues(I_vec, block_size, ix, &input[0]);CHKERRV(ierr);   
+        // get I field
+		ierr = VecGetValues(I_vec, block_size, ix.data(), &input[0]);
+		if (ierr != PETSC_SUCCESS)
+		{
+			std::cerr << "== ERROR in VecGetValues() in update_emission() in file: " << __FILE__ << ":" << __LINE__
+					  << std::endl;
+            std::cerr << "===   is approx: " << (approx ? "true" : "false") << std::endl;
+			std::cerr << "===   i_vec = " << i_vec << ", block_size = " << block_size << std::endl;
+            std::cerr << "===   idx: " << idx << std::endl;
+            std::cerr << "===   istart_local = " << istart_local << ", iend_local = " << iend_local << std::endl;
+            std::cerr << "===   size_local_all = " << size_local_all << std::endl;
+            std::cerr << "===   size_local = " << (iend_local - istart_local) << std::endl;
+            std::cerr << "===   RT_problem_->block_size_ = " << RT_problem_->block_size_ << std::endl;
+			std::cerr << "===   ix = [ ";
+            
+			for (int idx = 0; idx < 4; ++idx){ 
+                char buffer[100];
+                sprintf(buffer, "%" PetscInt_FMT, ix[idx]);
+                std::cerr << buffer << " ";
+            }
 
-        // compute grid indeces from Vec index i_vec
+			std::cerr << " ... ]" << std::endl;
+			std::cerr << "===   PetscErrorCode ierr = " << ierr << std::endl;
+			PetscCallAbort(PETSC_COMM_WORLD, ierr);
+		}
+
+		// compute grid indeces from Vec index i_vec
         i = i_start + counter_i;
         j = j_start + counter_j;
         k = k_start + counter_k;     
@@ -3023,7 +3040,7 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
         }
     }  
 
-    ierr = PetscFree(ix);CHKERRV(ierr); 
+    // ierr = PetscFree(ix);CHKERRV(ierr); 
 }
 
 
@@ -3072,7 +3089,7 @@ void MF_context::update_emission_J_KQ(const Vec &J_KQ_vec){
     for (int i_vec = istart_local; i_vec < iend_local; ++i_vec)
     {
         // set indeces
-        std::iota(ix, ix + J_KQ_size_, i_vec * J_KQ_size_);
+        std::iota(ix, ix + J_KQ_size_, PetscInt(i_vec) * PetscInt(J_KQ_size_));
 
         // get I field 
         ierr = VecGetValues(J_KQ_vec, J_KQ_size_, ix, &input[0]);CHKERRV(ierr);   
@@ -3193,8 +3210,8 @@ void MF_context::I_vec_to_J_KQ_vec(const Vec &I_vec, Vec &J_KQ_vec){
     for (int i_vec = istart_local; i_vec < iend_local; ++i_vec)
     {
         // set indeces
-        std::iota(ix, ix + block_size, i_vec * block_size);
-        std::iota(ix_J_KQ, ix_J_KQ + J_KQ_size_, i_vec * J_KQ_size_);
+        std::iota(ix, ix + block_size, PetscInt(i_vec) * PetscInt(block_size));
+        std::iota(ix_J_KQ, ix_J_KQ + J_KQ_size_, PetscInt(i_vec) * PetscInt(J_KQ_size_));
 
         // get I field 
         ierr = VecGetValues(I_vec, block_size, ix, &input[0]);CHKERRV(ierr);   
@@ -3370,7 +3387,7 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
     {
         // set indeces
         // std::iota(ix, ix + block_size, i_vec * block_size);
-        std::iota(ix, ix + block_size, i_vec * block_size);
+        std::iota(ix, ix + block_size, PetscInt(i_vec) * PetscInt(block_size));
 
         // get I field 
         // ierr = VecGetValues(I_vec, block_size, ix, &input[0]);CHKERRV(ierr);
