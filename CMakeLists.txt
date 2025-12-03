@@ -9,7 +9,7 @@ include(CMakeFindDependencyMacro)
 find_package(PkgConfig REQUIRED)
 
 find_package(sgrid 0 REQUIRED)
-find_package(Boost 1.61 COMPONENTS program_options regex serialization filesystem system atomic  REQUIRED)
+find_package(Boost 1.61 COMPONENTS program_options regex serialization filesystem  atomic  REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIRS})
 set(Boost_LIBRARY_DIRS "${BOOST_ROOT}/lib")
