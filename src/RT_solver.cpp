@@ -3847,7 +3847,8 @@ void RT_solver::print_info(){
         std::cout << "n_tiles      = " << mf_ctx_.n_tiles_ << std::endl;                          
         std::cout << "===================================================" << std::endl;
 
-        std::cout << "P solver type = " << pc_ksp_type_ << std::endl;                                  
+        std::cout << "\nKSP type = " << ksp_type_    << std::endl;           
+        std::cout <<   "PC type  = " << pc_ksp_type_ << "\n" <<  std::endl;    
     } 
 }
 

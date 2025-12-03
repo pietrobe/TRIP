@@ -8,6 +8,8 @@ project(par_moonolith_usage VERSION 1.0.0)
 include(CMakeFindDependencyMacro)
 find_package(PkgConfig REQUIRED)
 
+find_package(yaml-cpp REQUIRED)
+
 find_package(sgrid 0 REQUIRED)
 find_package(Boost 1.61 COMPONENTS program_options regex serialization filesystem  atomic  REQUIRED)
 
@@ -174,6 +176,7 @@ target_include_directories(solar_3D PUBLIC
 target_include_directories(solar_3D SYSTEM PUBLIC ${PETSC_INCLUDES})
 # target_link_libraries(solar_3D PUBLIC ${PETSC_LIBRARIES})
 target_link_libraries(solar_3D PUBLIC PkgConfig::PETSC)
+target_link_libraries(solar_3D PUBLIC yaml-cpp)
 target_compile_definitions(solar_3D PUBLIC ${PETSC_DEFINITIONS})
 
 
