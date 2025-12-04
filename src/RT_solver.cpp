@@ -2936,30 +2936,30 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
         // std::iota(ix.begin(), ix.end(), i_vec * block_size);
 
         // get I field
-		ierr = VecGetValues(I_vec, block_size, ix.data(), &input[0]);
-		if (ierr != PETSC_SUCCESS)
-		{
-			std::cerr << "== ERROR in VecGetValues() in update_emission() in file: " << __FILE__ << ":" << __LINE__
-					  << std::endl;
-            std::cerr << "===   is approx: " << (approx ? "true" : "false") << std::endl;
-			std::cerr << "===   i_vec = " << i_vec << ", block_size = " << block_size << std::endl;
-            std::cerr << "===   idx: " << idx << std::endl;
-            std::cerr << "===   istart_local = " << istart_local << ", iend_local = " << iend_local << std::endl;
-            std::cerr << "===   size_local_all = " << size_local_all << std::endl;
-            std::cerr << "===   size_local = " << (iend_local - istart_local) << std::endl;
-            std::cerr << "===   RT_problem_->block_size_ = " << RT_problem_->block_size_ << std::endl;
-			std::cerr << "===   ix = [ ";
+		ierr = VecGetValues(I_vec, block_size, ix.data(), &input[0]);CHKERRV(ierr);
+		// if (ierr != PETSC_SUCCESS)
+		// {
+		// 	std::cerr << "== ERROR in VecGetValues() in update_emission() in file: " << __FILE__ << ":" << __LINE__
+		// 			  << std::endl;
+        //     std::cerr << "===   is approx: " << (approx ? "true" : "false") << std::endl;
+		// 	std::cerr << "===   i_vec = " << i_vec << ", block_size = " << block_size << std::endl;
+        //     std::cerr << "===   idx: " << idx << std::endl;
+        //     std::cerr << "===   istart_local = " << istart_local << ", iend_local = " << iend_local << std::endl;
+        //     std::cerr << "===   size_local_all = " << size_local_all << std::endl;
+        //     std::cerr << "===   size_local = " << (iend_local - istart_local) << std::endl;
+        //     std::cerr << "===   RT_problem_->block_size_ = " << RT_problem_->block_size_ << std::endl;
+		// 	std::cerr << "===   ix = [ ";
             
-			for (int idx = 0; idx < 4; ++idx){ 
-                char buffer[100];
-                sprintf(buffer, "%" PetscInt_FMT, ix[idx]);
-                std::cerr << buffer << " ";
-            }
+		// 	for (int idx = 0; idx < 4; ++idx){ 
+        //         char buffer[100];
+        //         sprintf(buffer, "%" PetscInt_FMT, ix[idx]);
+        //         std::cerr << buffer << " ";
+        //     }
 
-			std::cerr << " ... ]" << std::endl;
-			std::cerr << "===   PetscErrorCode ierr = " << ierr << std::endl;
-			PetscCallAbort(PETSC_COMM_WORLD, ierr);
-		}
+		// 	std::cerr << " ... ]" << std::endl;
+		// 	std::cerr << "===   PetscErrorCode ierr = " << ierr << std::endl;
+		// 	PetscCallAbort(PETSC_COMM_WORLD, ierr);
+		// }
 
 		// compute grid indeces from Vec index i_vec
         i = i_start + counter_i;
