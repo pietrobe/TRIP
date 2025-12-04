@@ -101,47 +101,6 @@ pkg_check_modules(PETSC REQUIRED IMPORTED_TARGET PETSc)
 
 message(STATUS "Check Petsc done")
 
-# if(PETSC_FOUND)
-#     message(STATUS "Enter Petsc")
-#     list(APPEND UTOPIA_THIRDPARTY_INCLUDES ${PETSC_INCLUDES})
-#     list(APPEND UTOPIA_THIRDPARTY_LIBRARIES ${PETSC_LIBRARIES})
-
-#     set(CMAKE_C_COMPILER ${PETSC_COMPILER})
-
-#     if(NOT MPI_CXX_COMPILER)
-#         set(MPI_CXX_COMPILER $ENV{MPI_CXX_COMPILER})
-#         message(STATUS "compiler ${MPI_CXX_COMPILER}")
-#     endif()
-
-#     if(MPI_CXX_COMPILER)
-#         set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
-#         set(CMAKE_CXX_COMPILER_DEBUG ${MPI_CXX_COMPILER})
-#     else()
-#         execute_process(COMMAND mpicxx -v RESULT_VARIABLE MPICXX_FAILED)
-
-#         if(MPICXX_FAILED)
-#             message(
-#                 STATUS
-#                     "Using CMAKE compiler, you can define MPI_CXX_COMPILER=<alias_or_path_to_your_compiler>"
-#             )
-#         else()
-#             message(STATUS "-----------------------------------------------")
-#             message(
-#                 STATUS
-#                     "\n[MPI] using mpicxx for compiling c++ files.\nIf you want to use your own compiler define MPI_CXX_COMPILER=<alias_or_path_to_your_compiler>"
-#             )
-#             message(STATUS "-----------------------------------------------")
-#             set(CMAKE_CXX_COMPILER mpicxx)
-#             set(CMAKE_CXX_COMPILER_DEBUG mpicxx)
-#         endif()
-#     endif()
-
-#     set(UTOPIA_WITH_PETSC TRUE)
-# else()
-#     message(WARNING "[Warning] Petsc not found")
-#     set(UTOPIA_WITH_PETSC FALSE)
-# endif()
-
 # Configure header file
 set(SOLAR_3D_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
 set(SOLAR_3D_VERSION_MINOR ${PROJECT_VERSION_MINOR})
