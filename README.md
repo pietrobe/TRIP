@@ -1,13 +1,16 @@
 # TRIP
 Three-dimensional Radiative transfer Including Polarization and PRD
 
-## Dependencies
+### Dependencies
 * PETSc
 * rii
 * Kokkos
 * sgrid
 
-## Compile
+### Input
+The input is encoded in the `bin/config.yml` file, to be changed as necessary.
+
+### Compile
 ```bash
 cd bin
 cmake .. -Dsgrid_DIR=/path_to_sgrid/sgrid_installation/lib/cmake/ -DRII_ROOT_PATH=/path_to_rii/rii/rii-c/
@@ -24,9 +27,7 @@ make
 ```
 
 For ACC support, make sure that the RII library is compiled with ACC support as well.
-
-first build the RII accelerated module in the 
-RII source directory:
+First build the RII accelerated module in the RII source directory:
 
 ```bash 
 cd ${RII_MAIN_DIR}/rii-c/src_acc;
