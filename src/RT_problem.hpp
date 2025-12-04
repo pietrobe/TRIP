@@ -3,6 +3,7 @@
 
 #include "Utilities.hpp"
 #include "sgrid_Core.hpp"
+#include <yaml-cpp/yaml.h>
 
 using Grid_t  = sgrid::Grid<Real, 3>;  
 using Field_t = sgrid::Field<Grid_t>;
@@ -21,6 +22,47 @@ enum class emissivity_model { NONE,        	 //
 							  PRD_AA,	     //
 							  PRD_AA_MAPV,   //
 							  ZERO};         //
+
+namespace YAML {
+
+template<>
+struct convert<emissivity_model> {
+    static Node encode(const emissivity_model& rhs) {
+        Node node;
+        switch (rhs) {
+            case emissivity_model::NONE:           node = "NONE"; break;
+            case emissivity_model::CRD_limit:      node = "CRD_limit"; break;
+            case emissivity_model::CRD_limit_VHP:  node = "CRD_limit_VHP"; break;
+            case emissivity_model::PRD:            node = "PRD"; break;
+            case emissivity_model::PRD_NORMAL:     node = "PRD_NORMAL"; break;
+            case emissivity_model::PRD_FAST:       node = "PRD_FAST"; break;
+            case emissivity_model::PRD_AA:         node = "PRD_AA"; break;
+            case emissivity_model::PRD_AA_MAPV:    node = "PRD_AA_MAPV"; break;
+            case emissivity_model::ZERO:           node = "ZERO"; break;
+        }
+        return node;
+    }
+
+    static bool decode(const Node& node, emissivity_model& rhs) {
+        if (!node.IsScalar()) return false;
+        const std::string s = node.as<std::string>();
+
+        if      (s == "NONE")            rhs = emissivity_model::NONE;
+        else if (s == "CRD_limit")       rhs = emissivity_model::CRD_limit;
+        else if (s == "CRD_limit_VHP")   rhs = emissivity_model::CRD_limit_VHP;
+        else if (s == "PRD")             rhs = emissivity_model::PRD;
+        else if (s == "PRD_NORMAL")      rhs = emissivity_model::PRD_NORMAL;
+        else if (s == "PRD_FAST")        rhs = emissivity_model::PRD_FAST;
+        else if (s == "PRD_AA")          rhs = emissivity_model::PRD_AA;
+        else if (s == "PRD_AA_MAPV")     rhs = emissivity_model::PRD_AA_MAPV;
+        else if (s == "ZERO")            rhs = emissivity_model::ZERO;
+        else return false;
+
+        return true;
+    }
+};
+
+} // namespace YAML
 
 
 inline std::string emissivity_model_to_string(const emissivity_model& model)
@@ -125,7 +167,7 @@ public:
 
     	// frequency grid is not contained in PORTA input (but can be computed from T_ref)
     	// const bool use_wavelength = false; // TEST
-    	read_frequency(input_path_frequency + "/frequency.dat");
+    	read_frequency(input_path_frequency);
     	read_3D(filename_pmd, filename_cul, filename_qel, filename_llp, filename_back);
 
     	// timing    	    
@@ -165,7 +207,7 @@ public:
 
     	// frequency grid is not contained in PORTA input (but can be computed from T_ref)
     	// const bool use_wavelength = false; // TEST
-    	read_frequency(input_path_frequency + "/frequency.dat");
+    	read_frequency(input_path_frequency);
     	read_3D(PORTA_input);
 
     	// timing

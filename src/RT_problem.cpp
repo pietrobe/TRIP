@@ -3275,7 +3275,7 @@ void RT_problem::set_grid_partition() // TODO remove hardcoding
 		}
 		else if (mpi_size_ == 6912)
 		{
-			mpi_size_z_ = 27;
+		    	mpi_size_z_ = 27;
             mpi_size_x_ = 16;
             mpi_size_y_ = 16;
 		}

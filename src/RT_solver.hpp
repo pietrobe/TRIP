@@ -3,6 +3,7 @@
 
 #include "Formal_solver.hpp"
 #include "RT_problem.hpp"
+#include "RT_utility.hpp"
 #include <rii_emission_coefficient_3D.h>
 #include "sgrid_ReMap.hpp"
 
@@ -208,17 +209,22 @@ public:
     	}
     	    	
     	mf_ctx_.set_up_emission_module();  	  
-    
-    	// print some output 
-    	print_info();
-
+        	
     	// assemble rhs
     	assemble_rhs();
     	// save_vec(rhs_, "../output/rhs.m" ,"rhs_3d");  
 
     	// //test
     	// mf_ctx_.field_to_vec(RT_problem_->eta_field_, RT_problem_->I_vec_);     
-    	// save_vec(RT_problem_->I_vec_, "../output/eta_t.m" ,"etat");     	
+    	// save_vec(RT_problem_->I_vec_, "../output/eta_t.m" ,"etat");     
+
+    	// load input options 
+    	AppConfig cfg = loadConfig("config.yml");
+    	ksp_type_     = cfg.solver.ksp_solver_type;
+    	pc_ksp_type_  = cfg.prec.pc_solver_type;	    	
+
+    	// print some output 
+    	print_info();
   
     	// set linear system
 		PetscInt local_size = RT_problem_->local_size_;
@@ -230,16 +236,15 @@ public:
 
     	// set Krylov solver
     	ierr = KSPCreate(PETSC_COMM_WORLD,&ksp_solver_);CHKERRV(ierr);
-    	ierr = KSPSetOperators(ksp_solver_,MF_operator_,MF_operator_);CHKERRV(ierr);	    		
-    	// ierr = KSPSetType(ksp_solver_,ksp_type_);CHKERRV(ierr);     	
-
-    	if (using_prec_)
+    	ierr = KSPSetOperators(ksp_solver_,MF_operator_,MF_operator_);CHKERRV(ierr);	    		    	   
+    	ierr = KSPSetType(ksp_solver_,ksp_type_);CHKERRV(ierr);     	
+    	ierr = KSPSetTolerances(ksp_solver_,cfg.solver.ksp_rtol,PETSC_DEFAULT,PETSC_DEFAULT, cfg.solver.ksp_max_it);CHKERRV(ierr);
+    
+    	// some warnings 
+    	if (mpi_rank_ == 0)
     	{
-    		ierr = KSPSetType(ksp_solver_,ksp_type_);CHKERRV(ierr);     	
-    	}
-    	else
-    	{
-    		ierr = KSPSetType(ksp_solver_,KSPGMRES);CHKERRV(ierr);     	
+    		if (not using_prec_ && std::strcmp(ksp_type_, KSPFGMRES) == 0) std::cout << "WARNING: using FGMRES with no preconditioner, switch to GMRES for better performance." << std::endl;    	
+    		if (using_prec_     && std::strcmp(ksp_type_, KSPGMRES)  == 0) std::cout << "WARNING: using GMRES with matrix-free preconditioner can be unsafe, switch to FGMRES." << std::endl;    	
     	}
 
     	// set preconditioner
@@ -280,7 +285,7 @@ public:
     		// const int max_its = 10;
     		// const double r_tol = 1e-11;
     		// ierr = KSPSetFromOptions(mf_ctx_.pc_solver_);CHKERRV(ierr);    		
-    		// ierr = KSPSetTolerances(mf_ctx_.pc_solver_,r_tol,PETSC_DEFAULT,PETSC_DEFAULT, PETSC_DEFAULT);CHKERRV(ierr);
+    		ierr = KSPSetTolerances(mf_ctx_.pc_solver_,cfg.prec.pc_rtol,PETSC_DEFAULT,PETSC_DEFAULT, cfg.prec.pc_max_it);CHKERRV(ierr);
     		// ierr = KSPSetTolerances(mf_ctx_.pc_solver_,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT, max_its);CHKERRV(ierr);
     		// ierr = KSPSetNormType(mf_ctx_.pc_solver_, KSP_NORM_NONE);CHKERRV(ierr);
     		// ierr = KSPSetInitialGuessNonzero(mf_ctx_.pc_solver_, PETSC_TRUE);CHKERRV(ierr); // TEST
@@ -295,6 +300,10 @@ public:
     	{
     		ierr = PCSetType(pc_,PCNONE);CHKERRV(ierr);
     	}
+
+    	// adding some options for verbosity
+    	ierr = PetscOptionsSetValue(NULL, "-ksp_monitor", "");CHKERRV(ierr);
+		ierr = PetscOptionsSetValue(NULL, "-ksp_view", "");CHKERRV(ierr);
 
     	// extra options from command line   	
     	ierr = KSPSetFromOptions(ksp_solver_);CHKERRV(ierr);
@@ -566,8 +575,8 @@ private:
 	Vec rhs_;
 	
 	KSP ksp_solver_;
-	KSPType ksp_type_    = KSPFGMRES; //KSPFBCGS // KSPRICHARDSON; // test KSPPIPEFGMRES
-	KSPType pc_ksp_type_ = KSPBCGS; // test KSPPIPEFGMRES
+	KSPType ksp_type_;   //= KSPFGMRES; //KSPFBCGS // KSPRICHARDSON; // test KSPPIPEFGMRES
+	KSPType pc_ksp_type_; //= KSPGMRES; // test KSPPIPEFGMRES //KSPBCGS
 	PC pc_;
 	
 	bool using_prec_;	
