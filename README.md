@@ -9,16 +9,20 @@ Three-dimensional Radiative transfer Including Polarization and PRD
 
 ### Input
 The input is encoded in the `bin/config.yml` file, to be changed as necessary.
-The type of emissivity can be change via the `emissivity_model` field, between the following options:
-* NONE            undefined
-* CRD_limit       CRD limit (Default set to CRD_GL)
-* CRD_limit_VHP   CRD limit with VHP (Very hight precision) approximation
-* PRD             default (PRD_FAST) partial redistribution. Default grid
-* PRD_NORMAL      force partial redistribution with original grid.
-* PRD_FAST        force partial redistribution with fast grid.
-* PRD_AA          partial redistribution Angle averaged method.
-* PRD_AA_MAPV     same as PRD_AA but it store the map of the values for performance (DANGER it uses a lot of memory)
-* ZERO            continuum
+The scattering module can be changed via the `emissivity_model` field, between the following options:
+
+| Mode           | Description                                                        |
+|----------------|--------------------------------------------------------------------|
+| **NONE**       | undefined                                                          |
+| **CRD_limit**  | CRD limit (default set to CRD_GL)                                  |
+| **CRD_limit_VHP** | CRD limit with VHP (very high precision) approximation         |
+| **PRD**        | default (PRD_FAST), partial redistribution (default grid)           |
+| **PRD_NORMAL** | force PRD with original grid                                       |
+| **PRD_FAST**   | force PRD with fast grid                                           |
+| **PRD_AA**     | angle-averaged PRD method                                          |
+| **PRD_AA_MAPV** | angle-averaged PRD storing a value map (**high memory usage**)   |
+| **ZERO**       | continuum                                                          |
+
 
 ### Run
 ```bash
