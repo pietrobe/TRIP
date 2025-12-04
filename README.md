@@ -3,9 +3,9 @@ Three-dimensional Radiative transfer Including Polarization and PRD
 
 ### Dependencies
 * PETSc
-* rii
-* Kokkos
-* sgrid
+* rii    (Add link)
+* Kokkos (Deprecated)
+* sgrid  (Deprecated) 
 
 ### Input
 The input is encoded in the `bin/config.yml` file, to be changed as necessary.
