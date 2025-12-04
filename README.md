@@ -9,6 +9,34 @@ Three-dimensional Radiative transfer Including Polarization and PRD
 
 ### Input
 The input is encoded in the `bin/config.yml` file, to be changed as necessary.
+The type of emissivity can be change via the `emissivity_model` field, between the following options:
+* NONE            undefined
+* CRD_limit       CRD limit (Default set to CRD_GL)
+* CRD_limit_VHP   CRD limit with VHP (Very hight precision) approximation
+* PRD             default (PRD_FAST) partial redistribution. Default grid
+* PRD_NORMAL      force partial redistribution with original grid.
+* PRD_FAST        force partial redistribution with fast grid.
+* PRD_AA          partial redistribution Angle averaged method.
+* PRD_AA_MAPV     same as PRD_AA but it store the map of the values for performance (DANGER it uses a lot of memory)
+* ZERO            continuum
+
+### Run
+```bash
+srun ./solar_3D
+```
+
+### Cite 
+```
+@article{benedusi2023scalable,
+  title={Scalable matrix-free solver for 3D transfer of polarized radiation in stellar atmospheres},
+  author={Benedusi, Pietro and Riva, Simone and Zulian, Patrick and {\v{S}}t{\v{e}}p{\'a}n, Ji{\v{r}}{\'\i} and Belluzzi, Luca and Krause, Rolf},
+  journal={Journal of Computational Physics},
+  volume={479},
+  pages={112013},
+  year={2023},
+  publisher={Elsevier}
+}
+```
 
 ### Compile
 ```bash
@@ -62,7 +90,9 @@ add the others flags as needed, and then build the RII library:
 make -j12
 ```
 
-### Run
-```bash
-srun ./solar_3D
-```
+
+### Contributing guidelines
+
+**TRIP** is developed by [Pietro Benedusi](https://pietrobe.github.io/) and Simone Riva in Luca Belluzzi's group at [IRSOL](https://www.irsol.usi.ch/).
+
+
