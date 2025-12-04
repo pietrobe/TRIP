@@ -11,7 +11,7 @@ Three-dimensional Radiative transfer Including Polarization and PRD
 The input is encoded in the `bin/config.yml` file, to be changed as necessary.
 The scattering module can be changed via the `emissivity_model` field, between the following options:
 
-| Mode           | Description                                                        |
+| emissivity_model  | Description                                                        |
 |----------------|--------------------------------------------------------------------|
 | **NONE**       | undefined                                                          |
 | **CRD_limit**  | CRD limit (default set to CRD_GL)                                  |
