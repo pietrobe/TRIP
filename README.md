@@ -1,16 +1,11 @@
-# README
-
-Parallel implementation for PRD radiative transfer in 3D
+# TRIP
+Three-dimensional Radiative transfer Including Polarization and PRD
 
 ## Dependencies
-* MPI
 * PETSc
-* Kokkos
 * rii
+* Kokkos
 * sgrid
-
-## Input Dependencies
-* input files encoding the atmospheric model 
 
 ## Compile
 ```bash
