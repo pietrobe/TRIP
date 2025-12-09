@@ -91,4 +91,8 @@ create_rt_problem(const AppConfig &cfg, const std::filesystem::path &input_file_
 				  const std::filesystem::path &frequencies_input_path, emissivity_model emissivity_model_var,
 				  int mpi_rank);
 
+
+int
+acc_devices_print_info(const int mpi_rank, const int mpi_size, std::ostream &os);
+
 #endif

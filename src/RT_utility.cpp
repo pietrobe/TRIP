@@ -4,6 +4,7 @@
 #include <regex>
 #include <sstream>
 #include <stdexcept>
+#include <rii_emission_coefficient_3D.h>
 
 inline KSPType toKSPType(const std::string& name)
 {
@@ -295,4 +296,34 @@ Default solver is the PRD.
 )";
 
   std::cout << help_string << std::endl;
+}
+
+int
+acc_devices_print_info(const int mpi_rank, const int mpi_size, std::ostream &os)
+{
+#if ACC_SOLAR_3D == _ON_
+
+	for (int i = 0; i < LIMIT_OUT_DEVICE_MEMORY_USAGE; i++)
+	{
+		MPI_Barrier(MPI_COMM_WORLD);
+		if (mpi_rank == i && RII_epsilon_contrib::RII_contrib_MPI_Is_Device_Handler())
+		{
+			os << RII_epsilon_contrib::RII_contrib_MPI_Device_Info() << std::endl;
+		}
+	}
+
+	const int is_device_handler = int(RII_epsilon_contrib::RII_contrib_MPI_Is_Device_Handler());
+
+	int devices_cnt = 0;
+	MPI_Reduce(&is_device_handler, &devices_cnt, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+
+	if (mpi_rank == 0)
+	{
+		os << "Using ACC version with " << devices_cnt << " devices." << std::endl;
+	}
+
+	return devices_cnt;
+#else
+	return 0;
+#endif
 }

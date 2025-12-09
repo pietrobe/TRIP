@@ -18,8 +18,9 @@ main(int argc, char *argv[])
 
 	const double main_start_time = MPI_Wtime();
 
-	int mpi_rank;
+	int mpi_rank, mpi_size;
 	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 
 	// print help if requested by the user
 	if (getOptionFlag(argc, argv, "--help") && mpi_rank == 0)
@@ -67,31 +68,13 @@ main(int argc, char *argv[])
 	const int devices_per_node = 4; // for MareNostrum 5 ACC & Daint Alps.
 	int		  mpi_error		   = RII_epsilon_contrib::RII_contrib_MPI_Init(devices_per_node, MPI_COMM_WORLD);
 
-	if (RII_epsilon_contrib::RII_contrib_MPI_Is_Device_Handler())
-	{
-		RII_epsilon_contrib::RII_contrib_MPI_Init_Memory_Pool();
-	}
-
-	for (int i = 0; i < LIMIT_OUT_DEVICE_MEMORY_USAGE; i++)
-	{
-		MPI_Barrier(MPI_COMM_WORLD);
-		if (mpi_rank == i && RII_epsilon_contrib::RII_contrib_MPI_Is_Device_Handler())
-		{
-			std::cout << RII_epsilon_contrib::RII_contrib_MPI_Device_Info() << std::endl;
-		}
-	}
-
-	const int is_device_handler = int(RII_epsilon_contrib::RII_contrib_MPI_Is_Device_Handler());
-
-	int devices_cnt = 0;
-	MPI_Reduce(&is_device_handler, &devices_cnt, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-
-	if (mpi_rank == 0)
-	{
-		std::cout << "Using ACC version with " << devices_cnt << " devices." << std::endl;
-	}
-
 	set_RII_contrib_block_size(RII_CONTRIB_BLOCK_SIZE);
+
+	if (RII_epsilon_contrib::RII_contrib_MPI_Is_Device_Handler()) //
+		RII_epsilon_contrib::RII_contrib_MPI_Init_Memory_Pool();  //
+
+	const int devices_cnt =									   //
+		acc_devices_print_info(mpi_rank, mpi_size, std::cout); //
 
 #else
 
