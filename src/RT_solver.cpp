@@ -2716,6 +2716,17 @@ void MF_context::set_up_emission_module(){
         if (mpi_rank_ == 0) std::cout << "\nUsing PRD_NORMAL emission, components:"<< std::endl;
 
         break;
+
+    case emissivity_model::PRD_MEDIUM:
+
+        components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB_MEDIUM);
+        components.push_back(emission_coefficient_components::epsilon_R_III_GL);
+        components.push_back(emission_coefficient_components::epsilon_csc);  
+
+        if (mpi_rank_ == 0) std::cout << "\nUsing PRD_MEDIUM emission, components:"<< std::endl;
+
+        break;
+        
     
     case emissivity_model::CRD_limit:
         

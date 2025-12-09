@@ -841,4 +841,3 @@ double pow_gen(const double x, const double exponent){
 
 
 
-

@@ -22,11 +22,13 @@
 #define CMAKE_CXX_COMPILER "@CMAKE_CXX_COMPILER@"
 #define CMAKE_BUILD_TYPE "@CMAKE_BUILD_TYPE@"
 
-// Boost configuration
-#define BOOST_VERSION "@Boost_VERSION@"
-#define BOOST_ROOT "@BOOST_ROOT@"
+// Boost configuration (renamed to avoid conflict with Boost's own BOOST_VERSION macro)
+#define TRIP_BOOST_VERSION "@Boost_VERSION@"
+#define TRIP_BOOST_ROOT "@BOOST_ROOT@"
 
 #define ACC_SOLAR_3D @ACC_SOLAR_3D@
 #define LIMIT_OUT_DEVICE_MEMORY_USAGE 320
+
+#define RII_CONTRIB_BLOCK_SIZE (250)
 
 #endif // SOLAR_3D_CONFIGURE_H

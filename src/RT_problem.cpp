@@ -1308,6 +1308,7 @@ void RT_problem::set_sizes(){
 			std::cerr << "\n========= ERROR: block_size_ / mpi_size_ should be a divisible by 4! =========\n" << std::endl;
 			std::cout << "block_size = " << block_size_ << std::endl;
 			std::cout << "mpi_size_  = " << mpi_size_   << std::endl;
+			std::cout << "N_s	   = " << N_s_ << " = " << N_x_ << " x " << N_y_ << " x " << N_z_ << std::endl;
 		}
 
 		throw;

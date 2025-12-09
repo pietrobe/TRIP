@@ -6,6 +6,8 @@
 #include "RT_utility.hpp"
 #include <rii_emission_coefficient_3D.h>
 #include "sgrid_ReMap.hpp"
+#include "RT_types.hpp"
+#include "Formal_solver.hpp"
 
 extern PetscErrorCode UserMult(Mat mat,Vec x,Vec y);
 extern PetscErrorCode UserMult_approx(Mat mat,Vec x,Vec y);

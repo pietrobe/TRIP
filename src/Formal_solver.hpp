@@ -1,7 +1,12 @@
 #ifndef Formal_solver_hpp
 #define Formal_solver_hpp
 
-#include "Utilities.hpp"
+#include "RT_types.hpp"
+#include <vector>
+#include <string>
+#include <iostream>
+#include <cmath>
+#include <mpi.h>
 
 typedef const std::vector<Real> input_vec;
 typedef const std::vector<std::vector<Real> > input_field;
@@ -96,4 +101,4 @@ private:
 	bool debug_mode_;
 };
 	
-#endif 
+#endif

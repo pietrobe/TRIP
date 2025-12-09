@@ -31,6 +31,49 @@ inline std::string validateFormalSolver(const std::string& s)
     throw std::runtime_error("Invalid formal_solver: " + s);
 }
 
+std::shared_ptr<RT_problem>
+create_rt_problem(const AppConfig &cfg, const std::filesystem::path &input_file_path,
+				  const std::filesystem::path &frequencies_input_path, emissivity_model emissivity_model_var,
+				  int mpi_rank)
+{
+	if (cfg.input_directory.string().find("FAL-C") != std::string::npos)
+	{
+		if (mpi_rank == 0) std::cout << "Using FAL-C input file:  " << input_file_path << std::endl;
+
+		return std::make_shared<RT_problem>(input_file_path.string(), cfg.N_theta, cfg.N_chi, emissivity_model_var,
+											cfg.use_B);
+	}
+	else if (cfg.input_cul.string().empty() || cfg.input_qel.empty() || cfg.input_llp.empty())
+	{
+		if (mpi_rank == 0) std::cout << "Using PORTA PMD input file ONLY:  " << input_file_path << std::endl;
+
+		return std::make_shared<RT_problem>(input_file_path.string().c_str(), frequencies_input_path.string().c_str(),
+											emissivity_model_var, cfg.use_B);
+	}
+	else
+	{
+		if (mpi_rank == 0) std::cout << "Using PORTA PMD + CUL + QEL + LLP + BACK input files" << std::endl;
+
+		auto input_cul_path	 = cfg.input_directory / cfg.input_cul;
+		auto input_qel_path	 = cfg.input_directory / cfg.input_qel;
+		auto input_llp_path	 = cfg.input_directory / cfg.input_llp;
+		auto input_back_path = cfg.input_directory / cfg.input_back;
+
+		if (mpi_rank == 0)
+		{
+			std::cout << "PMD input file:   " << input_file_path << std::endl;
+			std::cout << "LLP input file:   " << input_cul_path << std::endl;
+			std::cout << "CUL input file:   " << input_qel_path << std::endl;
+			std::cout << "QEL input file:   " << input_llp_path << std::endl;
+			std::cout << "BACK input file:  " << input_back_path << std::endl;
+		}
+
+		return std::make_shared<RT_problem>(input_file_path.string().c_str(), input_cul_path.string().c_str(),
+											input_qel_path.string().c_str(), input_llp_path.string().c_str(),
+											input_back_path.string().c_str(), frequencies_input_path.string(),
+											emissivity_model_var, cfg.use_B);
+	}
+}
 
 AppConfig loadConfig(const std::string& filename) {
     YAML::Node config = YAML::LoadFile(filename);
@@ -56,7 +99,7 @@ AppConfig loadConfig(const std::string& filename) {
     if (config["output_directory"]) cfg.output_directory = std::filesystem::path(config["output_directory"].as<std::string>());
 
     // Emissivity model (required)
-    cfg.emissivity_model = config["emissivity_model"].as<emissivity_model>();
+    cfg.emissivity_model_o = config["emissivity_model"].as<emissivity_model>();
 
     // Physical flags
     if (config["use_B"]) cfg.use_B = config["use_B"].as<bool>();    
@@ -83,7 +126,7 @@ AppConfig loadConfig(const std::string& filename) {
     if (config["use_prec"]) cfg.use_prec = config["use_prec"].as<bool>();
 
     // override logic: do not use preconditioner for CRD and ZERO
-    switch (cfg.emissivity_model) {
+    switch (cfg.emissivity_model_o) {
         case emissivity_model::CRD_limit:
         case emissivity_model::CRD_limit_VHP:
         case emissivity_model::ZERO:
@@ -111,6 +154,18 @@ AppConfig loadConfig(const std::string& filename) {
         if (p["pc_solver_type"]) cfg.prec.pc_solver_type = toKSPType(p["pc_solver_type"].as<std::string>());
         if (p["pc_rtol"])        cfg.prec.pc_rtol        = p["pc_rtol"].as<double>();
         if (p["pc_max_it"])      cfg.prec.pc_max_it      = p["pc_max_it"].as<int>();
+    }
+
+    // Arbitrary beams section
+    if (config["arbitrary_beams"]) 
+    {
+        for (const auto& beam : config["arbitrary_beams"]) 
+        {
+            BeamDirection bd;
+            if (beam["mu"])  bd.mu  = beam["mu"].as<double>();
+            if (beam["chi"]) bd.chi = beam["chi"].as<double>();
+            cfg.arbitrary_beams.push_back(bd);
+        }
     }
 
     return cfg;
@@ -200,16 +255,20 @@ std::string getCurrentDateTime() {
 // compile and run with:
 // make -j 32 && srun -n 4 ./main
 
+
 std::string getOptionArgument(int argc, char *argv[],
-                              const std::string &option) {
-  for (int i = 1; i < argc; ++i) {
-    std::string arg = argv[i];
-    if (arg == option && i + 1 < argc) {
-      return argv[i + 1];
+                              const std::string &option,
+                              const std::string &defaultValue) {
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == option && i + 1 < argc) {
+            return argv[i + 1];
+        }
     }
-  }
-  return std::string(); // Option not found or argument missing
+    return defaultValue; // Return default when not found
 }
+
+
 
 bool getOptionFlag(int argc, char *argv[], const std::string &option) {
   for (int i = 1; i < argc; ++i) {

@@ -1,4 +1,6 @@
 #include "Formal_solver.hpp"
+#include "Utilities.hpp"
+#include <cmath>
 
 /////////////////////// for BESSER
 

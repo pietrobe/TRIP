@@ -8,6 +8,7 @@
 #include <iostream>
 #include <map>
 #include <filesystem>
+#include <vector>
 #include "RT_problem.hpp"
 
 // Function declarations
@@ -15,11 +16,19 @@ std::string getCurrentDateTime();
 
 std::map<std::string, std::string> get_input_PORTA(const std::filesystem::path &config_file, int mpi_rank);
 
-std::string getOptionArgument(int argc, char *argv[], const std::string &option);
+std::string getOptionArgument(int argc, char *argv[],
+                              const std::string &option,
+                              const std::string &defaultValue = "");
 
 bool getOptionFlag(int argc, char *argv[], const std::string &option);
 
 void print_help();
+
+// Structure for arbitrary beam direction
+struct BeamDirection {
+    double mu  = 1.0;
+    double chi = 0.0;
+};
 
 // structures for input file
 struct SolverConfig {
@@ -46,7 +55,7 @@ struct AppConfig {
     bool output_overwrite_prevention = false;
 
     // emissivity
-    emissivity_model emissivity_model;
+    emissivity_model emissivity_model_o;
     
     // Physical switches
     bool use_B          = true;
@@ -69,8 +78,17 @@ struct AppConfig {
     // Subsections
     SolverConfig solver;
     PrecConfig   prec;
+
+    // Arbitrary beam directions
+    std::vector<BeamDirection> arbitrary_beams;
 };
 
 AppConfig loadConfig(const std::string& filename);
+
+
+std::shared_ptr<RT_problem>
+create_rt_problem(const AppConfig &cfg, const std::filesystem::path &input_file_path,
+				  const std::filesystem::path &frequencies_input_path, emissivity_model emissivity_model_var,
+				  int mpi_rank);
 
 #endif

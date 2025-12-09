@@ -3,7 +3,11 @@
 
 #include "Utilities.hpp"
 #include "sgrid_Core.hpp"
+#include "RT_types.hpp"
 #include <yaml-cpp/yaml.h>
+#include <petscsys.h> 
+#include <petsc.h>
+#include <cmath>
 
 using Grid_t  = sgrid::Grid<Real, 3>;  
 using Field_t = sgrid::Field<Grid_t>;
@@ -18,6 +22,7 @@ enum class emissivity_model { NONE,        	 //
 							  CRD_limit_VHP, //
 							  PRD,           //
 							  PRD_NORMAL,    //
+							  PRD_MEDIUM,    //
 							  PRD_FAST,      //
 							  PRD_AA,	     //
 							  PRD_AA_MAPV,   //
@@ -35,6 +40,7 @@ struct convert<emissivity_model> {
             case emissivity_model::CRD_limit_VHP:  node = "CRD_limit_VHP"; break;
             case emissivity_model::PRD:            node = "PRD"; break;
             case emissivity_model::PRD_NORMAL:     node = "PRD_NORMAL"; break;
+			case emissivity_model::PRD_MEDIUM:     node = "PRD_MEDIUM"; break;
             case emissivity_model::PRD_FAST:       node = "PRD_FAST"; break;
             case emissivity_model::PRD_AA:         node = "PRD_AA"; break;
             case emissivity_model::PRD_AA_MAPV:    node = "PRD_AA_MAPV"; break;
@@ -52,6 +58,7 @@ struct convert<emissivity_model> {
         else if (s == "CRD_limit_VHP")   rhs = emissivity_model::CRD_limit_VHP;
         else if (s == "PRD")             rhs = emissivity_model::PRD;
         else if (s == "PRD_NORMAL")      rhs = emissivity_model::PRD_NORMAL;
+		else if (s == "PRD_MEDIUM")      rhs = emissivity_model::PRD_MEDIUM;
         else if (s == "PRD_FAST")        rhs = emissivity_model::PRD_FAST;
         else if (s == "PRD_AA")          rhs = emissivity_model::PRD_AA;
         else if (s == "PRD_AA_MAPV")     rhs = emissivity_model::PRD_AA_MAPV;
@@ -540,7 +547,7 @@ private:
 	int Ju2_;
 	
 	// reference frame
-	const Real gamma_ = 0.5 * PI;	  
+	const Real gamma_ = 0.5 * M_PI;
 
 	// quantities needed to read 3D PORTA input
 	int node_size_;

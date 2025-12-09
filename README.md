@@ -18,9 +18,10 @@ The scattering module can be changed via the `emissivity_model` field, between t
 | **CRD_limit_VHP** | CRD limit with VHP (very high precision) approximation         |
 | **PRD**        | default (PRD_FAST), partial redistribution (default grid)           |
 | **PRD_NORMAL** | force PRD with original grid                                       |
+| **PRD_MEDIUM** | force PRD with the same or better accuracy w.r.t. PRD_NORMAL but faster          |
 | **PRD_FAST**   | force PRD with fast grid                                           |
 | **PRD_AA**     | angle-averaged PRD method                                          |
-| **PRD_AA_MAPV** | angle-averaged PRD storing a value map (**high memory usage**)   |
+| **PRD_AA_MAPV** | angle-averaged PRD storing a value map (**high memory usage**), 2 .. 3 times faster   |
 | **ZERO**       | continuum                                                          |
 
 
