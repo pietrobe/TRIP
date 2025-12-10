@@ -1319,6 +1319,11 @@ void const RT_problem::print_info(){
 	
 	if (mpi_rank_ == 0) 		
 	{		
+		if constexpr (std::is_same_v<Real_t, float>)
+    		std::cout << "Fields data type: FLOAT\n";
+		else
+    		std::cout << "Fields data type: DOUBLE\n";
+
 		std::cout << "\nmpi_size_x = " << mpi_size_x_ << std::endl;
 		std::cout <<   "mpi_size_y = " << mpi_size_y_ << std::endl;
 		std::cout <<   "mpi_size_z = " << mpi_size_z_ << std::endl << std::endl;
@@ -2587,10 +2592,7 @@ RT_problem::write_surface_point_profiles(input_string file_name, const int i_spa
 							}
 
 							// Close the file
-							outputFile.close();
-
-							if (mpi_rank_ == 0)
-								std::cout << "Output written in " << output_file << "\n" << std::endl;
+							outputFile.close();							
 						}
 						else
 						{
@@ -2600,8 +2602,10 @@ RT_problem::write_surface_point_profiles(input_string file_name, const int i_spa
 					}
 				}
 			}
-		}
+		}		
 	}
+
+	if (mpi_rank_ == 0 and i_space == 0 and j_space == 0) std::cout << "Output written in " << file_name << "_i_j.m" << "\n" << std::endl;
 }
 
 void const
@@ -2796,11 +2800,7 @@ void const RT_problem::write_surface_point_profiles_csv(input_string file_name,
               }
 
               // Close the file
-              outputFile.close();
-
-              if (mpi_rank_ == 0)
-                std::cout << "Output written in " << output_file << "\n"
-                          << std::endl;
+              outputFile.close();              
             } else {
               if (mpi_rank_ == 0)
                 std::cout << "\nERROR: failed to create the output file."
@@ -2811,6 +2811,8 @@ void const RT_problem::write_surface_point_profiles_csv(input_string file_name,
       }
     }
   }
+
+ if (mpi_rank_ == 0 and i_space == 0 and j_space == 0) std::cout << "Output written in " << file_name << "_i_j.csv" << "\n" << std::endl;
 }
 
 // write surface profile in all surface

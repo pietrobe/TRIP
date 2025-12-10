@@ -9,7 +9,10 @@
 #include <petsc.h>
 #include <cmath>
 
-using Grid_t  = sgrid::Grid<Real, 3>;  
+// Type for storing fields
+using Real_t = float; 
+
+using Grid_t  = sgrid::Grid<Real_t, 3>;  
 using Field_t = sgrid::Field<Grid_t>;
 
 using Grid_ptr_t  = std::shared_ptr<Grid_t>;
@@ -408,18 +411,18 @@ public:
 	Grid_ptr_t space_grid_; 	
 
 	// auxiliary grids	
-	std::vector<Real> depth_grid_; // ordering: [surf,...,deep] in km
-	std::vector<Real> nu_grid_; 
-	std::vector<Real> theta_grid_; 
-	std::vector<Real> mu_grid_; 	
-	std::vector<Real> chi_grid_; 
+	std::vector<double> depth_grid_; // ordering: [surf,...,deep] in km
+	std::vector<double> nu_grid_; 
+	std::vector<double> theta_grid_; 
+	std::vector<double> mu_grid_; 	
+	std::vector<double> chi_grid_; 
 	
 	// horixontal spacing
-	Real L_; // L = dx = dy
+	double L_; // L = dx = dy
 
 	// Legendre and trapezoidal weights 
-	std::vector<Real> w_theta_;
-	std::vector<Real> w_chi_;
+	std::vector<double> w_theta_;
+	std::vector<double> w_chi_;
 
 	// grids sizes	
 	int N_x_;     
@@ -547,21 +550,21 @@ private:
 	int Ju2_;
 	
 	// reference frame
-	const Real gamma_ = 0.5 * M_PI;
+	const double gamma_ = 0.5 * M_PI;
 
 	// quantities needed to read 3D PORTA input
 	int node_size_;
 	int header_size_;
 
 	// atom constant, to precompute
-	Real nu_0_;	
+	double nu_0_;	
 
 	// depolarizing rate due to elastic collisions
 	Field_ptr_t	D1_; 
 	Field_ptr_t	D2_; 
 
 	// quantities depending on direction
-	std::vector<std::vector<std::complex<Real> > > T_KQ_; // polarization tensor 
+	std::vector<std::vector<std::complex<double> > > T_KQ_; // polarization tensor 
 
 	// allocate grid fields 
 	void allocate_fields();	

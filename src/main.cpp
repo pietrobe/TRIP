@@ -168,6 +168,9 @@ main(int argc, char *argv[])
 
 		const double main_solve_end_time = MPI_Wtime();
 
+		// print some memory info
+		print_PETSc_mem();
+
 		if (cfg.output)
 		{
 			// write output Surface profiles for all surface points
@@ -239,7 +242,7 @@ main(int argc, char *argv[])
 
 			rii::process_mem_usage(vm_usage, resident_set);
 
-			print_PETSc_mem();
+			// print_PETSc_mem();
 
 			if (mpi_rank == 0)
 			{
