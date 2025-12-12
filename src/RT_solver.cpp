@@ -1,7 +1,5 @@
 #include "RT_solver.hpp"
 #include "cpu_clock.h"
-#include <string>
-
 
 namespace {
 unsigned int RII_contrib_block_size = 1;
@@ -217,13 +215,15 @@ void MF_context::apply_bc(Field_ptr_t I_field, const Real I0, const bool polariz
 
 
 void MF_context::apply_bc_serial(Field_ptr_t I_field, const Real I0, const bool polarized){
-         
+    
+    const auto N_y        = RT_problem_->N_y_;     
     const auto N_z        = RT_problem_->N_z_;
-    const auto W_T_dev    = RT_problem_->W_T_->view_device();
-    const auto space_grid = RT_problem_->space_grid_;  
+    // const auto W_T_dev    = RT_problem_->W_T_->view_device();
+    // const auto space_grid = RT_problem_->space_grid_; 
 
-    const auto g_dev = space_grid->view_device();
-    auto I_field_dev =    I_field->view_device();    
+    const auto g_dev = space_grid_serial_->view_device();
+    auto I_field_dev =            I_field->view_device();    
+    // const auto W_T_dev = W_T_serial_->view_device();
 
     // only intensity in the unpolarized case     
     PetscInt increment, block_size;
@@ -239,24 +239,24 @@ void MF_context::apply_bc_serial(Field_ptr_t I_field, const Real I0, const bool 
         block_size = n_local_rays_unpol_;
     }
 
-    sgrid::parallel_for("APPLY BC", space_grid->md_range(), SGRID_LAMBDA(int i, int j, int k) {
+    sgrid::parallel_for("APPLY BC", space_grid_serial_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
                                 
         const int k_global = g_dev.global_coord(2, k);
 
         // just in max depth
         if (k_global == (N_z - 1))        
         {       
-            const Real W_T_deep = I0 * W_T_dev.ref(i,j,k); 
-
-            const int i_global = g_dev.global_coord(0, i);
+            const int i_global = g_dev.global_coord(0, i); 
             const int j_global = g_dev.global_coord(1, j);           
                         
+            const Real W_T_deep = I0 * W_T_ij_serial_[j_global * N_y + i_global];                        
+                    
             for (int b = 0; b < block_size; b = b + increment) 
-            {
-                I_field_dev.block(i_global,j_global,k_global)[b] = W_T_deep;                
+            {                
+                I_field_dev.block(i,j,k)[b] = W_T_deep;                
             }                                                
         }
-    }); 
+    });     
 }
 
 
@@ -1989,6 +1989,228 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 
+// TODO: we could use just a loop on the block instead of the nested loop on j_theta, k_chi, n and local_to_block
+void MF_context::formal_solve_1_5D(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0)
+{
+    if (mpi_rank_ == 0) std::cout << "\nStarting 1.5D formal solution...";
+
+    // timer    
+    const double start_total = MPI_Wtime();                                    
+    
+    // init some quantities         
+    const auto N_z     = RT_problem_->N_z_;
+    const auto N_theta = RT_problem_->N_theta_; 
+    const auto N_chi   = RT_problem_->N_chi_;
+    const auto N_nu    = RT_problem_->N_nu_;
+    
+    const auto mu_grid    = RT_problem_->mu_grid_;
+    const auto depth_grid = RT_problem_->depth_grid_;   
+    
+    const auto eta_dev = RT_problem_->eta_field_ ->view_device(); 
+    const auto rho_dev = RT_problem_->rho_field_ ->view_device(); 
+    const auto g_dev   = RT_problem_->space_grid_->view_device(); 
+
+    // input fields 
+    const auto I_dev = I_field ->view_device(); 
+    const auto S_dev = S_field ->view_device();   
+
+    // indeces
+    const int i_start = g_dev.margin[0]; 
+    const int j_start = g_dev.margin[1];
+    const int k_start = g_dev.margin[2];
+
+    const int i_end = i_start + g_dev.dim[0];
+    const int j_end = j_start + g_dev.dim[1];
+    const int k_end = k_start + g_dev.dim[2];       
+
+    // some checks
+    if (i_start > 0 or j_start > 0) std::cout << "WARNING: margins shoulb be 0!" << std::endl;
+    if (k_start != 0)               std::cout << "WARNING: k_start shoulb be 0!" << std::endl;
+    if (k_end   != N_z)             std::cout << "WARNING: k_end shoulb be N_z!" << std::endl;
+    
+    const int stencil_size = formal_solver_.get_stencil_size();
+    
+    int k_aux, k_prev, k_next, b_start, b_index;
+    
+    // misc coeffs
+    double mu, dtau, distance, dz;
+
+    // quantities depending on spatial point (1) and (2)
+    std::vector<double> I1(4), S1(4), etas1(4), rhos1(4), K1(16);
+    std::vector<double> I2(4), S2(4), etas2(4), rhos2(4), K2(16);
+
+    // quantities depending on spatial point (3) in case of prabolic method
+    std::vector<double> S3(4), etas3(4), rhos3(4), K3(16);    
+    double dtau2, distance2, dz2;
+ 
+    // minus for optical depth conversion, trap rule and conversion to cm (- 0.5 * 1e5)
+    const double coeff = -50000;
+        
+    // impose boundary conditions 
+    apply_bc(I_field, I0);  
+        
+    // loop over spatial points
+    for (int k = k_start + 1; k < k_end; ++k)  // k_start + 1 to avoid boundaries                
+    {               
+        const bool use_quadratic_method = (stencil_size == 3) and (k < k_end - 1);
+
+        for (int j = j_start; j < j_end; ++j)
+        {
+            for (int i = i_start; i < i_end; ++i)
+            {                                          
+                // loop over directions 
+                for (int j_theta = 0; j_theta < N_theta; ++j_theta) 
+                {                    
+                    mu = mu_grid[j_theta];                                 
+
+                    // depth index depending on mu sign
+                    k_aux  = (mu > 0.0) ? k_end - 1 - k : k; 
+                    k_prev = (mu > 0.0) ? k_aux + 1 : k_aux - 1;  
+                                                            
+                    dz       = depth_grid[k_aux] - depth_grid[k_prev];
+                    distance = dz / mu;   
+
+                    if (distance <= 0) std::cout << "ERROR: distance should be positive, distance = " << distance << std::endl;                        
+
+                    if (use_quadratic_method)
+                    {
+                        k_next    = (mu > 0.0) ? k_aux - 1 : k_aux + 1;  
+                        dz2       = depth_grid[k_next] - depth_grid[k_aux];
+                        distance2 = dz / mu;   
+
+                        if (distance2 <= 0) std::cout << "ERROR: distance2 should be positive, distance2 = " << distance2 << std::endl;                        
+                    }                           
+
+                    for (int k_chi = 0; k_chi < N_chi; ++k_chi)
+                    {                                                                                                                                                                                                                                                                                   
+                        // loop on freqs
+                        for (int n = 0; n < N_nu; ++n)
+                        {                                                        
+                            // block index
+                            b_start = RT_problem_->local_to_block(j_theta, k_chi, n); 
+                                                                                                                            
+                            // set S and K entries and initial condition I1
+                            for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+                            {               
+                                b_index = b_start + i_stokes;
+
+                                // point (1)
+                                etas1[i_stokes] = eta_dev.block(i,j,k_prev)[b_index];                     
+                                rhos1[i_stokes] = rho_dev.block(i,j,k_prev)[b_index];     
+                                S1[i_stokes]    =   S_dev.block(i,j,k_prev)[b_index];
+                                I1[i_stokes]    =   I_dev.block(i,j,k_prev)[b_index];
+                                
+                                // point (2)
+                                etas2[i_stokes] = eta_dev.block(i,j,k_aux)[b_index];                     
+                                rhos2[i_stokes] = rho_dev.block(i,j,k_aux)[b_index];     
+                                S2[i_stokes]    =   S_dev.block(i,j,k_aux)[b_index];                                    
+                            }
+                                    
+                            // assemble absorption matrices
+                            K1 = assemble_propagation_matrix_scaled(etas1, rhos1);
+                            K2 = assemble_propagation_matrix_scaled(etas2, rhos2);
+                                        
+                            // optical depth step                               
+                            dtau = coeff * (etas1[0] + etas2[0]) * distance;
+                                        
+                            if (dtau > 0)  std::cout << "ERROR in dtau sign, dtau = " << dtau << std::endl;  
+                            if (dtau == 0) std::cout << "WARNING: dtau = 0, possible e.g. for N_chi = 4"<< std::endl;
+                            
+                            if (use_quadratic_method)
+                            {   
+                                // get also quantities in (3)
+                                for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+                                {               
+                                    b_index = b_start + i_stokes;
+                                    
+                                    // point (3)
+                                    etas3[i_stokes] = eta_dev.block(i,j,k_next)[b_index];                     
+                                    rhos3[i_stokes] = rho_dev.block(i,j,k_next)[b_index];     
+                                    S3[i_stokes]    =   S_dev.block(i,j,k_next)[b_index];                                    
+                                }
+
+                                K3 = assemble_propagation_matrix_scaled(etas3, rhos3);
+
+                                // optical depth step                               
+                                dtau2 = coeff * (etas2[0] + etas3[0]) * distance2;
+                                        
+                                if (dtau2 >= 0) std::cout << "ERROR in dtau2 sign, dtau2 = " << dtau2 << std::endl;                                  
+
+                                // perform formal solver step
+                                formal_solver_.one_step_quadratic(dtau, dtau2, K1, K2, K3, S1, S2, S3, I1, I2);          
+                            }
+                            else
+                            {                                
+                                // perform formal solver step
+                                formal_solver_.one_step(dtau, K1, K2, S1, S2, I1, I2);
+                            }
+                                                                                                                        
+                            // write result
+                            for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+                            {                           
+                                I_dev.block(i,j,k_aux)[b_start + i_stokes] = I2[i_stokes];                                      
+                            }                  
+
+                            // // test print
+                            // if (mpi_rank_ == 0 and n == 0 and k_chi == 0 and j_theta == N_theta - 1)
+                            // {   
+                            //     std::cout << "---------------------------------" << std::endl;                                
+                            //     std::cout << "k_aux = " << k_aux << std::endl;                                
+                            //     std::cout << "dtau = "  << dtau  << std::endl;                                   
+                            //     std::cout << "distance = " << distance << std::endl; 
+
+                            //     std::cout << "I1 = " << I1[0] << std::endl;   
+                            //     std::cout << "Q1 = " << I1[1] << std::endl;   
+                            //     std::cout << "U1 = " << I1[2] << std::endl;   
+                            //     std::cout << "V1 = " << I1[3] << std::endl;   
+
+                            //     std::cout << "I2 = " << I2[0] << std::endl;    
+                            //     std::cout << "Q2 = " << I2[1] << std::endl;   
+                            //     std::cout << "U2 = " << I2[2] << std::endl;
+                            //     std::cout << "V2 = " << I2[3] << std::endl;
+                                
+                            //     std::cout << "S1 = " << std::endl;
+                            //     for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S1[i_stokes] << std::endl;
+
+                            //     std::cout << "S2 = " << std::endl;
+                            //     for (int i_stokes = 0; i_stokes < 4; ++i_stokes) std::cout << S2[i_stokes] << std::endl;
+                                                            
+                            //     // std::cout << "K1 = " << std::endl;
+                            //     // for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K1[i_stokes] << std::endl;
+
+                            //     // std::cout << "K2 = " << std::endl;
+                            //     // for (int i_stokes = 0; i_stokes < 16; ++i_stokes) std::cout << K2[i_stokes] << std::endl;
+                            // }
+                        }
+                    }
+                }               
+            }      
+        }      
+    }
+                                  
+    // print timers
+    const double total_timer = MPI_Wtime() - start_total;
+    double total_timer_max;    
+    MPI_Reduce(&total_timer, &total_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+    if (mpi_rank_ == 0) printf("done, time:\t%g seconds\n",     total_timer_max);                            
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
+void MF_context::formal_solve(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0)
+{
+    if (RT_problem_->use_1_5D_approx_)
+    {
+        formal_solve_1_5D(I_field, S_field, I0);
+    }
+    else
+    {
+        formal_solve_global(I_field, S_field, I0);
+    }
+}   
+
 // given a intersection type with N cells and grid indeces ijk
 double MF_context::long_ray_steps_unpolarized(const std::vector<t_intersect> T, 
                                                const Field_ptr_t I_field, const Field_ptr_t S_field, 
@@ -3623,7 +3845,7 @@ void MF_context::init_serial_fields(const int n_tiles){
     S_field_serial_  ->allocate_on_device();     
 
     eta_field_serial_->allocate_on_device();     
-    rho_field_serial_->allocate_on_device();     
+    rho_field_serial_->allocate_on_device();
 
     // init remaps 
     I_remap_.init(*(RT_problem_->I_field_), *I_field_serial_);
@@ -3636,6 +3858,15 @@ void MF_context::init_serial_fields(const int n_tiles){
 
     tmp_remap.init(*(RT_problem_->rho_field_), *rho_field_serial_);
     tmp_remap.from_pgrid_to_pblock(*(RT_problem_->rho_field_), *rho_field_serial_, 0); 
+
+    if (not RT_problem_->use_1_5D_approx_)
+    {        
+        // Craete also vector with shared initial condition     
+        W_T_ij_serial_ = RT_problem_->extract_plane_k(RT_problem_->W_T_, RT_problem_->N_z_ - 1);       
+
+        // non-serial rho is not needed after this point 
+        RT_problem_->rho_field_.reset(); // TEST
+    }   
 } 
 
 
@@ -3760,6 +3991,8 @@ void MF_context::unpolarized_to_polarized(Vec &unpol_v, Vec &pol_v) {
 
 
 void MF_context::init_serial_fields_Omega(){
+
+    if (mpi_rank_ == 0) std::cout << "WARNING: new system of BC still to be included!!!" << std::endl;
     
     auto N_z  = RT_problem_->N_z_;
     auto N_nu = RT_problem_->N_nu_;
@@ -3869,8 +4102,11 @@ void RT_solver::assemble_rhs(){
     // with test = true data structures are created but not filled
     const bool test = false;
 
-  	if (mpi_rank_ == 0 and (not test)) std::cout << "\n++++++ Assembling right hand side...+++++++++";
-    if (mpi_rank_ == 0 and test)       std::cout << "\n+++++++++++ RHS TEST RHS TEST +++++++++++++";
+  	if (mpi_rank_ == 0)
+    {
+                  std::cout << "\n++++++ Assembling right hand side...+++++++++";
+        if (test) std::cout << "\n+++++++++++ RHS TEST RHS TEST +++++++++++++";
+    } 
  
 	PetscErrorCode ierr;
 
@@ -3955,14 +4191,14 @@ void RT_solver::assemble_rhs(){
     	});
 
     	// fill rhs_ from formal solve with bc
-        mf_ctx_.formal_solve_global(rhs_field, eps_th_field, 1.0);       
+        mf_ctx_.formal_solve(rhs_field, eps_th_field, 1.0);       
     	mf_ctx_.field_to_vec(rhs_field, rhs_);  
 
         // rhs_field->write("rhs_field.raw");           
 
         // clean
         rhs_field.reset();
-        eps_th_field.reset();
+        eps_th_field.reset();        
     }
 
 	if (mpi_rank_ == 0) std::cout << "+++++++++++++++++++++++++++++++++++++++++++++\n"; 	
@@ -3992,7 +4228,7 @@ PetscErrorCode UserMult(Mat mat, Vec x, Vec y){
     if (RT_problem->mpi_rank_ == 0) printf("update_emission:\t\t%g seconds\n", emission_timer_max);                  
   	    
   	// fill rhs_ from formal solve with zero bc  	
-    mf_ctx_->formal_solve_global(RT_problem->I_field_, RT_problem->S_field_, 0.0); 
+    mf_ctx_->formal_solve(RT_problem->I_field_, RT_problem->S_field_, 0.0);
       
     // copy intensity into petscvec format
 	mf_ctx_->field_to_vec(RT_problem->I_field_, y);
@@ -4089,7 +4325,7 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
     if (mf_ctx_->use_J_KQ_)
     {
         // fill rhs_ from formal solve with zero bc     
-        mf_ctx_->formal_solve_global(RT_problem->I_field_, RT_problem->S_field_, 0.0);
+        mf_ctx_->formal_solve(RT_problem->I_field_, RT_problem->S_field_, 0.0);
 
         // copy intensity into petscvec format 
         mf_ctx_->I_field_to_J_KQ_vec(RT_problem->I_field_, y);
@@ -4105,7 +4341,7 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
     else
     {
         // fill rhs_ from formal solve with zero bc     
-        mf_ctx_->formal_solve_global(RT_problem->I_field_, RT_problem->S_field_, 0.0);
+        mf_ctx_->formal_solve(RT_problem->I_field_, RT_problem->S_field_, 0.0);
 
         // copy intensity into petscvec format
         mf_ctx_->field_to_vec(RT_problem->I_field_, y);
@@ -4160,7 +4396,7 @@ PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y){
         mf_ctx->update_emission_J_KQ(mf_ctx->y_J_KQ_);
 
         // (ii) perform a formal solution        
-        mf_ctx->formal_solve_global(RT_problem->I_field_, RT_problem->S_field_, 0.0); // BC?
+        mf_ctx->formal_solve(RT_problem->I_field_, RT_problem->S_field_, 0.0); // BC?
 
         // map back to y
         mf_ctx->field_to_vec(RT_problem->I_field_, y);  
@@ -4185,10 +4421,9 @@ PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y){
         ierr = KSPSolve(mf_ctx->pc_solver_, x, y);CHKERRQ(ierr);
     }
 	
-    // print  iterations 
-    PetscInt iterations;
-    ierr = KSPGetIterationNumber(mf_ctx->pc_solver_, &iterations);CHKERRQ(ierr);
-    if (mf_ctx->mpi_rank_ == 0) std::cout << "Preconditioner iterations: " << iterations << std::endl;
-
+    // print preconditioner ConvergedReason 
+    KSPConvergedReason reason;
+    ierr = KSPGetConvergedReason(mf_ctx->pc_solver_, &reason);CHKERRQ(ierr);
+    
 	return ierr;
 }

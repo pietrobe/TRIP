@@ -1,9 +1,6 @@
-#include "RT_arbitrary_beam.hpp"
 #include "RT_solver.hpp"
-#include "RT_utility.hpp"
+#include "RT_arbitrary_beam.hpp"
 #include "Test_rii_include.hpp"
-#include "Utilities.hpp"
-#include "tools.h"
 
 //////////////////////////////////////////////////////////////////////////
 // Main function
@@ -83,26 +80,18 @@ main(int argc, char *argv[])
 #endif // ACC_SOLAR_3D
 
 	{ // start scope for RT_problem and RT_solver
-
-		// load emissivity module
-		emissivity_model emissivity_model_var = cfg.emissivity_model_o;
-
-		// set input files
-		const auto input_file_path		  = cfg.input_directory / cfg.input_file;
-		const auto frequencies_input_path = cfg.input_directory / cfg.frequency_file;
-
-		// create RT problem and solver
-		auto rt_problem_ptr = create_rt_problem(cfg, input_file_path, frequencies_input_path, //
-												emissivity_model_var, mpi_rank);
+		
+		// create problem object
+		auto rt_problem_ptr = std::make_shared<RT_problem>(cfg); 
 
 		// create solver object
-		RT_solver rt_solver(rt_problem_ptr, cfg.formal_solver, cfg.use_prec);
+		RT_solver rt_solver(rt_problem_ptr);
 
 		//////////////////////////////////////////////////////////////////////////
 		// Prepare output directory
 		// If the output directory does not exist, create it. If it exists, abort !
 		const std::filesystem::path output_subdir =
-			std::filesystem::path(cfg.input_file.string() + "." + emissivity_model_to_string_long(emissivity_model_var));
+			std::filesystem::path(cfg.input_file.string() + "." + emissivity_model_to_string_long(cfg.emissivity_model));
 		const std::filesystem::path output_path =
 			std::filesystem::path(cfg.output_directory) / std::filesystem::path(output_subdir);
 		std::string output_file = (output_path / "profiles").string();
