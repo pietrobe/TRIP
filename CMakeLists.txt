@@ -18,6 +18,14 @@ if(NOT yaml-cpp_FOUND)
       GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
       GIT_TAG 0.8.0 # Can be a tag (yaml-cpp-x.x.x), a commit hash, or a branch name (master)
     )
+
+    #     FetchContent_Declare(
+    #   yaml-cpp
+    #   URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/yaml-cpp-0.8.0.tar.gz
+    #   # Optional: add hash for integrity check
+    #   # URL_HASH SHA256=<hash_value>
+    # )
+
     FetchContent_MakeAvailable(yaml-cpp)
 else()
     message(STATUS "Found yaml-cpp on system: ${yaml-cpp_VERSION}")

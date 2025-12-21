@@ -10,7 +10,7 @@
 #include <cmath>
 
 // Type for storing fields
-using Real_t = float; 
+using Real_t = double; 
 
 using Grid_t  = sgrid::Grid<Real_t, 3>;  
 using Field_t = sgrid::Field<Grid_t>;
