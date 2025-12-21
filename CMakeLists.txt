@@ -10,22 +10,29 @@ find_package(PkgConfig REQUIRED)
 
 find_package(yaml-cpp QUIET)
 
+
 if(NOT yaml-cpp_FOUND)
-    message(STATUS "yaml-cpp not found on system, fetching from Git...")
-    include(FetchContent)
-    FetchContent_Declare(
-      yaml-cpp
-      GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
-      GIT_TAG 0.8.0 # Can be a tag (yaml-cpp-x.x.x), a commit hash, or a branch name (master)
-    )
 
-    #     FetchContent_Declare(
-    #   yaml-cpp
-    #   URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/yaml-cpp-0.8.0.tar.gz
-    #   # Optional: add hash for integrity check
-    #   # URL_HASH SHA256=<hash_value>
-    # )
+    if (DEFINED YAML_CPP_URL)
+        message(STATUS "yaml-cpp not found on system, fetching from URL...")
+        include(FetchContent)
+        FetchContent_Declare(
+            yaml-cpp
+            URL ${YAML_CPP_URL}
+            # Optional: add hash for integrity check
+            # URL_HASH SHA256=<hash_value>
+        )
 
+    else()
+
+        message(STATUS "yaml-cpp not found on system, fetching from Git...")
+        include(FetchContent)
+        FetchContent_Declare(
+            yaml-cpp
+            GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+            GIT_TAG 0.8.0 # Can be a tag (yaml-cpp-x.x.x), a commit hash, or a branch name (master)
+        )
+    endif()
     FetchContent_MakeAvailable(yaml-cpp)
 else()
     message(STATUS "Found yaml-cpp on system: ${yaml-cpp_VERSION}")

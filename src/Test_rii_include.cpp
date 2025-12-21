@@ -6,7 +6,7 @@
 namespace test_solar_3D {
 
 int test_rii_3D_include(int argc, char *argv[]) {
-
+/*************************************
   MPI_CHECK(MPI_Init(&argc, &argv));
   PetscInitialize(&argc, &argv, (char *)0, NULL);
   Kokkos::initialize(argc, argv);
@@ -100,6 +100,7 @@ int test_rii_3D_include(int argc, char *argv[]) {
   PetscFinalize();
   MPI_CHECK(MPI_Finalize());
 
+  ***********************************/
   return EXIT_SUCCESS;
 }
 
