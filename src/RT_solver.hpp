@@ -3,11 +3,7 @@
 
 #include "Formal_solver.hpp"
 #include "RT_problem.hpp"
-#include "RT_utility.hpp"
-#include <rii_emission_coefficient_3D.h>
 #include "sgrid_ReMap.hpp"
-#include "RT_types.hpp"
-#include "Formal_solver.hpp"
 
 extern PetscErrorCode UserMult(Mat mat,Vec x,Vec y);
 extern PetscErrorCode UserMult_approx(Mat mat,Vec x,Vec y);
@@ -77,6 +73,8 @@ struct MF_context {
 	Field_ptr_t S_field_serial_;
 	Field_ptr_t eta_field_serial_;
 	Field_ptr_t rho_field_serial_;
+
+	std::vector<double> W_T_ij_serial_; 
 
 	// auxiliary unpolarized vecotors
 	Field_ptr_t   I_unpol_field_serial_;
@@ -148,6 +146,8 @@ struct MF_context {
 	void formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
 	void formal_solve_ray(const Real mu, const Real chi);		
 	void formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
+	void formal_solve_1_5D(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);	
+	void formal_solve(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);	
 
 	void apply_bc(       Field_ptr_t I_field, const Real I0, const bool polarized = true);	
 	void apply_bc_serial(Field_ptr_t I_field, const Real I0, const bool polarized = true);	
@@ -178,7 +178,7 @@ struct MF_context {
 class RT_solver
 {
 public:
-	RT_solver(const std::shared_ptr<RT_problem> RT_problem, input_string formal_solver = "implicit_Euler", const bool using_prec = true) 
+	RT_solver(const std::shared_ptr<RT_problem> RT_problem) 
 	{		
 		PetscErrorCode ierr;
 
@@ -187,17 +187,25 @@ public:
     	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size_);  
 
     	RT_problem_ = RT_problem;  
-    	using_prec_ = using_prec;    	    	
+    	using_prec_ = RT_problem_->cfg_.use_prec;    	    	
 
     	mf_ctx_.RT_problem_    = RT_problem;  
     	mf_ctx_.mpi_rank_      = mpi_rank_;
     	mf_ctx_.mpi_size_      = mpi_size_;   
-    	mf_ctx_.formal_solver_ = Formal_solver(formal_solver);        	
-    	
-    	// init serial grids for formal solution
-    	const int n_tiles = 1; // TODO: now fixed
-    	mf_ctx_.init_serial_fields(n_tiles);	    	
 
+    	mf_ctx_.formal_solver_ = Formal_solver(RT_problem_->cfg_.formal_solver);        	
+    	
+    	// init serial grids for formal solution (not needed for 1.5D)
+    	if (RT_problem_->use_1_5D_approx_)
+    	{
+    		mf_ctx_.n_local_rays_ = RT_problem_->block_size_;
+    	}
+    	else
+    	{
+    		const int n_tiles = 1; 
+	    	mf_ctx_.init_serial_fields(n_tiles);	    	
+    	}
+    	
     	// init unpolarized formal solver and data structures
     	if (mf_ctx_.use_J_KQ_)
     	{    		
@@ -221,7 +229,7 @@ public:
     	// save_vec(RT_problem_->I_vec_, "../output/eta_t.m" ,"etat");     
 
     	// load input options 
-    	AppConfig cfg = loadConfig("config.yml");
+    	auto cfg = RT_problem_->cfg_;
     	ksp_type_     = cfg.solver.ksp_solver_type;
     	pc_ksp_type_  = cfg.prec.pc_solver_type;	    	
 
@@ -241,7 +249,9 @@ public:
     	ierr = KSPSetOperators(ksp_solver_,MF_operator_,MF_operator_);CHKERRV(ierr);	    		    	   
     	ierr = KSPSetType(ksp_solver_,ksp_type_);CHKERRV(ierr);     	
     	ierr = KSPSetTolerances(ksp_solver_,cfg.solver.ksp_rtol,PETSC_DEFAULT,PETSC_DEFAULT, cfg.solver.ksp_max_it);CHKERRV(ierr);
-    
+    	ierr = KSPSetNormType(ksp_solver_, KSP_NORM_UNPRECONDITIONED);CHKERRV(ierr);    	
+    	ierr = KSPGMRESSetRestart(ksp_solver_, cfg.solver.gmres_restart);CHKERRV(ierr);
+
     	// some warnings 
     	if (mpi_rank_ == 0)
     	{
@@ -305,8 +315,10 @@ public:
 
     	// adding some options for verbosity
     	ierr = PetscOptionsSetValue(NULL, "-ksp_monitor", "");CHKERRV(ierr);
-		ierr = PetscOptionsSetValue(NULL, "-ksp_view", "");CHKERRV(ierr);
-
+    	// ierr = PetscOptionsSetValue(NULL, "-ksp_monitor_true_residual", "");CHKERRV(ierr);    
+		ierr = PetscOptionsSetValue(NULL, "-ksp_view", "");CHKERRV(ierr);		
+		ierr = PetscOptionsSetValue(NULL, "-ksp_converged_reason", "");CHKERRV(ierr);		
+		
     	// extra options from command line   	
     	ierr = KSPSetFromOptions(ksp_solver_);CHKERRV(ierr);
     	// ierr = PCSetFromOptions(pc_);CHKERRV(ierr);	     
@@ -446,8 +458,7 @@ public:
 		const Real clock_start = MPI_Wtime();				
 
 		// update emissivity with current I_field (in all directions)
-		mf_ctx_.update_emission_Omega(RT_problem_->I_vec_, theta, chi);
-		
+		mf_ctx_.update_emission_Omega(RT_problem_->I_vec_, theta, chi);		
 
 		const Real clock_end = MPI_Wtime();
 		const Real clock_diff = clock_end - clock_start;
@@ -460,9 +471,7 @@ public:
 		// formal solve
 		MPI_Barrier(MPI_COMM_WORLD);
 
-
 		if (mpi_rank_ == 0) std::cout << "Start formal solve in Omega..." << "    file: " << __FILE__ << ":" << __LINE__ << std::endl;
-
 		
 		Real clock_start_formal = MPI_Wtime();
 		mf_ctx_.formal_solve_ray(theta, chi);
@@ -577,8 +586,8 @@ private:
 	Vec rhs_;
 	
 	KSP ksp_solver_;
-	KSPType ksp_type_;   //= KSPFGMRES; //KSPFBCGS // KSPRICHARDSON; // test KSPPIPEFGMRES
-	KSPType pc_ksp_type_; //= KSPGMRES; // test KSPPIPEFGMRES //KSPBCGS
+	KSPType ksp_type_;    //= KSPFGMRES; //KSPFBCGS //KSPRICHARDSON; //KSPPIPEFGMRES
+	KSPType pc_ksp_type_; //= KSPGMRES; //KSPPIPEFGMRES //KSPBCGS
 	PC pc_;
 	
 	bool using_prec_;	

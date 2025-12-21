@@ -11,7 +11,6 @@
 // read atom and grid quantities 
 void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, const char* filename_qel, const char* filename_llp, const char* filename_back)
 {
-	if (mpi_rank_ == 0) std::cout << "Reading PORTA input..."    << std::endl;
 	if (mpi_rank_ == 0) std::cout << "Reading .pmd input from:  "  << filename_pmd << std::endl;
 	if (mpi_rank_ == 0) std::cout << "Reading .llp input from:  "  << filename_llp << std::endl;
 	if (mpi_rank_ == 0) std::cout << "Reading .cul input from:  "  << filename_cul << std::endl;
@@ -85,20 +84,13 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	N_theta_ *= 2;
 	N_chi_   *= 4;
 
-	// TEST
-	if (mpi_rank_ == 0) std::cout << "WARNING: N_theta and N_chi HARDCODED!" << std::endl;
-	N_theta_ = 6;
-	N_chi_   = 12;
-	//////////////////
-
-
 	if (mpi_rank_ == 0) std::cout << "N_theta = " << N_theta_ << ", N_chi = " << N_chi_ << ", from PORTA input." << std::endl;
 		
 	// some irrelevant data	
 	skip_size = PMD_MAIN_HEADER2 - 196608 - 16;
 	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));
 
-    int module_head_size;
+   int module_head_size;
 
 	// Size of each grid node	
 	MPI_CHECK(MPI_File_read_all(fh, &module_head_size, 1, MPI_INT, MPI_STATUS_IGNORE));
@@ -106,28 +98,28 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	// Size of each grid node	
 	MPI_CHECK(MPI_File_read_all(fh, &node_size_, 1, MPI_INT, MPI_STATUS_IGNORE));
 
-    // Jump to data
-    header_size_ = PMD_MAIN_HEADER1 + PMD_MAIN_HEADER2 + 12 + module_head_size;
+   // Jump to data
+   header_size_ = PMD_MAIN_HEADER1 + PMD_MAIN_HEADER2 + 12 + module_head_size;
 
 	// some irrelevant data    
-    MPI_CHECK(MPI_File_seek(fh, TWOLEVEL_HEADER1, MPI_SEEK_CUR));
+   MPI_CHECK(MPI_File_seek(fh, TWOLEVEL_HEADER1, MPI_SEEK_CUR));
 
 	// reading atomic data    
-    MPI_CHECK(MPI_File_read_all(fh, &mass_,  1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    MPI_CHECK(MPI_File_read_all(fh, &Aul_,   1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    MPI_CHECK(MPI_File_read_all(fh, &Eu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    MPI_CHECK(MPI_File_read_all(fh, &Jl2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
-    MPI_CHECK(MPI_File_read_all(fh, &Ju2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
-    MPI_CHECK(MPI_File_read_all(fh, &gl_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    MPI_CHECK(MPI_File_read_all(fh, &gu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    MPI_CHECK(MPI_File_read_all(fh, &T_ref_, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &mass_,  1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &Aul_,   1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &Eu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &Jl2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &Ju2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &gl_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &gu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &T_ref_, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 
-    // // change Eu units to [cm-1]     
-    // Eu_ /= c_ * h_; 
-    
-    // hardcoded from FAL-C 
-    Eu_ = 23652.304;    
-    
+	// // change Eu units to [cm-1]     
+	// Eu_ /= c_ * h_; 
+
+	// hardcoded from FAL-C 
+	Eu_ = 23652.304;    
+ 
   	// some irrelevant data double temp[ny][nx];    matrix of ground (iz=0) for Planckian boundary
 	skip_size = (N_x_ * N_y_) * sizeof(double);
 	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));		
@@ -374,8 +366,6 @@ void RT_problem::read_single_node_triple_field(MPI_File input_file, const int i,
 
 // read atom and grid quantities 
 void RT_problem::read_3D(const char* filename){
-
-	if (mpi_rank_ == 0) std::cout << "Reading PORTA input from " << filename << std::endl;
 
 	const bool zero_velocities = false;
 	if (mpi_rank_ == 0 and zero_velocities) std::cout << "ZERO velocities HARDCODED!" << std::endl;
@@ -1300,9 +1290,8 @@ void RT_problem::set_sizes(){
 	{
 		if (mpi_rank_ == 0) std::cout << "\nUsing mpi_size > block_size/4" << std::endl;
 	}
-	else if ((block_size_ / mpi_size_) % 4 != 0)
+	else if ((block_size_ / mpi_size_) % 4 != 0 and (not use_1_5D_approx_))
 	{
-		// if (mpi_rank_ == 0) 
 		if (mpi_rank_ == 0) 
 		{
 			std::cerr << "\n========= ERROR: block_size_ / mpi_size_ should be a divisible by 4! =========\n" << std::endl;
@@ -1311,7 +1300,7 @@ void RT_problem::set_sizes(){
 			std::cout << "N_s	   = " << N_s_ << " = " << N_x_ << " x " << N_y_ << " x " << N_z_ << std::endl;
 		}
 
-		throw;
+		throw;	
 	}	
 }
 
@@ -1319,6 +1308,8 @@ void const RT_problem::print_info(){
 	
 	if (mpi_rank_ == 0) 		
 	{		
+		if (use_1_5D_approx_) std::cout << "\nWARNING: using 1.5D approximation\n";		
+
 		if constexpr (std::is_same_v<Real_t, float>)
     		std::cout << "Fields data type: FLOAT\n";
 		else
@@ -1373,16 +1364,13 @@ void RT_problem::polarized_to_unpolarized_field(const Field_ptr_t field, Field_p
 	auto field_dev       = field      ->view_device();
 	auto field_unpol_dev = field_unpol->view_device();
 
-    sgrid::parallel_for("UNPOL TO POL", space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
-    {         
-        auto *block       = field_dev.block(i, j, k);
-        auto *block_unpol = field_unpol_dev.block(i, j, k);
-         
-        for (int b = 0; b < block_size_; b = b + 4) 
-        {
-        	block_unpol[b/4] = block[b];        	       
-        }
-    });
+	sgrid::parallel_for("UNPOL TO POL", space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
+	{         
+	   auto *block       = field_dev.block(i, j, k);
+	   auto *block_unpol = field_unpol_dev.block(i, j, k);
+	      
+	   for (int b = 0; b < block_size_; b = b + 4) block_unpol[b/4] = block[b];		
+	});
 }
 
 
@@ -2100,12 +2088,61 @@ void RT_problem::set_TKQ_tensor()
 }
 
 
+// Get a z plane and share between all processors, used for BC
+std::vector<double> RT_problem::extract_plane_k(const Field_ptr_t field, const int k_global)
+{        
+	auto field_dev =       field->view_device();
+	auto g_dev     = space_grid_->view_device();
+
+	const int local_Nx = g_dev.dim[0];
+	const int local_Ny = g_dev.dim[1];
+	const int local_Nz = g_dev.dim[2];
+
+   // Determine if this rank owns k_global    
+   int owns_plane = -1;	
+   for (int k = 0; k < local_Nz; ++k) 
+   {
+		if (g_dev.global_coord(2, k) == k_global) 
+		{
+         owns_plane = k;
+         break;
+      }
+   }
+    
+   // Extract local piece of the plane   
+   const int Nxy = N_x_ * N_y_;
+   std::vector<double> local_slice(Nxy, 0.0);
+   std::vector<double>    field_ij(Nxy, 0.0);
+
+
+   if (owns_plane != -1) 
+   {
+	   for (int i = 0; i < local_Nx; ++i)
+	   {
+	      for (int j = 0; j < local_Ny; ++j)
+	      {
+	      	const int i_global = g_dev.global_coord(0, i);
+	      	const int j_global = g_dev.global_coord(1, j);
+
+	         local_slice[j_global * N_y_ + i_global] = field_dev.ref(i, j, owns_plane);
+	      }
+	   }
+	}
+	
+   MPI_CHECK(MPI_Allreduce(local_slice.data(), field_ij.data(),Nxy,MPI_DOUBLE,MPI_SUM, MPI_COMM_WORLD));
+
+   // every rank has a full (i,j) plane with ordering j_global * N_y_ + i_global]
+
+   return field_ij;
+}
+
+
 void RT_problem::set_up(){
  
-    if (mpi_rank_ == 0) std::cout << "\nPrecomputing quantities...";				
+   if (mpi_rank_ == 0) std::cout << "\nPrecomputing quantities...";				
 
-    // temporary constants
-    Real tmp_const, tmp_const2, tmp_const3;
+   // temporary constants
+   Real tmp_const, tmp_const2, tmp_const3;
     
 	// compute line-center frequency
 	const Real dE = Eu_ - El_;
@@ -2139,12 +2176,12 @@ void RT_problem::set_up(){
 	auto epsilon_dev       = epsilon_ ->view_device();
 	auto W_T_dev           = W_T_->view_device();
 
-	// TEST
-	const auto g_dev = space_grid_->view_device();
+	// // TEST
+	// auto g_dev = space_grid_->view_device();
 
 	// compute atmospheric quantities 
-    sgrid::parallel_for("INIT-ATM", space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
-    {       	
+   sgrid::parallel_for("INIT-ATM", space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
+   {       	
     	auto *u = u_dev.block(i, j, k);
 
     	// assign some variables for readability
@@ -2152,12 +2189,12 @@ void RT_problem::set_up(){
     	Real xi  =  xi_dev.ref(i,j,k);
     	Real Cul = Cul_dev.ref(i,j,k);
         
-        // precompute quantities depening only on position
-        if (not use_PORTA_input_) 
-        {
-        	D2_dev.ref(i,j,k)  = 0.5 * Qel_dev.ref(i,j,k); 
-        	epsilon_dev.ref(i,j,k) = Cul/(Cul + Aul_);	
-        }
+		// precompute quantities depening only on position
+		if (not use_PORTA_input_) 
+		{
+			D2_dev.ref(i,j,k)  = 0.5 * Qel_dev.ref(i,j,k); 
+			epsilon_dev.ref(i,j,k) = Cul/(Cul + Aul_);	
+		}
 
 		D1_dev.ref(i,j,k)  = tmp_const3 * D2_dev.ref(i,j,k);
 
@@ -2171,7 +2208,6 @@ void RT_problem::set_up(){
 		// Qel_dev.ref(i,j,k) =  (4.0 * PI * Doppler_width_dev.ref(i,j,k)) * a_dev.ref(i,j,k)  - Aul_ - Cul;
 		// Qel_dev.ref(i,j,k) = 0.0; // DANGER - hardcoded to zero
  
-
 		// if (use_PORTA_input_) a_dev.ref(i,j,k) = (Aul_ + Cul + Qel_dev.ref(i,j,k)) / (4 * PI * Doppler_width_dev.ref(i,j,k));
 
 		W_T_dev.ref(i,j,k) = tmp_const2 * std::exp(- h_ * nu_0_ / (k_B_ * T));		
@@ -2184,12 +2220,12 @@ void RT_problem::set_up(){
 
 		// TEST
 		//if (mpi_rank_ == 0)
-	    //{
-	    //	std::cout << "i,j,k = " << i << ", " << j << ", " << k << std::endl;	    
-	    // 	std::cout << "k_L = "<<  k_L_dev.ref(i,j,k) << std::endl;	    
-	    //	std::cout << "Doppler_width_dev = "<< Doppler_width_dev.ref(i,j,k) << std::endl;	 
-	    //}	
-    });			 
+	   //{
+	   //	std::cout << "i,j,k = " << i << ", " << j << ", " << k << std::endl;	    
+	   // 	std::cout << "k_L = "<<  k_L_dev.ref(i,j,k) << std::endl;	    
+	   //	std::cout << "Doppler_width_dev = "<< Doppler_width_dev.ref(i,j,k) << std::endl;	 
+	   //}	
+   });			 
 
 
 	// precompute polarization tensors T_KQ
@@ -3214,114 +3250,68 @@ bool RT_problem::field_is_zero(const Field_ptr_t field)
 }
 
 
-void RT_problem::set_grid_partition() // TODO remove hardcoding
+void RT_problem::set_3D_decomposition(const int N_x, const int N_y, const int N_z)
 {
-	// TODO: now hardcoded	
 
-	if (mpi_size_ <= N_z_)
-	{		
-		mpi_size_z_ = mpi_size_;
-		mpi_size_x_ = 1;
-		mpi_size_y_ = 1;
+	if (mpi_size_ > N_x * N_y * N_z) 
+	{
+   	std::cerr << "Error in 1.5D: mpi_size larger then N_x * N_y!" << std::endl;
+   	MPI_Abort(MPI_COMM_WORLD, 1);
 	}
-	else
+
+   double best_score = std::numeric_limits<double>::infinity();
+   int best_px = 1;
+   int best_py = 1;
+   int best_pz = mpi_size_;
+
+   for (int px = 1; px <= mpi_size_; ++px) 
+   {
+		if (mpi_size_ % px != 0) continue;
+		int rest = mpi_size_ / px;
+
+		for (int py = 1; py <= rest; ++py) 
+		{
+
+			if (rest % py != 0) continue;
+			int pz = rest / py;
+
+			// Respect grid limits
+			if (px > N_x || py > N_y || pz > N_z) continue;
+
+			// Compute local subdomain sizes
+			double lx = double(N_x) / px;
+			double ly = double(N_y) / py;
+			double lz = double(N_z) / pz;
+
+			// Balance metric = variance of (lx, ly, lz)
+			double mean = (lx + ly + lz) / 3.0;
+			double score = (lx-mean)*(lx-mean) + (ly-mean)*(ly-mean) + (lz-mean)*(lz-mean);
+
+			if (score < best_score) {
+			    best_score = score;
+			    best_px = px;
+			    best_py = py;
+			    best_pz = pz;
+			}
+		}
+   }
+
+   mpi_size_x_ = best_px;
+   mpi_size_y_ = best_py;
+   mpi_size_z_ = best_pz;
+}
+
+
+void RT_problem::set_grid_partition() 
+{	
+	// use the 1.5D approximation
+	if (use_1_5D_approx_)
 	{			
-		if (mpi_rank_ == 0) std::cout << "========== WARNING: hardcoding grid partition ==========" << std::endl;					
-
-		if (mpi_size_ == 1152) // HARDCODED
-		{
-			mpi_size_z_ = 128;
-			mpi_size_x_ = 3;
-			mpi_size_y_ = 3;			
-		}	
-		else if (mpi_size_ == 384) // HARDCODED
-		{
-			mpi_size_z_ = 128;
-			mpi_size_x_ = 3;
-			mpi_size_y_ = 1;			
-		}
-		else if (mpi_size_ == 256) // HARDCODED
-		{
-			mpi_size_z_ = 128;
-			mpi_size_x_ = 2;
-			mpi_size_y_ = 1;			
-		}
-		else if (mpi_size_ == 512) // HARDCODED
-		{
-			mpi_size_z_ = 128;
-			mpi_size_x_ = 2;
-			mpi_size_y_ = 2;			
-		}
-		else if (mpi_size_ == 1024) // HARDCODED
-		{
-			mpi_size_z_ = 128;
-			mpi_size_x_ = 4;
-			mpi_size_y_ = 2;	
-		}
-		else if (mpi_size_ == 2048) // HARDCODED
-		{
-			mpi_size_z_ = 128;
-			mpi_size_x_ = 4;
-			mpi_size_y_ = 4;		
-		}
-		else if (mpi_size_ == 4096) // HARDCODED
-		{
-			mpi_size_z_ = 1;
-			mpi_size_x_ = 64;
-			mpi_size_y_ = 64;			
-		}
-		else if (mpi_size_ == 6144) // HARDCODED
-		{
-			mpi_size_z_ = 32;
-			mpi_size_x_ = 16;
-			mpi_size_y_ = 12;			
-		}
-		else if (mpi_size_ == 6912)
-		{
-		    	mpi_size_z_ = 27;
-            mpi_size_x_ = 16;
-            mpi_size_y_ = 16;
-		}
-		else if (mpi_size_ == 8192) // HARDCODED
-		{
-			mpi_size_z_ = 32;
-			mpi_size_x_ = 16;
-			mpi_size_y_ = 16;			
-		}
-		else if (mpi_size_ == 12288) // HARDCODED
-		{
-			mpi_size_z_ = 12;
-			mpi_size_x_ = 32;
-			mpi_size_y_ = 32;			
-		}
-		else if (mpi_size_ == 16384) 
-		{
-			mpi_size_z_ = 16;
-			mpi_size_x_ = 32;
-			mpi_size_y_ = 32;
-		}
-		else if (mpi_size_ == 19200) 
-		{
-			mpi_size_z_ = 25;
-			mpi_size_x_ = 24;
-			mpi_size_y_ = 32;			
-		}
-		else
-		{
-			mpi_size_z_ = N_z_;
-
-			const double mpi_size_xy = mpi_size_ / mpi_size_z_;
-
-			if (std::floor(mpi_size_xy) != mpi_size_xy) std::cout << "ERROR: problem with domain decomposition: mpi_size_ / mpi_size_z_ not integer!" << std::endl;
-
-			mpi_size_x_ = std::floor(std::sqrt(mpi_size_xy));
-
-			const double mpi_size_y = mpi_size_xy / mpi_size_x_;
-
-			if (std::floor(mpi_size_y) != mpi_size_y) std::cout << "ERROR: problem with domain decomposition: mpi_size_y not integer!" << std::endl;
-
-			mpi_size_y_ = (int) mpi_size_y;		
-		}
+		set_3D_decomposition(N_x_, N_y_, 1);
+	}
+	else // full 3D
+	{		
+		set_3D_decomposition(N_x_, N_y_, N_z_);		
 	}
 }
 

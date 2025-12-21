@@ -1,10 +1,4 @@
 #include "RT_utility.hpp"
-#include "tools.h"
-#include <fstream>
-#include <regex>
-#include <sstream>
-#include <stdexcept>
-#include <rii_emission_coefficient_3D.h>
 
 inline KSPType toKSPType(const std::string& name)
 {
@@ -32,49 +26,40 @@ inline std::string validateFormalSolver(const std::string& s)
     throw std::runtime_error("Invalid formal_solver: " + s);
 }
 
-std::shared_ptr<RT_problem>
-create_rt_problem(const AppConfig &cfg, const std::filesystem::path &input_file_path,
-				  const std::filesystem::path &frequencies_input_path, emissivity_model emissivity_model_var,
-				  int mpi_rank)
-{
-	if (cfg.input_directory.string().find("FAL-C") != std::string::npos)
-	{
-		if (mpi_rank == 0) std::cout << "Using FAL-C input file:  " << input_file_path << std::endl;
+// std::shared_ptr<RT_problem>
+// create_rt_problem(const AppConfig &cfg, const std::filesystem::path &input_file_path,
+// 				  const std::filesystem::path &frequencies_input_path, emissivity_model emissivity_model_var,
+// 				  int mpi_rank)
+// {
+// 	if (cfg.input_directory.string().find("FAL-C") != std::string::npos)
+// 	{
+// 		if (mpi_rank == 0) std::cout << "Using FAL-C input file:  " << input_file_path << std::endl;
 
-		return std::make_shared<RT_problem>(input_file_path.string(), cfg.N_theta, cfg.N_chi, emissivity_model_var,
-											cfg.use_B);
-	}
-	else if (cfg.input_cul.string().empty() || cfg.input_qel.empty() || cfg.input_llp.empty())
-	{
-		if (mpi_rank == 0) std::cout << "Using PORTA PMD input file ONLY:  " << input_file_path << std::endl;
+// 		return std::make_shared<RT_problem>(input_file_path.string(), cfg.N_theta, cfg.N_chi, emissivity_model_var,
+// 											cfg.use_B);
+// 	}
+// 	else if (cfg.input_cul.string().empty() || cfg.input_qel.empty() || cfg.input_llp.empty())
+// 	{
+// 		if (mpi_rank == 0) std::cout << "Using PORTA PMD input file ONLY:  " << input_file_path << std::endl;
 
-		return std::make_shared<RT_problem>(input_file_path.string().c_str(), frequencies_input_path.string().c_str(),
-											emissivity_model_var, cfg.use_B);
-	}
-	else
-	{
-		if (mpi_rank == 0) std::cout << "Using PORTA PMD + CUL + QEL + LLP + BACK input files" << std::endl;
+// 		return std::make_shared<RT_problem>(input_file_path.string().c_str(), frequencies_input_path.string().c_str(),
+// 											emissivity_model_var, cfg.use_B);
+// 	}
+// 	else
+// 	{
+// 		if (mpi_rank == 0) std::cout << "Using PORTA PMD + CUL + QEL + LLP + BACK input files" << std::endl;
 
-		auto input_cul_path	 = cfg.input_directory / cfg.input_cul;
-		auto input_qel_path	 = cfg.input_directory / cfg.input_qel;
-		auto input_llp_path	 = cfg.input_directory / cfg.input_llp;
-		auto input_back_path = cfg.input_directory / cfg.input_back;
-
-		if (mpi_rank == 0)
-		{
-			std::cout << "PMD input file:   " << input_file_path << std::endl;
-			std::cout << "LLP input file:   " << input_cul_path << std::endl;
-			std::cout << "CUL input file:   " << input_qel_path << std::endl;
-			std::cout << "QEL input file:   " << input_llp_path << std::endl;
-			std::cout << "BACK input file:  " << input_back_path << std::endl;
-		}
-
-		return std::make_shared<RT_problem>(input_file_path.string().c_str(), input_cul_path.string().c_str(),
-											input_qel_path.string().c_str(), input_llp_path.string().c_str(),
-											input_back_path.string().c_str(), frequencies_input_path.string(),
-											emissivity_model_var, cfg.use_B);
-	}
-}
+// 		auto input_cul_path	 = cfg.input_directory / cfg.input_cul;
+// 		auto input_qel_path	 = cfg.input_directory / cfg.input_qel;
+// 		auto input_llp_path	 = cfg.input_directory / cfg.input_llp;
+// 		auto input_back_path = cfg.input_directory / cfg.input_back;
+		
+// 		return std::make_shared<RT_problem>(input_file_path.string().c_str(), input_cul_path.string().c_str(),
+// 											input_qel_path.string().c_str(), input_llp_path.string().c_str(),
+// 											input_back_path.string().c_str(), frequencies_input_path.string(),
+// 											emissivity_model_var, cfg.use_B);
+// 	}
+// }
 
 AppConfig loadConfig(const std::string& filename) {
     YAML::Node config = YAML::LoadFile(filename);
@@ -100,10 +85,12 @@ AppConfig loadConfig(const std::string& filename) {
     if (config["output_directory"]) cfg.output_directory = std::filesystem::path(config["output_directory"].as<std::string>());
 
     // Emissivity model (required)
-    cfg.emissivity_model_o = config["emissivity_model"].as<emissivity_model>();
+    cfg.emissivity_model = config["emissivity_model"].as<emissivity_model>();
 
-    // Physical flags
-    if (config["use_B"]) cfg.use_B = config["use_B"].as<bool>();    
+    // Flags
+    if (config["use_B"])            cfg.use_B            = config["use_B"].as<bool>();    
+    if (config["use_1_5D_approx"])  cfg.use_1_5D_approx  = config["use_1_5D_approx"].as<bool>();    
+    if (config["enable_continuum"]) cfg.enable_continuum = config["enable_continuum"].as<bool>();    
 
     // Formal solver
     if (config["formal_solver"]) 
@@ -114,8 +101,10 @@ AppConfig loadConfig(const std::string& filename) {
 
     // Integers
     if (config["N_theta"]) cfg.N_theta = config["N_theta"].as<int>();
-
-    if (config["N_chi"]) cfg.N_chi = config["N_chi"].as<int>();
+    if (config["N_chi"])   cfg.N_chi   = config["N_chi"].as<int>();
+    if (config["N_x"])     cfg.N_x     = config["N_x"].as<int>();
+    if (config["N_y"])     cfg.N_y     = config["N_y"].as<int>();
+    if (config["L"])       cfg.L       = config["L"].as<double>();
 
     // Optional strings (converted to filesystem::path)
     if (config["input_cul"])  cfg.input_cul  = std::filesystem::path(config["input_cul"].as<std::string>());
@@ -127,7 +116,7 @@ AppConfig loadConfig(const std::string& filename) {
     if (config["use_prec"]) cfg.use_prec = config["use_prec"].as<bool>();
 
     // override logic: do not use preconditioner for CRD and ZERO
-    switch (cfg.emissivity_model_o) {
+    switch (cfg.emissivity_model) {
         case emissivity_model::CRD_limit:
         case emissivity_model::CRD_limit_VHP:
         case emissivity_model::ZERO:
@@ -145,6 +134,7 @@ AppConfig loadConfig(const std::string& filename) {
         if (s["ksp_solver_type"]) cfg.solver.ksp_solver_type = toKSPType(s["ksp_solver_type"].as<std::string>());        
         if (s["ksp_rtol"])        cfg.solver.ksp_rtol        = s["ksp_rtol"].as<double>();
         if (s["ksp_max_it"])      cfg.solver.ksp_max_it      = s["ksp_max_it"].as<int>();
+        if (s["gmres_restart"])   cfg.solver.gmres_restart   = s["gmres_restart"].as<int>();
     }
 
     // Preconditioner section

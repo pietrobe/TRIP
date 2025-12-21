@@ -1,13 +1,8 @@
 #ifndef RT_problem_hpp
 #define RT_problem_hpp
 
-#include "Utilities.hpp"
 #include "sgrid_Core.hpp"
-#include "RT_types.hpp"
-#include <yaml-cpp/yaml.h>
-#include <petscsys.h> 
-#include <petsc.h>
-#include <cmath>
+#include "RT_utility.hpp"
 
 // Type for storing fields
 using Real_t = double; 
@@ -19,61 +14,6 @@ using Grid_ptr_t  = std::shared_ptr<Grid_t>;
 using Field_ptr_t = std::shared_ptr<Field_t>;
 
 typedef const std::string input_string;
-
-enum class emissivity_model { NONE,        	 //
-	                          CRD_limit,   	 //
-							  CRD_limit_VHP, //
-							  PRD,           //
-							  PRD_NORMAL,    //
-							  PRD_MEDIUM,    //
-							  PRD_FAST,      //
-							  PRD_AA,	     //
-							  PRD_AA_MAPV,   //
-							  ZERO};         //
-
-namespace YAML {
-
-template<>
-struct convert<emissivity_model> {
-    static Node encode(const emissivity_model& rhs) {
-        Node node;
-        switch (rhs) {
-            case emissivity_model::NONE:           node = "NONE"; break;
-            case emissivity_model::CRD_limit:      node = "CRD_limit"; break;
-            case emissivity_model::CRD_limit_VHP:  node = "CRD_limit_VHP"; break;
-            case emissivity_model::PRD:            node = "PRD"; break;
-            case emissivity_model::PRD_NORMAL:     node = "PRD_NORMAL"; break;
-			case emissivity_model::PRD_MEDIUM:     node = "PRD_MEDIUM"; break;
-            case emissivity_model::PRD_FAST:       node = "PRD_FAST"; break;
-            case emissivity_model::PRD_AA:         node = "PRD_AA"; break;
-            case emissivity_model::PRD_AA_MAPV:    node = "PRD_AA_MAPV"; break;
-            case emissivity_model::ZERO:           node = "ZERO"; break;
-        }
-        return node;
-    }
-
-    static bool decode(const Node& node, emissivity_model& rhs) {
-        if (!node.IsScalar()) return false;
-        const std::string s = node.as<std::string>();
-
-        if      (s == "NONE")            rhs = emissivity_model::NONE;
-        else if (s == "CRD_limit")       rhs = emissivity_model::CRD_limit;
-        else if (s == "CRD_limit_VHP")   rhs = emissivity_model::CRD_limit_VHP;
-        else if (s == "PRD")             rhs = emissivity_model::PRD;
-        else if (s == "PRD_NORMAL")      rhs = emissivity_model::PRD_NORMAL;
-		else if (s == "PRD_MEDIUM")      rhs = emissivity_model::PRD_MEDIUM;
-        else if (s == "PRD_FAST")        rhs = emissivity_model::PRD_FAST;
-        else if (s == "PRD_AA")          rhs = emissivity_model::PRD_AA;
-        else if (s == "PRD_AA_MAPV")     rhs = emissivity_model::PRD_AA_MAPV;
-        else if (s == "ZERO")            rhs = emissivity_model::ZERO;
-        else return false;
-
-        return true;
-    }
-};
-
-} // namespace YAML
-
 
 inline std::string emissivity_model_to_string(const emissivity_model& model)
 {
@@ -147,6 +87,87 @@ class RT_problem
 {
 
 public:
+	
+	// Deafult constructor 
+	RT_problem(const AppConfig &cfg)
+	{
+		Real start = MPI_Wtime();
+
+		// assign MPI varaibles 
+    	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank_);
+    	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size_);
+
+    	// set input file 
+    	cfg_ = cfg;
+
+    	if (mpi_rank_ == 0) 
+    	{
+			std::cout << "\n~~~~~~ MPI size = " << mpi_size_ << " ~~~~~~" << std::endl << std::endl;
+			std::cout << "Emissivity Model long:  " << emissivity_model_to_string_long(cfg_.emissivity_model) << std::endl;
+			std::cout << "Emissivity Model short: " << emissivity_model_to_string(cfg_.emissivity_model)      << std::endl;
+		}
+
+		// set flags    	
+    	use_PORTA_input_    = not (cfg_.input_directory.string().find("FAL-C") != std::string::npos);
+    	use_magnetic_field_ = cfg_.use_B;    	
+		emissivity_model_   = cfg_.emissivity_model;
+		enable_continuum_   = cfg_.enable_continuum;
+		use_1_5D_approx_    = cfg_.use_1_5D_approx;
+	
+		// set input files
+		const auto input_file_path		  = cfg_.input_directory / cfg_.input_file;
+		const auto frequencies_input_path = cfg_.input_directory / cfg_.frequency_file;		
+
+		// read input frequencies from separate file
+		read_frequency(frequencies_input_path.string().c_str());
+
+		// read atmoshperic data depending on input format 
+		if (use_PORTA_input_) 
+		{		
+			if (cfg_.input_cul.string().empty() || cfg_.input_qel.empty() || cfg_.input_llp.empty())
+			{
+				if (mpi_rank_ == 0) std::cout << "Using PORTA PMD input file ONLY:  " << input_file_path << std::endl;
+
+				read_3D(input_file_path.string().c_str());
+			}
+			else
+			{
+				if (mpi_rank_ == 0) std::cout << "Using PORTA PMD + CUL + QEL + LLP + BACK input files" << std::endl;
+
+				auto input_cul_path	 = cfg_.input_directory / cfg_.input_cul;
+				auto input_qel_path	 = cfg_.input_directory / cfg_.input_qel;
+				auto input_llp_path	 = cfg_.input_directory / cfg_.input_llp;
+				auto input_back_path = cfg_.input_directory / cfg_.input_back;
+
+				read_3D(input_file_path.string().c_str(), 
+					    input_cul_path.string().c_str(),
+				        input_qel_path.string().c_str(), 
+				        input_llp_path.string().c_str(),
+						input_back_path.string().c_str());													
+			}	
+		}
+		else // FAL-C input
+		{
+			if (mpi_rank_ == 0) std::cout << "Using FAL-C input format" << std::endl << std::endl;
+
+			read_FAL_C();
+		}
+			
+		// timing    	    
+	    if (mpi_rank_ == 0) printf("Reading input time:\t\t%g (seconds)\n", MPI_Wtime() - start);	      	 
+    	start = MPI_Wtime();
+
+		// precompute
+		set_up();
+
+		// print info 
+		print_info();	    
+		   
+	    if (mpi_rank_ == 0) printf("Set up time:\t\t%g (seconds)\n", MPI_Wtime() - start);	      		
+	}
+
+
+	// DEPRECATED CONSTRUCTORS
 
 	// constructor for PORTA input file with additional inputs
 	RT_problem(const char* filename_pmd,
@@ -181,7 +202,7 @@ public:
     	read_3D(filename_pmd, filename_cul, filename_qel, filename_llp, filename_back);
 
     	// timing    	    
-	    if (mpi_rank_ == 0) printf("Reading input time:\t\t%g (seconds)\n", MPI_Wtime() - start);	      		
+	    if (mpi_rank_ == 0) printf("Reading input time:\t\t%g (seconds)\n", MPI_Wtime() - start);	      	 
     	start = MPI_Wtime();
 
 		// precompute
@@ -260,7 +281,7 @@ public:
     
     	// TODO: now hardcoded (put everything in input_path file)    	
     	// N_x_ = std::sqrt(mpi_size_)/2;
-    	N_x_ = 1;
+    	N_x_ = 10;
     	N_y_ = N_x_;
     	L_   = 400.0;
     	// const double L_tot = 1000.0;
@@ -308,6 +329,48 @@ public:
 	    if (mpi_rank_ == 0) printf("Set up time:\t\t%g (seconds)\n", end - start);	      		
 	}
 
+
+	inline void read_FAL_C()
+	{		
+    	// Set grid horizontal dimensions
+    	N_x_ = cfg_.N_x;
+    	N_y_ = cfg_.N_y;
+    	L_   = cfg_.L;
+    	
+    	input_string input_path = (cfg_.input_directory / cfg_.input_file).string();
+
+    	// reading some input
+    	read_atom( input_path + "/atom.dat");
+    	read_depth(input_path + "/atmosphere.dat");	    	
+    	    
+    	// set sizes and directions grids and weigths
+		set_theta_chi_grids(cfg_.N_theta, cfg_.N_chi);
+		set_sizes();
+							
+		// init grid
+		space_grid_ = std::make_shared<Grid_t>();
+
+		// menage grid distribution // TODO: now bit hardcoded // necessary?
+		set_grid_partition();
+		space_grid_->init(MPI_COMM_WORLD, {N_x_, N_y_, N_z_}, {1, 1, 0},
+									 {mpi_size_x_, mpi_size_y_, mpi_size_z_}, use_ghost_layers_); 
+
+		// init fields
+		allocate_fields();				
+
+		// init atmospheric quantities 
+		allocate_atmosphere();	
+
+		// read atm data (needs grid object)
+		read_atmosphere_1D(    input_path + "/atmosphere.dat");    // NOTE: solar surface for space index k = 0
+		read_bulk_velocity_1D( input_path + "/bulk_velocity.dat");			
+		read_magnetic_field_1D(input_path + "/magnetic_field.dat");			
+		
+		read_continumm_1D(input_path + "/continuum/continuum_scat_opac.dat", 
+						  input_path + "/continuum/continuum_tot_opac.dat",
+						  input_path + "/continuum/continuum_therm_emiss.dat");		
+	}
+
 	// convert block index to to local ones = [j_theta, k_chi, n_nu, i_stokes]
 	inline std::vector<int> block_to_local(const int block_index)
 	{
@@ -343,6 +406,10 @@ public:
 
 		return local_indeces;	
 	}
+
+
+	// extract horizontal plane k from field
+	std::vector<double> extract_plane_k(const Field_ptr_t field, const int k_global);
 
 	// convert local indeces to block one (of fields) for the first Stokes parameter and vice versa
 	inline int local_to_block(const int j, const int k, const int n) { return 4 * ( N_nu_ * ( N_chi_ * j + k ) + n); }
@@ -403,8 +470,15 @@ public:
 	int mpi_size_z_;
 	
 	// flag to enable continuum 
-	bool enable_continuum_ = true;
+	bool enable_continuum_;
+
+	// Use the 1.5 approximation
+	bool use_1_5D_approx_;
+
+	// input file
+	AppConfig cfg_;
 		
+	// emissivity model
 	emissivity_model emissivity_model_ = emissivity_model::NONE; 
 
 	// spatial grid
@@ -518,7 +592,7 @@ public:
 
 	inline void free_fields_memory()
 	{
-		if (mpi_rank_ == 0) std::cout << "Freeing RT_Problem fields memory..." << std::endl;				
+		if (mpi_rank_ == 0) std::cout << "Freeing RT_problem fields memory..." << std::endl;				
 
 		// I_field_.reset();
     	// S_field_.reset();
@@ -571,14 +645,15 @@ private:
 	void allocate_atmosphere();
 
 	// init fields 
-	void init_field(Field_ptr_t input_field, const Real input_value); // TODO remove?
+	void init_field(Field_ptr_t input_field, const Real input_value);
 	
 	// set grids and sizes
 	void set_theta_chi_grids(const int N_theta, const int N_chi, const bool double_GL = true);
 	void set_sizes();
 
 	// menage grid distribution
-	void set_grid_partition();
+	void set_grid_partition();	
+	void set_3D_decomposition(const int N_x, const int N_y, const int N_z);
 
 	// read inputs
 	void read_atom(             input_string filename);
@@ -611,9 +686,6 @@ private:
 	
 	// precompute quantities
 	void set_up();
-
-	// free memory when not needed anymore 
-	void clean();
 
 	// print infos on screen
 	void const print_info();	
