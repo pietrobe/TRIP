@@ -176,4 +176,25 @@ endif()
 
 target_compile_definitions(solar_3D PUBLIC ${PETSC_DEFINITIONS})
 
+# Build thdf/libhdf_output.a using its Makefile
+if(FALSE)
+    add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/thdf/libhdf_output.a
+        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_SOURCE_DIR}/thdf make CC=${CMAKE_C_COMPILER} lib
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/thdf
+        COMMENT "Building libhdf_output.a in thdf using Makefile"
+    )
 
+    add_custom_target(hdf_output_lib ALL
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/thdf/libhdf_output.a
+    )
+
+    # Ensure solar_3D depends on the static library
+    add_dependencies(solar_3D hdf_output_lib)
+
+    # Include thdf headers
+    target_include_directories(solar_3D PUBLIC thdf/)
+
+    # Link the static library
+    target_link_libraries(solar_3D PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/thdf/libhdf_output.a)
+endif()
