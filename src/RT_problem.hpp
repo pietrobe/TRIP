@@ -460,6 +460,15 @@ public:
 	write_surface_point_profiles_Omega_csv(input_string file_name, const int i_space, const int j_space,
 										   const unsigned int precision);
 
+	int
+	make_write_surface_MPI_Comm(const MPI_Comm MPI_Comm_MAIN, MPI_Comm &write_comm);
+
+	int 
+	accumulate_surface_data(const int i_space, const int j_space, std::vector<double> &surface_data_I, 
+							std::vector<double> &surface_data_Q, 
+							std::vector<double> &surface_data_U, 
+							std::vector<double> &surface_data_V);
+
 	// MPI varables
 	int mpi_rank_;
 	int mpi_size_;	
