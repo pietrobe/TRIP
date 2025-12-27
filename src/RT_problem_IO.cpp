@@ -2,25 +2,88 @@
 #include "thdf.h"
 
 int
+write_emergent_field_hdf5(RT_problem &rt_problem, const std::string &output_file)
+{
+	MPI_Comm write_comm;
+	const auto [color, mpi_status] = rt_problem.make_write_surface_MPI_Comm(MPI_COMM_WORLD, write_comm);
+
+	if (color == MPI_UNDEFINED)
+	{
+		MPI_Barrier(MPI_COMM_WORLD);
+		MPI_Comm_free(&write_comm);
+		return EXIT_SUCCESS;
+	}
+
+	rt_problem.write_emergent_angular_frequency_grids_hdf5(output_file);
+
+	const int N_x = rt_problem.N_x_;
+	const int N_y = rt_problem.N_y_;
+
+	std::vector<double> surface_data_I;
+	std::vector<double> surface_data_Q;
+	std::vector<double> surface_data_U;
+	std::vector<double> surface_data_V;
+
+	const int N_nu	  = rt_problem.N_nu_;
+	const int N_theta = rt_problem.N_theta_;
+	const int N_chi	  = rt_problem.N_chi_;
+
+	const auto f_dev = rt_problem.I_field_->view_device();
+	const auto g_dev = rt_problem.space_grid_->view_device();
+
+	// indeces
+	const int i_start = g_dev.margin[0];
+	const int j_start = g_dev.margin[1];
+	const int k_start = g_dev.margin[2];
+
+	const int i_end = i_start + g_dev.dim[0];
+	const int j_end = j_start + g_dev.dim[1];
+
+	const int size_i = g_dev.dim[0];
+	const int size_j = g_dev.dim[1];
+
+	surface_data_I.reserve(N_nu * (N_theta / 2) * N_chi * size_i * size_j);
+	surface_data_Q.reserve(N_nu * (N_theta / 2) * N_chi * size_i * size_j);
+	surface_data_U.reserve(N_nu * (N_theta / 2) * N_chi * size_i * size_j);
+	surface_data_V.reserve(N_nu * (N_theta / 2) * N_chi * size_i * size_j);
+
+	rt_problem.accumulate_surface_domain_data(surface_data_I, surface_data_Q, surface_data_U, surface_data_V);
+
+	int status = rt_problem.write_emergent_field_hdf5(output_file, write_comm, surface_data_I, surface_data_Q,
+													  surface_data_U, surface_data_V);
+
+	MPI_Barrier(MPI_COMM_WORLD);
+	MPI_Comm_free(&write_comm);
+
+	return status;
+}
+
+std::tuple<int, int>
 RT_problem::make_write_surface_MPI_Comm(const MPI_Comm MPI_Comm_MAIN, MPI_Comm &write_comm)
 {
 	const auto g_dev = space_grid_->view_device();
 
-	const int mpi_status =																  //
-		MPI_Comm_split(MPI_Comm_MAIN,													  //
-					   (g_dev.global_coord(2, g_dev.margin[2]) == 0) ? 1 : MPI_UNDEFINED, //
-					   mpi_rank_,														  //
-					   &write_comm);
+	const int color = (g_dev.global_coord(2, g_dev.margin[2]) == 0) ? 1 : MPI_UNDEFINED;
 
-	return mpi_status;
+	const int mpi_status =						//
+		MPI_Comm_split(MPI_Comm_MAIN,			//
+					   color,					//
+					   mpi_rank_, &write_comm); //
+
+	return std::make_tuple(color, mpi_status);
 }
 
-int																						//
-RT_problem::write_emergent_angular_frequency_grids_hdf5(const std::string &output_file, //
-														const int		   i_space,		//
-														const int		   j_space)
+int //
+RT_problem::write_emergent_angular_frequency_grids_hdf5(const std::string &output_file)
 {
-	if (this->mpi_rank_ != 0 and i_space != 0 and j_space != 0) return EXIT_SUCCESS;
+	const auto g_dev = space_grid_->view_device();
+
+	if (this->mpi_rank_ != 0 and						//
+		g_dev.global_coord(0, g_dev.margin[0]) != 0 and //
+		g_dev.global_coord(1, g_dev.margin[1]) != 0)	//
+	{
+		return EXIT_SUCCESS;
+	}
 
 	THDF_angular_grid_t angular_grid;
 
@@ -128,6 +191,60 @@ RT_problem::write_emergent_field_hdf5(const std::string &output_file, MPI_Comm w
 }
 
 int
+RT_problem::accumulate_surface_domain_data(std::vector<double> &surface_data_I, std::vector<double> &surface_data_Q,
+										   std::vector<double> &surface_data_U, std::vector<double> &surface_data_V)
+{
+	const auto f_dev = I_field_->view_device();
+	const auto g_dev = space_grid_->view_device();
+
+	// indeces
+	const int i_start = g_dev.margin[0];
+	const int j_start = g_dev.margin[1];
+	const int k_start = g_dev.margin[2];
+
+	const int i_end = i_start + g_dev.dim[0];
+	const int j_end = j_start + g_dev.dim[1];
+
+	const int size_i = g_dev.dim[0];
+	const int size_j = g_dev.dim[1];
+
+	int i_global, j_global;
+
+	if (g_dev.global_coord(2, k_start) != 0) return 0;
+
+	for (int i = i_start; i < i_end; ++i)
+	{
+		i_global = g_dev.global_coord(0, i);
+		for (int j = j_start; j < j_end; ++j)
+		{
+			j_global = g_dev.global_coord(1, j);
+			for (int j_theta = N_theta_ / 2; j_theta < N_theta_; ++j_theta)
+			{
+				for (int k_chi = 0; k_chi < N_chi_; ++k_chi)
+				{
+					const int b_start = local_to_block(j_theta, k_chi, 0);
+
+					for (int b = 0; b < 4 * N_nu_; b = b + 4)
+					{
+						const double I = f_dev.block(i, j, k_start)[b_start + b + 0];
+						const double Q = f_dev.block(i, j, k_start)[b_start + b + 1];
+						const double U = f_dev.block(i, j, k_start)[b_start + b + 2];
+						const double V = f_dev.block(i, j, k_start)[b_start + b + 3];
+
+						surface_data_I.push_back(I);
+						surface_data_Q.push_back(Q / I * 100.0);
+						surface_data_U.push_back(U / I * 100.0);
+						surface_data_V.push_back(V / I * 100.0);
+					}
+				}
+			}
+		}
+	}
+
+	return 0;
+}
+
+int
 RT_problem::accumulate_surface_data(const int i_space, const int j_space, std::vector<double> &surface_data_I,
 									std::vector<double> &surface_data_Q, std::vector<double> &surface_data_U,
 									std::vector<double> &surface_data_V)
@@ -145,16 +262,6 @@ RT_problem::accumulate_surface_data(const int i_space, const int j_space, std::v
 
 	const int size_i = g_dev.dim[0];
 	const int size_j = g_dev.dim[1];
-
-	surface_data_I.clear();
-	surface_data_Q.clear();
-	surface_data_U.clear();
-	surface_data_V.clear();
-
-	surface_data_I.reserve(N_nu_ * (N_theta_ / 2) * N_chi_ * size_i * size_j);
-	surface_data_Q.reserve(N_nu_ * (N_theta_ / 2) * N_chi_ * size_i * size_j);
-	surface_data_U.reserve(N_nu_ * (N_theta_ / 2) * N_chi_ * size_i * size_j);
-	surface_data_V.reserve(N_nu_ * (N_theta_ / 2) * N_chi_ * size_i * size_j);
 
 	int i_global, j_global;
 
@@ -187,9 +294,9 @@ RT_problem::accumulate_surface_data(const int i_space, const int j_space, std::v
 									const double V = f_dev.block(i, j, k_start)[b_start + b + 3];
 
 									surface_data_I.push_back(I);
-									surface_data_Q.push_back(Q);
-									surface_data_U.push_back(U);
-									surface_data_V.push_back(V);
+									surface_data_Q.push_back(Q / I * 100.0);
+									surface_data_U.push_back(U / I * 100.0);
+									surface_data_V.push_back(V / I * 100.0);
 								}
 							}
 						}

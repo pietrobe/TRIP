@@ -1,5 +1,5 @@
-#include "RT_solver.hpp"
 #include "RT_arbitrary_beam.hpp"
+#include "RT_solver.hpp"
 #include "Test_rii_include.hpp"
 
 //////////////////////////////////////////////////////////////////////////
@@ -80,9 +80,9 @@ main(int argc, char *argv[])
 #endif // ACC_SOLAR_3D
 
 	{ // start scope for RT_problem and RT_solver
-		
+
 		// create problem object
-		auto rt_problem_ptr = std::make_shared<RT_problem>(cfg); 
+		auto rt_problem_ptr = std::make_shared<RT_problem>(cfg);
 
 		// create solver object
 		RT_solver rt_solver(rt_problem_ptr);
@@ -171,8 +171,6 @@ main(int argc, char *argv[])
 				for (int j = 0; j < N_y; ++j)
 				{
 					// const std::string output_file_Omega_mu	   = output_file + "_mu" + mu_str + "_chi" + chi_str;
-					const std::string output_file_frequencies  = (output_path / "frequencies_grid_Hz").string();
-					const std::string output_file_angular_grid = (output_path / "angular_grid").string();
 
 					rt_problem_ptr->write_surface_point_profiles(output_file, i, j);
 
@@ -181,6 +179,9 @@ main(int argc, char *argv[])
 
 					if (rt_problem_ptr->mpi_rank_ == 0 and i == 0 and j == 0)
 					{
+						const std::string output_file_frequencies  = (output_path / "frequencies_grid_Hz").string();
+						const std::string output_file_angular_grid = (output_path / "angular_grid").string();
+
 						rt_problem_ptr->write_angular_grid_csv(output_file_angular_grid, i, j);
 						rt_problem_ptr->write_frequencies_grid_csv(output_file_frequencies, i, j);
 					}
