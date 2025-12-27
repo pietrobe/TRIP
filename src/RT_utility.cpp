@@ -85,7 +85,7 @@ AppConfig loadConfig(const std::string& filename) {
     if (config["output_directory"]) cfg.output_directory = std::filesystem::path(config["output_directory"].as<std::string>());
 
     // Emissivity model (required)
-    cfg.emissivity_model = config["emissivity_model"].as<emissivity_model>();
+    cfg.emissivity_model = config["emissivity_model"].as<emissivity_model_t>();
 
     // Flags
     if (config["use_B"])            cfg.use_B            = config["use_B"].as<bool>();    
@@ -117,9 +117,9 @@ AppConfig loadConfig(const std::string& filename) {
 
     // override logic: do not use preconditioner for CRD and ZERO
     switch (cfg.emissivity_model) {
-        case emissivity_model::CRD_limit:
-        case emissivity_model::CRD_limit_VHP:
-        case emissivity_model::ZERO:
+        case emissivity_model_t::CRD_limit:
+        case emissivity_model_t::CRD_limit_VHP:
+        case emissivity_model_t::ZERO:
             cfg.use_prec = false;
             break;
         default:

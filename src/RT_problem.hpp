@@ -15,27 +15,27 @@ using Field_ptr_t = std::shared_ptr<Field_t>;
 
 typedef const std::string input_string;
 
-inline std::string emissivity_model_to_string(const emissivity_model& model)
+inline std::string emissivity_model_to_string(const emissivity_model_t& model)
 {
 	switch (model)
 	{
-		case emissivity_model::NONE:
+		case emissivity_model_t::NONE:
 			return "NONE";
 			break;
-		case emissivity_model::CRD_limit_VHP:
-		case emissivity_model::CRD_limit:
+		case emissivity_model_t::CRD_limit_VHP:
+		case emissivity_model_t::CRD_limit:
 			return "CRD";
 			break;
-		case emissivity_model::PRD:
-		case emissivity_model::PRD_NORMAL:
-		case emissivity_model::PRD_FAST:
+		case emissivity_model_t::PRD:
+		case emissivity_model_t::PRD_NORMAL:
+		case emissivity_model_t::PRD_FAST:
 			return "PRD";
 			break;
-		case emissivity_model::PRD_AA:
-		case emissivity_model::PRD_AA_MAPV:
+		case emissivity_model_t::PRD_AA:
+		case emissivity_model_t::PRD_AA_MAPV:
 			return "PRD_AA";
 			break;
-		case emissivity_model::ZERO:
+		case emissivity_model_t::ZERO:
 			return "CONTINUUM";
 			break;
 		default:
@@ -46,35 +46,35 @@ inline std::string emissivity_model_to_string(const emissivity_model& model)
 }
 
 
-inline std::string emissivity_model_to_string_long(const emissivity_model& model)
+inline std::string emissivity_model_to_string_long(const emissivity_model_t& model)
 {
 	switch (model)
 	{
-		case emissivity_model::NONE:
+		case emissivity_model_t::NONE:
 			return "NONE";
 			break;
-		case emissivity_model::CRD_limit:
+		case emissivity_model_t::CRD_limit:
 			return "CRD_limit";
 			break;
-		case emissivity_model::CRD_limit_VHP:
+		case emissivity_model_t::CRD_limit_VHP:
 			return "CRD_limit_VHP";
 			break;
-		case emissivity_model::PRD:
+		case emissivity_model_t::PRD:
 			return "PRD";
 			break;
-		case emissivity_model::PRD_NORMAL:
+		case emissivity_model_t::PRD_NORMAL:
 			return "PRD_NORMAL";
 			break;
-		case emissivity_model::PRD_FAST:
+		case emissivity_model_t::PRD_FAST:
 			return "PRD_FAST";
 			break;
-		case emissivity_model::PRD_AA:
+		case emissivity_model_t::PRD_AA:
 			return "PRD_AA";
 			break;
-		case emissivity_model::PRD_AA_MAPV:
+		case emissivity_model_t::PRD_AA_MAPV:
 			return "PRD_AA_MAPV";
 			break;
-		case emissivity_model::ZERO:
+		case emissivity_model_t::ZERO:
 			return "CONTINUUM";
 			break;
 		default:
@@ -176,7 +176,7 @@ public:
 			   const char* filename_llp, 
 			   const char* filename_back,
 			   input_string input_path_frequency, 
-			   const emissivity_model emissivity_model_arg, 
+			   const emissivity_model_t emissivity_model_arg, 
 			   const bool use_magnetic_field = false)
 	{				
 		Real start = MPI_Wtime();
@@ -217,7 +217,7 @@ public:
 	/////////////////////////////////////////////////////////////////////////
 	// constructor for PORTA input file
 	RT_problem(const char* PORTA_input, input_string input_path_frequency, 
-			   const emissivity_model emissivity_model_arg, 
+			   const emissivity_model_t emissivity_model_arg, 
 			   const bool use_magnetic_field = false)
 	{				
 		Real start = MPI_Wtime();
@@ -261,7 +261,7 @@ public:
 	RT_problem(input_string input_path, 
 			   const int N_theta, 
 			   const int N_chi, 
-		       const emissivity_model emissivity_model_arg = emissivity_model::NONE,
+		       const emissivity_model_t emissivity_model_arg = emissivity_model_t::NONE,
 		       const bool use_magnetic_field = false)			   
 	{		
 		Real start = MPI_Wtime();
@@ -488,7 +488,7 @@ public:
 	AppConfig cfg_;
 		
 	// emissivity model
-	emissivity_model emissivity_model_ = emissivity_model::NONE; 
+	emissivity_model_t emissivity_model_ = emissivity_model_t::NONE; 
 
 	// spatial grid
 	Grid_ptr_t space_grid_; 	
