@@ -463,11 +463,20 @@ public:
 	int
 	make_write_surface_MPI_Comm(const MPI_Comm MPI_Comm_MAIN, MPI_Comm &write_comm);
 
-	int 
-	accumulate_surface_data(const int i_space, const int j_space, std::vector<double> &surface_data_I, 
-							std::vector<double> &surface_data_Q, 
-							std::vector<double> &surface_data_U, 
-							std::vector<double> &surface_data_V);
+	int
+	accumulate_surface_data(const int i_space, const int j_space, //
+							std::vector<double> &surface_data_I, std::vector<double> &surface_data_Q,
+							std::vector<double> &surface_data_U, std::vector<double> &surface_data_V);
+
+	int																			//
+	write_emergent_angular_frequency_grids_hdf5(const std::string &output_file, //
+												const int		   i_space,		//
+												const int		   j_space);				//
+
+	int
+	write_emergent_field_hdf5(const std::string &output_file, MPI_Comm write_comm, std::vector<double> &surface_data_I,
+							  std::vector<double> &surface_data_Q, std::vector<double> &surface_data_U,
+							  std::vector<double> &surface_data_V);
 
 	// MPI varables
 	int mpi_rank_;

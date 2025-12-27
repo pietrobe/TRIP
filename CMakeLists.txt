@@ -5,6 +5,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${SOLAR_3D_ROOT_PATH}/cmake")
 
 project(par_moonolith_usage VERSION 1.0.0)
 
+find_package(HDF5 REQUIRED)
+find_package(HDF5 COMPONENTS HL REQUIRED)
+
 include(CMakeFindDependencyMacro)
 find_package(PkgConfig REQUIRED)
 
@@ -148,6 +151,8 @@ configure_file(
 
 # we use one of our examples here
 add_executable(solar_3D ${CMAKE_SOURCE_DIR}/src/main.cpp)
+
+target_include_directories(solar_3D PUBLIC ${HDF5_INCLUDE_DIRS})
 set(CMAKE_CXX_FLAGS  " -O3 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option ")
 
 #set(CMAKE_CXX_FLAGS  " -Ofast -fno-signed-zeros -fno-trapping-math -fassociative-math -march=native -mtune=native -mprefer-vector-width=512 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option -pedantic ")
@@ -159,6 +164,9 @@ message( STATUS  "RII path: ${RII_ROOT_PATH}")
 
 # import all the dependencies and targets
 target_link_libraries(solar_3D PUBLIC  sgrid::sgrid rii ${Boost_LIBRARIES})
+
+target_link_libraries(solar_3D PUBLIC ${HDF5_LIBRARIES})
+target_link_libraries(solar_3D PUBLIC ${HDF5_HL_LIBRARIES})
 
 target_sources(solar_3D PUBLIC ${SOURCES_FILES})
 target_include_directories(solar_3D PUBLIC  
@@ -178,24 +186,24 @@ endif()
 target_compile_definitions(solar_3D PUBLIC ${PETSC_DEFINITIONS})
 
 # Build thdf/libhdf_output.a using its Makefile
-if(FALSE)
+if(TRUE)
     add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/thdf/libhdf_output.a
-        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_SOURCE_DIR}/thdf make CC=${CMAKE_C_COMPILER} lib
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/thdf
+        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a
+        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf make CC=mpicc lib
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf
         COMMENT "Building libhdf_output.a in thdf using Makefile"
     )
 
     add_custom_target(hdf_output_lib ALL
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/thdf/libhdf_output.a
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a
     )
 
     # Ensure solar_3D depends on the static library
     add_dependencies(solar_3D hdf_output_lib)
 
     # Include thdf headers
-    target_include_directories(solar_3D PUBLIC thdf/)
+    target_include_directories(solar_3D PUBLIC src/thdf/)
 
     # Link the static library
-    target_link_libraries(solar_3D PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/thdf/libhdf_output.a)
+    target_link_libraries(solar_3D PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a)
 endif()

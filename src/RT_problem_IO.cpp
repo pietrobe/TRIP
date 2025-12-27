@@ -1,4 +1,5 @@
 #include "RT_problem.hpp"
+#include "thdf.h"
 
 int
 RT_problem::make_write_surface_MPI_Comm(const MPI_Comm MPI_Comm_MAIN, MPI_Comm &write_comm)
@@ -12,6 +13,118 @@ RT_problem::make_write_surface_MPI_Comm(const MPI_Comm MPI_Comm_MAIN, MPI_Comm &
 					   &write_comm);
 
 	return mpi_status;
+}
+
+int																						//
+RT_problem::write_emergent_angular_frequency_grids_hdf5(const std::string &output_file, //
+														const int		   i_space,		//
+														const int		   j_space)
+{
+	if (this->mpi_rank_ != 0 and i_space != 0 and j_space != 0) return EXIT_SUCCESS;
+
+	THDF_angular_grid_t angular_grid;
+
+	angular_grid.N_directions		  = N_theta_ / 2 * N_chi_;
+	angular_grid.N_inclination_angles = N_theta_ / 2;
+	angular_grid.N_azimuthal_angles	  = N_chi_;
+
+	std::vector<double> theta_grid_rad(N_theta_ / 2);
+	std::vector<int>	inclinations_indices;
+	std::vector<int>	azimuthal_indices(N_chi_);
+
+	for (int j = N_theta_ / 2; j < N_theta_; ++j)
+	{
+		theta_grid_rad[j - N_theta_ / 2] = theta_grid_[j];
+		inclinations_indices.push_back(j);
+	}
+
+	angular_grid.inclination_angles = theta_grid_rad.data();
+	angular_grid.azimuthal_angles	= chi_grid_.data();
+
+	std::iota(azimuthal_indices.begin(), azimuthal_indices.end(), 0);
+	angular_grid.inclinations_indices = inclinations_indices.data();
+	angular_grid.azimuthal_indices	  = azimuthal_indices.data();
+
+	hid_t file_id, plist_id;
+	plist_id = H5Pcreate(H5P_FILE_ACCESS);
+	file_id	 = H5Fcreate(output_file.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
+
+	if (THDF_write_angular_grid_to_hdf5(file_id, &angular_grid) != 0)
+	{
+		fprintf(stderr, "Error writing emergent angular grid to HDF5 file\n");
+		return EXIT_FAILURE;
+	}
+
+	THDF_frequencies_grid_t freq_grid;
+	freq_grid.N_frequencies = N_nu_;
+	freq_grid.frequencies	= nu_grid_.data();
+
+	if (THDF_write_frequencies_grid_to_hdf5(file_id, &freq_grid) != 0)
+	{
+		fprintf(stderr, "Error writing frequencies grid to HDF5 file\n");
+		return EXIT_FAILURE;
+	}
+
+	H5Fclose(file_id);
+
+	return EXIT_SUCCESS;
+}
+
+int
+RT_problem::write_emergent_field_hdf5(const std::string &output_file, MPI_Comm write_comm,
+									  std::vector<double> &surface_data_I, std::vector<double> &surface_data_Q,
+									  std::vector<double> &surface_data_U, std::vector<double> &surface_data_V)
+{
+	const auto g_dev   = space_grid_->view_device();
+	const int  k_start = g_dev.margin[2];
+
+	if (g_dev.global_coord(2, k_start) != 0) return EXIT_SUCCESS;
+
+	const int i_size = g_dev.dim[0];
+	const int j_size = g_dev.dim[1];
+
+	const int i_start = g_dev.margin[0];
+	const int j_start = g_dev.margin[1];
+
+	// Create HDF5 file with MPI I/O access property list
+	hid_t file_id, plist_id;
+	plist_id = H5Pcreate(H5P_FILE_ACCESS);
+	H5Pset_fapl_mpio(plist_id, write_comm, MPI_INFO_NULL);
+	file_id = H5Fopen(output_file.c_str(), H5F_ACC_RDWR, plist_id);
+	H5Pclose(plist_id);
+
+	THDF_field_handler_t *output_dset_handler =
+		THDF_create_field_handler_mpi(file_id, N_x_, N_y_, N_theta_ / 2, N_chi_, N_nu_);
+
+	if (output_dset_handler == NULL)
+	{
+		fprintf(stderr, "Rank %d: Error creating MPI output field dataset\n", mpi_rank_);
+		return EXIT_FAILURE;
+	}
+
+	THDF_field_t output_field  = {};
+	output_field.index_i	   = i_start;
+	output_field.index_j	   = j_start;
+	output_field.index_incl	   = 0;
+	output_field.index_azimuth = 0;
+
+	// assign data pointers
+	output_field.stokes_I  = surface_data_I.data();
+	output_field.stokes_QI = surface_data_Q.data();
+	output_field.stokes_UI = surface_data_U.data();
+	output_field.stokes_VI = surface_data_V.data();
+
+	// Write local output field surface data
+	THDF_write_field_dataset_to_hdf5(output_dset_handler,		   //
+									 &output_field,				   //
+									 i_start, j_start, 0, 0,	   //
+									 i_size, j_size,			   //
+									 N_theta_ / 2, N_chi_, N_nu_); //
+
+	THDF_close_field_handler_mpi(output_dset_handler);
+	H5Fclose(file_id);
+
+	return EXIT_SUCCESS;
 }
 
 int
@@ -29,6 +142,19 @@ RT_problem::accumulate_surface_data(const int i_space, const int j_space, std::v
 
 	const int i_end = i_start + g_dev.dim[0];
 	const int j_end = j_start + g_dev.dim[1];
+
+	const int size_i = g_dev.dim[0];
+	const int size_j = g_dev.dim[1];
+
+	surface_data_I.clear();
+	surface_data_Q.clear();
+	surface_data_U.clear();
+	surface_data_V.clear();
+
+	surface_data_I.reserve(N_nu_ * (N_theta_ / 2) * N_chi_ * size_i * size_j);
+	surface_data_Q.reserve(N_nu_ * (N_theta_ / 2) * N_chi_ * size_i * size_j);
+	surface_data_U.reserve(N_nu_ * (N_theta_ / 2) * N_chi_ * size_i * size_j);
+	surface_data_V.reserve(N_nu_ * (N_theta_ / 2) * N_chi_ * size_i * size_j);
 
 	int i_global, j_global;
 
