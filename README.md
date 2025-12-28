@@ -98,6 +98,6 @@ make -j12
 
 ### Contributors
 
-**TRIP** is developed by [Pietro Benedusi](https://pietrobe.github.io/), Simone Riva, and Melanie Tonarelli in Luca Belluzzi's group at [IRSOL](https://www.irsol.usi.ch/).
+**TRIP** is developed by [Pietro Benedusi](https://pietrobe.github.io/), Simone Riva, and [Melanie Tonarelli](https://github.com/melanie-t27) in Luca Belluzzi's group at [IRSOL](https://www.irsol.usi.ch/).
 
 
