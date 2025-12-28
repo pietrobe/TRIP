@@ -56,7 +56,7 @@ bool intersComp(const t_xyzinters &i1, const t_xyzinters &i2) {
     return (i1.t < i2.t);
 }
 //////////////////////////////////////////////////////
-
+// UNUSED with new grid manager (maybe)
 void MF_context::field_to_vec(const Field_ptr_t field, Vec &v, const int block_size)
 {
 	if (mpi_rank_ == 0) std::cout << "\nCopying field to Vec...";
@@ -68,17 +68,14 @@ void MF_context::field_to_vec(const Field_ptr_t field, Vec &v, const int block_s
     // block size
     const int bs = (block_size == -1) ? RT_problem_->block_size_ : block_size;
 
-	auto g_dev = space_grid->view_device();
-	auto f_dev =      field->view_device();	
-
 	// indeces
-	const int i_start = g_dev.margin[0]; 
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const int i_start = space_grid->getGlobalStartX(); //g_dev.margin[0];
+	const int j_start = space_grid->getGlobalStartY(); //g_dev.margin[1];
+	const int k_start = space_grid->getGlobalStartZ(); //g_dev.margin[2];
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
-	const int k_end = k_start + g_dev.dim[2];	
+	const int i_end = i_start + space_grid->getLocalSizeX(); //g_dev.dim[0];
+	const int j_end = j_start + space_grid->getLocalSizeY(); //g_dev.dim[1];
+	const int k_end = k_start + space_grid->getLocalSizeZ(); //g_dev.dim[2];	
 
 	PetscInt istart, row;
 
@@ -99,7 +96,7 @@ void MF_context::field_to_vec(const Field_ptr_t field, Vec &v, const int block_s
 					// set row index and corresponding entry
 					row = istart + counter;
 
-					value = f_dev.block(i, j, k)[b];
+					value = field->block(i, j, k)[b];
 
 					ierr = VecSetValue(v, row, value, INSERT_VALUES);CHKERRV(ierr); // TODO: use VecSetValues for perf
 
@@ -115,7 +112,7 @@ void MF_context::field_to_vec(const Field_ptr_t field, Vec &v, const int block_s
     if (mpi_rank_ == 0) std::cout << "done" << std::endl;
 }
 
-
+// UNUSED with new grid manager (maybe)
 void MF_context::vec_to_field(Field_ptr_t field, const Vec &v, const int block_size)
 {
 	if (mpi_rank_ == 0) std::cout << "\nCopying Vec to field...";
@@ -127,17 +124,15 @@ void MF_context::vec_to_field(Field_ptr_t field, const Vec &v, const int block_s
     // block size
     const int bs = (block_size == -1) ? RT_problem_->block_size_ : block_size;
 
-	auto g_dev = space_grid->view_device();
-	auto f_dev =      field->view_device();	
-
 	// indeces
-	const int i_start = g_dev.margin[0]; 
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const int i_start = space_grid->getGlobalStartX(); //g_dev.margin[0];
+	const int j_start = space_grid->getGlobalStartY(); //g_dev.margin[1];
+	const int k_start = space_grid->getGlobalStartZ(); //g_dev.margin[2];
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
-	const int k_end = k_start + g_dev.dim[2];	
+	const int i_end = i_start + space_grid->getLocalSizeX(); //g_dev.dim[0];
+	const int j_end = j_start + space_grid->getLocalSizeY(); //g_dev.dim[1];
+	const int k_end = k_start + space_grid->getLocalSizeZ(); //g_dev.dim[2];	
+
 
 	PetscInt istart, row;
 
@@ -160,7 +155,7 @@ void MF_context::vec_to_field(Field_ptr_t field, const Vec &v, const int block_s
 
 					ierr = VecGetValues(v, 1, &row, &value);CHKERRV(ierr); 
 
-					f_dev.block(i,j,k)[b] = value;								
+					field->block(i,j,k)[b] = value;								
 
 					counter++;
 				}							
@@ -172,7 +167,7 @@ void MF_context::vec_to_field(Field_ptr_t field, const Vec &v, const int block_s
 }
 
 
-
+// NOTE
 void MF_context::apply_bc(Field_ptr_t I_field, const Real I0, const bool polarized){
          
     // init some quantities 
@@ -180,13 +175,12 @@ void MF_context::apply_bc(Field_ptr_t I_field, const Real I0, const bool polariz
     const auto space_grid = RT_problem_->space_grid_;   
 
     // apply BC
-    const auto W_T_dev     = RT_problem_->W_T_->view_device();
-    const auto g_dev       =        space_grid->view_device();
-    auto I_field_dev       =           I_field->view_device();    
+    const auto W_T     = RT_problem_->W_T_; 
 
     // only intensity in the unpolarized case     
     PetscInt increment, block_size;
     
+    // NOTE With the new layout of field this could be avoided 
     if (polarized)
     {
         increment  = 4;
@@ -198,36 +192,29 @@ void MF_context::apply_bc(Field_ptr_t I_field, const Real I0, const bool polariz
         block_size = RT_problem_->block_size_unpolarized_;
     }
 
-    sgrid::parallel_for("APPLY BC", space_grid->md_range(), SGRID_LAMBDA(int i, int j, int k) {
-                                    
+    space_grid->parallel_for([&](int i, int j, int k) {         
         // just in max depth
-        if (g_dev.global_coord(2, k) == (N_z - 1))        
+        if (space_grid->local_to_global_coordinate(2, k) == (N_z - 1))        
         {       
-            const Real W_T_deep = I0 * W_T_dev.ref(i,j,k);
+            const Real W_T_deep = I0 * W_T->block(i,j,k)[0];
                         
             for (int b = 0; b < block_size; b = b + increment) 
             {
-                I_field_dev.block(i,j,k)[b] = W_T_deep;                
+                I_field->block(i,j,k)[b] = W_T_deep;                
             }                                                
         }
     }); 
 }
 
-
+// NOTE
 void MF_context::apply_bc_serial(Field_ptr_t I_field, const Real I0, const bool polarized){
     
     const auto N_y        = RT_problem_->N_y_;     
     const auto N_z        = RT_problem_->N_z_;
-    // const auto W_T_dev    = RT_problem_->W_T_->view_device();
-    // const auto space_grid = RT_problem_->space_grid_; 
-
-    const auto g_dev = space_grid_serial_->view_device();
-    auto I_field_dev =            I_field->view_device();    
-    // const auto W_T_dev = W_T_serial_->view_device();
 
     // only intensity in the unpolarized case     
     PetscInt increment, block_size;
-    
+    // NOTE With the new layout of field this could be avoided 
     if (polarized)
     {
         increment  = 4;
@@ -239,21 +226,21 @@ void MF_context::apply_bc_serial(Field_ptr_t I_field, const Real I0, const bool 
         block_size = n_local_rays_unpol_;
     }
 
-    sgrid::parallel_for("APPLY BC", space_grid_serial_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
+    space_grid_serial_->parallel_for([&](int i, int j, int k) {
                                 
-        const int k_global = g_dev.global_coord(2, k);
+        const int k_global = space_grid_serial_->local_to_global_coordinate(2, k);
 
         // just in max depth
         if (k_global == (N_z - 1))        
         {       
-            const int i_global = g_dev.global_coord(0, i); 
-            const int j_global = g_dev.global_coord(1, j);           
+            const int i_global = space_grid_serial_->local_to_global_coordinate(0, i); 
+            const int j_global = space_grid_serial_->local_to_global_coordinate(1, j);           
                         
             const Real W_T_deep = I0 * W_T_ij_serial_[j_global * N_y + i_global];                        
                     
             for (int b = 0; b < block_size; b = b + increment) 
             {                
-                I_field_dev.block(i,j,k)[b] = W_T_deep;                
+                I_field->block(i,j,k)[b] = W_T_deep;                
             }                                                
         }
     });     
@@ -522,11 +509,11 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
     const auto N_x = RT_problem_->N_x_;
     const auto N_y = RT_problem_->N_y_;
     
-    const auto eta_dev = (formal_solution_Omega_) ? eta_field_serial_Omega_->view_device() : eta_field_serial_->view_device(); 
-    const auto rho_dev = (formal_solution_Omega_) ? rho_field_serial_Omega_->view_device() : rho_field_serial_->view_device(); 
+    const auto eta_dev = (formal_solution_Omega_) ? eta_field_serial_Omega_ : eta_field_serial_; 
+    const auto rho_dev = (formal_solution_Omega_) ? rho_field_serial_Omega_ : rho_field_serial_; 
     
-    const auto I_dev = I_field->view_device();     
-    const auto S_dev = S_field->view_device(); 
+    // const auto I_dev = I_field->view_device();     
+    // const auto S_dev = S_field->view_device(); 
     
 	// coeff trap + cm conversion = - 0.5 * 1e5;
 	const double coeff = -50000;
@@ -546,7 +533,7 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
 		if (cell == 0) 
 		{
 			// init
-			for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+			for (int i_stokes = 0; i_stokes < 4; ++i_stokes) // NOTE here we could use the field layout to distinguish between polarised and unpolarised cases
 			{
 				etas[i_stokes] = 0;
 				rhos[i_stokes] = 0;
@@ -572,17 +559,17 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
 
 				weight = T[cell].w[face_vertices];	               
 
-				for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+				for (int i_stokes = 0; i_stokes < 4; ++i_stokes) // NOTE here we could use the field layout to distinguish between polarised and unpolarised cases
 				{
 					b_index = block_index + i_stokes;										
 			
 					// get eta and rho
-					etas[i_stokes] += weight * eta_dev.block(i_intersect,j_intersect,k_intersect)[b_index]; 
-					rhos[i_stokes] += weight * rho_dev.block(i_intersect,j_intersect,k_intersect)[b_index];
+					etas[i_stokes] += weight * eta_dev->block(i_intersect,j_intersect,k_intersect)[b_index]; 
+					rhos[i_stokes] += weight * rho_dev->block(i_intersect,j_intersect,k_intersect)[b_index];
 
 					// set S1 and I1 
-					S1[i_stokes] += weight * S_dev.block(i_intersect,j_intersect,k_intersect)[b_index];												
-					I1[i_stokes] += weight * I_dev.block(i_intersect,j_intersect,k_intersect)[b_index];																									
+					S1[i_stokes] += weight * S_field->block(i_intersect,j_intersect,k_intersect)[b_index];												
+					I1[i_stokes] += weight * I_field->block(i_intersect,j_intersect,k_intersect)[b_index];																									
 				}	
 			}
 
@@ -602,7 +589,7 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
         if (cell < N - 1)
         {           
             // init
-            for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+            for (int i_stokes = 0; i_stokes < 4; ++i_stokes) // NOTE here we could use the field layout to distinguish between polarised and unpolarised cases
             {
                 etas[i_stokes] = 0;
                 rhos[i_stokes] = 0;
@@ -621,16 +608,16 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
 
     			weight = T[cell + 1].w[face_vertices];	
 
-    			for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+    			for (int i_stokes = 0; i_stokes < 4; ++i_stokes) // NOTE here we could use the field layout to distinguish between polarised and unpolarised cases
     			{
     				b_index = block_index + i_stokes;										
 
     				// get eta and rho
-    				etas[i_stokes] += weight * eta_dev.block(i_intersect,j_intersect,k_intersect)[b_index]; 
-    				rhos[i_stokes] += weight * rho_dev.block(i_intersect,j_intersect,k_intersect)[b_index];                    
+    				etas[i_stokes] += weight * eta_dev->block(i_intersect,j_intersect,k_intersect)[b_index]; 
+    				rhos[i_stokes] += weight * rho_dev->block(i_intersect,j_intersect,k_intersect)[b_index];                    
 
     				// set S2
-    				S2[i_stokes] += weight * S_dev.block(i_intersect,j_intersect,k_intersect)[b_index];															
+    				S2[i_stokes] += weight * S_field->block(i_intersect,j_intersect,k_intersect)[b_index];															
     			}				
     		}
 
@@ -638,16 +625,16 @@ std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T,
         }
         else
         {
-            for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+            for (int i_stokes = 0; i_stokes < 4; ++i_stokes) // NOTE here we could use the field layout to distinguish between polarised and unpolarised cases
             {
                 b_index = block_index + i_stokes;                                       
         
                 // get eta and rho
-                etas[i_stokes] = eta_dev.block(i,j,k)[b_index]; 
-                rhos[i_stokes] = rho_dev.block(i,j,k)[b_index];
+                etas[i_stokes] = eta_dev->block(i,j,k)[b_index]; 
+                rhos[i_stokes] = rho_dev->block(i,j,k)[b_index];
 
                 // set S2
-                S2[i_stokes] = S_dev.block(i,j,k)[b_index];                                                         
+                S2[i_stokes] = S_field->block(i,j,k)[b_index];                                                         
             }               
 
             K2 = assemble_propagation_matrix_scaled(etas, rhos);
@@ -749,12 +736,9 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
     const auto N_x = RT_problem_->N_x_;
     const auto N_y = RT_problem_->N_y_;
 
-    const auto eta_dev = (formal_solution_Omega_) ? eta_field_serial_Omega_->view_device() : eta_field_serial_->view_device(); 
-    const auto rho_dev = (formal_solution_Omega_) ? rho_field_serial_Omega_->view_device() : rho_field_serial_->view_device(); 
-    
-    const auto I_dev = I_field->view_device();     
-    const auto S_dev = S_field->view_device(); 
-    
+    const auto eta_dev = (formal_solution_Omega_) ? eta_field_serial_Omega_ : eta_field_serial_; 
+    const auto rho_dev = (formal_solution_Omega_) ? rho_field_serial_Omega_ : rho_field_serial_; 
+
     // coeff trap + cm conversion = - 0.5 * 1e5;
     const double coeff = -50000;
 
@@ -770,7 +754,7 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
     std::vector<double> I1(4), I2(4), S1(4), S2(4), S3(4), etas(4), rhos(4), K1(16), K2(16), K3(16);   
 
     // TEST
-    auto T_dev = RT_problem_->T_ ->view_device();  
+    auto T_dev = RT_problem_->T_;  
 
     for (int cell = 0; cell < N; ++cell)
     {                           
@@ -778,7 +762,7 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
         if (cell == 0) 
         {
             // init
-            for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+            for (int i_stokes = 0; i_stokes < 4; ++i_stokes) // NOTE here we could use the field layout to distinguish between polarised and unpolarised cases
             {
                 etas[i_stokes] = 0;
                 rhos[i_stokes] = 0;
@@ -798,17 +782,17 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
                 
                 weight = T[cell].w[face_vertices];                  
 
-                for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+                for (int i_stokes = 0; i_stokes < 4; ++i_stokes) // NOTE here we could use the field layout to distinguish between polarised and unpolarised cases
                 {
                     b_index = block_index + i_stokes;                                       
             
                     // get eta and rho
-                    etas[i_stokes] += weight * eta_dev.block(i_intersect,j_intersect,k_intersect)[b_index]; 
-                    rhos[i_stokes] += weight * rho_dev.block(i_intersect,j_intersect,k_intersect)[b_index];
+                    etas[i_stokes] += weight * eta_dev->block(i_intersect,j_intersect,k_intersect)[b_index]; 
+                    rhos[i_stokes] += weight * rho_dev->block(i_intersect,j_intersect,k_intersect)[b_index];
 
                     // set S1 and I1 
-                    S1[i_stokes] += weight * S_dev.block(i_intersect,j_intersect,k_intersect)[b_index];                                             
-                    I1[i_stokes] += weight * I_dev.block(i_intersect,j_intersect,k_intersect)[b_index];                                                                                                                     
+                    S1[i_stokes] += weight * S_field->block(i_intersect,j_intersect,k_intersect)[b_index];                                             
+                    I1[i_stokes] += weight * I_field->block(i_intersect,j_intersect,k_intersect)[b_index];                                                                                                                     
                 }   
             }
 
@@ -831,16 +815,16 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
         {            
             if (cell == N - 1) // in case of short ray this is also the last iterate
             {
-                for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+                for (int i_stokes = 0; i_stokes < 4; ++i_stokes) // NOTE here we could use the field layout to distinguish between polarised and unpolarised cases
                 {
                     b_index = block_index + i_stokes;                                       
             
                     // get eta and rho
-                    etas[i_stokes] = eta_dev.block(i,j,k)[b_index]; 
-                    rhos[i_stokes] = rho_dev.block(i,j,k)[b_index];
+                    etas[i_stokes] = eta_dev->block(i,j,k)[b_index]; 
+                    rhos[i_stokes] = rho_dev->block(i,j,k)[b_index];
 
                     // set S2
-                    S2[i_stokes] = S_dev.block(i,j,k)[b_index];                                                         
+                    S2[i_stokes] = S_field->block(i,j,k)[b_index];                                                         
                 }               
 
                 // compute current interval distance (different formula for last cell)
@@ -849,7 +833,7 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
             else 
             {
                 // init
-                for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+                for (int i_stokes = 0; i_stokes < 4; ++i_stokes) // NOTE here we could use the field layout to distinguish between polarised and unpolarised cases
                 {
                     etas[i_stokes] = 0;
                     rhos[i_stokes] = 0;
@@ -873,11 +857,11 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
                         b_index = block_index + i_stokes;                                       
 
                         // get eta and rho
-                        etas[i_stokes] += weight * eta_dev.block(i_intersect,j_intersect,k_intersect)[b_index]; 
-                        rhos[i_stokes] += weight * rho_dev.block(i_intersect,j_intersect,k_intersect)[b_index];                    
+                        etas[i_stokes] += weight * eta_dev->block(i_intersect,j_intersect,k_intersect)[b_index]; 
+                        rhos[i_stokes] += weight * rho_dev->block(i_intersect,j_intersect,k_intersect)[b_index];                    
 
                         // set S2
-                        S2[i_stokes] += weight * S_dev.block(i_intersect,j_intersect,k_intersect)[b_index];                                                         
+                        S2[i_stokes] += weight * S_field->block(i_intersect,j_intersect,k_intersect)[b_index];                                                         
                     }               
                 }                
 
@@ -908,16 +892,16 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
         // quantities in (3)
         if (cell == N - 2) // no interpolation
         {
-            for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+            for (int i_stokes = 0; i_stokes < 4; ++i_stokes) // NOTE here we could use the field layout to distinguish between polarised and unpolarised cases
             {
                 b_index = block_index + i_stokes;                                       
         
                 // get eta and rho
-                etas[i_stokes] = eta_dev.block(i,j,k)[b_index]; 
-                rhos[i_stokes] = rho_dev.block(i,j,k)[b_index];
+                etas[i_stokes] = eta_dev->block(i,j,k)[b_index]; 
+                rhos[i_stokes] = rho_dev->block(i,j,k)[b_index];
 
                 // set S3
-                S3[i_stokes] = S_dev.block(i,j,k)[b_index];                                                         
+                S3[i_stokes] = S_field->block(i,j,k)[b_index];                                                         
             }     
 
             // compute current interval distance 
@@ -926,7 +910,7 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
         else
         {
             // init
-            for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+            for (int i_stokes = 0; i_stokes < 4; ++i_stokes) // NOTE here we could use the field layout to distinguish between polarised and unpolarised cases
             {
                 etas[i_stokes] = 0;
                 rhos[i_stokes] = 0;
@@ -947,16 +931,16 @@ std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_int
 
                 weight = T[next_cell].w[face_vertices];  
 
-                for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
+                for (int i_stokes = 0; i_stokes < 4; ++i_stokes) // NOTE here we could use the field layout to distinguish between polarised and unpolarised cases
                 {
                     b_index = block_index + i_stokes;                                       
 
                     // get eta and rho
-                    etas[i_stokes] += weight * eta_dev.block(i_intersect,j_intersect,k_intersect)[b_index]; 
-                    rhos[i_stokes] += weight * rho_dev.block(i_intersect,j_intersect,k_intersect)[b_index];                    
+                    etas[i_stokes] += weight * eta_dev->block(i_intersect,j_intersect,k_intersect)[b_index]; 
+                    rhos[i_stokes] += weight * rho_dev->block(i_intersect,j_intersect,k_intersect)[b_index];                    
 
                     // set S3
-                    S3[i_stokes] += weight * S_dev.block(i_intersect,j_intersect,k_intersect)[b_index];                                                         
+                    S3[i_stokes] += weight * S_field->block(i_intersect,j_intersect,k_intersect)[b_index];                                                         
                 }               
             }   
 
@@ -1092,11 +1076,8 @@ std::vector<double> MF_context::single_long_ray_step(const std::vector<t_interse
     const auto N_x = RT_problem_->N_x_;
     const auto N_y = RT_problem_->N_y_;
 
-    const auto eta_dev = (formal_solution_Omega_) ? eta_field_serial_Omega_->view_device() : eta_field_serial_->view_device(); 
-    const auto rho_dev = (formal_solution_Omega_) ? rho_field_serial_Omega_->view_device() : rho_field_serial_->view_device(); 
-
-    const auto I_dev = I_field->view_device();     
-    const auto S_dev = S_field->view_device(); 
+    const auto eta_dev = (formal_solution_Omega_) ? eta_field_serial_Omega_ : eta_field_serial_; 
+    const auto rho_dev = (formal_solution_Omega_) ? rho_field_serial_Omega_ : rho_field_serial_; 
 
     // coeff trap + cm conversion = - 0.5 * 1e5;
     const double coeff = -50000;
@@ -1143,12 +1124,12 @@ std::vector<double> MF_context::single_long_ray_step(const std::vector<t_interse
             b_index = block_index + i_stokes;                                       
         
             // interpolate eta and rho
-            etas[i_stokes] += weight * eta_dev.block(i_intersect,j_intersect,k_intersect)[b_index]; 
-            rhos[i_stokes] += weight * rho_dev.block(i_intersect,j_intersect,k_intersect)[b_index];
+            etas[i_stokes] += weight * eta_dev->block(i_intersect,j_intersect,k_intersect)[b_index]; 
+            rhos[i_stokes] += weight * rho_dev->block(i_intersect,j_intersect,k_intersect)[b_index];
 
             // interpolate S1 and I1
-            S1[i_stokes] += weight * S_dev.block(i_intersect,j_intersect,k_intersect)[b_index];                                             
-            I1[i_stokes] += weight * I_dev.block(i_intersect,j_intersect,k_intersect)[b_index];                
+            S1[i_stokes] += weight * S_field->block(i_intersect,j_intersect,k_intersect)[b_index];                                             
+            I1[i_stokes] += weight * I_field->block(i_intersect,j_intersect,k_intersect)[b_index];                
         }   
     }
 
@@ -1165,11 +1146,11 @@ std::vector<double> MF_context::single_long_ray_step(const std::vector<t_interse
         b_index = block_index + i_stokes;                                       
 
         // get eta and rho
-        etas[i_stokes] = eta_dev.block(i,j,k)[b_index]; 
-        rhos[i_stokes] = rho_dev.block(i,j,k)[b_index];
+        etas[i_stokes] = eta_dev->block(i,j,k)[b_index]; 
+        rhos[i_stokes] = rho_dev->block(i,j,k)[b_index];
 
         // set S2
-        S2[i_stokes] = S_dev.block(i,j,k)[b_index];                                                         
+        S2[i_stokes] = S_field->block(i,j,k)[b_index];                                                         
     }               
 
     K2 = assemble_propagation_matrix_scaled(etas, rhos);        
@@ -1210,24 +1191,23 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
     const auto depth_grid = RT_problem_->depth_grid_;   
     const auto L          = RT_problem_->L_;            
 
-    const auto eta_dev = eta_field_serial_Omega_->view_device(); 
-    const auto rho_dev = rho_field_serial_Omega_->view_device(); 
+    const auto eta_dev = eta_field_serial_Omega_; 
+    const auto rho_dev = rho_field_serial_Omega_; 
 
-    const auto I_dev = I_field_serial_Omega_->view_device();      
-    const auto S_dev = S_field_serial_Omega_->view_device();      
-
-    const auto g_dev = space_grid_serial_->view_device();   
+    const auto I_dev = I_field_serial_Omega_;      
+    const auto S_dev = S_field_serial_Omega_;      
+    const auto space_grid = space_grid_serial_;
 
     // indeces
-    const int i_start = g_dev.margin[0]; 
-    const int j_start = g_dev.margin[1];
-    const int k_start = g_dev.margin[2];
+    const int i_start = space_grid->getGlobalStartX(); //g_dev.margin[0];
+	const int j_start = space_grid->getGlobalStartY(); //g_dev.margin[1];
+	const int k_start = space_grid->getGlobalStartZ(); //g_dev.margin[2];
 
     if (i_start > 0 or j_start > 0 or k_start > 0) std::cout << "WARNING: periodic BC hardcoded for margin = 0!" << std::endl;
 
-    const int i_end = i_start + g_dev.dim[0];
-    const int j_end = j_start + g_dev.dim[1];
-    const int k_end = k_start + g_dev.dim[2];           
+    const int i_end = i_start + space_grid->getLocalSizeX(); //g_dev.dim[0];
+	const int j_end = j_start + space_grid->getLocalSizeY(); //g_dev.dim[1];
+    const int k_end = k_start + space_grid->getLocalSizeZ(); //g_dev.dim[2];          
 
     const int stencil_size = formal_solver_.get_stencil_size();
 
@@ -1267,23 +1247,33 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
     ///////////// data movement ////////////////////
     
     // write eta and rhos to the serial grid
-    sgrid::ReMap<Field_t> tmp_remap;
+    // sgrid::ReMap<Field_t> tmp_remap;
+    ReMap3D tmp_remap(RT_problem_->space_grid, space_grid_serial_, blockRT_problem_->block_size_, tile_size_);
 
-    tmp_remap.init(*(RT_problem_->eta_field_Omega_), *eta_field_serial_Omega_);
-    tmp_remap.from_pgrid_to_pblock(*(RT_problem_->eta_field_Omega_), *eta_field_serial_Omega_, 0); 
+    // tmp_remap.init(*(RT_problem_->eta_field_Omega_), *eta_field_serial_Omega_);
+    // tmp_remap.from_pgrid_to_pblock(*(RT_problem_->eta_field_Omega_), *eta_field_serial_Omega_, 0); 
+    tmp_remap.from_space_to_block_distributed(
+        RT_problem_->eta_field_Omega_, eta_field_serial_Omega_
+    );
 
-    tmp_remap.init(*(RT_problem_->rho_field_Omega_), *rho_field_serial_Omega_);
-    tmp_remap.from_pgrid_to_pblock(*(RT_problem_->rho_field_Omega_), *rho_field_serial_Omega_, 0); 
-    
+    // tmp_remap.init(*(RT_problem_->rho_field_Omega_), *rho_field_serial_Omega_);
+    // tmp_remap.from_pgrid_to_pblock(*(RT_problem_->rho_field_Omega_), *rho_field_serial_Omega_, 0); 
+    tmp_remap.from_space_to_block_distributed(
+        RT_problem_->rho_field_Omega_, rho_field_serial_Omega_
+    );
+
     // write S to the serial grid
-    S_remap_Omega_.from_pgrid_to_pblock(*RT_problem_->S_field_Omega_, *S_field_serial_Omega_, 0);                                    
+    tmp_remap.from_space_to_block_distributed(
+        RT_problem_->S_field_Omega_, S_field_serial_Omega_
+    );
+    // S_remap_Omega_.from_pgrid_to_pblock(*RT_problem_->S_field_Omega_, *S_field_serial_Omega_, 0);                                    
 
     comm_timer += MPI_Wtime() - start_comm;          
 
     ////////////////////////////////////////////////
 
     // TODO FIX
-    const bool idle_proc = (eta_dev.block(i_start,j_start,k_start)[0] == 0);
+    const bool idle_proc = (eta_dev->block(i_start,j_start,k_start)[0] == 0);
 
     // // TODO to TEST this more safe
     // const bool idle_proc = (mpi_rank_ * local_block_size_ > block_size - 1);                                        
@@ -1297,10 +1287,10 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
             {                
                 for (int i = i_start; i < i_end; ++i)
                 {                          
-                    k_aux = (mu > 0.0) ? k_end - 1 - k + g_dev.margin[2]: k; 
+                    k_aux = (mu > 0.0) ? k_end - 1 - k + space_grid->getGlobalStartZ()/*g_dev.margin[2]*/: k; 
 
                     // depth index
-                    k_global = g_dev.global_coord(2, k_aux);                             
+                    k_global = space_grid->local_to_global_coordinate(2, k_aux);                             
 
                     boundary = (k_global == 0 and mu < 0) or (k_global == N_z - 1 and mu > 0);
                     
@@ -1309,8 +1299,8 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
                         // set vertical box size
                         dz = (mu > 0) ? depth_grid[k_global] -  depth_grid[k_global + 1] : depth_grid[k_global - 1] - depth_grid[k_global];                                                                
                             
-                        i_aux = (cos(chi) < 0.0) ? i_end - 1 - i + g_dev.margin[0]: i;  
-                        j_aux = (sin(chi) < 0.0) ? j_end - 1 - j + g_dev.margin[1]: j;                                      
+                        i_aux = (cos(chi) < 0.0) ? i_end - 1 - i + space_grid->getGlobalStartX()/*g_dev.margin[0]*/: i;  
+                        j_aux = (sin(chi) < 0.0) ? j_end - 1 - j + space_grid->getGlobalStartY()/*g_dev.margin[1]*/: j;                                      
                         
                         find_intersection(theta, chi, dz, dz, L, &intersection_data); 
 
@@ -1418,11 +1408,11 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
                                     b_index = b + i_stokes;
 
                                     // get eta and rho
-                                    etas[i_stokes] = eta_dev.block(i_aux,j_aux,k_aux)[b_index];                     
-                                    rhos[i_stokes] = rho_dev.block(i_aux,j_aux,k_aux)[b_index];     
+                                    etas[i_stokes] = eta_dev->block(i_aux,j_aux,k_aux)[b_index];                     
+                                    rhos[i_stokes] = rho_dev->block(i_aux,j_aux,k_aux)[b_index];     
                                     
                                     // set S2 with values in the current grid nodes                             
-                                    S2[i_stokes] = S_dev.block(i_aux,j_aux,k_aux)[b_index];                                 
+                                    S2[i_stokes] = S_dev->block(i_aux,j_aux,k_aux)[b_index];                                 
                                 }
 
                                 // for optical depth conversion
@@ -1452,12 +1442,12 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
                                         b_index = b + i_stokes;                                       
 
                                         // interpolate eta and rho                                                  
-                                        etas[i_stokes] += weight * eta_dev.block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_index]; 
-                                        rhos[i_stokes] += weight * rho_dev.block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_index];                                                    
+                                        etas[i_stokes] += weight * eta_dev->block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_index]; 
+                                        rhos[i_stokes] += weight * rho_dev->block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_index];                                                    
 
                                         // interpolate S1 and I1
-                                        S1[i_stokes] += weight * S_dev.block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_index];                                                        
-                                        I1[i_stokes] += weight * I_dev.block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_index];                                                        
+                                        S1[i_stokes] += weight * S_dev->block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_index];                                                        
+                                        I1[i_stokes] += weight * I_dev->block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_index];                                                        
                                     }                                           
                                 }                                                                                                                                                   
 
@@ -1521,7 +1511,7 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
                             // write result
                             for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
                             {                                                           
-                                I_dev.block(i_aux,j_aux,k_aux)[b + i_stokes] = I2[i_stokes];                                      
+                                I_dev->block(i_aux,j_aux,k_aux)[b + i_stokes] = I2[i_stokes];                                      
                             }       
 
                             one_step_timer += MPI_Wtime() - start_one;
@@ -1535,7 +1525,8 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
     if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
     start_comm = MPI_Wtime();    
     
-    I_remap_Omega_.from_pblock_to_pgrid(*I_field_serial_Omega_, *RT_problem_->I_field_Omega_, 0); 
+    I_remap_Omega_.from_block_to_space_distributed(
+        I_field_serial_Omega_, RT_problem_->I_field_Omega_); 
 
     comm_timer += MPI_Wtime() - start_comm;      
 
@@ -1581,24 +1572,24 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 	const auto depth_grid = RT_problem_->depth_grid_;	
 	const auto L          = RT_problem_->L_;		
 
-    const auto eta_dev = eta_field_serial_->view_device(); 
-    const auto rho_dev = rho_field_serial_->view_device(); 
+    const auto eta_dev = eta_field_serial_; 
+    const auto rho_dev = rho_field_serial_; 
 
-    const auto I_dev = I_field_serial_->view_device();		
-	const auto S_dev = S_field_serial_->view_device();	    
+    const auto I_dev = I_field_serial_;		
+	const auto S_dev = S_field_serial_;	    
 
-	const auto g_dev = space_grid_serial_->view_device();   
+	const auto g_dev = space_grid_serial_;   
 
 	// indeces
-	const int i_start = g_dev.margin[0]; 
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
+	const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
+	const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
 
 	if (i_start > 0 or j_start > 0 or k_start > 0) std::cout << "WARNING: periodic BC hardcoded for margin = 0!" << std::endl;
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
-	const int k_end = k_start + g_dev.dim[2];	    
+	const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
+	const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
+	const int k_end = k_start + g_dev->getLocalSizeZ(); //g_dev.dim[2];	    
 
     const int stencil_size = formal_solver_.get_stencil_size();
 
@@ -1651,7 +1642,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
         Real start_comm = MPI_Wtime();                                    
         
         // write S to the serial grid and I to get initial condition              
-        S_remap_.from_pgrid_to_pblock(*S_field, *S_field_serial_, tile_number);                        
+        S_remap_.from_block_to_space_distributed(S_field, S_field_serial_, tile_number);                        
         // I_remap_.from_pgrid_to_pblock(*I_field, *I_field_serial_, tile_number); // TODO: this is a bit redundant, only one xy plane is needed                
                                 
         comm_timer1 += MPI_Wtime() - start_comm;      
@@ -1659,7 +1650,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
         if (not idle_proc)
         {      
             // get indeces
-            local_idx = RT_problem_->block_to_local(block_start);
+            local_idx = RT_problem_->block_to_local(block_start); // NOTE this could be substituted with field->block_to_local
         
             j_theta_start = local_idx[0];
             k_chi_start   = local_idx[1];
@@ -1669,7 +1660,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 
             if (local_idx[3] != 0) { std::cout << "ERROR in block decomposition in formal_solve_global(), i_stokes_start not 0" << std::endl; throw_error = true; }
 
-            local_idx = RT_problem_->block_to_local(block_end);
+            local_idx = RT_problem_->block_to_local(block_end); // NOTE this could be substituted with field->block_to_local
 
             j_theta_end = local_idx[0] + 1;
             k_chi_end   = local_idx[1] + 1;
@@ -1696,10 +1687,10 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     						theta = theta_grid[j_theta];
     						mu    = mu_grid[j_theta];						
 
-    						k_aux = (mu > 0.0) ? k_end - 1 - k + g_dev.margin[2]: k; 
+    						k_aux = (mu > 0.0) ? k_end - 1 - k + g_dev->getGlobalStartZ()/*.margin[2]*/: k; 
 
     						// depth index
-    						k_global = g_dev.global_coord(2, k_aux);	                             
+    						k_global = g_dev->local_to_global_coordinate(2, k_aux);	                             
                             
     						boundary = (k_global == 0 and mu < 0) or (k_global == N_z - 1 and mu > 0);
 
@@ -1712,8 +1703,8 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     							{	                                
     								chi = chi_grid[k_chi]; 
     							
-    								i_aux = (cos(chi) < 0.0) ? i_end - 1 - i + g_dev.margin[0]: i;	
-    								j_aux = (sin(chi) < 0.0) ? j_end - 1 - j + g_dev.margin[1]: j;		                                                               
+    								i_aux = (cos(chi) < 0.0) ? i_end - 1 - i + g_dev->getGlobalStartX()/*margin[0]*/: i;	
+    								j_aux = (sin(chi) < 0.0) ? j_end - 1 - j + g_dev->getGlobalStartY()/*margin[1]*/: j;		                                                               
                                     
     								find_intersection(theta, chi, dz, dz, L, &intersection_data); 
 
@@ -1794,11 +1785,11 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
                                             // for debug
                                             bool print_flag = false;
 
-                                           // if (g_dev.global_coord(0, i_aux) == 0 and 
-                                           //     g_dev.global_coord(1, j_aux) == 0 and                                                 
+                                           // if (g_dev->local_to_global_coordinate(0, i_aux) == 0 and 
+                                           //     g_dev->local_to_global_coordinate(1, j_aux) == 0 and                                                 
                                            //     n == 0 and k_chi == 0 and j_theta == 7)
                                            //  {   
-                                           //      std::cout << "k = " << g_dev.global_coord(2, k_aux) << std::endl;                                                       
+                                           //      std::cout << "k = " << g_dev->local_to_global_coordinate(2, k_aux) << std::endl;                                                       
                                            //      std::cout << "mu = " << mu << std::endl;          
                                            //      std::cout << "chi = "<< chi << std::endl;                                                                                                    
                                            //      if (long_ray) std::cout << " --- LONG RAY ---" << std::endl;                                                    
@@ -1845,11 +1836,11 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     											b_index = b_start + i_stokes;
 
     											// get eta and rho
-    											etas[i_stokes] = eta_dev.block(i_aux,j_aux,k_aux)[b_index];						
-    											rhos[i_stokes] = rho_dev.block(i_aux,j_aux,k_aux)[b_index];		
+    											etas[i_stokes] = eta_dev->block(i_aux,j_aux,k_aux)[b_index];						
+    											rhos[i_stokes] = rho_dev->block(i_aux,j_aux,k_aux)[b_index];		
     											
     											// set S2 with values in the current grid nodes 							
-    											S2[i_stokes] = S_dev.block(i_aux,j_aux,k_aux)[b_index];									
+    											S2[i_stokes] = S_dev->block(i_aux,j_aux,k_aux)[b_index];									
     										}
 
     										// for optical depth conversion
@@ -1879,12 +1870,12 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     												b_index = b_start + i_stokes;										
 
     												// interpolate eta and rho													
-													etas[i_stokes] += weight * eta_dev.block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_index]; 
-													rhos[i_stokes] += weight * rho_dev.block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_index];                                                    
+													etas[i_stokes] += weight * eta_dev->block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_index]; 
+													rhos[i_stokes] += weight * rho_dev->block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_index];                                                    
 
 													// interpolate S1 and I1
-													S1[i_stokes] += weight * S_dev.block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_index];	                                                    
-													I1[i_stokes] += weight * I_dev.block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_index];	     												
+													S1[i_stokes] += weight * S_dev->block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_index];	                                                    
+													I1[i_stokes] += weight * I_dev->block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_index];	     												
     											}											
     										}																											                                        
 
@@ -1902,9 +1893,9 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
                                             // if (j_theta == 7 and k_chi == 0 and n == 0 and i == i_start and j == j_start)                                                
                                             // {                                                                                                                         
                                             //     // std::cout << "\nk = " << k << std::endl;                                              
-                                            //     // std::cout << "\ni_global = " << g_dev.global_coord(0, i_aux) << std::endl;                                              
-                                            //     // std::cout << "\nj_global = " << g_dev.global_coord(1, j_aux) << std::endl;         
-                                            //     std::cout << "\nk_global = " << g_dev.global_coord(2, k_aux) << std::endl;         
+                                            //     // std::cout << "\ni_global = " << g_dev->local_to_global_coordinate(0, i_aux) << std::endl;                                              
+                                            //     // std::cout << "\nj_global = " << g_dev->local_to_global_coordinate(1, j_aux) << std::endl;         
+                                            //     std::cout << "\nk_global = " << g_dev->local_to_global_coordinate(2, k_aux) << std::endl;         
                                             //     // std::cout << "theta = " << theta << std::endl;
                                             //     std::cout << "mu = "  << mu  << std::endl;                                                
                                             //     std::cout << "chi = " << chi << std::endl;                                                
@@ -1949,7 +1940,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     									// write result
     									for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
     									{							
-    										I_dev.block(i_aux,j_aux,k_aux)[b_start + i_stokes] = I2[i_stokes];										
+    										I_dev->block(i_aux,j_aux,k_aux)[b_start + i_stokes] = I2[i_stokes];										
     									}       
 
                                         one_step_timer += MPI_Wtime() - start_one;
@@ -1965,7 +1956,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
         if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
         start_comm = MPI_Wtime();    
         
-        I_remap_.from_pblock_to_pgrid(*I_field_serial_, *I_field, tile_number); 
+        I_remap_.from_block_to_space_distributed(I_field_serial_, I_field, tile_number); 
 
         comm_timer2 += MPI_Wtime() - start_comm; 
     }                
@@ -2006,22 +1997,22 @@ void MF_context::formal_solve_1_5D(Field_ptr_t I_field, const Field_ptr_t S_fiel
     const auto mu_grid    = RT_problem_->mu_grid_;
     const auto depth_grid = RT_problem_->depth_grid_;   
     
-    const auto eta_dev = RT_problem_->eta_field_ ->view_device(); 
-    const auto rho_dev = RT_problem_->rho_field_ ->view_device(); 
-    const auto g_dev   = RT_problem_->space_grid_->view_device(); 
+    const auto eta_dev = RT_problem_->eta_field_ ; 
+    const auto rho_dev = RT_problem_->rho_field_ ; 
+    const auto g_dev   = RT_problem_->space_grid_-; 
 
     // input fields 
-    const auto I_dev = I_field ->view_device(); 
-    const auto S_dev = S_field ->view_device();   
+    const auto I_dev = I_field ; 
+    const auto S_dev = S_field ;   
 
     // indeces
-    const int i_start = g_dev.margin[0]; 
-    const int j_start = g_dev.margin[1];
-    const int k_start = g_dev.margin[2];
+    const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
+	const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
+	const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
 
-    const int i_end = i_start + g_dev.dim[0];
-    const int j_end = j_start + g_dev.dim[1];
-    const int k_end = k_start + g_dev.dim[2];       
+    const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
+    const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
+    const int k_end = k_start + g_dev->getLocalSizeZ(); //g_dev.dim[2];     
 
     // some checks
     if (i_start > 0 or j_start > 0) std::cout << "WARNING: margins shoulb be 0!" << std::endl;
@@ -2095,15 +2086,15 @@ void MF_context::formal_solve_1_5D(Field_ptr_t I_field, const Field_ptr_t S_fiel
                                 b_index = b_start + i_stokes;
 
                                 // point (1)
-                                etas1[i_stokes] = eta_dev.block(i,j,k_prev)[b_index];                     
-                                rhos1[i_stokes] = rho_dev.block(i,j,k_prev)[b_index];     
-                                S1[i_stokes]    =   S_dev.block(i,j,k_prev)[b_index];
-                                I1[i_stokes]    =   I_dev.block(i,j,k_prev)[b_index];
+                                etas1[i_stokes] = eta_dev->block(i,j,k_prev)[b_index];                     
+                                rhos1[i_stokes] = rho_dev->block(i,j,k_prev)[b_index];     
+                                S1[i_stokes]    =   S_dev->block(i,j,k_prev)[b_index];
+                                I1[i_stokes]    =   I_dev->block(i,j,k_prev)[b_index];
                                 
                                 // point (2)
-                                etas2[i_stokes] = eta_dev.block(i,j,k_aux)[b_index];                     
-                                rhos2[i_stokes] = rho_dev.block(i,j,k_aux)[b_index];     
-                                S2[i_stokes]    =   S_dev.block(i,j,k_aux)[b_index];                                    
+                                etas2[i_stokes] = eta_dev->block(i,j,k_aux)[b_index];                     
+                                rhos2[i_stokes] = rho_dev->block(i,j,k_aux)[b_index];     
+                                S2[i_stokes]    =   S_dev->block(i,j,k_aux)[b_index];                                    
                             }
                                     
                             // assemble absorption matrices
@@ -2124,9 +2115,9 @@ void MF_context::formal_solve_1_5D(Field_ptr_t I_field, const Field_ptr_t S_fiel
                                     b_index = b_start + i_stokes;
                                     
                                     // point (3)
-                                    etas3[i_stokes] = eta_dev.block(i,j,k_next)[b_index];                     
-                                    rhos3[i_stokes] = rho_dev.block(i,j,k_next)[b_index];     
-                                    S3[i_stokes]    =   S_dev.block(i,j,k_next)[b_index];                                    
+                                    etas3[i_stokes] = eta_dev->block(i,j,k_next)[b_index];                     
+                                    rhos3[i_stokes] = rho_dev->block(i,j,k_next)[b_index];     
+                                    S3[i_stokes]    =   S_dev->block(i,j,k_next)[b_index];                                    
                                 }
 
                                 K3 = assemble_propagation_matrix_scaled(etas3, rhos3);
@@ -2148,7 +2139,7 @@ void MF_context::formal_solve_1_5D(Field_ptr_t I_field, const Field_ptr_t S_fiel
                             // write result
                             for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
                             {                           
-                                I_dev.block(i,j,k_aux)[b_start + i_stokes] = I2[i_stokes];                                      
+                                I_dev->block(i,j,k_aux)[b_start + i_stokes] = I2[i_stokes];                                      
                             }                  
 
                             // // test print
@@ -2220,9 +2211,9 @@ double MF_context::long_ray_steps_unpolarized(const std::vector<t_intersect> T,
     const auto N_x = RT_problem_->N_x_;
     const auto N_y = RT_problem_->N_y_;
     
-    const auto I_dev   = I_field->view_device();     
-    const auto S_dev   = S_field->view_device();     
-    const auto eta_dev = eta_field_serial_->view_device(); 
+    const auto I_dev   = I_field;     
+    const auto S_dev   = S_field;     
+    const auto eta_dev = eta_field_serial_; 
 
     // eta stays in an polarized data structure
     const int eta_block_index = 4 * block_index;
@@ -2268,11 +2259,11 @@ double MF_context::long_ray_steps_unpolarized(const std::vector<t_intersect> T,
                 for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
                 {                        
                     // get eta
-                    eta1 += weight * eta_dev.block(i_intersect,j_intersect,k_intersect)[eta_block_index];                     
+                    eta1 += weight * eta_dev->block(i_intersect,j_intersect,k_intersect)[eta_block_index];                     
 
                     // set S1 and I1 
-                    S1 += weight * S_dev.block(i_intersect,j_intersect,k_intersect)[block_index];                                             
-                    I1 += weight * I_dev.block(i_intersect,j_intersect,k_intersect)[block_index];                                                                                                 
+                    S1 += weight * S_dev->block(i_intersect,j_intersect,k_intersect)[block_index];                                             
+                    I1 += weight * I_dev->block(i_intersect,j_intersect,k_intersect)[block_index];                                                                                                 
                 }   
             }            
         }
@@ -2303,15 +2294,15 @@ double MF_context::long_ray_steps_unpolarized(const std::vector<t_intersect> T,
                 weight = T[cell + 1].w[face_vertices];  
                                                 
                 // get eta and S
-                eta2 += weight * eta_dev.block(i_intersect,j_intersect,k_intersect)[eta_block_index];                                                     
-                S2   += weight *   S_dev.block(i_intersect,j_intersect,k_intersect)[block_index];                                                                                     
+                eta2 += weight * eta_dev->block(i_intersect,j_intersect,k_intersect)[eta_block_index];                                                     
+                S2   += weight *   S_dev->block(i_intersect,j_intersect,k_intersect)[block_index];                                                                                     
             }            
         }
         else
         {
             // get eta and rho
-            eta2 = eta_dev.block(i,j,k)[eta_block_index]; 
-            S2   = S_dev.block(i,j,k)[block_index];                                                         
+            eta2 = eta_dev->block(i,j,k)[eta_block_index]; 
+            S2   = S_dev->block(i,j,k)[block_index];                                                         
         }
 
         // compute current interval distance
@@ -2359,9 +2350,9 @@ double MF_context::long_ray_steps_quadratic_unpolarized(const std::vector<t_inte
     const auto N_x = RT_problem_->N_x_;
     const auto N_y = RT_problem_->N_y_;
 
-    const auto I_dev   = I_field->view_device();     
-    const auto S_dev   = S_field->view_device(); 
-    const auto eta_dev = eta_field_serial_->view_device();     
+    const auto I_dev   = I_field;     
+    const auto S_dev   = S_field; 
+    const auto eta_dev = eta_field_serial_;     
 
     const int eta_block_index = 4 * block_index;
     
@@ -2401,9 +2392,9 @@ double MF_context::long_ray_steps_quadratic_unpolarized(const std::vector<t_inte
                 weight = T[cell].w[face_vertices];                  
                                             
                 // get fields in 1
-                eta1 += weight * eta_dev.block(i_intersect,j_intersect,k_intersect)[eta_block_index];            
-                S1   += weight *   S_dev.block(i_intersect,j_intersect,k_intersect)[block_index];
-                I1   += weight *   I_dev.block(i_intersect,j_intersect,k_intersect)[block_index];
+                eta1 += weight * eta_dev->block(i_intersect,j_intersect,k_intersect)[eta_block_index];            
+                S1   += weight *   S_dev->block(i_intersect,j_intersect,k_intersect)[block_index];
+                I1   += weight *   I_dev->block(i_intersect,j_intersect,k_intersect)[block_index];
             }            
         }
         else // reuse quantities in (2) 
@@ -2421,8 +2412,8 @@ double MF_context::long_ray_steps_quadratic_unpolarized(const std::vector<t_inte
             if (cell == N - 1) // in case of short ray this is also the last iterate
             {               
                 // get eta and rho
-                eta2 = eta_dev.block(i,j,k)[eta_block_index];                         
-                S2   = S_dev.block(i,j,k)[block_index];                                                                                        
+                eta2 = eta_dev->block(i,j,k)[eta_block_index];                         
+                S2   = S_dev->block(i,j,k)[block_index];                                                                                        
 
                 // compute current interval distance (different formula for last cell)
                 cell_distance = T[cell].distance;         
@@ -2445,8 +2436,8 @@ double MF_context::long_ray_steps_quadratic_unpolarized(const std::vector<t_inte
                     weight = T[cell + 1].w[face_vertices];                     
                                                     
                     // get fields in 2
-                    eta2 += weight * eta_dev.block(i_intersect,j_intersect,k_intersect)[eta_block_index]; 
-                    S2   += weight *   S_dev.block(i_intersect,j_intersect,k_intersect)[block_index];                                                                           
+                    eta2 += weight * eta_dev->block(i_intersect,j_intersect,k_intersect)[eta_block_index]; 
+                    S2   += weight *   S_dev->block(i_intersect,j_intersect,k_intersect)[block_index];                                                                           
                 }                
 
                 // compute current interval distance
@@ -2470,8 +2461,8 @@ double MF_context::long_ray_steps_quadratic_unpolarized(const std::vector<t_inte
         // quantities in (3)
         if (cell == N - 2) // no interpolation
         {            
-            eta3 = eta_dev.block(i,j,k)[eta_block_index];                    
-            S3   =   S_dev.block(i,j,k)[block_index];                                                         
+            eta3 = eta_dev->block(i,j,k)[eta_block_index];                    
+            S3   =   S_dev->block(i,j,k)[block_index];                                                         
              
             // compute current interval distance 
             cell_distance = T[cell + 1].distance;                     
@@ -2496,8 +2487,8 @@ double MF_context::long_ray_steps_quadratic_unpolarized(const std::vector<t_inte
 
                 weight = T[next_cell].w[face_vertices];  
                 
-                eta3 += weight * eta_dev.block(i_intersect,j_intersect,k_intersect)[eta_block_index]; 
-                S3   += weight *   S_dev.block(i_intersect,j_intersect,k_intersect)[block_index];                                                                                                 
+                eta3 += weight * eta_dev->block(i_intersect,j_intersect,k_intersect)[eta_block_index]; 
+                S3   += weight *   S_dev->block(i_intersect,j_intersect,k_intersect)[block_index];                                                                                                 
             }   
 
             // compute current interval distance
@@ -2567,22 +2558,22 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
     const auto L          = RT_problem_->L_;        
 
     // TODO still to be init
-    const auto I_dev   = I_unpol_field_serial_->view_device();      
-    const auto S_dev   = S_unpol_field_serial_->view_device();      
-    const auto eta_dev = eta_field_serial_->view_device();  // for this we use the polarized data structure
+    const auto I_dev   = I_unpol_field_serial_;      
+    const auto S_dev   = S_unpol_field_serial_;      
+    const auto eta_dev = eta_field_serial_;  // for this we use the polarized data structure
 
-    const auto g_dev = space_grid_serial_->view_device();   
+    const auto g_dev = space_grid_serial_;   
 
     // indeces
-    const int i_start = g_dev.margin[0]; 
-    const int j_start = g_dev.margin[1];
-    const int k_start = g_dev.margin[2];
+    const int i_start = g_dev->getGlobalStartX(); //.margin[0]; 
+    const int j_start = g_dev->getGlobalStartY(); //.margin[1];
+    const int k_start = g_dev->getGlobalStartZ(); //.margin[2];
 
     if (i_start > 0 or j_start > 0 or k_start > 0) std::cout << "WARNING: periodic BC hardcoded for margin = 0!" << std::endl;
 
-    const int i_end = i_start + g_dev.dim[0];
-    const int j_end = j_start + g_dev.dim[1];
-    const int k_end = k_start + g_dev.dim[2];       
+    const int i_end = i_start + g_dev->getLocalSizeX(); //.dim[0];
+    const int j_end = j_start + g_dev->getLocalSizeY(); //.dim[1];
+    const int k_end = k_start + g_dev->getLocalSizeZ(); //.dim[2];       
 
     const int stencil_size = formal_solver_unpol_.get_stencil_size();
 
@@ -2637,8 +2628,8 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
     Real start_comm = MPI_Wtime();                                    
     
     // write S to the serial grid and I to get initial condition              
-    S_unpol_remap_.from_pgrid_to_pblock(*S_field, *S_unpol_field_serial_, 0);                        
-    // I_unpol_remap_.from_pgrid_to_pblock(*I_field, *I_unpol_field_serial_, 0); // TODO: this is redundant, only one xy plane is needed
+    S_unpol_remap_.from_space_to_block_distributed(S_field, S_unpol_field_serial_);                        
+    // I_unpol_remap_.from_space_to_block_distributed(I_field, I_unpol_field_serial_); // TODO: this is redundant, only one xy plane is needed
             
     comm_timer += MPI_Wtime() - start_comm;      
 
@@ -2674,10 +2665,10 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
                         theta = theta_grid[j_theta];
                         mu    = mu_grid[j_theta];                       
 
-                        k_aux = (mu > 0.0) ? k_end - 1 - k + g_dev.margin[2]: k; 
+                        k_aux = (mu > 0.0) ? k_end - 1 - k + g_dev->getGlobalStartZ()/*.margin[2]*/: k; 
 
                         // depth index
-                        k_global = g_dev.global_coord(2, k_aux);                                 
+                        k_global = g_dev->local_to_global_coordinate(2, k_aux);                                 
                         
                         boundary = (k_global == 0 and mu < 0) or (k_global == N_z - 1 and mu > 0);
 
@@ -2690,8 +2681,8 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
                             {                                   
                                 chi = chi_grid[k_chi]; 
                             
-                                i_aux = (cos(chi) < 0.0) ? i_end - 1 - i + g_dev.margin[0]: i;  
-                                j_aux = (sin(chi) < 0.0) ? j_end - 1 - j + g_dev.margin[1]: j;                                                                     
+                                i_aux = (cos(chi) < 0.0) ? i_end - 1 - i + g_dev->getGlobalStartX()/*.margin[0]*/: i;  
+                                j_aux = (sin(chi) < 0.0) ? j_end - 1 - j + g_dev->getGlobalStartY()/*.margin[1]*/: j;                                                                     
                                 
                                 find_intersection(theta, chi, dz, dz, L, &intersection_data); 
 
@@ -2772,11 +2763,11 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
                                     bool print_flag = false;      
 
                                     // TEST
-                                    //  if (g_dev.global_coord(0, i_aux) == 0 and 
-                                    //      g_dev.global_coord(1, j_aux) == 0 and                                                 
+                                    //  if (g_dev->local_to_global_coordinate(0, i_aux) == 0 and 
+                                    //      g_dev->local_to_global_coordinate(1, j_aux) == 0 and                                                 
                                     //      n == 0 and k_chi == 0 and j_theta == 7)
                                     //     {   
-                                    //         std::cout << "k = " << g_dev.global_coord(2, k_aux) << std::endl;                                                       
+                                    //         std::cout << "k = " << g_dev->local_to_global_coordinate(2, k_aux) << std::endl;                                                       
                                     //         std::cout << "mu = " << mu << std::endl;          
                                     //         std::cout << "chi = "<< chi << std::endl;                                                                                                    
                                     //         if (long_ray) std::cout << " --- LONG RAY ---" << std::endl;                                                    
@@ -2800,8 +2791,8 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
                                     else // short ray
                                     {                                                        
                                         // get eta and S
-                                        eta2 = eta_dev.block(i_aux,j_aux,k_aux)[b_start_eta];  
-                                        S2   =   S_dev.block(i_aux,j_aux,k_aux)[b_start];                                                                         
+                                        eta2 = eta_dev->block(i_aux,j_aux,k_aux)[b_start_eta];  
+                                        S2   =   S_dev->block(i_aux,j_aux,k_aux)[b_start];                                                                         
                                                                                                                                                             
                                         // compute S1 and I1                                                                                                                                                                    
                                         eta1 = 0;                                        
@@ -2814,9 +2805,9 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
                                             weight = intersection_data.w[face_v];
                                                                               
                                             // interpolate S1 and I1 and eta
-                                            eta1 += weight * eta_dev.block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_start_eta];                                             
-                                            S1   += weight *   S_dev.block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_start];                                                        
-                                            I1   += weight *   I_dev.block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_start];                                                                                                
+                                            eta1 += weight * eta_dev->block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_start_eta];                                             
+                                            S1   += weight *   S_dev->block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_start];                                                        
+                                            I1   += weight *   I_dev->block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b_start];                                                                                                
                                         }                                                                                                                                                   
                                                                                                                                                         
                                         // optical depth step                               
@@ -2831,9 +2822,9 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
                                         // if (j_theta == 7 and k_chi == 0 and n == 0 and i == i_start and j == j_start)                                                
                                         // {                                                                                                                         
                                         //     // // std::cout << "\nk = " << k << std::endl;                                              
-                                        //     // std::cout << "\ni_global = " << g_dev.global_coord(0, i_aux) << std::endl;                                              
-                                        //     // std::cout << "\nj_global = " << g_dev.global_coord(1, j_aux) << std::endl;         
-                                        //     std::cout << "\nk_global = " << g_dev.global_coord(2, k_aux) << std::endl;         
+                                        //     // std::cout << "\ni_global = " << g_dev->local_to_global_coordinate(0, i_aux) << std::endl;                                              
+                                        //     // std::cout << "\nj_global = " << g_dev->local_to_global_coordinate(1, j_aux) << std::endl;         
+                                        //     std::cout << "\nk_global = " << g_dev->local_to_global_coordinate(2, k_aux) << std::endl;         
                                         //     // // std::cout << "theta = " << theta << std::endl;
                                         //     std::cout << "mu = "  << mu  << std::endl;                                                
                                         //     std::cout << "chi = " << chi << std::endl;                                                
@@ -2855,7 +2846,7 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
                                     }   
                                                                               
                                     // write result
-                                    I_dev.block(i_aux,j_aux,k_aux)[b_start] = I2;                                      
+                                    I_dev->block(i_aux,j_aux,k_aux)[b_start] = I2;                                      
                                     
                                     // update timer       
                                     one_step_timer += MPI_Wtime() - start_one;
@@ -2870,7 +2861,7 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
     
     start_comm = MPI_Wtime();    
     
-    I_unpol_remap_.from_pblock_to_pgrid(*I_unpol_field_serial_, *I_field, 0); 
+    I_unpol_remap_.from_block_to_space_distributed(I_unpol_field_serial_, I_field); 
 
     comm_timer += MPI_Wtime() - start_comm;              
     
@@ -3065,23 +3056,25 @@ void MF_context::set_up_emission_module(){
 }
 
 
+
+// TODO remove I_vec and use field
 // emissivity from scattering (line + continuum)
 void MF_context::update_emission(const Vec &I_vec, const bool approx){ 	
 
 	PetscErrorCode ierr; 
 	       
-    const auto g_dev   = RT_problem_->space_grid_->view_device();  
-    const auto eta_dev = RT_problem_->eta_field_ ->view_device();
-    const auto S_dev   = RT_problem_->S_field_   ->view_device(); 
+    const auto g_dev   = RT_problem_->space_grid_;  
+    const auto eta_dev = RT_problem_->eta_field_ ;
+    const auto S_dev   = RT_problem_->S_field_; 
 
     // field range indeces 
-    const int i_start = g_dev.margin[0]; 
-    const int j_start = g_dev.margin[1];
-    const int k_start = g_dev.margin[2];
+    const int i_start = g_dev->getGlobalStartX();//.margin[0]; 
+    const int j_start = g_dev->getGlobalStartY();//.margin[1];
+    const int k_start = g_dev->getGlobalStartZ();//.margin[2];
 
-    const int i_end = i_start + g_dev.dim[0]; 
-    const int j_end = j_start + g_dev.dim[1];
-    const int k_end = k_start + g_dev.dim[2];   
+    const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
+	const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
+	const int k_end = k_start + g_dev->getLocalSizeZ(); //g_dev.dim[2];	   
 
     const PetscInt block_size = RT_problem_->block_size_;   
 	
@@ -3249,24 +3242,24 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
 
         for (int b = 0; b < block_size; b = b + 4)
         {
-            eta_I_inv = 1.0 / (eta_dev.block(i,j,k)[b]);
+            eta_I_inv = 1.0 / (eta_dev->block(i,j,k)[b]);
             
-            S_dev.block(i,j,k)[b]     = eta_I_inv * output[b];                                                         
-            S_dev.block(i,j,k)[b + 1] = eta_I_inv * output[b + 1]; // TODO: remove these fot the unopolarized version
-            S_dev.block(i,j,k)[b + 2] = eta_I_inv * output[b + 2];
-            S_dev.block(i,j,k)[b + 3] = eta_I_inv * output[b + 3];                                                       
+            S_dev->block(i,j,k)[b]     = eta_I_inv * output[b];                                                         
+            S_dev->block(i,j,k)[b + 1] = eta_I_inv * output[b + 1]; // TODO: remove these fot the unopolarized version
+            S_dev->block(i,j,k)[b + 2] = eta_I_inv * output[b + 2];
+            S_dev->block(i,j,k)[b + 3] = eta_I_inv * output[b + 3];                                                       
         }        
 
         // update counters
         counter_i++;
 
-        if (counter_i == i_end - g_dev.margin[0])
+        if (counter_i == i_end - g_dev->getGlobalStartX()/*.margin[0]*/)
         {
             counter_i = 0;
             counter_j++;
         }
 
-        if (counter_j == j_end - g_dev.margin[1])
+        if (counter_j == j_end - g_dev->getGlobalStartY()/*.margin[1]*/)
         {
             counter_j = 0;
             counter_k++;
@@ -3282,18 +3275,18 @@ void MF_context::update_emission_J_KQ(const Vec &J_KQ_vec){
 
     PetscErrorCode ierr; 
            
-    const auto g_dev   = RT_problem_->space_grid_->view_device();  
-    const auto eta_dev = RT_problem_->eta_field_ ->view_device();
-    const auto S_dev   = RT_problem_->S_field_   ->view_device(); 
+    const auto g_dev   = RT_problem_->space_grid_;  
+    const auto eta_dev = RT_problem_->eta_field_;
+    const auto S_dev   = RT_problem_->S_field_ ; 
 
     // field range indeces 
-    const int i_start = g_dev.margin[0]; 
-    const int j_start = g_dev.margin[1];
-    const int k_start = g_dev.margin[2];
+    const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
+	const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
+	const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
 
-    const int i_end = i_start + g_dev.dim[0]; 
-    const int j_end = j_start + g_dev.dim[1];
-    const int k_end = k_start + g_dev.dim[2];   
+    const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
+	const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
+	const int k_end = k_start + g_dev->getLocalSizeZ(); //g_dev.dim[2];	      
 
     const int block_size = RT_problem_->block_size_;     
     
@@ -3357,37 +3350,37 @@ void MF_context::update_emission_J_KQ(const Vec &J_KQ_vec){
 
         for (int b = 0; b < block_size; b = b + 4)
         {
-            eta_I_inv = 1.0 / (eta_dev.block(i,j,k)[b]);            
+            eta_I_inv = 1.0 / (eta_dev->block(i,j,k)[b]);            
             
-            S_dev.block(i,j,k)[b]     = eta_I_inv * output[b];                                                         
-            S_dev.block(i,j,k)[b + 1] = eta_I_inv * output[b + 1]; // TODO: remove these fot the unopolarized version
-            S_dev.block(i,j,k)[b + 2] = eta_I_inv * output[b + 2];
-            S_dev.block(i,j,k)[b + 3] = eta_I_inv * output[b + 3];                                                       
+            S_dev->block(i,j,k)[b]     = eta_I_inv * output[b];                                                         
+            S_dev->block(i,j,k)[b + 1] = eta_I_inv * output[b + 1]; // TODO: remove these fot the unopolarized version
+            S_dev->block(i,j,k)[b + 2] = eta_I_inv * output[b + 2];
+            S_dev->block(i,j,k)[b + 3] = eta_I_inv * output[b + 3];                                                       
         }
 
         if (mpi_rank_ == 0 and i_vec == istart_local)        
         {   std::cout << "eta inv" << std::endl;
-            std::cout <<  1.0 / (eta_dev.block(i,j,k)[0]) << std::endl;
-            std::cout <<  1.0 / (eta_dev.block(i,j,k)[1]) << std::endl;
-            std::cout <<  1.0 / (eta_dev.block(i,j,k)[2]) << std::endl;
-            std::cout <<  1.0 / (eta_dev.block(i,j,k)[3]) << std::endl;
+            std::cout <<  1.0 / (eta_dev->block(i,j,k)[0]) << std::endl;
+            std::cout <<  1.0 / (eta_dev->block(i,j,k)[1]) << std::endl;
+            std::cout <<  1.0 / (eta_dev->block(i,j,k)[2]) << std::endl;
+            std::cout <<  1.0 / (eta_dev->block(i,j,k)[3]) << std::endl;
             std::cout << "S" << std::endl;
-            std::cout << S_dev.block(i,j,k)[0] << std::endl;
-            std::cout << S_dev.block(i,j,k)[1] << std::endl;
-            std::cout << S_dev.block(i,j,k)[2] << std::endl;
-            std::cout << S_dev.block(i,j,k)[3] << std::endl;
+            std::cout << S_dev->block(i,j,k)[0] << std::endl;
+            std::cout << S_dev->block(i,j,k)[1] << std::endl;
+            std::cout << S_dev->block(i,j,k)[2] << std::endl;
+            std::cout << S_dev->block(i,j,k)[3] << std::endl;
         }
     
         // update counters
         counter_i++;
 
-        if (counter_i == i_end - g_dev.margin[0])
+        if (counter_i == i_end - g_dev->getGlobalStartX()/*g_dev.margin[0]*/)
         {
             counter_i = 0;
             counter_j++;
         }
 
-        if (counter_j == j_end - g_dev.margin[1])
+        if (counter_j == j_end - g_dev->getGlobalStartY()/*g_dev.margin[1]*/)
         {
             counter_j = 0;
             counter_k++;
@@ -3398,21 +3391,21 @@ void MF_context::update_emission_J_KQ(const Vec &J_KQ_vec){
 }
 
 
-
+//TODO I_vec should be field now (would it make sense to make even J_KQ_vec a Field??)
 void MF_context::I_vec_to_J_KQ_vec(const Vec &I_vec, Vec &J_KQ_vec){
 
     PetscErrorCode ierr; 
            
-    const auto g_dev = RT_problem_->space_grid_->view_device();  
+    const auto g_dev = RT_problem_->space_grid_;  
 
     // field range indeces 
-    const int i_start = g_dev.margin[0]; 
-    const int j_start = g_dev.margin[1];
-    const int k_start = g_dev.margin[2];
+    const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
+	const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
+	const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
 
-    const int i_end = i_start + g_dev.dim[0]; 
-    const int j_end = j_start + g_dev.dim[1];
-    const int k_end = k_start + g_dev.dim[2];   
+    const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
+	const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
+	const int k_end = k_start + g_dev->getLocalSizeZ(); //g_dev.dim[2];	
 
     const int block_size = RT_problem_->block_size_;   
     
@@ -3491,17 +3484,15 @@ void MF_context::I_field_to_J_KQ_vec(const Field_ptr_t field, Vec &J_KQ_vec){
     // block size
     const int block_size = RT_problem_->block_size_;
 
-    auto g_dev = space_grid->view_device();
-    auto f_dev =      field->view_device(); 
-
+    auto g_dev = space_grid;
     // indeces
-    const int i_start = g_dev.margin[0]; 
-    const int j_start = g_dev.margin[1];
-    const int k_start = g_dev.margin[2];
+    const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
+	const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
+	const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
 
-    const int i_end = i_start + g_dev.dim[0];
-    const int j_end = j_start + g_dev.dim[1];
-    const int k_end = k_start + g_dev.dim[2]; 
+    const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
+	const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
+	const int k_end = k_start + g_dev->getLocalSizeZ(); //g_dev.dim[2];	     
 
     PetscInt *ix_J_KQ;
     ierr = PetscMalloc1(J_KQ_size_, &ix_J_KQ);CHKERRV(ierr);   
@@ -3523,7 +3514,7 @@ void MF_context::I_field_to_J_KQ_vec(const Field_ptr_t field, Vec &J_KQ_vec){
             {
                 for (int b = 0; b < block_size; b++) 
                 {                    
-                    I_ijk_vec[b] = f_dev.block(i, j, k)[b];                                        
+                    I_ijk_vec[b] = field->block(i, j, k)[b];                                        
                 }   
 
                 // set input field
@@ -3558,6 +3549,7 @@ void MF_context::I_field_to_J_KQ_vec(const Field_ptr_t field, Vec &J_KQ_vec){
 // emissivity from scattering (line + continuum)
 // emissivity block for a arbitrary direction (mu,chi) is saved in first N_nu block entries of S_field 
 // for each spatial point (i,j,k)
+//TODO I_vec should be field now
 void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const Real chi)
 {      
     const bool include_eps_lth = true;        
@@ -3581,21 +3573,21 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
 
     PetscErrorCode ierr; 
            
-    const auto g_dev       = RT_problem_->space_grid_      ->view_device();  
-    const auto eta_dev     = RT_problem_->eta_field_Omega_ ->view_device();
-    const auto S_dev_Omega = RT_problem_->S_field_Omega_   ->view_device(); 
+    const auto g_dev       = RT_problem_->space_grid_;  
+    const auto eta_dev     = RT_problem_->eta_field_Omega_;
+    const auto S_dev_Omega = RT_problem_->S_field_Omega_; 
     
     const int block_size = RT_problem_->block_size_;   
     const auto N_nu      = RT_problem_->N_nu_;     
     
     // field range indeces 
-    const int i_start = g_dev.margin[0]; 
-    const int j_start = g_dev.margin[1];
-    const int k_start = g_dev.margin[2];
+    const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
+	const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
+	const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
 
-    const int i_end = i_start + g_dev.dim[0]; 
-    const int j_end = j_start + g_dev.dim[1];
-    const int k_end = k_start + g_dev.dim[2];   
+    const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
+	const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
+	const int k_end = k_start + g_dev->getLocalSizeZ(); //g_dev.dim[2];	 
 
     std::vector<double> input(block_size);        
 
@@ -3697,11 +3689,11 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
         {
             b = 4 * n_nu;
 
-            eta_I_inv = 1.0 / (eta_dev.block(i,j,k)[b]);            
+            eta_I_inv = 1.0 / (eta_dev->block(i,j,k)[b]);            
 
             for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
             {
-                S_dev_Omega.block(i,j,k)[b + i_stokes] = eta_I_inv * (*IQUV_matrix_sh_ptr)(n_nu, i_stokes);                
+                S_dev_Omega->block(i,j,k)[b + i_stokes] = eta_I_inv * (*IQUV_matrix_sh_ptr)(n_nu, i_stokes);                
             }                                    
         }
 
@@ -3722,13 +3714,13 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
         // update counters
         counter_i++;
 
-        if (counter_i == i_end - g_dev.margin[0])
+        if (counter_i == i_end - g_dev->getGlobalStartX()/*g_dev.margin[0]*/)
         {
             counter_i = 0;
             counter_j++;
         }
 
-        if (counter_j == j_end - g_dev.margin[1])
+        if (counter_j == j_end - g_dev->getGlobalStartX()/*g_dev.margin[1]*/)
         {
             counter_j = 0;
             counter_k++;
@@ -3755,7 +3747,7 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
 #endif
 }
 
-
+// TODO  look at remap
 void MF_context::init_serial_fields(const int n_tiles){
     
     auto block_size = RT_problem_->block_size_;
@@ -3828,36 +3820,44 @@ void MF_context::init_serial_fields(const int n_tiles){
     // init serial grid
     const bool use_ghost_layers = false;
 
-    space_grid_serial_ = std::make_shared<Grid_t>();    
-    space_grid_serial_->init(MPI_COMM_SELF, {N_x, N_y, N_z}, {1, 1, 0}, {}, use_ghost_layers);
+    space_grid_serial_ = std::make_shared<Grid3D>(
+        MPI_COMM_SELF,
+        N_x, N_y, N_z,
+        std::array<PetscInt, 3>{1,1,1}
+    );    
+    //space_grid_serial_->init(MPI_COMM_SELF, {N_x, N_y, N_z}, {1, 1, 0}, {}, use_ghost_layers);
     
     // create serial fields 
-    I_field_serial_ = std::make_shared<Field_t>("I_serial", space_grid_serial_, tile_size_); 
-    S_field_serial_ = std::make_shared<Field_t>("S_serial", space_grid_serial_, tile_size_);
+    I_field_serial_ = std::make_shared<Field>(
+        "I_serial", space_grid_serial_, tile_size_
+    ); 
+    S_field_serial_ = std::make_shared<Field>(
+        "S_serial", space_grid_serial_, tile_size_
+    );
 
     if (n_tiles_ != 1) std::cout << "ERROR: n_tiles_ should be 1 for now (for b indexing eta and rho) " << std::endl;
 
-    eta_field_serial_ = std::make_shared<Field_t>("eta_serial", space_grid_serial_, n_local_rays_); // here could tiles also be used to reduce mem footprint
-    rho_field_serial_ = std::make_shared<Field_t>("rho_serial", space_grid_serial_, n_local_rays_);
+    eta_field_serial_ = std::make_shared<Field>(
+        "eta_serial", space_grid_serial_, n_local_rays_
+    ); // here could tiles also be used to reduce mem footprint
+    rho_field_serial_ = std::make_shared<Field>(
+        "rho_serial", space_grid_serial_, n_local_rays_
+    );
 
-    // allocate
-    I_field_serial_  ->allocate_on_device();     
-    S_field_serial_  ->allocate_on_device();     
-
-    eta_field_serial_->allocate_on_device();     
-    rho_field_serial_->allocate_on_device();
-
-    // init remaps 
-    I_remap_.init(*(RT_problem_->I_field_), *I_field_serial_);
-    S_remap_.init(*(RT_problem_->S_field_), *S_field_serial_);
+    // init remaps //TODO we could use just one remap
+    I_remap_.init(
+        RT_problem_->space_grid_, space_grid_serial_, block_size, tile_size_
+    );
+    S_remap_.init(
+        RT_problem_->space_grid_, space_grid_serial_, block_size, tile_size_
+    );
             
-    sgrid::ReMap<Field_t> tmp_remap;
+    ReMap3D tmp_remap(
+        RT_problem_->space_grid_, space_grid_serial_, block_size, tile_size_
+    );
 
-    tmp_remap.init(*(RT_problem_->eta_field_), *eta_field_serial_);
-    tmp_remap.from_pgrid_to_pblock(*(RT_problem_->eta_field_), *eta_field_serial_, 0); 
-
-    tmp_remap.init(*(RT_problem_->rho_field_), *rho_field_serial_);
-    tmp_remap.from_pgrid_to_pblock(*(RT_problem_->rho_field_), *rho_field_serial_, 0); 
+    tmp_remap.from_space_to_block_distributed(RT_problem_->eta_field_, eta_field_serial_); 
+    tmp_remap.from_space_to_block_distributed(RT_problem_->rho_field_, rho_field_serial_); 
 
     if (not RT_problem_->use_1_5D_approx_)
     {        
@@ -3869,7 +3869,7 @@ void MF_context::init_serial_fields(const int n_tiles){
     }   
 } 
 
-
+// TODO  look at remap
 void MF_context::init_unpol_fields(){
 
     PetscErrorCode ierr;
@@ -3882,16 +3882,20 @@ void MF_context::init_unpol_fields(){
     n_local_rays_unpol_ = n_local_rays_/4;
     
     // create serial fields 
-    I_unpol_field_serial_ = std::make_shared<Field_t>("I_unpol_serial", space_grid_serial_, n_local_rays_unpol_); 
-    S_unpol_field_serial_ = std::make_shared<Field_t>("S_unpol_serial", space_grid_serial_, n_local_rays_unpol_);
+    I_unpol_field_serial_ = std::make_shared<Field>(
+        "I_unpol_serial", space_grid_serial_, n_local_rays_unpol_
+    ); 
+    S_unpol_field_serial_ = std::make_shared<Field>(
+        "S_unpol_serial", space_grid_serial_, n_local_rays_unpol_
+    );        
 
-    // allocate
-    I_unpol_field_serial_ ->allocate_on_device();     
-    S_unpol_field_serial_ ->allocate_on_device();         
-
-    // init remaps 
-    I_unpol_remap_.init(*(RT_problem_->I_unpol_field_), *I_unpol_field_serial_);
-    S_unpol_remap_.init(*(RT_problem_->S_unpol_field_), *S_unpol_field_serial_);        
+    // init remaps // TODO we could use just one remap
+    I_unpol_remap_.init(
+        RT_problem_->space_grid_, space_grid_serial_, RT_problem_->block_size_, tile_size_
+    );
+    S_unpol_remap_.init(
+        RT_problem_->space_grid_, space_grid_serial_, RT_problem_->block_size_, tile_size_
+    );        
 
     // vectors for unpolarized data    
     ierr = VecCreate(PETSC_COMM_WORLD, &x_unpol_);CHKERRV(ierr);  
@@ -4028,44 +4032,51 @@ void MF_context::init_serial_fields_Omega(){
     if (local_block_size_ % 4 != 0) std::cout << "ERROR: in init_serial_fields(): local_block_size_ should be divisible by 4" << std::endl;        
         
     // create serial fields 
-    I_field_serial_Omega_   = std::make_shared<Field_t>("I_serial", space_grid_serial_, local_block_size_); 
-    S_field_serial_Omega_   = std::make_shared<Field_t>("S_serial", space_grid_serial_, local_block_size_);    
+    I_field_serial_Omega_   = std::make_shared<Field>(
+        "I_serial", space_grid_serial_, local_block_size_
+    ); 
+    S_field_serial_Omega_   = std::make_shared<Field>(
+        "S_serial", space_grid_serial_, local_block_size_
+    );    
 
-    eta_field_serial_Omega_ = std::make_shared<Field_t>("eta_serial", space_grid_serial_, local_block_size_); // here could tiles also be used to reduce mem footprint
-    rho_field_serial_Omega_ = std::make_shared<Field_t>("rho_serial", space_grid_serial_, local_block_size_);
+    eta_field_serial_Omega_ = std::make_shared<Field>(
+        "eta_serial", space_grid_serial_, local_block_size_
+    ); // here could tiles also be used to reduce mem footprint
+    rho_field_serial_Omega_ = std::make_shared<Field>(
+        "rho_serial", space_grid_serial_, local_block_size_
+    );   
 
-    // allocate
-    I_field_serial_Omega_  ->allocate_on_device();     
-    S_field_serial_Omega_  ->allocate_on_device();     
-
-    eta_field_serial_Omega_->allocate_on_device();     
-    rho_field_serial_Omega_->allocate_on_device();     
-
-    // init remaps 
-    I_remap_Omega_.init(*(RT_problem_->I_field_Omega_), *I_field_serial_Omega_); 
-    S_remap_Omega_.init(*(RT_problem_->S_field_Omega_), *S_field_serial_Omega_);      
+    // init remaps // TODO use just one remao
+    I_remap_Omega_.init(
+        RT_problem_->space_grid_, space_grid_serial_, block_size, local_block_size_
+    ); 
+    S_remap_Omega_.init(
+        RT_problem_->space_grid_, space_grid_serial_, block_size, local_block_size_
+    );      
 
     // apply BC on I_Field
-    const auto I_Omega_dev = RT_problem_->I_field_Omega_->view_device();      
-    const auto W_T_dev     = RT_problem_->W_T_          ->view_device();     
-    const auto g_dev       = RT_problem_->space_grid_   ->view_device();  
+    const auto I_Omega_dev = RT_problem_->I_field_Omega_;      
+    const auto W_T_dev     = RT_problem_->W_T_;     
+    const auto g_dev       = RT_problem_->space_grid_;  
 
-    sgrid::parallel_for("APPLY BC", RT_problem_->space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
+    g_dev->parallel_for([&](int i, int j, int k) {
                                     
         // just in max depth
-        if (g_dev.global_coord(2, k) == (N_z - 1))        
+        if (g_dev->local_to_global_coordinate(2, k) == (N_z - 1))        
         {       
-            const Real W_T_deep = W_T_dev.ref(i,j,k);            
+            const Real W_T_deep = W_T_dev->block(i,j,k)[0];            
             
             for (int b = 0; b < block_size; b = b + 4) 
             {
-                I_Omega_dev.block(i,j,k)[b] = W_T_deep;                                
+                I_Omega_dev->block(i,j,k)[b] = W_T_deep;                                
             }                       
         }
     });     
 
     // init BC in serial grid
-    I_remap_Omega_.from_pgrid_to_pblock(*RT_problem_->I_field_Omega_, *I_field_serial_Omega_, 0);                                    
+    I_remap_Omega_.from_space_to_block_distributed(
+        RT_problem_->I_field_Omega_, I_field_serial_Omega_
+    );                                    
 } 
 
 
@@ -4119,11 +4130,11 @@ void RT_solver::assemble_rhs(){
 	const auto local_size = RT_problem_->local_size_;
 
 	// get fields
-	const auto eta_dev =      RT_problem_->eta_field_->view_device();	
-	const auto eps_c_th_dev = RT_problem_->eps_c_th_ ->view_device();	
-	const auto epsilon_dev  = RT_problem_->epsilon_  ->view_device();	
-	const auto W_T_dev      = RT_problem_->W_T_      ->view_device();	
-	const auto k_c_dev      = RT_problem_->k_c_      ->view_device();	
+	const auto eta_dev =      RT_problem_->eta_field_;	
+	const auto eps_c_th_dev = RT_problem_->eps_c_th_;	
+	const auto epsilon_dev  = RT_problem_->epsilon_;	
+	const auto W_T_dev      = RT_problem_->W_T_;	
+	const auto k_c_dev      = RT_problem_->k_c_;	
 
 	// allocate rhs vector 
 	ierr = VecCreate(PETSC_COMM_WORLD, &rhs_);CHKERRV(ierr);    
@@ -4133,16 +4144,19 @@ void RT_solver::assemble_rhs(){
     if (not test)
     {     
     	// create rhs field (temporary)
-    	auto rhs_field = std::make_shared<Field_t>("RHS", space_grid, block_size);
-    	rhs_field->allocate_on_device(); 	
+    	auto rhs_field = std::make_shared<Field>(
+            "RHS", space_grid, block_size
+        );
     	
     	// create eps_th field (temporary)
-    	auto eps_th_field = std::make_shared<Field_t>("EPS_TH", space_grid, block_size);
-    	eps_th_field->allocate_on_device(); 
-    	const auto eps_th_dev = eps_th_field->view_device();	 
+    	auto eps_th_field = std::make_shared<Field>(
+            "EPS_TH", space_grid, block_size
+        );
+
+    	const auto eps_th_dev = eps_th_field;	 
     	
     	// fill eps_th =  eps_c_th +  eps_l_th
-    	sgrid::parallel_for("ASSEMBLE RHS", space_grid->md_range(), SGRID_LAMBDA(int i, int j, int k) {
+    	space_grid->parallel_for([&](int i, int j, int k) {
     		
     		double value;
 
@@ -4150,9 +4164,9 @@ void RT_solver::assemble_rhs(){
 
     		for (int b = 0; b < block_size; b++) 
     		{		
-    			local_idx = RT_problem_->block_to_local(b);
+    			local_idx = RT_problem_->block_to_local(b); //TODO use field->block_to_local(b)
 
-    			double eta_i = eta_dev.block(i,j,k)[b];
+    			double eta_i = eta_dev->block(i,j,k)[b];
 
     			// first Stokes parameter
     			if (local_idx[3] == 0)
@@ -4162,15 +4176,15 @@ void RT_solver::assemble_rhs(){
     				if (RT_problem_->enable_continuum_) 
     				{
     					// eps_c_th
-    					value = eps_c_th_dev.block(i,j,k)[index_nu];
+    					value = eps_c_th_dev->block(i,j,k)[index_nu];
 
     					// eps_l_th		
-    					value += epsilon_dev.ref(i,j,k) * W_T_dev.ref(i,j,k) * (eta_i - k_c_dev.block(i,j,k)[index_nu]);				
+    					value += epsilon_dev->block(i,j,k)[0] * W_T_dev->block(i,j,k)[0] * (eta_i - k_c_dev->block(i,j,k)[index_nu]);				
     				}
     				else
     				{
     					// eps_l_th
-    					value = epsilon_dev.ref(i,j,k) * W_T_dev.ref(i,j,k) * eta_i;				
+    					value = epsilon_dev->block(i,j,k)[0] * W_T_dev->block(i,j,k)[0] * eta_i;				
     				}
 
     				// (eps_c_th + eps_l_th_) / eta_I
@@ -4179,14 +4193,14 @@ void RT_solver::assemble_rhs(){
     			else
     			{
     				// get eta_I (!= eta_i)
-    				double eta_I = eta_dev.block(i,j,k)[b - local_idx[3]];
+    				double eta_I = eta_dev->block(i,j,k)[b - local_idx[3]];
 
     				// eps_l_th / eta_i_l
-    				value = eta_i * epsilon_dev.ref(i,j,k) * W_T_dev.ref(i,j,k) / eta_I;	
+    				value = eta_i * epsilon_dev->block(i,j,k)[0] * W_T_dev->block(i,j,k)[0] / eta_I;	
     			}	                
 
     			// finally se eps_th
-    			eps_th_dev.block(i,j,k)[b] = value;	                                            
+    			eps_th_dev->block(i,j,k)[b] = value;	                                            
     		}	
     	});
 
@@ -4283,29 +4297,27 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
 /*
 ///////////////// TEST
     if (RT_problem->mpi_rank_ == 0) 
-    {
-        const auto space_grid = RT_problem->space_grid_;   
-
+    { 
         // block size
         const int block_size = RT_problem->block_size_;
 
-        auto g_dev = space_grid->view_device();
-        auto S_dev = RT_problem->S_field_->view_device(); 
+        auto g_dev = RT_problem->space_grid_;
+        auto S_dev = RT_problem->S_field_; 
 
         // indeces
-        const int i_start = g_dev.margin[0]; 
-        const int j_start = g_dev.margin[1];
-        const int k_start = g_dev.margin[2];
+        const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
+        const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
+        const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
 
-        const int i_end = i_start + g_dev.dim[0];
-        const int j_end = j_start + g_dev.dim[1];
-        const int k_end = k_start + g_dev.dim[2]; 
+        const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
+        const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
+        const int k_end = k_start + g_dev->getLocalSizeZ(); //g_dev.dim[2];	 
 
         std::cout << "S = " << std::endl;
-        std::cout << S_dev.block(i_start, j_start, k_start)[0] << std::endl; 
-        std::cout << S_dev.block(i_start, j_start, k_start)[1] << std::endl; 
-        std::cout << S_dev.block(i_start, j_start, k_start)[2] << std::endl; 
-        std::cout << S_dev.block(i_start, j_start, k_start)[3] << std::endl; 
+        std::cout << S_dev->block(i_start, j_start, k_start)[0] << std::endl; 
+        std::cout << S_dev->block(i_start, j_start, k_start)[1] << std::endl; 
+        std::cout << S_dev->block(i_start, j_start, k_start)[2] << std::endl; 
+        std::cout << S_dev->block(i_start, j_start, k_start)[3] << std::endl; 
 
         // for (int k = k_start; k < k_end; ++k)                   
         // {                                                           
@@ -4313,7 +4325,7 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
         //     {
         //         for (int i = i_start; i < i_end; ++i)               
         //         {
-        //               S_dev.block(i, j, k)[b];                                        
+        //               S_dev->block(i, j, k)[b];                                        
         //         }
         //     }
         // }

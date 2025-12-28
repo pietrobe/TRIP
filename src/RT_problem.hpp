@@ -1,17 +1,14 @@
 #ifndef RT_problem_hpp
 #define RT_problem_hpp
 
-#include "sgrid_Core.hpp"
+#include "GridManager/GridManager.hpp"
 #include "RT_utility.hpp"
 
 // Type for storing fields
 using Real_t = float; 
 
-using Grid_t  = sgrid::Grid<Real_t, 3>;  
-using Field_t = sgrid::Field<Grid_t>;
-
-using Grid_ptr_t  = std::shared_ptr<Grid_t>;
-using Field_ptr_t = std::shared_ptr<Field_t>;
+using Grid_ptr_t  = std::shared_ptr<Grid3D>;
+using Field_ptr_t = std::shared_ptr<Field>;
 
 typedef const std::string input_string;
 
@@ -297,14 +294,9 @@ public:
 		set_sizes();
 								
 		// init grid
-		space_grid_ = std::make_shared<Grid_t>();
-
-		// menage grid distribution // TODO: now bit hardcoded // necessary?
-		set_grid_partition();
-		space_grid_->init(MPI_COMM_WORLD, {N_x_, N_y_, N_z_}, {1, 1, 0},
-									 {mpi_size_x_, mpi_size_y_, mpi_size_z_}, use_ghost_layers_); 
-		
-		// space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0}, {}, use_ghost_layers); 
+		space_grid_ = std::make_shared<Grid3D>(
+			MPI_COMM_WORLD, N_x_, N_y_, N_z_
+		);
 
 		// init fields
 		allocate_fields();				
@@ -348,12 +340,7 @@ public:
 		set_sizes();
 							
 		// init grid
-		space_grid_ = std::make_shared<Grid_t>();
-
-		// menage grid distribution // TODO: now bit hardcoded // necessary?
-		set_grid_partition();
-		space_grid_->init(MPI_COMM_WORLD, {N_x_, N_y_, N_z_}, {1, 1, 0},
-									 {mpi_size_x_, mpi_size_y_, mpi_size_z_}, use_ghost_layers_); 
+		space_grid_ = std::make_shared<Grid_t>(MPI_COMM_WORLD, N_x_, N_y_, N_z_);
 
 		// init fields
 		allocate_fields();				
@@ -372,6 +359,7 @@ public:
 	}
 
 	// convert block index to to local ones = [j_theta, k_chi, n_nu, i_stokes]
+	// TODO this will be deleted
 	inline std::vector<int> block_to_local(const int block_index)
 	{
 		std::vector<int> local_indeces;
@@ -391,6 +379,7 @@ public:
 	}
 
 	// convert block index to to local ones = [j_theta, k_chi, n_nu]
+	// TODO this will be deleted
 	inline std::vector<int> block_to_local_unpol(const int block_index)
 	{
 		std::vector<int> local_indeces;
@@ -412,9 +401,11 @@ public:
 	std::vector<double> extract_plane_k(const Field_ptr_t field, const int k_global);
 
 	// convert local indeces to block one (of fields) for the first Stokes parameter and vice versa
+	// TODO this will be deleted
 	inline int local_to_block(const int j, const int k, const int n) { return 4 * ( N_nu_ * ( N_chi_ * j + k ) + n); }
 
 	// convert local indeces to block one (of fields)
+	// TODO this will be deleted
 	inline int local_to_block_unpol(const int j, const int k, const int n) { return N_nu_ * ( N_chi_ * j + k ) + n; }
 
 
@@ -464,7 +455,7 @@ public:
 	int mpi_rank_;
 	int mpi_size_;	
 
-	// procs in each dimension
+	// procs in each dimension // TODO these will be useless
 	int mpi_size_x_;
 	int mpi_size_y_;
 	int mpi_size_z_;
@@ -508,12 +499,14 @@ public:
 	int N_chi_;   
 	int N_dirs_; // N_dirs_ = N_theta_ * N_chi_;   
 	int N_nu_;        
+
+	int N_pol_ = 4; // ADDED
 		
 	int local_size_; // == tot_size_ con mpi_size_ = 1
 	PetscInt block_size_; // 4 * N_nu_ * N_theta_ * N_chi_;
 	PetscInt tot_size_;   // N_s_ * block_size;	
 
-	// unpolarized sizes (normal ones divided by 4)
+	// unpolarized sizes (normal ones divided by 4) // UNUSED when introducing the new field class, these values could be avoided
 	PetscInt local_size_unpolarized_; // == tot_size_ con mpi_size_ = 1
 	PetscInt block_size_unpolarized_; // N_nu_ * N_theta_ * N_chi_;
 	PetscInt tot_size_unpolarized_;   // N_s_ * block_size;	
@@ -523,7 +516,7 @@ public:
 	Field_ptr_t S_field_; // source function
 
 	// PETSc data structure for intensity	
-	Vec I_vec_;
+	Vec I_vec_; // TODO useless
 		
 	// propagation matrix entries 
 	Field_ptr_t eta_field_; 
@@ -581,7 +574,7 @@ public:
 	void allocate_unpolarized_fields();	
 	void allocate_J_KQ_field();	
 
-	// polarized_to_unpolarized
+	// polarized_to_unpolarized 
 	void polarized_to_unpolarized_field(const Field_ptr_t field, Field_ptr_t field_unpol);
 	
 
@@ -653,7 +646,7 @@ private:
 
 	// menage grid distribution
 	void set_grid_partition();	
-	void set_3D_decomposition(const int N_x, const int N_y, const int N_z);
+	void set_3D_decomposition(const int N_x, const int N_y, const int N_z); // UNUSED
 
 	// read inputs
 	void read_atom(             input_string filename);

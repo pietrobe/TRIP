@@ -3,7 +3,7 @@
 
 #include "Formal_solver.hpp"
 #include "RT_problem.hpp"
-#include "sgrid_ReMap.hpp"
+#include "GridManager/GridManager.hpp"
 
 extern PetscErrorCode UserMult(Mat mat,Vec x,Vec y);
 extern PetscErrorCode UserMult_approx(Mat mat,Vec x,Vec y);
@@ -66,8 +66,8 @@ struct MF_context {
 	// serial objects for formal solution
 	Grid_ptr_t  space_grid_serial_;	
 
-	sgrid::ReMap<Field_t> I_remap_;
-	sgrid::ReMap<Field_t> S_remap_;
+	ReMap3D I_remap_; // TODO we could use just one map
+	ReMap3D S_remap_;
 	
 	Field_ptr_t I_field_serial_;
 	Field_ptr_t S_field_serial_;
@@ -86,12 +86,12 @@ struct MF_context {
 	// auxiliary J_KQ vecotors
 	Vec x_J_KQ_, y_J_KQ_;
 
-	sgrid::ReMap<Field_t> I_unpol_remap_;
-	sgrid::ReMap<Field_t> S_unpol_remap_;
+	ReMap3D I_unpol_remap_; // TODO we could use just one map
+	ReMap3D S_unpol_remap_;
 
 	// data structures a single direction Omega (if needed)
-	sgrid::ReMap<Field_t> I_remap_Omega_;
-	sgrid::ReMap<Field_t> S_remap_Omega_;
+	ReMap3D I_remap_Omega_; // TODO we could use just one map
+	ReMap3D S_remap_Omega_;
 	
 	Field_ptr_t I_field_serial_Omega_;
 	Field_ptr_t S_field_serial_Omega_;
@@ -123,8 +123,8 @@ struct MF_context {
 #endif
 	
 	// change data format
-	void field_to_vec(const Field_ptr_t field, Vec &v, const int block_size = -1);
-	void vec_to_field(Field_ptr_t field, const Vec &v, const int block_size = -1);
+	void field_to_vec(const Field_ptr_t field, Vec &v, const int block_size = -1); //UNUSED
+	void vec_to_field(Field_ptr_t field, const Vec &v, const int block_size = -1); //UNUSED
 
 	void I_vec_to_J_KQ_vec(const Vec &I_vec, Vec &J_KQ_vec);
 	void I_field_to_J_KQ_vec(const Field_ptr_t field, Vec &J_KQ_vec);
@@ -331,6 +331,7 @@ public:
 	}
 
 	// solve linear system
+	//TODO
 	inline void solve()
 	{	
 		PetscErrorCode ierr;
@@ -338,15 +339,16 @@ public:
 		Real start = MPI_Wtime();	
 				
 		if (mpi_rank_ == 0) std::cout << "\nStart linear solve..." << std::endl;			
-		ierr = KSPSolve(ksp_solver_, rhs_, RT_problem_->I_vec_);CHKERRV(ierr);
+		ierr = KSPSolve(ksp_solver_, rhs_, RT_problem_->I_vec_);CHKERRV(ierr); // TODO RT_problem_->I_vec_ => field.getVec()
 
 		MPI_Barrier(MPI_COMM_WORLD); Real end = MPI_Wtime();
 		if (mpi_rank_ == 0) std::cout << "Solve time (s) = " << end - start << std::endl;	
 
 		// update I_field for later use
-		mf_ctx_.vec_to_field(RT_problem_->I_field_, RT_problem_->I_vec_);		
+		mf_ctx_.vec_to_field(RT_problem_->I_field_, RT_problem_->I_vec_);	//TODO	remove
 	}
 
+	//TODO
 	inline void solve_checkpoint(const std::string output_path, const int checkpoint_interval)
 	{
 		PetscErrorCode ierr;
@@ -362,14 +364,14 @@ public:
 		// while KSPSolve reaches max it
 		while (reason == KSP_DIVERGED_ITS)
 		{
-			ierr = KSPSolve(ksp_solver_, rhs_, RT_problem_->I_vec_);CHKERRV(ierr);
+			ierr = KSPSolve(ksp_solver_, rhs_, RT_problem_->I_vec_);CHKERRV(ierr); // TODO RT_problem_->I_vec_ => field.getVec()
 			ierr = KSPGetConvergedReason(ksp_solver_, &reason);CHKERRV(ierr); 
 			ierr = KSPGetIterationNumber(ksp_solver_, &its);CHKERRV(ierr); 
 
 			counter += its;
 
 			// update I_field for write_surface_point_profiles()
-			mf_ctx_.vec_to_field(RT_problem_->I_field_, RT_problem_->I_vec_);		
+			mf_ctx_.vec_to_field(RT_problem_->I_field_, RT_problem_->I_vec_); // TODO remove	
 			
 			output_file = output_path + "CP" + std::to_string(counter);
 			RT_problem_->write_surface_point_profiles(output_file, 0, 0);
@@ -377,9 +379,10 @@ public:
 		}		
 		
 		// update I_field for later use
-		mf_ctx_.vec_to_field(RT_problem_->I_field_, RT_problem_->I_vec_);		
+		mf_ctx_.vec_to_field(RT_problem_->I_field_, RT_problem_->I_vec_);	//TODO	remove
 	}
 
+	//TODO 
 	inline void apply_formal_solver()
 	{		
 		Real start = MPI_Wtime();		
@@ -387,11 +390,11 @@ public:
 		// // set source fun
 		// if (mpi_rank_ == 0) std::cout << "WARNING: setting source function in apply_formal_solver()" << std::endl;
 
-		// auto S_dev = RT_problem_->S_field_->view_device();
+		// auto S_dev = RT_problem_->S_field_;
 
-		// sgrid::parallel_for("INIT S", RT_problem_->space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) 
+		// RT_problem_->space_grid_->parallel_for([&](int i, int j, int k) 
 		// {         
-		// 	auto *block = S_dev.block(i, j, k);
+		// 	auto *block = S_dev->block(i, j, k);
 
 		// 	for (int b = 0; b < (int)RT_problem_->block_size_; ++b) 
 		// 	{	    
@@ -408,9 +411,10 @@ public:
 		if (mpi_rank_ == 0) std::cout << "Formal solve time (s) = " << end - start << std::endl;	
 
 		// update I_vec for later use
-		mf_ctx_.field_to_vec(RT_problem_->I_field_, RT_problem_->I_vec_);
+		mf_ctx_.field_to_vec(RT_problem_->I_field_, RT_problem_->I_vec_); // TODO remove
 	}	
 
+	//TODO
 	inline void compute_emission()
 	{
 		Real start = MPI_Wtime();		
@@ -437,6 +441,7 @@ public:
 	}
 
 
+	//TODO
 	// set the radiation field in an arbitrary direction Omega
 	inline void apply_formal_solver_Omega(const Real theta, const Real chi)
 	{
@@ -458,7 +463,7 @@ public:
 		const Real clock_start = MPI_Wtime();				
 
 		// update emissivity with current I_field (in all directions)
-		mf_ctx_.update_emission_Omega(RT_problem_->I_vec_, theta, chi);		
+		mf_ctx_.update_emission_Omega(RT_problem_->I_vec_, theta, chi);	// TODO RT_problem_->I_vec_ => field->getVec()	
 
 		const Real clock_end = MPI_Wtime();
 		const Real clock_diff = clock_end - clock_start;
@@ -488,18 +493,18 @@ public:
 	{			
 		PetscErrorCode ierr; 
 
-		const auto g_dev      = RT_problem_->space_grid_->view_device();
-		const auto field_dev  = RT_problem_->I_field_->view_device();	
+		const auto g_dev      = RT_problem_->space_grid_;
+		const auto field_dev  = RT_problem_->I_field_;	
 		const auto block_size = RT_problem_->block_size_;
 
 		// indeces
-		const int i_start = g_dev.margin[0]; 
-		const int j_start = g_dev.margin[1];
-		const int k_start = g_dev.margin[2];
+		const int i_start = g_dev->getGlobalStartX(); 
+		const int j_start = g_dev->getGlobalStartY();
+		const int k_start = g_dev->getGlobalStartZ();
 
-		const int i_end = i_start + g_dev.dim[0];
-		const int j_end = j_start + g_dev.dim[1];
-		const int k_end = k_start + g_dev.dim[2];
+		const int i_end = i_start + g_dev->getLocalSizeX();
+		const int j_end = j_start + g_dev->getLocalSizeY();
+		const int k_end = k_start + g_dev->getLocalSizeZ();
 
 		int counter = 0;
 
@@ -515,7 +520,7 @@ public:
 				{
 					for (int b = 0; b < block_size; b++) 
 					{			
-						field_dev.block(i, j, k)[b] = istart + counter;							
+						field_dev->block(i, j, k)[b] = istart + counter;							
 
 						counter++;
 					}							
@@ -524,13 +529,13 @@ public:
 		}
 
 		// test 1
-		mf_ctx_.field_to_vec(RT_problem_->I_field_, RT_problem_->I_vec_);
+		mf_ctx_.field_to_vec(RT_problem_->I_field_, RT_problem_->I_vec_); // TODO remove this
 
 		save_vec(RT_problem_->I_vec_,  "../output/vec1.m" ,"vec_1");   
 
 		// test 2 
-		mf_ctx_.vec_to_field(RT_problem_->I_field_, RT_problem_->I_vec_);
-		mf_ctx_.field_to_vec(RT_problem_->I_field_, RT_problem_->I_vec_);
+		mf_ctx_.vec_to_field(RT_problem_->I_field_, RT_problem_->I_vec_); // TODO remove this 
+		mf_ctx_.field_to_vec(RT_problem_->I_field_, RT_problem_->I_vec_); // TODO remove this
 
 		save_vec(RT_problem_->I_vec_,  "../output/vec2.m" ,"vec_2");   
 

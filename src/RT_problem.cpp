@@ -134,12 +134,18 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	tot_size_   = (PetscInt) N_s_ * block_size_;	
 	
 	// create space grid
-	space_grid_ = std::make_shared<Grid_t>();
-	
-	// menage grid distribution and init
-	set_grid_partition();	
-	space_grid_->init(MPI_COMM_WORLD, {N_x_, N_y_, N_z_}, {1, 1, 0},
-									 {mpi_size_x_, mpi_size_y_, mpi_size_z_}, use_ghost_layers_); 
+	mpi_size_x_ = PETSC_DECIDE;
+	mpi_size_y_ = PETSC_DECIDE;
+	if (use_1_5D_approx_) {			
+		mpi_size_z_ = 1;
+	} else {
+		mpi_size_z_ = PETSC_DECIDE;
+	}
+	space_grid_ = std::make_shared<Grid3D>(
+		MPI_COMM_WORLD, 
+		N_x_, N_y_, N_z_, 
+		std::array<PetscInt, 3>{mpi_size_x_, mpi_size_y_, mpi_size_z_}
+	);	
 		
 	// init fields
 	allocate_fields();				
@@ -147,35 +153,13 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	// init atmospheric quantities 
 	allocate_atmosphere();	
 
-	// load devices for parallel data structures
-	auto T_dev   = T_   ->view_device();
-	auto a_dev   = a_   ->view_device();
-	auto Nl_dev  = Nl_  ->view_device();
-	auto Cul_dev = Cul_ ->view_device();
-	auto B_dev   = B_   ->view_device();
-	auto v_b_dev = v_b_ ->view_device();
-	auto xi_dev  = xi_  ->view_device();
-	auto Qel_dev = Qel_ ->view_device();
-	auto D2_dev  = D2_  ->view_device();
-
-	auto sigma_dev    = sigma_    ->view_device();
-	auto k_c_dev      = k_c_      ->view_device();
-	auto eps_c_th_dev = eps_c_th_ ->view_device();
-	auto epsilon_dev  = epsilon_  ->view_device();
-
-	auto Doppler_width_dev = Doppler_width_->view_device();
-
-	
-
-	auto g_dev = space_grid_->view_device();	
-
 	// fill field 
-	sgrid::parallel_for("READ-ATM1D", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
+	space_grid_->parallel_for([&](int i, int j, int k) {
 
 		// get global indeces form local ones
-		const int i_global  = g_dev.start[0] + i - g_dev.margin[0];
-		const int j_global  = g_dev.start[1] + j - g_dev.margin[1];
-		const int k_global  = g_dev.start[2] + k - g_dev.margin[2];
+		const int i_global  = space_grid_->getGlobalStartX() + i;// - g_dev.margin[0];
+		const int j_global  = space_grid_->getGlobalStartY() + j;// - g_dev.margin[1];
+		const int k_global  = space_grid_->getGlobalStartZ() + k;// - g_dev.margin[2];
 		
 		// reversing z index because of input ordering 
 		const int k_reverse = (N_z_ - k_global - 1);  
@@ -184,22 +168,22 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 
 		// epsilon_dev.ref(i,j,k) = tmp_vector[0];		
 		// Cul_dev.ref(i,j,k)     = tmp_vector[1];		
-		T_dev.ref(i,j,k)       = tmp_vector[2];			
+		(*T_)(i,j,k)[0]       = tmp_vector[2];			
 		// Nl_dev.ref(i,j,k)      = tmp_vector[9];		
-		a_dev.ref(i,j,k)       = tmp_vector[10];		
-		D2_dev.ref(i,j,k)      = tmp_vector[11];
+		(*a_)(i,j,k)[0]       = tmp_vector[10];		
+		(*D2_)(i,j,k)[0]     = tmp_vector[11];
 
 		// hardcoding xi to zero
-		xi_dev.ref(i,j,k) = 0; 
+		(*xi_)(i,j,k)[0] = 0; 
 		
 		// compute Qel and Cul
-		Cul_dev.ref(i,j,k) = read_single_node_single_field(f_cul,i_global,j_global,k_reverse);					
-		Qel_dev.ref(i,j,k) = read_single_node_single_field(f_qel,i_global,j_global,k_reverse);		
-		Nl_dev.ref(i,j,k)  = read_single_node_single_field(f_llp,i_global,j_global,k_reverse);		
+		(*Cul_)(i,j,k)[0] = read_single_node_single_field(f_cul,i_global,j_global,k_reverse);					
+		(*Qel_)(i,j,k)[0] = read_single_node_single_field(f_qel,i_global,j_global,k_reverse);		
+		(*Nl_)(i,j,k)[0]  = read_single_node_single_field(f_llp,i_global,j_global,k_reverse);		
 
         // compute thermalization param 
      // epsilon_dev.ref(i,j,k) = Cul_dev.ref(i,j,k)/(Cul_dev.ref(i,j,k) + Aul_);
-        epsilon_dev.ref(i,j,k) = Cul_dev.ref(i,j,k)/(Cul_dev.ref(i,j,k) + Aul_);
+        (*epsilon_)(i,j,k)[0] = (*Cul_)(i,j,k)[0]/((*Cul_)(i,j,k)[0] + Aul_);
 
 		// /// Hardcoded Qel
 		// const double C_lu = 0.0; // hardcoded to zero
@@ -207,7 +191,7 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 		// Qel_dev.ref(i,j,k) =  (4.0 * PI * Doppler_width_dev.ref(i,j,k)) * a_dev.ref(i,j,k)  - Aul_ - Cul_dev.ref(i,j,k) - C_lu;
 		
 		// compute thermalization param 
-		epsilon_dev.ref(i,j,k) = Cul_dev.ref(i,j,k)/(Cul_dev.ref(i,j,k) + Aul_);		
+		(*epsilon_)(i,j,k)[0] = (*Cul_)(i,j,k)[0]/((*Cul_)(i,j,k)[0] + Aul_);		
 
 		// convert to spherical coordinates
 		auto B_spherical = convert_cartesian_to_spherical(tmp_vector[3], 
@@ -215,9 +199,9 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 														  tmp_vector[5]);	
 		if (use_magnetic_field_)
 		{								
-			B_dev.block(i, j, k)[0] = B_spherical[0] * 1399600.0; // converting to Larmor frequency					
-			B_dev.block(i, j, k)[1] = B_spherical[1]; 					
-			B_dev.block(i, j, k)[2] = B_spherical[2]; 
+			B_->block(i, j, k)[0] = B_spherical[0] * 1399600.0; // converting to Larmor frequency					
+			B_->block(i, j, k)[1] = B_spherical[1]; 					
+			B_->block(i, j, k)[2] = B_spherical[2]; 
 
 			// // /*  hardcoded B field */ ////////////////////
 			
@@ -228,26 +212,26 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 			// if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD, theta: " <<  theta_B_field << " rad" << std::endl;
 			// if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD, chi:   " <<  chi_B_field << " rad" << std::endl;
 
-			// B_dev.block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(B_field_hardcoded) ; // converting to Larmor frequency					
-			// B_dev.block(i, j, k)[1] = theta_B_field;
-			// B_dev.block(i, j, k)[2] = chi_B_field; 
+			// B_->block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(B_field_hardcoded) ; // converting to Larmor frequency					
+			// B_->block(i, j, k)[1] = theta_B_field;
+			// B_->block(i, j, k)[2] = chi_B_field; 
 			
 			// // end hardcoded B field ////////////////////
 
 		}
 		else
 		{
-			B_dev.block(i, j, k)[0] = 0.0;
-			B_dev.block(i, j, k)[1] = 0.0;
-			B_dev.block(i, j, k)[2] = 0.0;
+			B_->block(i, j, k)[0] = 0.0;
+			B_->block(i, j, k)[1] = 0.0;
+			B_->block(i, j, k)[2] = 0.0;
 		}
 		
 		
 		if (zero_velocities)
 		{
-			v_b_dev.block(i, j, k)[0] = 0.0;					
-			v_b_dev.block(i, j, k)[1] = 0.0;					
-			v_b_dev.block(i, j, k)[2] = 0.0;	
+			v_b_->block(i, j, k)[0] = 0.0;					
+			v_b_->block(i, j, k)[1] = 0.0;					
+			v_b_->block(i, j, k)[2] = 0.0;	
 		}
 		else
 		{
@@ -255,9 +239,9 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 			auto v_spherical = convert_cartesian_to_spherical(tmp_vector[6], 
 														      tmp_vector[7], 
 														      tmp_vector[8]);		
-			v_b_dev.block(i, j, k)[0] = v_spherical[0];					
-			v_b_dev.block(i, j, k)[1] = v_spherical[1];					
-			v_b_dev.block(i, j, k)[2] = v_spherical[2];	
+			v_b_->block(i, j, k)[0] = v_spherical[0];					
+			v_b_->block(i, j, k)[1] = v_spherical[1];					
+			v_b_->block(i, j, k)[2] = v_spherical[2];	
 		}
 				
 		{
@@ -285,9 +269,9 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 
 			for (int n = 0; n < N_nu_; ++n)
 			{			
-				sigma_dev.block(   i, j, k)[n] = double(sigma * sigma_mult);
-				k_c_dev.block(     i, j, k)[n] = kappa;
-				eps_c_th_dev.block(i, j, k)[n] = epsilon;	
+				sigma_->block(   i, j, k)[n] = double(sigma * sigma_mult);
+				k_c_->block(     i, j, k)[n] = kappa;
+				eps_c_th_->block(i, j, k)[n] = epsilon;	
 
 				// TODO: read sigma from file .back, da controllare nell'input (solo un valore)
 				// read_single_node_single_field(filename_qel,i_global,j_global,k_reverse);				
@@ -510,39 +494,24 @@ void RT_problem::read_3D(const char* filename){
 	tot_size_   = (PetscInt) N_s_ * block_size_;	
 	
 	// create space grid
-	space_grid_ = std::make_shared<Grid_t>();
-	
-	// menage grid distribution and init
-	set_grid_partition();	
-
-	space_grid_->init(MPI_COMM_WORLD, {N_x_, N_y_, N_z_}, {1, 1, 0},
-									 {mpi_size_x_, mpi_size_y_, mpi_size_z_}, use_ghost_layers_); 	
+	mpi_size_x_ = PETSC_DECIDE;
+	mpi_size_y_ = PETSC_DECIDE;
+	if (use_1_5D_approx_) {			
+		mpi_size_z_ = 1;
+	} else {
+		mpi_size_z_ = PETSC_DECIDE;
+	}
+	space_grid_ = std::make_shared<Grid3D>(
+		MPI_COMM_WORLD, 
+		N_x_, N_y_, N_z_, 
+		std::array<PetscInt, 3>{mpi_size_x_, mpi_size_y_, mpi_size_z_}
+	);	
 	
 	// init fields
 	allocate_fields();				
 
 	// init atmospheric quantities 
 	allocate_atmosphere();	
-
-	// load devices for parallel data structures
-	auto T_dev   = T_   ->view_device();
-	auto a_dev   = a_   ->view_device();
-	auto Nl_dev  = Nl_  ->view_device();
-	auto Cul_dev = Cul_ ->view_device();
-	auto B_dev   = B_   ->view_device();
-	auto v_b_dev = v_b_ ->view_device();
-	auto xi_dev  = xi_  ->view_device();
-	auto Qel_dev = Qel_ ->view_device();
-	auto D2_dev  = D2_  ->view_device();
-
-	auto sigma_dev    = sigma_    ->view_device();
-	auto k_c_dev      = k_c_      ->view_device();
-	auto eps_c_th_dev = eps_c_th_ ->view_device();
-	auto epsilon_dev  = epsilon_  ->view_device();
-
-	auto Doppler_width_dev = Doppler_width_->view_device();
-
-	auto g_dev = space_grid_->view_device();
 
 	// some constants hardcoded	
 	if (mpi_rank_ == 0) std::cout << "WARNING: hardcoding quantities for PORTA input read!" << std::endl;
@@ -553,37 +522,37 @@ void RT_problem::read_3D(const char* filename){
 	std::array<double, 134> xi_vec = { 2.0, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 1.9886373912499999e+00, 1.9773626719999999e+00, 1.9419696239999999e+00, 1.8600738539999999e+00, 1.7778424079999999e+00, 1.6824751599999999e+00, 1.5795074739999999e+00, 1.4744281220000000e+00, 1.3537171600000000e+00, 1.2327272599999999e+00, 1.1129887319999998e+00, 9.9467995799999975e-01, 8.7645056999999993e-01, 7.8089990399999998e-01, 6.8735903999999992e-01, 6.0959461199999998e-01, 5.6051231999999995e-01, 5.1142826399999997e-01, 4.9363330559999996e-01, 4.8427622399999998e-01, 4.7908703999999996e-01, 4.8846167039999999e-01, 4.9785317760000003e-01, 5.1861966000000015e-01, 5.4516093000000010e-01, 5.8094278171428582e-01, 6.2224760000000012e-01, 6.7522791428571438e-01, 7.3142138000000012e-01, 8.0070458000000022e-01, 8.7089629200000007e-01, 9.5220700000000047e-01, 1.0332738400000001e+00, 1.1213362909090909e+00, 1.2152569890909093e+00, 1.3094004363636367e+00, 1.4048512000000004e+00, 1.5007467520000004e+00, 1.5978336000000002e+00, 1.6978324000000005e+00, 1.7978304000000003e+00, 1.8947160320000005e+00, 1.9907144960000005e+00, 2.0867125760000005e+00, 2.1827118080000001e+00, 2.2787102720000001e+00, 2.3705575253333340e+00, 2.4612234666666670e+00, 2.5518886826666671e+00, 2.6425844611764711e+00, 2.7343480658823536e+00, 2.8261127717647065e+00, 2.9178771105882353e+00, 3.0096418164705878e+00, 3.0936051408695651e+00, 3.1753403478260873e+00, 3.2570791513043482e+00, 3.3388189356521742e+00, 3.4205534886956523e+00, 3.5020644897959188e+00, 3.5755338775510208e+00, 3.6489997387755104e+00, 3.7224691265306125e+00, 3.7959382204081633e+00, 3.8687040000000006e+00, 3.9367072639999998e+00, 4.0047040000000003e+00, 4.0727037280000005e+00, 4.1407040000000004e+00, 4.2084453608247427e+00, 4.2744210474226803e+00, 4.3404041237113411e+00, 4.4063803381443298e+00, 4.4723597195876286e+00, 4.5390595657142860e+00, 4.6076277028571422e+00, 4.6761985828571433e+00, 4.7447738514285716e+00, 4.8133414400000003e+00, 4.8820457066666672e+00, 4.9553796266666668e+00, 5.0287088533333337e+00, 5.1020427733333342e+00, 5.1753755200000002e+00, 5.2502169904761908e+00, 5.3264074666666668e+00, 5.4025979428571436e+00, 5.4787847619047625e+00, 5.5549752380952384e+00, 5.6335312941176472e+00, 5.7182371764705886e+00, 5.8029430588235300e+00, 5.8876489411764705e+00, 5.9725229090909098e+00, 6.0634269090909090e+00, 6.1543359999999998e+00, 6.2481976369230772e+00, 6.3497304123076930e+00, 6.4512745600000008e+00, 6.5531384216216226e+00, 6.6666519351351363e+00, 6.7818653538461549e+00, 6.9049422769230784e+00, 7.0308618105263161e+00, 7.1716484000000005e+00, 7.3142758956521750e+00, 7.4573813333333341e+00, 7.6035485714285720e+00, 7.7321138285714301e+00, 7.8826903272727300e+00, 8.3409513513513822e+00, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01};
 
 	// fill field 
-	sgrid::parallel_for("READ-ATM1D", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
+	space_grid_->parallel_for([&](int i, int j, int k) {
 
 		// get global indeces form local ones
-		const int i_global  = g_dev.start[0] + i - g_dev.margin[0];
-		const int j_global  = g_dev.start[1] + j - g_dev.margin[1];
-		const int k_global  = g_dev.start[2] + k - g_dev.margin[2];
+		const int i_global  = space_grid_->getGlobalStartX() + i;// - g_dev.margin[0];
+		const int j_global  = space_grid_->getGlobalStartY() + j;// - g_dev.margin[1];
+		const int k_global  = space_grid_->getGlobalStartZ() + k;// - g_dev.margin[2];
 		
 		// reversing z index because of input ordering 
 		const int k_reverse = (N_z_ - k_global - 1);  
 
 		auto tmp_vector = read_single_node(fh,i_global,j_global,k_reverse);			
 
-		epsilon_dev.ref(i,j,k) = tmp_vector[0];		
-		Cul_dev.ref(i,j,k)     = tmp_vector[1];		
-		T_dev.ref(i,j,k)       = tmp_vector[2];			
-		Nl_dev.ref(i,j,k)      = tmp_vector[9];		
-		a_dev.ref(i,j,k)       = tmp_vector[10];		
-		D2_dev.ref(i,j,k)      = tmp_vector[11];
+		epsilon_->block(i,j,k)[0] = tmp_vector[0];		
+		Cul_->block(i,j,k)[0]     = tmp_vector[1];		
+		T_->block(i,j,k)[0]       = tmp_vector[2];			
+		Nl_->block(i,j,k)[0]     = tmp_vector[9];		
+		a_->block(i,j,k)[0]      = tmp_vector[10];		
+		D2_->block(i,j,k)[0]      = tmp_vector[11];
 		
 		// hardcoding xi
-		xi_dev.ref(i,j,k) = 0; // with conversion to cm/s
+		xi_->block(i,j,k) = 0; // with conversion to cm/s
 
 		// RH Doppler_width to compute Qel
 		const double xi = 1e5 * xi_vec[k_reverse];; // with conversion to cm/s
-		const double Dw_RH = Eu_ * std::sqrt(xi * xi + 2 * k_B_ * T_dev.ref(i,j,k) / mass_real_RH);	
+		const double Dw_RH = Eu_ * std::sqrt(xi * xi + 2 * k_B_ * T_->block(i,j,k)[0] / mass_real_RH);	
 
 		// compute Qel
-		Qel_dev.ref(i,j,k) = a_dev.ref(i,j,k) * (4 * PI * Dw_RH) - Aul_RH;
+		Qel_->block(i,j,k)[0] = a_->block(i,j,k)[0] * (4 * PI * Dw_RH) - Aul_RH;
 
 		// compute thermalization param 
-      // epsilon_dev.ref(i,j,k) = Cul_dev.ref(i,j,k)/(Cul_dev.ref(i,j,k) + Aul_RH);
+      // epsilon_->block(i,j,k)[0] = Cul_->block(i,j,k)[0]/(Cul_->block(i,j,k)[0] + Aul_RH);
 		
 		// convert to spherical coordinates
 		auto B_spherical = convert_cartesian_to_spherical(tmp_vector[3], 
@@ -591,9 +560,9 @@ void RT_problem::read_3D(const char* filename){
 														  tmp_vector[5]);	
 		if (use_magnetic_field_)
 		{								
-			B_dev.block(i, j, k)[0] = B_spherical[0] * 1399600.0; // converting to Larmor frequency					
-			B_dev.block(i, j, k)[1] = B_spherical[1]; 					
-			B_dev.block(i, j, k)[2] = B_spherical[2]; 
+			B_->block(i, j, k)[0] = B_spherical[0] * 1399600.0; // converting to Larmor frequency					
+			B_->block(i, j, k)[1] = B_spherical[1]; 					
+			B_->block(i, j, k)[2] = B_spherical[2]; 
 
 			// // /*  hardcoded B field */ ////////////////////
 			
@@ -604,9 +573,9 @@ void RT_problem::read_3D(const char* filename){
 			// if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD, theta: " <<  theta_B_field << " rad" << std::endl;
 			// if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED B FIELD, chi:   " <<  chi_B_field << " rad" << std::endl;
 
-			// B_dev.block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(B_field_hardcoded) ; // converting to Larmor frequency					
-			// B_dev.block(i, j, k)[1] = theta_B_field;
-			// B_dev.block(i, j, k)[2] = chi_B_field; 
+			// B_->block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(B_field_hardcoded) ; // converting to Larmor frequency					
+			// B_->block(i, j, k)[1] = theta_B_field;
+			// B_->block(i, j, k)[2] = chi_B_field; 
 			
 		
 			// // end hardcoded B field ////////////////////
@@ -614,17 +583,17 @@ void RT_problem::read_3D(const char* filename){
 		}
 		else
 		{
-			B_dev.block(i, j, k)[0] = 0.0;
-			B_dev.block(i, j, k)[1] = 0.0;
-			B_dev.block(i, j, k)[2] = 0.0;
+			B_->block(i, j, k)[0] = 0.0;
+			B_->block(i, j, k)[1] = 0.0;
+			B_->block(i, j, k)[2] = 0.0;
 		}
 		
 		
 		if (zero_velocities)
 		{
-			v_b_dev.block(i, j, k)[0] = 0.0;					
-			v_b_dev.block(i, j, k)[1] = 0.0;					
-			v_b_dev.block(i, j, k)[2] = 0.0;	
+			v_b_->block(i, j, k)[0] = 0.0;					
+			v_b_->block(i, j, k)[1] = 0.0;					
+			v_b_->block(i, j, k)[2] = 0.0;	
 		}
 		else
 		{
@@ -632,9 +601,9 @@ void RT_problem::read_3D(const char* filename){
 			auto v_spherical = convert_cartesian_to_spherical(tmp_vector[6], 
 														      tmp_vector[7], 
 														      tmp_vector[8]);		
-			v_b_dev.block(i, j, k)[0] = v_spherical[0];					
-			v_b_dev.block(i, j, k)[1] = v_spherical[1];					
-			v_b_dev.block(i, j, k)[2] = v_spherical[2];	
+			v_b_->block(i, j, k)[0] = v_spherical[0];					
+			v_b_->block(i, j, k)[1] = v_spherical[1];					
+			v_b_->block(i, j, k)[2] = v_spherical[2];	
 			
 			//////// hardcoded velocities DANDGER !!!!!!!
 			/*
@@ -647,9 +616,9 @@ void RT_problem::read_3D(const char* filename){
 			if ( mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) std::cout << "WARNING: HARDCODED Vz: " <<  Vz << " km/s" << std::endl;
                         
 
-			v_b_dev.block(i, j, k)[0] = Vx;
-			v_b_dev.block(i, j, k)[1] = Vy;
-			v_b_dev.block(i, j, k)[2] = Vz;
+			v_b_->block(i, j, k)[0] = Vx;
+			v_b_->block(i, j, k)[1] = Vy;
+			v_b_->block(i, j, k)[2] = Vz;
 			*/
 			/////////// end hardcoded velocities
 
@@ -660,9 +629,9 @@ void RT_problem::read_3D(const char* filename){
 		for (int n = 0; n < N_nu_; ++n)
 		{			
 			// hardcoded to 0.0 as in PORTA
-			sigma_dev.block(   i, j, k)[n] = 0.0;		
-			k_c_dev.block(     i, j, k)[n] = tmp_vector[12];		
-			eps_c_th_dev.block(i, j, k)[n] = tmp_vector[13];					
+			sigma_->block(   i, j, k)[n] = 0.0;		
+			k_c_->block(     i, j, k)[n] = tmp_vector[12];		
+			eps_c_th_->block(i, j, k)[n] = tmp_vector[13];					
 		}			
 	});
 
@@ -835,10 +804,6 @@ void RT_problem::read_continumm_1D(input_string filename_sigma, input_string fil
 
 	bool first_line = true;
 
-	auto sigma_dev    = sigma_    ->view_device();
-	auto k_c_dev      = k_c_      ->view_device();
-	auto eps_c_th_dev = eps_c_th_ ->view_device();
-
 	Real entry;	
 
 	std::vector<Real> sigma_vec;
@@ -882,21 +847,19 @@ void RT_problem::read_continumm_1D(input_string filename_sigma, input_string fil
 	if (sigma_vec.size()    != N_z_N_nu_) std::cout << "WARNING: size mismatch in read_continumm_1D()" << std::endl;
 	if (k_c_vec.size()      != N_z_N_nu_) std::cout << "WARNING: size mismatch in read_continumm_1D()" << std::endl;
 	if (eps_c_th_vec.size() != N_z_N_nu_) std::cout << "WARNING: size mismatch in read_continumm_1D()" << std::endl;
-	
-	auto g_dev = space_grid_->view_device();
 
 	// fill field
-	sgrid::parallel_for("READ SIGMA", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
+	space_grid_->parallel_for([&](int i, int j, int k) {
 
 		int k_global;
 
 		for (int n = 0; n < N_nu_; ++n)
 		{
-			k_global = N_nu_ * (g_dev.start[2] + k - g_dev.margin[2]) + n;
+			k_global = N_nu_ * (space_grid_->getGlobalStartZ() + k /*- g_dev.margin[2]*/) + n;
 
-			sigma_dev.block(   i, j, k)[n] = sigma_vec[k_global];		
-			k_c_dev.block(     i, j, k)[n] = k_c_vec[k_global];		
-			eps_c_th_dev.block(i, j, k)[n] = eps_c_th_vec[k_global];					
+			sigma_->block(   i, j, k)[n] = sigma_vec[k_global];		
+			k_c_->block(     i, j, k)[n] = k_c_vec[k_global];		
+			eps_c_th_->block(i, j, k)[n] = eps_c_th_vec[k_global];					
 		}			
 	});	
 }
@@ -912,8 +875,6 @@ void RT_problem::read_magnetic_field_1D(input_string filename){
 	if (not myFile.good()) std::cerr << "\nERROR: File " << filename << " does not exist!\n" << std::endl;
 
 	bool first_line = true;
-
-	auto B_dev = B_ ->view_device();
 
 	Real entry;	
 	std::string entry_label;		
@@ -954,19 +915,17 @@ void RT_problem::read_magnetic_field_1D(input_string filename){
 	if (nu_L_vec.size()    != N_z_) std::cout << "WARNING: size mismatch (" << nu_L_vec.size()    << ") in read_magnetic_field_1D()" << std::endl;
 	if (theta_B_vec.size() != N_z_) std::cout << "WARNING: size mismatch (" << theta_B_vec.size() << ") in read_magnetic_field_1D()" << std::endl;
 	if (chi_B_vec.size()   != N_z_) std::cout << "WARNING: size mismatch (" << chi_B_vec.size()   << ") in read_magnetic_field_1D()" << std::endl;
-	
-	auto g_dev = space_grid_->view_device();
 
 	const bool B_etero = false;
 
 	if (mpi_rank_ == 0 and B_etero) std::cout << "\nWARNING: adding perturbation to magnetic field!" << std::endl;
 
 	// fill field
-	sgrid::parallel_for("READ B", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
+	space_grid_->parallel_for([&](int i, int j, int k) {
 				
-		const int i_global = g_dev.start[0] + i - g_dev.margin[0];
-		const int j_global = g_dev.start[1] + j - g_dev.margin[1];
-		const int k_global = g_dev.start[2] + k - g_dev.margin[2];
+		const int i_global = space_grid_->getGlobalStartX() + i;// - g_dev.margin[0];
+		const int j_global = space_grid_->getGlobalStartY() + j;// - g_dev.margin[1];
+		const int k_global = space_grid_->getGlobalStartZ() + k;// - g_dev.margin[2];
 
 		if (B_etero)
 		{
@@ -975,15 +934,15 @@ void RT_problem::read_magnetic_field_1D(input_string filename){
 
 			const double B_max = 30.0;	
 
-			B_dev.block(i,j,k)[0] = 1399600.0 * B_max * (1 + cos(x) * cos(y)/2.0);	
-			B_dev.block(i,j,k)[1] =     PI * abs(cos(x) * cos(y));
-			B_dev.block(i,j,k)[2] = 2 * PI * abs(cos(x) * cos(y));
+			B_->block(i,j,k)[0] = 1399600.0 * B_max * (1 + cos(x) * cos(y)/2.0);	
+			B_->block(i,j,k)[1] =     PI * abs(cos(x) * cos(y));
+			B_->block(i,j,k)[2] = 2 * PI * abs(cos(x) * cos(y));
 		}
 		else
 		{
-			B_dev.block(i, j, k)[0] =    nu_L_vec[k_global];					
-			B_dev.block(i, j, k)[1] = theta_B_vec[k_global];					
-			B_dev.block(i, j, k)[2] =   chi_B_vec[k_global];
+			B_->block(i, j, k)[0] =    nu_L_vec[k_global];					
+			B_->block(i, j, k)[1] = theta_B_vec[k_global];					
+			B_->block(i, j, k)[2] =   chi_B_vec[k_global];
 		}
 	});		
 }
@@ -999,8 +958,6 @@ void RT_problem::read_bulk_velocity_1D(input_string filename){
 	if (not myFile.good()) std::cerr << "\nERROR: File " << filename << " does not exist!\n" << std::endl;
 
 	bool first_line = true;
-
-	auto v_b_dev = v_b_ ->view_device();
 	
 	Real entry;
 	std::string entry_label;		
@@ -1041,19 +998,16 @@ void RT_problem::read_bulk_velocity_1D(input_string filename){
 	if (theta_b_vec.size() != N_z_) std::cout << "WARNING: size mismatch in read_bulk_velocity_1D()" << std::endl;
 	if (chi_b_vec.size()   != N_z_) std::cout << "WARNING: size mismatch in read_bulk_velocity_1D()" << std::endl;
 
-	auto g_dev = space_grid_->view_device();
-
 	// fill field
-	sgrid::parallel_for("READ BULK-VEL", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
+	space_grid_->parallel_for([&](int i, int j, int k) {
 		
-		const int k_global = g_dev.start[2] + k - g_dev.margin[2];
+		const int k_global = space_grid_->getGlobalStartZ() + k;// - g_dev.margin[2];
 
-		v_b_dev.block(i, j, k)[0] =     v_b_vec[k_global];					
-		v_b_dev.block(i, j, k)[1] = theta_b_vec[k_global];					
-		v_b_dev.block(i, j, k)[2] =   chi_b_vec[k_global];															
+		v_b_->block(i, j, k)[0] =     v_b_vec[k_global];					
+		v_b_->block(i, j, k)[1] = theta_b_vec[k_global];					
+		v_b_->block(i, j, k)[2] =   chi_b_vec[k_global];															
     });
 }
-
 
 void RT_problem::read_atmosphere_1D(input_string filename){
 
@@ -1065,14 +1019,6 @@ void RT_problem::read_atmosphere_1D(input_string filename){
 	if (not myFile.good()) std::cerr << "\nERROR: File " << filename << " does not exist!\n" << std::endl;
 
 	bool first_line = true;
-
-	auto T_dev   = T_   ->view_device();
-	auto xi_dev  = xi_  ->view_device();
-	auto a_dev   = a_   ->view_device();
-	auto Nl_dev  = Nl_  ->view_device();
-	// auto Nu_dev   = Nu_  ->view_device();
-	auto Cul_dev = Cul_ ->view_device();
-	auto Qel_dev = Qel_ ->view_device();
 	
 	Real entry;
 	std::string entry_label;
@@ -1140,39 +1086,37 @@ void RT_problem::read_atmosphere_1D(input_string filename){
 	if (Cul_vec.size() != N_z_) std::cout << "WARNING: size mismatch in Cul"    << std::endl;
 	if (Qel_vec.size() != N_z_) std::cout << "WARNING: size mismatch in Qel"    << std::endl;
 
-	auto g_dev = space_grid_->view_device();
-
 	const bool test_etero = false;
 
 	if (mpi_rank_ == 0 and test_etero) std::cout << "WARNING: adding temperature perturbation!" << std::endl;
 
 	// fill field 
-	sgrid::parallel_for("READ-ATM1D", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
+	space_grid_->parallel_for([&](int i, int j, int k) {
 
-		const int k_global = g_dev.start[2] + k - g_dev.margin[2];
+		const int k_global = space_grid_->getGlobalStartZ() + k;// - g_dev.margin[2];
 
 		if (N_x_ > 1 and test_etero)
 		{
-			const int i_global = g_dev.start[0] + i - g_dev.margin[0];
-			const int j_global = g_dev.start[1] + j - g_dev.margin[1];
+			const int i_global = space_grid_->getGlobalStartX() + i;// - g_dev.margin[0];
+			const int j_global = space_grid_->getGlobalStartY()  + j;// - g_dev.margin[1];
 
 			const double x = i_global / (N_x_ - 1.0);
 			const double y = j_global / (N_y_ - 1.0);
 
 			const double T_ijk = T_vec[k_global] * cos(2.0 * PI * x) * cos(2.0 * PI * y) / 2.0;
 
-			T_dev.ref(i,j,k) = T_vec[k_global] + T_ijk;
+			T_->block(i,j,k)[0] = T_vec[k_global] + T_ijk;
 		}
 		else
 		{
-			T_dev.ref(i,j,k) = T_vec[k_global];
+			T_->block(i,j,k)[0] = T_vec[k_global];
 		}		
 
-		xi_dev.ref( i, j, k) =  xi_vec[k_global];		
-		a_dev.ref(  i, j, k) =   a_vec[k_global];		
-		Nl_dev.ref( i, j, k) =  Nl_vec[k_global];		
-		Cul_dev.ref(i, j, k) = Cul_vec[k_global];		
-		Qel_dev.ref(i, j, k) = Qel_vec[k_global];						
+		xi_->block( i, j, k)[0] =  xi_vec[k_global];		
+		a_->block(  i, j, k)[0] =   a_vec[k_global];		
+		Nl_->block( i, j, k)[0] =  Nl_vec[k_global];		
+		Cul_->block(i, j, k)[0] = Cul_vec[k_global];		
+		Qel_->block(i, j, k)[0] = Qel_vec[k_global];						
 	});
 
 	// T_->write("T32.raw");          
@@ -1360,46 +1304,28 @@ void const RT_problem::print_info(){
 }
 
 void RT_problem::polarized_to_unpolarized_field(const Field_ptr_t field, Field_ptr_t field_unpol){
+	space_grid_->parallel_for(
+		[&](int i, int j, int k){
+			auto *block       = field_dev.block(i, j, k);
+	   		auto *block_unpol = field_unpol_dev.block(i, j, k);
 
-	auto field_dev       = field      ->view_device();
-	auto field_unpol_dev = field_unpol->view_device();
-
-	sgrid::parallel_for("UNPOL TO POL", space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
-	{         
-	   auto *block       = field_dev.block(i, j, k);
-	   auto *block_unpol = field_unpol_dev.block(i, j, k);
-	      
-	   for (int b = 0; b < block_size_; b = b + 4) block_unpol[b/4] = block[b];		
-	});
+			for (int b = 0; b < block_size_; b = b + 4) block_unpol[b/4] = block[b];	
+		}
+	);
 }
 
 
-void RT_problem::allocate_fields(){
+void RT_problem::allocate_fields(){ 
 
 	// create fields 
-	I_field_   = std::make_shared<Field_t>("I",   space_grid_, block_size_); 
-	S_field_   = std::make_shared<Field_t>("S",   space_grid_, block_size_);
-	eta_field_ = std::make_shared<Field_t>("eta", space_grid_, block_size_);
-	rho_field_ = std::make_shared<Field_t>("rho", space_grid_, block_size_);
-
-	I_field_->  allocate_on_device(); 
-	S_field_->  allocate_on_device(); 
-	eta_field_->allocate_on_device(); 
-	rho_field_->allocate_on_device(); 		
-
-	///////////////////////
-
-	if (mpi_rank_ == 0) std::cout << "\nCreating PETSc vector..." << std::endl;		
-
-	PetscErrorCode ierr; 
-
-	auto g_dev = space_grid_->view_device();
-
-	local_size_ = block_size_ * g_dev.dim[0] * g_dev.dim[1] * g_dev.dim[2];
-	
-	ierr = VecCreate(PETSC_COMM_WORLD, &I_vec_);CHKERRV(ierr);	
-	ierr = VecSetSizes(I_vec_, local_size_, tot_size_);CHKERRV(ierr);			
-	ierr = VecSetFromOptions(I_vec_);CHKERRV(ierr);		
+	I_field_   = std::make_shared<Field>(
+		"I", space_grid_, N_pol_, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_}, true); // allocate PETSc vec
+	S_field_   = std::make_shared<Field>(
+		"S",   space_grid_, N_pol_, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_});
+	eta_field_ = std::make_shared<Field>(
+		"eta", space_grid_, N_pol_, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_});
+	rho_field_ = std::make_shared<Field>(
+		"rho", space_grid_, N_pol_, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_});
 }
 
 
@@ -1407,108 +1333,78 @@ void RT_problem::allocate_unpolarized_fields(){
 
 	if (mpi_rank_ == 0) std::cout << "\nAllocating unpolarized fields..." << std::endl;	
 	
-	// size of unpolarized radiation and emissivity fields
+	// size of unpolarized radiation and emissivity fields // UNUSED
 	block_size_unpolarized_ = block_size_/4;
 	local_size_unpolarized_ = local_size_/4;
 	tot_size_unpolarized_   = tot_size_/4;	
 
 	// create unpolarized vectors
-	I_unpol_field_ = std::make_shared<Field_t>("I_unpolarized", space_grid_, block_size_unpolarized_); 
-	S_unpol_field_ = std::make_shared<Field_t>("S_unpolarized", space_grid_, block_size_unpolarized_);
-
-	// allocate	
-	I_unpol_field_-> allocate_on_device(); 
-	S_unpol_field_-> allocate_on_device(); 
+	I_unpol_field_ = std::make_shared<Field>(
+		"I_unpolarized", space_grid_,  1, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_}, true); 
+	S_unpol_field_ = std::make_shared<Field>(
+		"S_unpolarized", space_grid_,  1, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_});
 }
 
 
 // allocate fields in a single direction Omega
-void RT_problem::allocate_fields_Omega(){		
+void RT_problem::allocate_fields_Omega() {		
 
-	const PetscInt block_size_Omega = 4 * N_nu_;
+	const PetscInt block_size_Omega = 4 * N_nu_; // UNUSED
 
 	// create fields 
-	I_field_Omega_   = std::make_shared<Field_t>("I_Omega",   space_grid_, block_size_Omega); 
-	S_field_Omega_   = std::make_shared<Field_t>("S_Omega",   space_grid_, block_size_Omega);
-	eta_field_Omega_ = std::make_shared<Field_t>("eta_Omega", space_grid_, block_size_Omega);
-	rho_field_Omega_ = std::make_shared<Field_t>("rho_Omega", space_grid_, block_size_Omega);
-
-	I_field_Omega_->  allocate_on_device(); 
-	S_field_Omega_->  allocate_on_device(); 
-	eta_field_Omega_->allocate_on_device(); 
-	rho_field_Omega_->allocate_on_device(); 		
+	I_field_Omega_   = std::make_shared<Field>(
+		"I_Omega",   space_grid_, N_pol_, std::vector<PetscInt>{N_nu_}, true); 
+	S_field_Omega_   = std::make_shared<Field>(
+		"S_Omega",   space_grid_, N_pol_, std::vector<PetscInt>{N_nu_});
+	eta_field_Omega_ = std::make_shared<Field>(
+		"eta_Omega", space_grid_, N_pol_, std::vector<PetscInt>{N_nu_});
+	rho_field_Omega_ = std::make_shared<Field>(
+		"rho_Omega", space_grid_, N_pol_, std::vector<PetscInt>{N_nu_});	
 }
 
 
-void RT_problem::allocate_atmosphere(){
+void RT_problem::allocate_atmosphere() {
 	
 	// create atmospheric quantities 
-	D1_  = std::make_shared<Field_t>("D1",   space_grid_);
-	D2_  = std::make_shared<Field_t>("D2",   space_grid_);
-	Nl_  = std::make_shared<Field_t>("Nl",   space_grid_);
-	T_   = std::make_shared<Field_t>("T",    space_grid_);
-	xi_  = std::make_shared<Field_t>("xi",   space_grid_);
-	Cul_ = std::make_shared<Field_t>("Cul",  space_grid_);
-	Qel_ = std::make_shared<Field_t>("Qel",  space_grid_);
-	a_   = std::make_shared<Field_t>("a",    space_grid_);
-	W_T_ = std::make_shared<Field_t>("W_T",  space_grid_);
-	// Nu_   = std::make_shared<Field_t>("Nu",   space_grid);
+	D1_  = std::make_shared<Field>("D1",   space_grid_);
+	D2_  = std::make_shared<Field>("D2",   space_grid_);
+	Nl_  = std::make_shared<Field>("Nl",   space_grid_);
+	T_   = std::make_shared<Field>("T",    space_grid_);
+	xi_  = std::make_shared<Field>("xi",   space_grid_);
+	Cul_ = std::make_shared<Field>("Cul",  space_grid_);
+	Qel_ = std::make_shared<Field>("Qel",  space_grid_);
+	a_   = std::make_shared<Field>("a",    space_grid_);
+	W_T_ = std::make_shared<Field>("W_T",  space_grid_);
+	// Nu_   = std::make_shared<Field>("Nu",   space_grid);
 
 	// magnetic field 
-	B_ = std::make_shared<Field_t>("B", space_grid_, 3); 	
+	B_ = std::make_shared<Field>("B", space_grid_, PetscInt{3}); 	
 
 	// bulk velocities, in polar coordinates
-	v_b_ = std::make_shared<Field_t>("v_b", space_grid_, 3);    
+	v_b_ = std::make_shared<Field>("v_b", space_grid_, PetscInt{3});    
 	
 	// quantities depending on position that can be precomputed
-	Doppler_width_ = std::make_shared<Field_t>("Doppler_width", space_grid_);
-	k_L_           = std::make_shared<Field_t>("k_L", 		    space_grid_);
-	epsilon_       = std::make_shared<Field_t>("epsilon_", 		space_grid_);
+	Doppler_width_ = std::make_shared<Field>("Doppler_width", space_grid_);
+	k_L_           = std::make_shared<Field>("k_L", 		    space_grid_);
+	epsilon_       = std::make_shared<Field>("epsilon_", 		space_grid_);
 
 	// input quantities depending on position and frequency 
-	u_        = std::make_shared<Field_t>("u",        space_grid_, N_nu_);  
-	sigma_    = std::make_shared<Field_t>("sigma",    space_grid_, N_nu_);
-	k_c_      = std::make_shared<Field_t>("k_c",      space_grid_, N_nu_);
-	eps_c_th_ = std::make_shared<Field_t>("eps_c_th", space_grid_, N_nu_);
-	
-	// allocate
-	D1_  -> allocate_on_device(); 
-	D2_  -> allocate_on_device(); 
-	Nl_  -> allocate_on_device(); 
-	T_   -> allocate_on_device(); 
-	xi_  -> allocate_on_device(); 	
-	Cul_ -> allocate_on_device(); 
-	Qel_ -> allocate_on_device(); 
-	a_   -> allocate_on_device(); 
-	W_T_ -> allocate_on_device(); 	
-	B_   -> allocate_on_device(); 
-	v_b_ -> allocate_on_device(); 
-	// Nu_  -> allocate_on_device(); 
-		
-	Doppler_width_ -> allocate_on_device(); 
-	k_L_           -> allocate_on_device(); 
-	epsilon_       -> allocate_on_device(); 
-
-	u_        -> allocate_on_device(); 
-	sigma_ 	  -> allocate_on_device(); 
-	k_c_      -> allocate_on_device(); 
-	eps_c_th_ -> allocate_on_device(); 
+	u_        = std::make_shared<Field>("u",        space_grid_, N_nu_);  
+	sigma_    = std::make_shared<Field>("sigma",    space_grid_, N_nu_);
+	k_c_      = std::make_shared<Field>("k_c",      space_grid_, N_nu_);
+	eps_c_th_ = std::make_shared<Field>("eps_c_th", space_grid_, N_nu_);
 }
 
 
 void RT_problem::init_field(Field_ptr_t input_field, const Real input_value){
-
-	auto field_dev = input_field->view_device();
-
-    sgrid::parallel_for("INIT I", space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
-    {         
-        auto *block = field_dev.block(i, j, k);
-         
-        for (int b = 0; b < block_size_; ++b) 
-        {
-        	block[b] = input_value;        	
-        }
-    });
+	auto grid = input_field->getGrid();
+    grid->parallel_for(
+		[&](int i, int j, int k) {         
+			auto *block = field_dev->block(i, j, k);
+			for (int b = 0; b < block_size_; ++b) 
+				block[b] = input_value;        	
+    	}
+	);
 }
 
 
@@ -1778,28 +1674,15 @@ std::complex<Real> RT_problem::get_TKQi(const std::vector<std::complex<Real>> T_
 
 
 void RT_problem::set_eta_and_rhos(){
-
-	auto eta_dev = eta_field_->view_device();
-	auto rho_dev = rho_field_->view_device();
-
-	auto a_dev   = a_    ->view_device();
-	auto u_dev   = u_    ->view_device();
-	auto k_L_dev = k_L_  ->view_device();
-	auto k_c_dev = k_c_  ->view_device();	
-	auto B_dev   = B_    ->view_device();	
-	auto v_b_dev = v_b_  ->view_device();
-	
-	auto Doppler_width_dev = Doppler_width_->view_device();
-
-    sgrid::parallel_for("INIT ETA-RHO", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) 
+    space_grid_->parallel_for([&](int i, int j, int k) 
     {         
-        auto *block_eta = eta_dev.block(i, j, k);
-        auto *block_rho = rho_dev.block(i, j, k);
+        auto *block_eta = eta_field_->block(i, j, k);
+        auto *block_rho = rho_field_->block(i, j, k);
         
-        auto *u   =   u_dev.block(i, j, k);		
-		auto *k_c = k_c_dev.block(i, j, k);		
-		auto *B   =   B_dev.block(i, j, k);       
-        auto *v_b = v_b_dev.block(i, j, k);                        
+        auto *u   =   u_->block(i, j, k);	// or (*u_)(i,j,k):	
+		auto *k_c = k_c_->block(i, j, k);		
+		auto *B   =   B_->block(i, j, k);       
+        auto *v_b = v_b_->block(i, j, k);                        
                         
         // assign some variables for readability
         Real theta_v_b = v_b[1];
@@ -1809,9 +1692,9 @@ void RT_problem::set_eta_and_rhos(){
         Real theta_B = B[1];
         Real chi_B   = B[2];
 
-        Real Doppler_width = Doppler_width_dev.ref(i,j,k);
-    	Real k_L           = k_L_dev.ref(i,j,k);
-		Real a             = a_dev.ref(i,j,k);
+        Real Doppler_width = (*Doppler_width_)(i,j,k)[0]; // ref is basically the first element of the block in the scalar case
+    	Real k_L           = (*k_L_)(i,j,k)[0];
+		Real a             = (*a_)(i,j,k)[0];
 
 		// init rotation matrix
         Rotation_matrix R(0.0, -theta_B, -chi_B);
@@ -1824,7 +1707,7 @@ void RT_problem::set_eta_and_rhos(){
         {        	        	
         	block_rho[b + 1] = 0;
 
-			local_idx = block_to_local(b);
+			local_idx = eta_field_->block_to_local(b);
 
         	j_theta = local_idx[0];
         	k_chi   = local_idx[1];
@@ -1890,7 +1773,7 @@ void RT_problem::set_eta_and_rhos(){
 
         	if (enable_continuum_) block_eta[b] += k_c[n_nu];       
 
-        	// if (i == 0 and j == 0 and g_dev.global_coord(2, k) == 0 and b >= block_size_ - 4 * N_nu_) 
+        	// if (i == 0 and j == 0 and g_dev.space_grid_->getLocalSizeX();(2, k) == 0 and b >= block_size_ - 4 * N_nu_) 
         	// {
         	// 	// std::cout << "k = "     <<   k      << std::endl; 
         	// 	std::cout <<   block_eta[b]       << std::endl; 
@@ -1929,32 +1812,19 @@ void RT_problem::set_eta_and_rhos_Omega(const Real theta, const Real chi){
 	// vector with KQ components for each stokes profile
 	std::vector< std::vector<std::complex<Real> > > T_KQ(4);
 
-	for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
-	{
+	for (int i_stokes = 0; i_stokes < 4; ++i_stokes) {
 		T_KQ[i_stokes] = compute_T_KQ(i_stokes, theta, chi);		
 	}	
-
-	auto eta_dev = eta_field_Omega_->view_device();
-	auto rho_dev = rho_field_Omega_->view_device();
-
-	auto a_dev   = a_    ->view_device();
-	auto u_dev   = u_    ->view_device();
-	auto k_L_dev = k_L_  ->view_device();
-	auto k_c_dev = k_c_  ->view_device();	
-	auto B_dev   = B_    ->view_device();	
-	auto v_b_dev = v_b_  ->view_device();
 	
-	auto Doppler_width_dev = Doppler_width_->view_device();	
-	
-    sgrid::parallel_for("INIT ETA-RHO", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) 
+    space_grid_->parallel_for([&](int i, int j, int k) 
     {             	
-        auto *block_eta = eta_dev.block(i, j, k);
-        auto *block_rho = rho_dev.block(i, j, k);
+        auto *block_eta = eta_field_Omega_->block(i, j, k);
+        auto *block_rho = rho_field_Omega_->block(i, j, k);
         
-        auto *u   =   u_dev.block(i, j, k);		
-		auto *k_c = k_c_dev.block(i, j, k);		
-		auto *B   =   B_dev.block(i, j, k);       
-        auto *v_b = v_b_dev.block(i, j, k);           
+        auto *u   =   u_->block(i, j, k);		
+		auto *k_c = k_c_->block(i, j, k);		
+		auto *B   =   B_->block(i, j, k);       
+        auto *v_b = v_b_->block(i, j, k);           
                         
         // assign some variables for readability
         Real theta_v_b = v_b[1];
@@ -1964,9 +1834,9 @@ void RT_problem::set_eta_and_rhos_Omega(const Real theta, const Real chi){
         Real theta_B = B[1];
         Real chi_B   = B[2];
 
-        Real Doppler_width = Doppler_width_dev.ref(i,j,k);
-    	Real k_L           = k_L_dev.ref(i,j,k);
-		Real a             = a_dev.ref(i,j,k);
+        Real Doppler_width = (*Doppler_width_)(i,j,k)[0];
+    	Real k_L           = (*k_L_)(i,j,k)[0];
+		Real a             = (*a_)(i,j,k)[0];
 
 		// init rotation matrix
         Rotation_matrix R(0.0, -theta_B, -chi_B);
@@ -2088,21 +1958,19 @@ void RT_problem::set_TKQ_tensor()
 }
 
 
+
 // Get a z plane and share between all processors, used for BC
 std::vector<double> RT_problem::extract_plane_k(const Field_ptr_t field, const int k_global)
 {        
-	auto field_dev =       field->view_device();
-	auto g_dev     = space_grid_->view_device();
-
-	const int local_Nx = g_dev.dim[0];
-	const int local_Ny = g_dev.dim[1];
-	const int local_Nz = g_dev.dim[2];
+	const int local_Nx = space_grid_->getLocalSizeX();
+	const int local_Ny = space_grid_->getLocalSizeY();
+	const int local_Nz = space_grid_->getLocalSizeZ();
 
    // Determine if this rank owns k_global    
    int owns_plane = -1;	
    for (int k = 0; k < local_Nz; ++k) 
    {
-		if (g_dev.global_coord(2, k) == k_global) 
+		if (space_grid_->local_to_global_coordinate(2, k) == k_global) 
 		{
          owns_plane = k;
          break;
@@ -2121,10 +1989,9 @@ std::vector<double> RT_problem::extract_plane_k(const Field_ptr_t field, const i
 	   {
 	      for (int j = 0; j < local_Ny; ++j)
 	      {
-	      	const int i_global = g_dev.global_coord(0, i);
-	      	const int j_global = g_dev.global_coord(1, j);
-
-	         local_slice[j_global * N_y_ + i_global] = field_dev.ref(i, j, owns_plane);
+	      	const int i_global = space_grid_->local_to_global_coordinate(0, i);
+	      	const int j_global = space_grid_->local_to_global_coordinate(1, j);
+			local_slice[j_global * N_y_ + i_global] = (*field)(i,j,owns_plane)[0]; //.ref(i, j, owns_plane);
 	      }
 	   }
 	}
@@ -2161,69 +2028,51 @@ void RT_problem::set_up(){
 
 	const Real mass_real = mass_ * 1.6605e-24;
 
-	auto xi_dev   = xi_  ->view_device();
-	auto T_dev    = T_   ->view_device();
-	auto Nl_dev   = Nl_  ->view_device();
-	auto Cul_dev  = Cul_ ->view_device();
-	auto Qel_dev  = Qel_ ->view_device();
-	auto D2_dev   = D2_  ->view_device();
-	auto D1_dev   = D1_  ->view_device();
-	auto k_L_dev  = k_L_ ->view_device();
-	auto u_dev    = u_   ->view_device();
-	auto a_dev    = a_   ->view_device();
-
-	auto Doppler_width_dev = Doppler_width_->view_device();
-	auto epsilon_dev       = epsilon_ ->view_device();
-	auto W_T_dev           = W_T_->view_device();
-
-	// // TEST
-	// auto g_dev = space_grid_->view_device();
-
 	// compute atmospheric quantities 
-   sgrid::parallel_for("INIT-ATM", space_grid_->md_range(), KOKKOS_LAMBDA(int i, int j, int k) 
+   space_grid_->parallel_for([&](int i, int j, int k) 
    {       	
-    	auto *u = u_dev.block(i, j, k);
+    	auto *u = u_->block(i, j, k);
 
     	// assign some variables for readability
-    	Real T   =   T_dev.ref(i,j,k);    	    	
-    	Real xi  =  xi_dev.ref(i,j,k);
-    	Real Cul = Cul_dev.ref(i,j,k);
+    	Real T   =   (*T_)(i,j,k)[0];    	    	
+    	Real xi  =  (*xi_)(i,j,k)[0];
+    	Real Cul = (*Cul_)(i,j,k)[0];
         
 		// precompute quantities depening only on position
 		if (not use_PORTA_input_) 
 		{
-			D2_dev.ref(i,j,k)  = 0.5 * Qel_dev.ref(i,j,k); 
-			epsilon_dev.ref(i,j,k) = Cul/(Cul + Aul_);	
+			(*D2_)(i,j,k)[0]  = 0.5 * (*Qel_)(i,j,k)[0]; 
+			(*epsilon_)(i,j,k)[0] = Cul/(Cul + Aul_);	
 		}
 
-		D1_dev.ref(i,j,k)  = tmp_const3 * D2_dev.ref(i,j,k);
+		(*D1_)(i,j,k)[0]  = tmp_const3 * (*D2_)(i,j,k)[0];
 
-		k_L_dev.ref(i,j,k) = tmp_const * Nl_dev.ref(i,j,k);		
+		(*k_L_)(i,j,k)[0] = tmp_const * (*Nl_)(i,j,k)[0];		
 		
-		Doppler_width_dev.ref(i,j,k) = dE * std::sqrt(xi * xi + 2 * k_B_ * T / mass_real);	
+		(*Doppler_width_)(i,j,k)[0] = dE * std::sqrt(xi * xi + 2 * k_B_ * T / mass_real);	
 
 		// const double C_lu = 0.0; // hardcoded to zero?
 		// const double Pi = 3.1415926535897932384626433;
-		// Qel_dev.ref(i,j,k) =  (4.0 * PI * Doppler_width_dev.ref(i,j,k)) * a_dev.ref(i,j,k)  - Aul_ - Cul_dev.ref(i,j,k) - C_lu;		
-		// Qel_dev.ref(i,j,k) =  (4.0 * PI * Doppler_width_dev.ref(i,j,k)) * a_dev.ref(i,j,k)  - Aul_ - Cul;
-		// Qel_dev.ref(i,j,k) = 0.0; // DANGER - hardcoded to zero
+		// (*Qel_)(i,j,k)[0] =  (4.0 * PI * (*Doppler_width_)(i,j,k)[0]) * (*a_)(i,j,k)[0]  - Aul_ - (*Cul_)(i,j,k)[0] - C_lu;		
+		// (*Qel_)(i,j,k)[0] =  (4.0 * PI * Doppler_width_dev.ref(i,j,k)) * a_dev.ref(i,j,k)  - Aul_ - Cul;
+		// (*Qel_)(i,j,k)[0] = 0.0; // DANGER - hardcoded to zero
  
-		// if (use_PORTA_input_) a_dev.ref(i,j,k) = (Aul_ + Cul + Qel_dev.ref(i,j,k)) / (4 * PI * Doppler_width_dev.ref(i,j,k));
+		// if (use_PORTA_input_) (*a_)(i,j,k)[0] = (Aul_ + Cul + (*Qel_)(i,j,k)[0]) / (4 * PI * (*Doppler_width_)(i,j,k)[0]);
 
-		W_T_dev.ref(i,j,k) = tmp_const2 * std::exp(- h_ * nu_0_ / (k_B_ * T));		
+		(*W_T_)(i,j,k)[0] = tmp_const2 * std::exp(- h_ * nu_0_ / (k_B_ * T));		
 		
 		// on position and frequency
 		for (int n = 0; n < N_nu_; ++n)
 		{
-			u[n] = (nu_0_ - nu_grid_[n]) / Doppler_width_dev.ref(i,j,k);						
+			u[n] = (nu_0_ - nu_grid_[n]) / (*Doppler_width_)(i,j,k)[0];						
 		}		
 
 		// TEST
 		//if (mpi_rank_ == 0)
 	   //{
 	   //	std::cout << "i,j,k = " << i << ", " << j << ", " << k << std::endl;	    
-	   // 	std::cout << "k_L = "<<  k_L_dev.ref(i,j,k) << std::endl;	    
-	   //	std::cout << "Doppler_width_dev = "<< Doppler_width_dev.ref(i,j,k) << std::endl;	 
+	   // 	std::cout << "k_L = "<<  (*k_L_)(i,j,k)[0] << std::endl;	    
+	   //	std::cout << "Doppler_width_dev = "<< (*Doppler_width_)(i,j,k)[0] << std::endl;	 
 	   //}	
    });			 
 
@@ -2243,27 +2092,23 @@ void RT_problem::set_up(){
 void const RT_problem::print_surface_profile(const Field_ptr_t field, const int i_stoke, const int i_space, const int j_space, const int j_theta, const int k_chi){
 		
 	MPI_Barrier(MPI_COMM_WORLD);
-		
-	const auto f_dev = field->view_device();	
-	const auto g_dev = space_grid_->view_device();
-
 	// indeces
-	const int i_start = g_dev.margin[0]; 
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const int i_start = space_grid_->getGlobalStartX(); //g_dev.margin[0];
+	const int j_start = space_grid_->getGlobalStartY(); //g_dev.margin[1];
+	const int k_start = space_grid_->getGlobalStartZ(); //g_dev.margin[2];
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); //g_dev.dim[0];
+	const int j_end = j_start + space_grid_->getLocalSizeY(); //g_dev.dim[1];
 				
-	if (g_dev.global_coord(2, k_start) == 0)
+	if (space_grid_->local_to_global_coordinate(2, k_start) == 0)
 	{
 		for (int i = i_start; i < i_end; ++i)
 		{			
-			if (g_dev.global_coord(0, i) == i_space)
+			if (space_grid_->local_to_global_coordinate(0, i) == i_space)
 			{
 				for (int j = j_start; j < j_end; ++j)
 				{										
-					if (g_dev.global_coord(1, j) == j_space)
+					if (space_grid_->local_to_global_coordinate(1, j) == j_space)
 					{				
 						// print info	
 						switch (i_stoke)
@@ -2289,11 +2134,11 @@ void const RT_problem::print_surface_profile(const Field_ptr_t field, const int 
 								  << mu_grid_[j_theta] << ", chi =  " << chi_grid_[k_chi] 
 								  << ", mpi_rank = " << mpi_rank_ << std::endl;	
 						
-						const int b_start = i_stoke + local_to_block(j_theta, k_chi, 0);						
+						const int b_start = i_stoke + field->local_to_block(j_theta, k_chi, 0); //local_to_block(j_theta, k_chi, 0);						
 
 						for (int b = 0; b < 4 * N_nu_; b = b + 4) 
 						{								
-							std::cout << f_dev.block(i,j,k_start)[b_start + b] << std::endl; 							
+							std::cout << field->block(i,j,k_start)[b_start + b] << std::endl; 							
 						}
 					}
 				}
@@ -2319,42 +2164,39 @@ void const RT_problem::print_surface_QI_profile(const Field_ptr_t field, const i
 
 	if (mpi_rank_ == 0) std::cout << "mu =  " << mu_grid_[j_theta] << ", chi =  " << chi_grid_[k_chi] << std::endl;		
 	if (mpi_rank_ == 0) std::cout << "i,j =  " << i_space << ", " << j_space << std::endl;	
-	
-	const auto f_dev = field->view_device();	
-	const auto g_dev = space_grid_->view_device();
 
 	// indeces
-	const int i_start = g_dev.margin[0]; 
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const int i_start = space_grid_->getGlobalStartX();//g_dev.margin[0]; 
+	const int j_start = space_grid_->getGlobalStartY();
+	const int k_start = space_grid_->getGlobalStartZ();
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); // g_dev.dim[0];
+	const int j_end = j_start + space_grid_->getLocalSizeY(); 
 		
 	int i_global, j_global;
 	
-	if (g_dev.global_coord(2, k_start) == 0)
+	if (space_grid_->local_to_global_coordinate(2, k_start) == 0)
 	{
 		for (int i = i_start; i < i_end; ++i)
 		{
-			i_global = g_dev.global_coord(0, i);
+			i_global = space_grid_->local_to_global_coordinate(0, i);
 
 			if (i_global == i_space)
 			{
 				for (int j = j_start; j < j_end; ++j)
 				{
-					j_global = g_dev.global_coord(1, j);
+					j_global = space_grid_->local_to_global_coordinate(1, j);
 
 					if (j_global == j_space)
 					{
-						const int b_start = local_to_block(j_theta, k_chi, 0);						
+						const int b_start = field->local_to_block(j_theta, k_chi, 0);						
 
 						if (center_line)
 						{
 							// print only center line
 							const int b_nu_0 = 4 * (N_nu_ - 1) / 2;
-							const double I   = f_dev.block(i,j,k_start)[b_start + b_nu_0];
-							const double QUV = f_dev.block(i,j,k_start)[b_start + b_nu_0 + i_stokes];	
+							const double I   = field->block(i,j,k_start)[b_start + b_nu_0];
+							const double QUV = field->block(i,j,k_start)[b_start + b_nu_0 + i_stokes];	
 
 							std::cout << QUV/I << std::endl; 						
 						}
@@ -2362,8 +2204,8 @@ void const RT_problem::print_surface_QI_profile(const Field_ptr_t field, const i
 						{
 							for (int b = 0; b < 4 * N_nu_; b = b + 4) 
 							{															
-								const double I   = f_dev.block(i,j,k_start)[b_start + b];
-								const double QUV = f_dev.block(i,j,k_start)[b_start + b + i_stokes];							
+								const double I   = field->block(i,j,k_start)[b_start + b];
+								const double QUV = field->block(i,j,k_start)[b_start + b + i_stokes];							
 
 								std::cout << QUV/I << std::endl; 														
 							}
@@ -2397,37 +2239,34 @@ void const RT_problem::print_surface_QI_point(const int i_space, const int j_spa
 	if (mpi_rank_ == 0 and i_stokes == 3) std::cout << "\nSurface V/I, ";
 
 	if (mpi_rank_ == 0) std::cout << "mu =  " << mu_grid_[j_theta] << ", chi =  " << chi_grid_[k_chi] << ", nu =  " << nu_grid_[n_nu] << std::endl;		
-	
-	const auto f_dev = I_field_->view_device();	
-	const auto g_dev = space_grid_->view_device();
 
 	// indeces
-	const int i_start = g_dev.margin[0]; 
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const int i_start = space_grid_->getGlobalStartX();//g_dev.margin[0]; 
+	const int j_start = space_grid_->getGlobalStartY();
+	const int k_start = space_grid_->getGlobalStartZ();
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); // g_dev.dim[0];
+	const int j_end = j_start + space_grid_->getLocalSizeY(); 
 		
 	int i_global, j_global;
 	
-	if (g_dev.global_coord(2, k_start) == 0)
+	if (space_grid_->local_to_global_coordinate(2, k_start) == 0)
 	{
 		for (int i = i_start; i < i_end; ++i)
 		{
-			i_global = g_dev.global_coord(0, i);
+			i_global = space_grid_->local_to_global_coordinate(0, i);
 
 			if (i_global == i_space)
 			{
 				for (int j = j_start; j < j_end; ++j)
 				{
-					j_global = g_dev.global_coord(1, j);
+					j_global = space_grid_->local_to_global_coordinate(1, j);
 
 					if (j_global == j_space)
 					{
-						const int b_start = local_to_block(j_theta, k_chi, n_nu);
-						const double I   = f_dev.block(i,j,k_start)[b_start];
-						const double QUV = f_dev.block(i,j,k_start)[b_start + i_stokes];							
+						const int b_start = field->local_to_block(j_theta, k_chi, n_nu);
+						const double I   = field->block(i,j,k_start)[b_start];
+						const double QUV = field->block(i,j,k_start)[b_start + i_stokes];							
 
 						std::cout << QUV/I << std::endl; 													
 
@@ -2474,43 +2313,40 @@ void const RT_problem::print_profile(const Field_ptr_t field, const int i_stoke,
 		std::cout << ", height =  " << depth_grid_[k_space] << " km" << std::endl;				
 	}
 
-	const auto f_dev = field->view_device();	
-	const auto g_dev = space_grid_->view_device();
-
 	// indeces
-	const int i_start = g_dev.margin[0]; 
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const int i_start = space_grid_->getGlobalStartX();//g_dev.margin[0]; 
+	const int j_start = space_grid_->getGlobalStartY();
+	const int k_start = space_grid_->getGlobalStartZ();
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
-	const int k_end = k_start + g_dev.dim[2];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); // g_dev.dim[0];
+	const int j_end = j_start + space_grid_->getLocalSizeY(); 
+	const int k_end = k_start + space_grid_->getLocalSizeZ();
 		
 	int i_global, j_global, k_global;
 
 	for (int i = i_start; i < i_end; ++i)
 	{
-		i_global = g_dev.global_coord(0, i);
+		i_global = space_grid_->local_to_global_coordinate(0, i);
 
 		if (i_global == i_space)
 		{
 			for (int j = j_start; j < j_end; ++j)
 			{
-				j_global = g_dev.global_coord(1, j);
+				j_global = space_grid_->local_to_global_coordinate(1, j);
 
 				if (j_global == j_space)
 				{
 					for (int k = k_start; k < k_end; ++k)
 					{
-						k_global = g_dev.global_coord(2, k);
+						k_global = space_grid_->local_to_global_coordinate(2, k);
 
 						if (k_global == k_space)
 						{
-							const int b_start = i_stoke + local_to_block(j_theta, k_chi, 0);
+							const int b_start = i_stoke + field->local_to_block(j_theta, k_chi, 0);
 
 							for (int b = 0; b < 4 * N_nu_; b = b + 4) 
 							{	
-								std::cout << f_dev.block(i,j,k)[b_start + b] << std::endl; 							
+								std::cout << field->block(i,j,k)[b_start + b] << std::endl; 							
 							}					
 						}
 					}					
@@ -2524,6 +2360,8 @@ void const RT_problem::print_profile(const Field_ptr_t field, const int i_stoke,
 	MPI_Barrier(MPI_COMM_WORLD);
 }
 
+
+
 // write surface profile in one single point
 void const
 RT_problem::write_surface_point_profiles(input_string file_name, const int i_space, const int j_space)
@@ -2532,33 +2370,30 @@ RT_problem::write_surface_point_profiles(input_string file_name, const int i_spa
 	// if (mpi_rank_ == 0) std::cout << " Writing output in spatial point (" << i_space << ", " << j_space << ")" <<
 	// std::endl;
 
-	const auto f_dev = I_field_->view_device();
-	const auto g_dev = space_grid_->view_device();
-
 	// indeces
-	const int i_start = g_dev.margin[0];
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const int i_start = space_grid_->getGlobalStartX();//g_dev.margin[0]; 
+	const int j_start = space_grid_->getGlobalStartY();
+	const int k_start = space_grid_->getGlobalStartZ();
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); // g_dev.dim[0];
+	const int j_end = j_start + space_grid_->getLocalSizeY(); 
 
 	int i_global, j_global;
 
 	double I, QUV;
 
 	// write profiles
-	if (g_dev.global_coord(2, k_start) == 0)
+	if (space_grid_->local_to_global_coordinate(2, k_start) == 0)
 	{
 		for (int i = i_start; i < i_end; ++i)
 		{
-			i_global = g_dev.global_coord(0, i);
+			i_global = space_grid_->local_to_global_coordinate(0, i);
 
 			if (i_global == i_space)
 			{
 				for (int j = j_start; j < j_end; ++j)
 				{
-					j_global = g_dev.global_coord(1, j);
+					j_global = space_grid_->local_to_global_coordinate(1, j);
 
 					if (j_global == j_space)
 					{
@@ -2598,7 +2433,7 @@ RT_problem::write_surface_point_profiles(input_string file_name, const int i_spa
 							{
 								for (int k_chi = 0; k_chi < N_chi_; ++k_chi)
 								{
-									const int b_start = local_to_block(j_theta, k_chi, 0);
+									const int b_start = field->local_to_block(j_theta, k_chi, 0);
 
 									for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
 									{
@@ -2607,7 +2442,7 @@ RT_problem::write_surface_point_profiles(input_string file_name, const int i_spa
 
 										for (int b = 0; b < 4 * N_nu_; b = b + 4)
 										{
-											I = f_dev.block(i, j, k_start)[b_start + b];
+											I = f_dev->block(i, j, k_start)[b_start + b];
 
 											if (i_stokes == 0)
 											{
@@ -2615,7 +2450,7 @@ RT_problem::write_surface_point_profiles(input_string file_name, const int i_spa
 											}
 											else
 											{
-												QUV = f_dev.block(i, j, k_start)[b_start + b + i_stokes];
+												QUV = f_dev->block(i, j, k_start)[b_start + b + i_stokes];
 
 												outputFile << std::scientific << std::setprecision(15) << 100.0 * QUV / I
 														   << " ";
@@ -2644,6 +2479,7 @@ RT_problem::write_surface_point_profiles(input_string file_name, const int i_spa
 	if (mpi_rank_ == 0 and i_space == 0 and j_space == 0) std::cout << "Output written in " << file_name << "_i_j.m" << "\n" << std::endl;
 }
 
+
 void const
 RT_problem::write_angular_grid_csv(input_string file_name, const int i_space, const int j_space, const unsigned int precision)
 {
@@ -2651,29 +2487,29 @@ RT_problem::write_angular_grid_csv(input_string file_name, const int i_space, co
 	const auto g_dev = space_grid_->view_device();
 
 	// indeces
-	const int i_start = g_dev.margin[0];
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const int i_start = space_grid_->getGlobalStartX();//g_dev.margin[0]; 
+	const int j_start = space_grid_->getGlobalStartY();
+	const int k_start = space_grid_->getGlobalStartZ();
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); // g_dev.dim[0];
+	const int j_end = j_start + space_grid_->getLocalSizeY(); 
 
 	int i_global, j_global;
 
 	double I, QUV;
 
 	// write profiles
-	if (g_dev.global_coord(2, k_start) == 0)
+	if (space_grid_->local_to_global_coordinate(2, k_start) == 0)
 	{
 		for (int i = i_start; i < i_end; ++i)
 		{
-			i_global = g_dev.global_coord(0, i);
+			i_global = space_grid_->local_to_global_coordinate(0, i);
 
 			if (i_global == i_space)
 			{
 				for (int j = j_start; j < j_end; ++j)
 				{
-					j_global = g_dev.global_coord(1, j);
+					j_global = space_grid_->local_to_global_coordinate(1, j);
 
 					if (j_global == j_space)
 					{
@@ -2709,6 +2545,7 @@ RT_problem::write_angular_grid_csv(input_string file_name, const int i_space, co
 	}
 }
 
+
 void const
 RT_problem::write_frequencies_grid_csv(input_string file_name, const int i_space, const int j_space, const unsigned int precision)
 {
@@ -2716,29 +2553,29 @@ RT_problem::write_frequencies_grid_csv(input_string file_name, const int i_space
 	const auto g_dev = space_grid_->view_device();
 
 	// indeces
-	const int i_start = g_dev.margin[0];
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const int i_start = space_grid_->getGlobalStartX();//g_dev.margin[0]; 
+	const int j_start = space_grid_->getGlobalStartY();
+	const int k_start = space_grid_->getGlobalStartZ();
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); // g_dev.dim[0];
+	const int j_end = j_start + space_grid_->getLocalSizeY(); 
 
 	int i_global, j_global;
 
 	double I, QUV;
 
 	// write profiles
-	if (g_dev.global_coord(2, k_start) == 0)
+	if (space_grid_->local_to_global_coordinate(2, k_start) == 0)
 	{
 		for (int i = i_start; i < i_end; ++i)
 		{
-			i_global = g_dev.global_coord(0, i);
+			i_global = space_grid_->local_to_global_coordinate(0, i);
 
 			if (i_global == i_space)
 			{
 				for (int j = j_start; j < j_end; ++j)
 				{
-					j_global = g_dev.global_coord(1, j);
+					j_global = space_grid_->local_to_global_coordinate(1, j);
 
 					if (j_global == j_space)
 					{
@@ -2766,33 +2603,32 @@ RT_problem::write_frequencies_grid_csv(input_string file_name, const int i_space
 	}
 }
 
+
 void const RT_problem::write_surface_point_profiles_csv(input_string file_name,
                                                         const int i_space,
                                                         const int j_space,
 													    const unsigned int precision) {
-  const auto f_dev = I_field_->view_device();
-  const auto g_dev = space_grid_->view_device();
 
   // indeces
-  const int i_start = g_dev.margin[0];
-  const int j_start = g_dev.margin[1];
-  const int k_start = g_dev.margin[2];
+  const int i_start = space_grid_->getGlobalStartX();//g_dev.margin[0]; 
+  const int j_start = space_grid_->getGlobalStartY();
+  const int k_start = space_grid_->getGlobalStartZ();
 
-  const int i_end = i_start + g_dev.dim[0];
-  const int j_end = j_start + g_dev.dim[1];
+  const int i_end = i_start + space_grid_->getLocalSizeX(); // g_dev.dim[0];
+  const int j_end = j_start + space_grid_->getLocalSizeY(); 
 
   int i_global, j_global;
 
   double I, QUV;
 
   // write profiles
-  if (g_dev.global_coord(2, k_start) == 0) {
+  if (space_grid_->local_to_global_coordinate(2, k_start) == 0) {
     for (int i = i_start; i < i_end; ++i) {
-      i_global = g_dev.global_coord(0, i);
+      i_global = space_grid_->local_to_global_coordinate(0, i);
 
       if (i_global == i_space) {
         for (int j = j_start; j < j_end; ++j) {
-          j_global = g_dev.global_coord(1, j);
+          j_global = space_grid_->local_to_global_coordinate(1, j);
 
           if (j_global == j_space) {
             // Create a new file
@@ -2807,7 +2643,7 @@ void const RT_problem::write_surface_point_profiles_csv(input_string file_name,
               for (int j_theta = N_theta_ / 2; j_theta < N_theta_; ++j_theta) {
                 for (int k_chi = 0; k_chi < N_chi_; ++k_chi) {
 
-                  const int b_start = local_to_block(j_theta, k_chi, 0);
+                  const int b_start = field->local_to_block(j_theta, k_chi, 0);
 
                   for (int i_stokes = 0; i_stokes < 4; ++i_stokes) {
                     // outputFile << "\nField{" << i_stokes + 1 << ","
@@ -2823,7 +2659,7 @@ void const RT_problem::write_surface_point_profiles_csv(input_string file_name,
                                    << I << sep;
                       } else {
                         QUV =
-                            f_dev.block(i, j, k_start)[b_start + b + i_stokes];
+                            f_dev->block(i, j, k_start)[b_start + b + i_stokes];
 
                         outputFile << std::scientific << std::setprecision(precision)
                                    << 100.0 * QUV / I << sep;
@@ -2851,6 +2687,8 @@ void const RT_problem::write_surface_point_profiles_csv(input_string file_name,
  if (mpi_rank_ == 0 and i_space == 0 and j_space == 0) std::cout << "Output written in " << file_name << "_i_j.csv" << "\n" << std::endl;
 }
 
+
+
 // write surface profile in all surface
 void const RT_problem::write_surface_profiles(input_string file_name)
 {	
@@ -2858,24 +2696,21 @@ void const RT_problem::write_surface_profiles(input_string file_name)
 	{
 		std::cerr << "\nWARNING: write_surface_profiles not supported for hotizontal decomposition!" << std::endl;    						
 	}
-	
-	const auto f_dev = I_field_->view_device();	
-	const auto g_dev = space_grid_->view_device();
 
 	// indeces
-	const int i_start = g_dev.margin[0]; 
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const int i_start = space_grid_->getGlobalStartX();//g_dev.margin[0]; 
+    const int j_start = space_grid_->getGlobalStartY();
+    const int k_start = space_grid_->getGlobalStartZ();
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+    const int i_end = i_start + space_grid_->getLocalSizeX(); // g_dev.dim[0];
+    const int j_end = j_start + space_grid_->getLocalSizeY(); 
 		
 	int i_global, j_global;
 
 	double I, QUV;
 
 	// write profiles
-	if (g_dev.global_coord(2, k_start) == 0)
+	if (space_grid_->local_to_global_coordinate(2, k_start) == 0)
 	{
 		// Create a new file 
 		input_string output_file = file_name + ".m";
@@ -2913,17 +2748,17 @@ void const RT_problem::write_surface_profiles(input_string file_name)
 		// loop over spatial ppoints and directions
 		for (int i = i_start; i < i_end; ++i)
 		{
-			i_global = g_dev.global_coord(0, i);
+			i_global = space_grid_->local_to_global_coordinate(0, i);
 			
 			for (int j = j_start; j < j_end; ++j)
 			{
-				j_global = g_dev.global_coord(1, j);
+				j_global = space_grid_->local_to_global_coordinate(1, j);
 											
 				for (int j_theta = N_theta_/2; j_theta < N_theta_; ++j_theta)
 				{								
 					for (int k_chi = 0; k_chi < N_chi_; ++k_chi)
 					{							
-						const int b_start = local_to_block(j_theta, k_chi, 0);						
+						const int b_start = field->local_to_block(j_theta, k_chi, 0);						
 				
 						for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
 						{
@@ -2931,7 +2766,7 @@ void const RT_problem::write_surface_profiles(input_string file_name)
 
 							for (int b = 0; b < 4 * N_nu_; b = b + 4) 
 							{
-								I = f_dev.block(i,j,k_start)[b_start + b];
+								I = f_dev->block(i,j,k_start)[b_start + b];
 
 								if (i_stokes == 0)
 								{
@@ -2939,7 +2774,7 @@ void const RT_problem::write_surface_profiles(input_string file_name)
 								}
 								else
 								{
-									QUV = f_dev.block(i,j,k_start)[b_start + b + i_stokes];
+									QUV = f_dev->block(i,j,k_start)[b_start + b + i_stokes];
 
 									outputFile << 100.0 * QUV/I << " ";
 								}
@@ -2957,40 +2792,39 @@ void const RT_problem::write_surface_profiles(input_string file_name)
 	}  		
 }
 
+
+
 // write surface profile in one single point - CSV format
 void const
 RT_problem::write_surface_point_profiles_Omega_csv(input_string file_name, const int i_space, const int j_space,
 												   const unsigned int precision)
 {
-	const auto I_dev = I_field_Omega_->view_device();
-	const auto g_dev = space_grid_->view_device();
-
 	const int block_size = 4 * N_nu_;
 
 	// indeces
-	const int i_start = g_dev.margin[0];
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const int i_start = space_grid_->getGlobalStartX();//g_dev.margin[0]; 
+    const int j_start = space_grid_->getGlobalStartY();
+    const int k_start = space_grid_->getGlobalStartZ();
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+    const int i_end = i_start + space_grid_->getLocalSizeX(); // g_dev.dim[0];
+    const int j_end = j_start + space_grid_->getLocalSizeY(); 
 
 	int i_global, j_global;
 
 	double I, QUV;
 
 	// write profiles
-	if (g_dev.global_coord(2, k_start) == 0)
+	if (space_grid_->local_to_global_coordinate(2, k_start) == 0)
 	{
 		for (int i = i_start; i < i_end; ++i)
 		{
-			i_global = g_dev.global_coord(0, i);
+			i_global = space_grid_->local_to_global_coordinate(0, i);
 
 			if (i_global == i_space)
 			{
 				for (int j = j_start; j < j_end; ++j)
 				{
-					j_global = g_dev.global_coord(1, j);
+					j_global = space_grid_->local_to_global_coordinate(1, j);
 
 					if (j_global == j_space)
 					{
@@ -3007,14 +2841,14 @@ RT_problem::write_surface_point_profiles_Omega_csv(input_string file_name, const
 							// Write data rows
 							for (int b = 0; b < block_size; b = b + 4)
 							{
-								I = I_dev.block(i, j, k_start)[b];
+								I = I_field_Omega_->block(i, j, k_start)[b];
 
 								outputFile << std::scientific << std::setprecision(precision) << I << ",";
 
 								// Q/I, U/I, V/I
 								for (int i_stokes = 1; i_stokes < 4; ++i_stokes)
 								{
-									QUV = I_dev.block(i, j, k_start)[b + i_stokes];
+									QUV = I_field_Omega_->block(i, j, k_start)[b + i_stokes];
 
 									std::string sep = (i_stokes < 3) ? "," : "";
 									outputFile << std::scientific << std::setprecision(precision) << 100.0 * QUV / I
@@ -3040,41 +2874,40 @@ RT_problem::write_surface_point_profiles_Omega_csv(input_string file_name, const
 	}
 }
 
+
+
 // write surface profile in one single point
 void const RT_problem::write_surface_point_profiles_Omega(input_string file_name, const int i_space, const int j_space)
 {
 	// // a single MPI rank writes output
 	// if (mpi_rank_ == 0) std::cout << " Writing output in spatial point (" << i_space << ", " << j_space << ")" << std::endl;
 
-	const auto I_dev = I_field_Omega_->view_device();	
-	const auto g_dev = space_grid_->view_device();
-
 	const int block_size = 4 * N_nu_;
 
 	// indeces
-	const int i_start = g_dev.margin[0]; 
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const int i_start = space_grid_->getGlobalStartX();//g_dev.margin[0]; 
+    const int j_start = space_grid_->getGlobalStartY();
+    const int k_start = space_grid_->getGlobalStartZ();
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+    const int i_end = i_start + space_grid_->getLocalSizeX(); // g_dev.dim[0];
+    const int j_end = j_start + space_grid_->getLocalSizeY(); 
 		
 	int i_global, j_global;
 
 	double I, QUV;
 
 	// write profiles
-	if (g_dev.global_coord(2, k_start) == 0)
+	if (space_grid_->local_to_global_coordinate(2, k_start) == 0)
 	{
 		for (int i = i_start; i < i_end; ++i)
 		{
-			i_global = g_dev.global_coord(0, i);
+			i_global = space_grid_->local_to_global_coordinate(0, i);
 
 			if (i_global == i_space)
 			{
 				for (int j = j_start; j < j_end; ++j)
 				{
-					j_global = g_dev.global_coord(1, j);
+					j_global = space_grid_->local_to_global_coordinate(1, j);
 
 					if (j_global == j_space)
 					{						
@@ -3093,7 +2926,7 @@ void const RT_problem::write_surface_point_profiles_Omega(input_string file_name
 
 									for (int b = 0; b < block_size; b = b + 4) 
 									{
-										I = I_dev.block(i,j,k_start)[b];
+										I = I_field_Omega_->block(i,j,k_start)[b];
 
 										if (i_stokes == 0)
 										{
@@ -3101,7 +2934,7 @@ void const RT_problem::write_surface_point_profiles_Omega(input_string file_name
 										}
 										else
 										{
-											QUV = I_dev.block(i,j,k_start)[b + i_stokes];
+											QUV = I_field_Omega_->block(i,j,k_start)[b + i_stokes];
 
 											outputFile << 100.0 * QUV/I << " ";
 										}
@@ -3134,26 +2967,22 @@ void const RT_problem::write_surface_profiles_Omega(input_string file_name)
 	{
 		std::cerr << "\nWARNING: write_surface_profiles_Omega not supported for hotizontal decomposition!" << std::endl;    						
 	}
-
-	const auto I_dev = I_field_Omega_->view_device();	
-	const auto g_dev = space_grid_->view_device();
-
 	const int block_size = 4 * N_nu_;
 
 	// indeces
-	const int i_start = g_dev.margin[0]; 
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const int i_start = space_grid_->getGlobalStartX();//g_dev.margin[0]; 
+    const int j_start = space_grid_->getGlobalStartY();
+    const int k_start = space_grid_->getGlobalStartZ();
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+    const int i_end = i_start + space_grid_->getLocalSizeX(); // g_dev.dim[0];
+    const int j_end = j_start + space_grid_->getLocalSizeY(); 
 		
 	int i_global, j_global;
 
 	double I, QUV;
 
 	// write profiles
-	if (g_dev.global_coord(2, k_start) == 0)
+	if (space_grid_->local_to_global_coordinate(2, k_start) == 0)
 	{
 		// Create a new file 
 		input_string output_file = file_name + ".m";
@@ -3173,11 +3002,11 @@ void const RT_problem::write_surface_profiles_Omega(input_string file_name)
 
 		for (int i = i_start; i < i_end; ++i)
 		{
-			i_global = g_dev.global_coord(0, i);
+			i_global = space_grid_->local_to_global_coordinate(0, i);
 
 			for (int j = j_start; j < j_end; ++j)
 			{
-				j_global = g_dev.global_coord(1, j);
+				j_global = space_grid_->local_to_global_coordinate(1, j);
 																							
 				for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
 				{
@@ -3185,7 +3014,7 @@ void const RT_problem::write_surface_profiles_Omega(input_string file_name)
 
 					for (int b = 0; b < block_size; b = b + 4) 
 					{
-						I = I_dev.block(i,j,k_start)[b];
+						I = I_field_Omega_->block(i,j,k_start)[b];
 
 						if (i_stokes == 0)
 						{
@@ -3193,7 +3022,7 @@ void const RT_problem::write_surface_profiles_Omega(input_string file_name)
 						}
 						else
 						{
-							QUV = I_dev.block(i,j,k_start)[b + i_stokes];
+							QUV = I_field_Omega_->block(i,j,k_start)[b + i_stokes];
 
 							outputFile << 100.0 * QUV/I << " ";
 						}
@@ -3210,23 +3039,18 @@ void const RT_problem::write_surface_profiles_Omega(input_string file_name)
 }
 
 
-
-
 bool RT_problem::field_is_zero(const Field_ptr_t field)
 {
 	bool field_is_zero = true;
 
-	auto g_dev = space_grid_->view_device();
-	auto f_dev =       field->view_device();	
-
 	// indeces
-	const int i_start = g_dev.margin[0]; 
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const int i_start = space_grid_->getGlobalStartX(); 
+	const int j_start = space_grid_->getGlobalStartY(); 
+	const int k_start = space_grid_->getGlobalStartX(); 
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
-	const int k_end = k_start + g_dev.dim[2];	
+	const int i_end = i_start + space_grid_->getLocalSizeX();
+	const int j_end = j_start + space_grid_->getLocalSizeY();
+	const int k_end = k_start + space_grid_->getLocalSizeZ();;	
 	
 	for (int k = k_start; k < k_end; ++k)					
 	{															
@@ -3236,7 +3060,7 @@ bool RT_problem::field_is_zero(const Field_ptr_t field)
 			{
 				for (int b = 0; b < block_size_; b++) 
 				{
-					if (f_dev.block(i,j,k)[b] != 0)
+					if (field->block(i,j,k)[b] != 0)
 					{
 						field_is_zero = false;
 						break;
@@ -3311,7 +3135,8 @@ void RT_problem::set_grid_partition()
 	}
 	else // full 3D
 	{		
-		set_3D_decomposition(N_x_, N_y_, N_z_);		
+		//TODO
+		// set_3D_decomposition(N_x_, N_y_, N_z_);		
 	}
 }
 
