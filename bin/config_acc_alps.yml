@@ -6,7 +6,7 @@ frequency_file:  frequency/96F/frequency.dat
 
 output: true
 output_overwrite_prevention: true
-output_directory: /capstor/scratch/cscs/sriva/PORTA/output/o2/
+output_directory: /capstor/scratch/cscs/sriva/PORTA/output/o9/
 
 use_B: true
 use_continuum: false
@@ -28,24 +28,24 @@ use_prec: true
 solver:
   ksp_solver_type: KSPFGMRES
   ksp_rtol: 1e-6
-  ksp_max_it: 2
+  ksp_max_it: 1
 
 prec:
   pc_solver_type: KSPGMRES
   pc_rtol: 1e-4
-  pc_max_it: 50
+  pc_max_it: 20
 
 default_chi: &default_chi 0.0
 
-arbitrary_beams: 
-  - mu: 0.1
-    chi: *default_chi
+# arbitrary_beams: 
+#   - mu: 0.1
+#     chi: *default_chi
 
-  - mu: 0.3
-    chi: *default_chi
+#   - mu: 0.3
+#     chi: *default_chi
     
-  - mu: 0.7
-    chi: *default_chi
+#   - mu: 0.7
+#     chi: *default_chi
 
-  - mu: 1.0
-    chi: *default_chi
+#   - mu: 1.0
+#     chi: *default_chi

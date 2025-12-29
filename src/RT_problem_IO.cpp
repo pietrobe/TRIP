@@ -1,20 +1,27 @@
 #include "RT_problem.hpp"
 #include "thdf.h"
 
+//////////////////////////////////////////////////////////////////////////
+// Write emergent field to HDF5
+// write_emergent_field_hdf5
+//////////////////////////////////////////////////////////////////////////
 int
 write_emergent_field_hdf5(RT_problem &rt_problem, const std::string &output_file)
 {
 	MPI_Comm write_comm;
 	const auto [color, mpi_status] = rt_problem.make_write_surface_MPI_Comm(MPI_COMM_WORLD, write_comm);
 
-	if (color == MPI_UNDEFINED)
+	// Note: color == 1 means that the rank is a surface writer
+	//       color == 0 means that the rank is NOT a surface writer
+	if (color == 0)
 	{
-		MPI_Barrier(MPI_COMM_WORLD);
+		MPI_Barrier(write_comm);
 		MPI_Comm_free(&write_comm);
 		return EXIT_SUCCESS;
 	}
 
 	rt_problem.write_emergent_angular_frequency_grids_hdf5(output_file);
+	MPI_Barrier(write_comm);
 
 	const int N_x = rt_problem.N_x_;
 	const int N_y = rt_problem.N_y_;
@@ -38,32 +45,32 @@ write_emergent_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 
 	const int i_end = i_start + g_dev.dim[0];
 	const int j_end = j_start + g_dev.dim[1];
+	const int k_end = k_start + g_dev.dim[2];
 
 	const int size_i = g_dev.dim[0];
 	const int size_j = g_dev.dim[1];
-
-	surface_data_I.reserve(N_nu * (N_theta / 2) * N_chi * size_i * size_j);
-	surface_data_Q.reserve(N_nu * (N_theta / 2) * N_chi * size_i * size_j);
-	surface_data_U.reserve(N_nu * (N_theta / 2) * N_chi * size_i * size_j);
-	surface_data_V.reserve(N_nu * (N_theta / 2) * N_chi * size_i * size_j);
 
 	rt_problem.accumulate_surface_domain_data(surface_data_I, surface_data_Q, surface_data_U, surface_data_V);
 
 	int status = rt_problem.write_emergent_field_hdf5(output_file, write_comm, surface_data_I, surface_data_Q,
 													  surface_data_U, surface_data_V);
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	MPI_Barrier(write_comm);
 	MPI_Comm_free(&write_comm);
 
 	return status;
 }
 
+/////////////////////////////////////////////////////////////////////////
+// Create MPI communicator for writing surface data
+// make_write_surface_MPI_Comm
+//////////////////////////////////////////////////////////////////////////
 std::tuple<int, int>
 RT_problem::make_write_surface_MPI_Comm(const MPI_Comm MPI_Comm_MAIN, MPI_Comm &write_comm)
 {
 	const auto g_dev = space_grid_->view_device();
 
-	const int color = (g_dev.global_coord(2, g_dev.margin[2]) == 0) ? 1 : MPI_UNDEFINED;
+	const int color = (g_dev.global_coord(2, g_dev.margin[2]) == 0) ? 1 : 0;
 
 	const int mpi_status =						//
 		MPI_Comm_split(MPI_Comm_MAIN,			//
@@ -73,14 +80,20 @@ RT_problem::make_write_surface_MPI_Comm(const MPI_Comm MPI_Comm_MAIN, MPI_Comm &
 	return std::make_tuple(color, mpi_status);
 }
 
-int //
-RT_problem::write_emergent_angular_frequency_grids_hdf5(const std::string &output_file)
+//////////////////////////////////////////////////////////////////////////
+// Write emergent angular and frequency grids to HDF5
+// write_emergent_angular_frequency_grids_hdf5
+///////////////////////////////////////////////////////////////////////////
+int																						//
+RT_problem::write_emergent_angular_frequency_grids_hdf5(const std::string &output_file) //
 {
 	const auto g_dev = space_grid_->view_device();
 
-	if (this->mpi_rank_ != 0 and						//
-		g_dev.global_coord(0, g_dev.margin[0]) != 0 and //
-		g_dev.global_coord(1, g_dev.margin[1]) != 0)	//
+	// Only MPI rank 0 AND the process owning global spatial coords (0,0) should create the file
+	if (not(this->mpi_rank_ == 0 and						//
+			g_dev.global_coord(0, g_dev.margin[0]) == 0 and //
+			g_dev.global_coord(1, g_dev.margin[1]) == 0 and //
+			g_dev.global_coord(2, g_dev.margin[2]) == 0))	//
 	{
 		return EXIT_SUCCESS;
 	}
@@ -114,7 +127,8 @@ RT_problem::write_emergent_angular_frequency_grids_hdf5(const std::string &outpu
 
 	if (THDF_write_angular_grid_to_hdf5(file_id, &angular_grid) != 0)
 	{
-		fprintf(stderr, "Error writing emergent angular grid to HDF5 file\n");
+		fprintf(stderr, "Error writing emergent angular grid to HDF5 file, rank %d, file: %s:%d\n", mpi_rank_, __FILE__,
+				__LINE__);
 		return EXIT_FAILURE;
 	}
 
@@ -124,7 +138,8 @@ RT_problem::write_emergent_angular_frequency_grids_hdf5(const std::string &outpu
 
 	if (THDF_write_frequencies_grid_to_hdf5(file_id, &freq_grid) != 0)
 	{
-		fprintf(stderr, "Error writing frequencies grid to HDF5 file\n");
+		fprintf(stderr, "Error writing frequencies grid to HDF5 file, rank %d, file: %s:%d\n", mpi_rank_, __FILE__,
+				__LINE__);
 		return EXIT_FAILURE;
 	}
 
@@ -133,6 +148,10 @@ RT_problem::write_emergent_angular_frequency_grids_hdf5(const std::string &outpu
 	return EXIT_SUCCESS;
 }
 
+//////////////////////////////////////////////////////////////////////////
+// Write emergent field to HDF5
+// write_emergent_field_hdf5
+//////////////////////////////////////////////////////////////////////////
 int
 RT_problem::write_emergent_field_hdf5(const std::string &output_file, MPI_Comm write_comm,
 									  std::vector<double> &surface_data_I, std::vector<double> &surface_data_Q,
@@ -149,6 +168,9 @@ RT_problem::write_emergent_field_hdf5(const std::string &output_file, MPI_Comm w
 	const int i_start = g_dev.margin[0];
 	const int j_start = g_dev.margin[1];
 
+	const int i_start_global = g_dev.global_coord(0, i_start);
+	const int j_start_global = g_dev.global_coord(1, j_start);
+
 	// Create HDF5 file with MPI I/O access property list
 	hid_t file_id, plist_id;
 	plist_id = H5Pcreate(H5P_FILE_ACCESS);
@@ -156,8 +178,9 @@ RT_problem::write_emergent_field_hdf5(const std::string &output_file, MPI_Comm w
 	file_id = H5Fopen(output_file.c_str(), H5F_ACC_RDWR, plist_id);
 	H5Pclose(plist_id);
 
-	THDF_field_handler_t *output_dset_handler =
-		THDF_create_field_handler_mpi(file_id, N_x_, N_y_, N_theta_ / 2, N_chi_, N_nu_);
+	THDF_field_handler_t *output_dset_handler = THDF_create_field_handler_mpi(file_id,						//
+																			  N_x_, N_y_,					//
+																			  N_theta_ / 2, N_chi_, N_nu_); //
 
 	if (output_dset_handler == NULL)
 	{
@@ -178,11 +201,11 @@ RT_problem::write_emergent_field_hdf5(const std::string &output_file, MPI_Comm w
 	output_field.stokes_VI = surface_data_V.data();
 
 	// Write local output field surface data
-	THDF_write_field_dataset_to_hdf5(output_dset_handler,		   //
-									 &output_field,				   //
-									 i_start, j_start, 0, 0,	   //
-									 i_size, j_size,			   //
-									 N_theta_ / 2, N_chi_, N_nu_); //
+	THDF_write_field_dataset_to_hdf5(output_dset_handler,				   //
+									 &output_field,						   //
+									 i_start_global, j_start_global, 0, 0, //
+									 i_size, j_size,					   //
+									 N_theta_ / 2, N_chi_, N_nu_);		   //
 
 	THDF_close_field_handler_mpi(output_dset_handler);
 	H5Fclose(file_id);
@@ -190,6 +213,10 @@ RT_problem::write_emergent_field_hdf5(const std::string &output_file, MPI_Comm w
 	return EXIT_SUCCESS;
 }
 
+//////////////////////////////////////////////////////////////////////////
+// Accumulate surface data from local domain
+// accumulate_surface_data
+//////////////////////////////////////////////////////////////////////////
 int
 RT_problem::accumulate_surface_domain_data(std::vector<double> &surface_data_I, std::vector<double> &surface_data_Q,
 										   std::vector<double> &surface_data_U, std::vector<double> &surface_data_V)
@@ -211,6 +238,21 @@ RT_problem::accumulate_surface_domain_data(std::vector<double> &surface_data_I, 
 	int i_global, j_global;
 
 	if (g_dev.global_coord(2, k_start) != 0) return 0;
+
+	const int N_nu	  = this->N_nu_;
+	const int N_theta = this->N_theta_;
+	const int N_chi	  = this->N_chi_;
+
+	surface_data_I.reserve(N_nu * (N_theta / 2) * N_chi * size_i * size_j);
+	surface_data_Q.reserve(N_nu * (N_theta / 2) * N_chi * size_i * size_j);
+	surface_data_U.reserve(N_nu * (N_theta / 2) * N_chi * size_i * size_j);
+	surface_data_V.reserve(N_nu * (N_theta / 2) * N_chi * size_i * size_j);
+
+	std::cout << "Rank " << mpi_rank_ << " accumulating surface data from domain: i[" << i_start << ", " << i_end
+			  << ")  j[" << j_start << ", " << j_end << ")" << std::endl
+			  << " global coords: i[" << g_dev.global_coord(0, i_start) << ", " << g_dev.global_coord(0, i_end - 1)
+			  << "]  j[" << g_dev.global_coord(1, j_start) << ", " << g_dev.global_coord(1, j_end - 1) << "]"
+			  << std::endl;
 
 	for (int i = i_start; i < i_end; ++i)
 	{
@@ -244,72 +286,79 @@ RT_problem::accumulate_surface_domain_data(std::vector<double> &surface_data_I, 
 	return 0;
 }
 
-int
-RT_problem::accumulate_surface_data(const int i_space, const int j_space, std::vector<double> &surface_data_I,
-									std::vector<double> &surface_data_Q, std::vector<double> &surface_data_U,
-									std::vector<double> &surface_data_V)
-{
-	const auto f_dev = I_field_->view_device();
-	const auto g_dev = space_grid_->view_device();
+//////////////////////////////////////////////////////////////////////////
+// Accumulate surface data from one single point
+// accumulate_surface_data
+//////////////////////////////////////////////////////////////////////////
+// int
+// RT_problem::accumulate_surface_data(const int i_space, const int j_space, std::vector<double> &surface_data_I,
+// 									std::vector<double> &surface_data_Q, std::vector<double> &surface_data_U,
+// 									std::vector<double> &surface_data_V)
+// {
+// 	const auto f_dev = I_field_->view_device();
+// 	const auto g_dev = space_grid_->view_device();
 
-	// indeces
-	const int i_start = g_dev.margin[0];
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+// 	// indeces
+// 	const int i_start = g_dev.margin[0];
+// 	const int j_start = g_dev.margin[1];
+// 	const int k_start = g_dev.margin[2];
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+// 	const int i_end = i_start + g_dev.dim[0];
+// 	const int j_end = j_start + g_dev.dim[1];
 
-	const int size_i = g_dev.dim[0];
-	const int size_j = g_dev.dim[1];
+// 	const int size_i = g_dev.dim[0];
+// 	const int size_j = g_dev.dim[1];
 
-	int i_global, j_global;
+// 	int i_global, j_global;
 
-	// write profiles
-	if (g_dev.global_coord(2, k_start) == 0)
-	{
-		for (int i = i_start; i < i_end; ++i)
-		{
-			i_global = g_dev.global_coord(0, i);
+// 	// write profiles
+// 	if (g_dev.global_coord(2, k_start) == 0)
+// 	{
+// 		for (int i = i_start; i < i_end; ++i)
+// 		{
+// 			i_global = g_dev.global_coord(0, i);
 
-			if (i_global == i_space)
-			{
-				for (int j = j_start; j < j_end; ++j)
-				{
-					j_global = g_dev.global_coord(1, j);
+// 			if (i_global == i_space)
+// 			{
+// 				for (int j = j_start; j < j_end; ++j)
+// 				{
+// 					j_global = g_dev.global_coord(1, j);
 
-					if (j_global == j_space)
-					{
-						for (int j_theta = N_theta_ / 2; j_theta < N_theta_; ++j_theta)
-						{
-							for (int k_chi = 0; k_chi < N_chi_; ++k_chi)
-							{
-								const int b_start = local_to_block(j_theta, k_chi, 0);
+// 					if (j_global == j_space)
+// 					{
+// 						for (int j_theta = N_theta_ / 2; j_theta < N_theta_; ++j_theta)
+// 						{
+// 							for (int k_chi = 0; k_chi < N_chi_; ++k_chi)
+// 							{
+// 								const int b_start = local_to_block(j_theta, k_chi, 0);
 
-								for (int b = 0; b < 4 * N_nu_; b = b + 4)
-								{
-									const double I = f_dev.block(i, j, k_start)[b_start + b];
-									const double Q = f_dev.block(i, j, k_start)[b_start + b + 1];
-									const double U = f_dev.block(i, j, k_start)[b_start + b + 2];
-									const double V = f_dev.block(i, j, k_start)[b_start + b + 3];
+// 								for (int b = 0; b < 4 * N_nu_; b = b + 4)
+// 								{
+// 									const double I = f_dev.block(i, j, k_start)[b_start + b];
+// 									const double Q = f_dev.block(i, j, k_start)[b_start + b + 1];
+// 									const double U = f_dev.block(i, j, k_start)[b_start + b + 2];
+// 									const double V = f_dev.block(i, j, k_start)[b_start + b + 3];
 
-									surface_data_I.push_back(I);
-									surface_data_Q.push_back(Q / I * 100.0);
-									surface_data_U.push_back(U / I * 100.0);
-									surface_data_V.push_back(V / I * 100.0);
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+// 									surface_data_I.push_back(I);
+// 									surface_data_Q.push_back(Q / I * 100.0);
+// 									surface_data_U.push_back(U / I * 100.0);
+// 									surface_data_V.push_back(V / I * 100.0);
+// 								}
+// 							}
+// 						}
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
 
-	return 0;
-}
+// 	return 0;
+// }
 
-// write surface profile in one single point
+//////////////////////////////////////////////////////////////////////////
+// Write surface point profiles to file
+// write_surface_point_profiles
+//////////////////////////////////////////////////////////////////////////
 void const
 RT_problem::write_surface_point_profiles(input_string file_name, const int i_space, const int j_space)
 {
@@ -429,6 +478,10 @@ RT_problem::write_surface_point_profiles(input_string file_name, const int i_spa
 		std::cout << "Output written in " << file_name << "_i_j.m" << "\n" << std::endl;
 }
 
+//////////////////////////////////////////////////////////////////////////
+// Write surface point angular grid to file
+// write_angular_grid_csv
+//////////////////////////////////////////////////////////////////////////
 void const
 RT_problem::write_angular_grid_csv(input_string file_name, const int i_space, const int j_space,
 								   const unsigned int precision)
@@ -493,6 +546,10 @@ RT_problem::write_angular_grid_csv(input_string file_name, const int i_space, co
 	}
 }
 
+//////////////////////////////////////////////////////////////////////////
+// Write surface point frequency grid to file
+// write_frequencies_grid_csv
+//////////////////////////////////////////////////////////////////////////
 void const
 RT_problem::write_frequencies_grid_csv(input_string file_name, const int i_space, const int j_space,
 									   const unsigned int precision)
@@ -551,6 +608,10 @@ RT_problem::write_frequencies_grid_csv(input_string file_name, const int i_space
 	}
 }
 
+//////////////////////////////////////////////////////////////////////////
+// Write surface point profiles to file in CSV format
+// write_surface_point_profiles_csv
+//////////////////////////////////////////////////////////////////////////
 void const
 RT_problem::write_surface_point_profiles_csv(input_string file_name, const int i_space, const int j_space,
 											 const unsigned int precision)
@@ -644,7 +705,9 @@ RT_problem::write_surface_point_profiles_csv(input_string file_name, const int i
 		std::cout << "Output written in " << file_name << "_i_j.csv" << "\n" << std::endl;
 }
 
-// write surface profile in all surface
+////////////////////////////////////////////////////////////////////////////
+// write_surface_profiles
+////////////////////////////////////////////////////////////////////////////
 void const
 RT_problem::write_surface_profiles(input_string file_name)
 {
@@ -753,7 +816,10 @@ RT_problem::write_surface_profiles(input_string file_name)
 	}
 }
 
-// write surface profile in one single point - CSV format
+////////////////////////////////////////////////////////////////////////////
+// Write surface point profiles to file in CSV format
+// write_surface_point_profiles_Omega_csv
+////////////////////////////////////////////////////////////////////////////
 void const
 RT_problem::write_surface_point_profiles_Omega_csv(input_string file_name, const int i_space, const int j_space,
 												   const unsigned int precision)
@@ -836,7 +902,10 @@ RT_problem::write_surface_point_profiles_Omega_csv(input_string file_name, const
 	}
 }
 
+////////////////////////////////////////////////////////////////////////////
 // write surface profile in one single point
+// write_surface_point_profiles_Omega
+////////////////////////////////////////////////////////////////////////////
 void const
 RT_problem::write_surface_point_profiles_Omega(input_string file_name, const int i_space, const int j_space)
 {
@@ -925,7 +994,10 @@ RT_problem::write_surface_point_profiles_Omega(input_string file_name, const int
 	}
 }
 
+////////////////////////////////////////////////////////////////////////////
 // write surface profile for arbitrary direction
+// write_surface_profiles_Omega
+////////////////////////////////////////////////////////////////////////////
 void const
 RT_problem::write_surface_profiles_Omega(input_string file_name)
 {

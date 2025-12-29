@@ -166,6 +166,9 @@ main(int argc, char *argv[])
 			const int N_x = rt_problem_ptr->N_x_;
 			const int N_y = rt_problem_ptr->N_y_;
 
+			// Old scoole output ....
+			// Where the output is written in separate files for each emergent spatial point
+			////////////////////////////////////////////////////////////////////////////////////////////////
 			for (int i = 0; i < N_x; ++i)
 			{
 				for (int j = 0; j < N_y; ++j)
@@ -187,6 +190,10 @@ main(int argc, char *argv[])
 					}
 				}
 			}
+
+			// New HDF5 output .... TESTING
+			////////////////////////////////////////////////////////////////////////////////////////////////
+			write_emergent_field_hdf5(*rt_problem_ptr, (output_path / "emergent_field.h5").string());
 
 			////////////////////////////////////////////////////////////////////////////////////////////////
 			// compute arbitrary beams
@@ -271,6 +278,9 @@ main(int argc, char *argv[])
 
 	Kokkos::finalize();
 	PetscFinalize(); // CHKERRQ(ierr);
+
+	if (mpi_rank == 0) std::cout << "Program ended successfully." << std::endl;
+
 	MPI_CHECK(MPI_Finalize());
 
 	return 0;

@@ -60,3 +60,4 @@ scripts/read_field.asv
 prove_cpp/a.out
 prove_cpp/readbin.cpp
 src/configure.h
+src/thdf/libhdf_output.a

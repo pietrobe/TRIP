@@ -368,7 +368,7 @@ THDF_write_angular_grid_to_hdf5(hid_t                      file,  //
 
   hid_t angular_group = H5Gcreate2(file, "/emergent_angular_grid", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   if (angular_group < 0) {
-    fprintf(stderr, "Error creating emergent angular grid group\n");
+    fprintf(stderr, "Error creating emergent angular grid group file: %s:%d", __FILE__, __LINE__);
     return -1;
   }
 

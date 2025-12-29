@@ -7,14 +7,14 @@
 #SBATCH --ntasks=512
 
 ## to be defined !!!!!!!!! 
-#SBATCH --time=00:59:00
+#SBATCH --time=00:30:00
 
 #SBATCH --job-name="TRIP_PRD_3D"
 
 #SBATCH --exclusive
 #SBATCH --cpus-per-task=1
 #SBATCH --account=c40
-#SBATCH --partition=normal
+#SBATCH --partition=debug
 #SBATCH --ntasks-per-socket=46
 
 
@@ -43,10 +43,6 @@ printf "%-30s %s\n" "SLURM_OUTPUT_LOG:" "slurm-${SLURM_JOB_ID}.out"
 echo "=========================================="
 echo ""
 
-
-export CRD=" --CRD "
-export CRD="  "
-
 export MPICH_GPU_SUPPORT_ENABLED=1
 
 ulimit -c 0
@@ -68,8 +64,10 @@ echo ""
 
 # Define arguments as a bash array
 ARGS=(
-    "--yaml_config" "$HOME/git/TRIP/bin/config_acc.yml" 
+    "--yaml_config" "$HOME/git/TRIP/bin/config_acc_alps.yml" 
     "-ksp_monitor"
+    "-ksp_monitor_true_residual" 
+    "-ksp_converged_reason"
     "-ksp_view"
 )
 
