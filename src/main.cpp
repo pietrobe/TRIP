@@ -166,7 +166,7 @@ main(int argc, char *argv[])
 			const int N_x = rt_problem_ptr->N_x_;
 			const int N_y = rt_problem_ptr->N_y_;
 
-			// Old scoole output ....
+			// Old scool output ....
 			// Where the output is written in separate files for each emergent spatial point
 			////////////////////////////////////////////////////////////////////////////////////////////////
 			for (int i = 0; i < N_x; ++i)

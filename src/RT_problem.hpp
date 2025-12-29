@@ -468,16 +468,38 @@ class RT_problem
 	// 						std::vector<double> &surface_data_U, std::vector<double> &surface_data_V);
 
 	int
-	accumulate_surface_domain_data(std::vector<double> &surface_data_I, std::vector<double> &surface_data_Q,
-								   std::vector<double> &surface_data_U, std::vector<double> &surface_data_V);
+	accumulate_surface_domain_data(std::vector<double> &surface_data_I,	 //
+								   std::vector<double> &surface_data_Q,	 //
+								   std::vector<double> &surface_data_U,	 //
+								   std::vector<double> &surface_data_V); //
 
 	int																			 //
-	write_emergent_angular_frequency_grids_hdf5(const std::string &output_file); //
+	write_angular_frequency_grids_hdf5(const std::string &output_file); //
 
 	int
 	write_emergent_field_hdf5(const std::string &output_file, MPI_Comm write_comm, std::vector<double> &surface_data_I,
 							  std::vector<double> &surface_data_Q, std::vector<double> &surface_data_U,
 							  std::vector<double> &surface_data_V);
+
+	int
+	accumulate_surface_profiles_Omega_domain_data(std::vector<double> &surface_data_I,	//
+												  std::vector<double> &surface_data_Q,	//
+												  std::vector<double> &surface_data_U,	//
+												  std::vector<double> &surface_data_V); //
+
+	int																				//
+	write_beams_frequency_grids_Omega_hdf5(const std::vector<BeamDirection> &beams, //
+										   const std::string				&output_file);			//
+
+	int
+	write_emergent_field_Omega_hdf5(const std::string				 &output_file,	  //
+									MPI_Comm						  write_comm,	  //
+									const std::vector<BeamDirection> &beams,		  //
+									const int						  beam_index,	  //
+									std::vector<double>				 &surface_data_I, //
+									std::vector<double>				 &surface_data_Q, //
+									std::vector<double>				 &surface_data_U, //
+									std::vector<double>				 &surface_data_V);			  //
 
 	// MPI varables
 	int mpi_rank_;

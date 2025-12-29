@@ -187,10 +187,17 @@ target_compile_definitions(solar_3D PUBLIC ${PETSC_DEFINITIONS})
 
 # Build thdf/libhdf_output.a using its Makefile
 if(TRUE)
+    # Collect all C source and header files in src/thdf
+    # file(GLOB THDF_SOURCES
+    #     "${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/*.c"
+    #     "${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/*.h"
+    # )
+
     add_custom_command(
         OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a
         COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf make CC=mpicc lib
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf
+        # DEPENDS ${THDF_SOURCES}
         COMMENT "Building libhdf_output.a in thdf using Makefile"
     )
 

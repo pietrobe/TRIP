@@ -20,7 +20,7 @@ write_emergent_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 		return EXIT_SUCCESS;
 	}
 
-	rt_problem.write_emergent_angular_frequency_grids_hdf5(output_file);
+	rt_problem.write_angular_frequency_grids_hdf5(output_file);
 	MPI_Barrier(write_comm);
 
 	const int N_x = rt_problem.N_x_;
@@ -82,10 +82,10 @@ RT_problem::make_write_surface_MPI_Comm(const MPI_Comm MPI_Comm_MAIN, MPI_Comm &
 
 //////////////////////////////////////////////////////////////////////////
 // Write emergent angular and frequency grids to HDF5
-// write_emergent_angular_frequency_grids_hdf5
+// write_angular_frequency_grids_hdf5
 ///////////////////////////////////////////////////////////////////////////
-int																						//
-RT_problem::write_emergent_angular_frequency_grids_hdf5(const std::string &output_file) //
+int																			   //
+RT_problem::write_angular_frequency_grids_hdf5(const std::string &output_file) //
 {
 	const auto g_dev = space_grid_->view_device();
 
@@ -286,74 +286,195 @@ RT_problem::accumulate_surface_domain_data(std::vector<double> &surface_data_I, 
 	return 0;
 }
 
-//////////////////////////////////////////////////////////////////////////
-// Accumulate surface data from one single point
-// accumulate_surface_data
-//////////////////////////////////////////////////////////////////////////
-// int
-// RT_problem::accumulate_surface_data(const int i_space, const int j_space, std::vector<double> &surface_data_I,
-// 									std::vector<double> &surface_data_Q, std::vector<double> &surface_data_U,
-// 									std::vector<double> &surface_data_V)
-// {
-// 	const auto f_dev = I_field_->view_device();
-// 	const auto g_dev = space_grid_->view_device();
+int
+RT_problem::accumulate_surface_profiles_Omega_domain_data(std::vector<double> &surface_data_I, //
+														  std::vector<double> &surface_data_Q, //
+														  std::vector<double> &surface_data_U, //
+														  std::vector<double> &surface_data_V)
+{
+	const auto f_dev = I_field_->view_device();
+	const auto g_dev = space_grid_->view_device();
+	const auto I_dev = I_field_Omega_->view_device();
 
-// 	// indeces
-// 	const int i_start = g_dev.margin[0];
-// 	const int j_start = g_dev.margin[1];
-// 	const int k_start = g_dev.margin[2];
+	// indeces
+	const int i_start = g_dev.margin[0];
+	const int j_start = g_dev.margin[1];
+	const int k_start = g_dev.margin[2];
 
-// 	const int i_end = i_start + g_dev.dim[0];
-// 	const int j_end = j_start + g_dev.dim[1];
+	const int i_end = i_start + g_dev.dim[0];
+	const int j_end = j_start + g_dev.dim[1];
 
-// 	const int size_i = g_dev.dim[0];
-// 	const int size_j = g_dev.dim[1];
+	const int size_i = g_dev.dim[0];
+	const int size_j = g_dev.dim[1];
 
-// 	int i_global, j_global;
+	int i_global, j_global;
 
-// 	// write profiles
-// 	if (g_dev.global_coord(2, k_start) == 0)
-// 	{
-// 		for (int i = i_start; i < i_end; ++i)
-// 		{
-// 			i_global = g_dev.global_coord(0, i);
+	if (g_dev.global_coord(2, k_start) != 0) return 0;
 
-// 			if (i_global == i_space)
-// 			{
-// 				for (int j = j_start; j < j_end; ++j)
-// 				{
-// 					j_global = g_dev.global_coord(1, j);
+	const int N_nu	  = this->N_nu_;
+	const int N_theta = this->N_theta_;
+	const int N_chi	  = this->N_chi_;
 
-// 					if (j_global == j_space)
-// 					{
-// 						for (int j_theta = N_theta_ / 2; j_theta < N_theta_; ++j_theta)
-// 						{
-// 							for (int k_chi = 0; k_chi < N_chi_; ++k_chi)
-// 							{
-// 								const int b_start = local_to_block(j_theta, k_chi, 0);
+	surface_data_I.reserve(N_nu * size_i * size_j);
+	surface_data_Q.reserve(N_nu * size_i * size_j);
+	surface_data_U.reserve(N_nu * size_i * size_j);
+	surface_data_V.reserve(N_nu * size_i * size_j);
 
-// 								for (int b = 0; b < 4 * N_nu_; b = b + 4)
-// 								{
-// 									const double I = f_dev.block(i, j, k_start)[b_start + b];
-// 									const double Q = f_dev.block(i, j, k_start)[b_start + b + 1];
-// 									const double U = f_dev.block(i, j, k_start)[b_start + b + 2];
-// 									const double V = f_dev.block(i, j, k_start)[b_start + b + 3];
+	for (int i = i_start; i < i_end; ++i)
+	{
+		i_global = g_dev.global_coord(0, i);
+		for (int j = j_start; j < j_end; ++j)
+		{
+			j_global = g_dev.global_coord(1, j);
 
-// 									surface_data_I.push_back(I);
-// 									surface_data_Q.push_back(Q / I * 100.0);
-// 									surface_data_U.push_back(U / I * 100.0);
-// 									surface_data_V.push_back(V / I * 100.0);
-// 								}
-// 							}
-// 						}
-// 					}
-// 				}
-// 			}
-// 		}
-// 	}
+			for (int b = 0; b < 4 * N_nu_; b = b + 4)
+			{
+				I_dev.block(i, j, k_start)[b];
 
-// 	return 0;
-// }
+				const double I = I_dev.block(i, j, k_start)[b + 0];
+				const double Q = I_dev.block(i, j, k_start)[b + 1];
+				const double U = I_dev.block(i, j, k_start)[b + 2];
+				const double V = I_dev.block(i, j, k_start)[b + 3];
+
+				surface_data_I.push_back(I);
+				surface_data_Q.push_back(Q / I * 100.0);
+				surface_data_U.push_back(U / I * 100.0);
+				surface_data_V.push_back(V / I * 100.0);
+			}
+		}
+	}
+
+	return 0;
+}
+
+int																							//
+RT_problem::write_beams_frequency_grids_Omega_hdf5(const std::vector<BeamDirection> &beams, //
+												   const std::string				&output_file)
+{
+	const int N_beams = static_cast<int>(beams.size());
+
+	// Only MPI rank 0 AND the process owning global spatial coords (0,0) should create the file
+	const auto g_dev = space_grid_->view_device();
+	if (not(this->mpi_rank_ == 0 and						//
+			g_dev.global_coord(0, g_dev.margin[0]) == 0 and //
+			g_dev.global_coord(1, g_dev.margin[1]) == 0 and //
+			g_dev.global_coord(2, g_dev.margin[2]) == 0))	//
+	{
+		return EXIT_SUCCESS;
+	}
+
+	std::vector<double> mu_beams(N_beams);
+	std::vector<double> chi_beams(N_beams);
+
+	for (int b = 0; b < N_beams; ++b)
+	{
+		mu_beams[b]	 = beams[b].mu;
+		chi_beams[b] = beams[b].chi;
+	}
+
+	hid_t file_id, plist_id;
+	plist_id = H5Pcreate(H5P_FILE_ACCESS);
+	file_id	 = H5Fcreate(output_file.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
+
+	THDF_beams_grid_t beams_grid;
+	beams_grid.N_beams	 = N_beams;
+	beams_grid.mu_beams	 = mu_beams.data();
+	beams_grid.chi_beams = chi_beams.data();
+
+	if (THDF_write_beams_grid_to_hdf5(file_id, &beams_grid) != 0)
+	{
+		fprintf(stderr, "Error writing beams grid to HDF5 file, rank %d, file: %s:%d\n", mpi_rank_, __FILE__, __LINE__);
+		return EXIT_FAILURE;
+	}
+
+	THDF_ard_frequencies_t ard_freqs;
+
+	ard_freqs.N_frequencies = N_nu_;
+	ard_freqs.frequencies	= nu_grid_.data();
+
+	if (THDF_write_ard_frequencies_to_hdf5(file_id, &ard_freqs) != 0)
+	{
+		fprintf(stderr, "Error writing ARD frequencies to HDF5 file, rank %d, file: %s:%d\n", mpi_rank_, __FILE__,
+				__LINE__);
+		return EXIT_FAILURE;
+	}
+
+	H5Fclose(file_id);
+	H5Pclose(plist_id);
+}
+
+int
+write_emergent_field_Omega_hdf5(const std::string				 &output_file,	  //
+								MPI_Comm						  write_comm,	  //
+								const std::vector<BeamDirection> &beams,		  //
+								const int						  beam_index,	  //
+								std::vector<double>				 &surface_data_I, //
+								std::vector<double>				 &surface_data_Q, //
+								std::vector<double>				 &surface_data_U, //
+								std::vector<double>				 &surface_data_V)
+{
+	// indeces
+	const int i_start = g_dev.margin[0];
+	const int j_start = g_dev.margin[1];
+	const int k_start = g_dev.margin[2];
+
+	const int i_end = i_start + g_dev.dim[0];
+	const int j_end = j_start + g_dev.dim[1];
+
+	const int size_i = g_dev.dim[0];
+	const int size_j = g_dev.dim[1];
+
+	if (g_dev.global_coord(2, k_start) != 0) return EXIT_SUCCESS;
+
+	const int i_global = g_dev.global_coord(0, i_start);
+	const int j_global = g_dev.global_coord(1, j_start);
+
+	// Create ARD field handler for this direction
+	THDF_ard_field_handler *dset_handler =						//
+		THDF_create_ard_field_handler_mp(file_id,				//
+										 beams[beam_index].mu,	//
+										 beams[beam_index].chi, //
+										 this->N_x_,			//
+										 this->N_y_,			//
+										 beams.size(),			//
+										 this->N_nu_);
+
+	if (dset_handler == NULL)
+	{
+		fprintf(stderr, "Rank %d: Error creating ARD output field dataset\n", mpi_rank_);
+		return EXIT_FAILURE;
+	}
+
+	THDF_ard_field_t output_field = {};
+	output_field.index_i		  = i_global;
+	output_field.index_j		  = j_global;
+	output_field.index_k		  = 0;
+	output_field.index_beam		  = beam_index;
+	output_field.N_frequencies	  = this->N_nu_;
+	// assign data pointers
+	output_field.stokes_I  = surface_data_I.data();
+	output_field.stokes_QI = surface_data_Q.data();
+	output_field.stokes_UI = surface_data_U.data();
+	output_field.stokes_VI = surface_data_V.data();
+
+	// Write local output field surface data
+	const int ret = THDF_write_ard_field_dataset_to_hdf5(dset_handler,		 //
+														 &output_field,		 //
+														 i_global, j_global, //
+														 size_i, size_j,	 //
+														 this->N_nu_);		 //
+
+	if (ret != 0)
+	{
+		fprintf(stderr, "Rank %d: Error writing ARD output field dataset\n", mpi_rank_);
+		return EXIT_FAILURE;
+	}
+
+	THDF_close_ard_field_handler_mp(dset_handler);
+	H5Fclose(file_id);
+
+	return EXIT_SUCCESS;
+}
 
 //////////////////////////////////////////////////////////////////////////
 // Write surface point profiles to file
