@@ -6,7 +6,7 @@ frequency_file:  frequency/96F/frequency.dat
 
 output: true
 output_overwrite_prevention: true
-output_directory: /capstor/scratch/cscs/sriva/PORTA/output/o9/
+output_directory: /capstor/scratch/cscs/sriva/PORTA/output/o1/
 
 use_B: true
 use_continuum: false
@@ -37,15 +37,15 @@ prec:
 
 default_chi: &default_chi 0.0
 
-# arbitrary_beams: 
-#   - mu: 0.1
-#     chi: *default_chi
+arbitrary_beams: 
+  - mu: 0.1
+    chi: *default_chi
 
-#   - mu: 0.3
-#     chi: *default_chi
+  - mu: 0.3
+    chi: *default_chi
     
-#   - mu: 0.7
-#     chi: *default_chi
+  - mu: 0.7
+    chi: *default_chi
 
-#   - mu: 1.0
-#     chi: *default_chi
+  - mu: 1.0
+    chi: *default_chi

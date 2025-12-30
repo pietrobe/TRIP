@@ -203,7 +203,8 @@ main(int argc, char *argv[])
 			rt_problem_ptr->free_fields_memory();
 			rt_solver.free_fields_memory();
 
-			process_arbitrary_beams(cfg.arbitrary_beams, rt_solver, rt_problem_ptr, output_file, output_info_file_name);
+			process_arbitrary_beams_hdf(cfg.arbitrary_beams, rt_solver, rt_problem_ptr,
+										(output_path / "emergent_AR_Omega_field.h5").string(), output_info_file_name);
 
 			const double main_end_time = MPI_Wtime();
 
@@ -279,6 +280,7 @@ main(int argc, char *argv[])
 	Kokkos::finalize();
 	PetscFinalize(); // CHKERRQ(ierr);
 
+	MPI_Barrier(MPI_COMM_WORLD);
 	if (mpi_rank == 0) std::cout << "Program ended successfully." << std::endl;
 
 	MPI_CHECK(MPI_Finalize());

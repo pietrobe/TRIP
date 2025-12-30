@@ -376,6 +376,8 @@ RT_problem::write_beams_frequency_grids_Omega_hdf5(const std::vector<BeamDirecti
 	plist_id = H5Pcreate(H5P_FILE_ACCESS);
 	file_id	 = H5Fcreate(output_file.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
 
+	H5Pclose(plist_id);
+
 	THDF_ard_directions_t ard_directions;
 	ard_directions.N_directions = N_directions;
 	ard_directions.mu			= mu_beams.data();
@@ -400,7 +402,8 @@ RT_problem::write_beams_frequency_grids_Omega_hdf5(const std::vector<BeamDirecti
 	}
 
 	H5Fclose(file_id);
-	H5Pclose(plist_id);
+
+	return EXIT_SUCCESS;
 }
 
 int
@@ -433,7 +436,10 @@ RT_problem::write_emergent_field_Omega_hdf5(const std::string				 &output_file,	
 
 	hid_t file_id, plist_id;
 	plist_id = H5Pcreate(H5P_FILE_ACCESS);
-	file_id	 = H5Fcreate(output_file.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
+	H5Pset_fapl_mpio(plist_id, write_comm, MPI_INFO_NULL);
+	file_id	 = H5Fopen(output_file.c_str(), H5F_ACC_RDWR, plist_id);
+
+	H5Pclose(plist_id);
 
 	// Create ARD field handler for this direction
 	THDF_ard_field_handler *dset_handler =						 //
@@ -443,7 +449,7 @@ RT_problem::write_emergent_field_Omega_hdf5(const std::string				 &output_file,	
 										  this->N_x_,			 //
 										  this->N_y_,			 //
 										  beams.size(),			 //
-										  this->N_nu_);
+										  this->N_nu_);			 //
 
 	if (dset_handler == NULL)
 	{
