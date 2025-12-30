@@ -473,7 +473,7 @@ class RT_problem
 								   std::vector<double> &surface_data_U,	 //
 								   std::vector<double> &surface_data_V); //
 
-	int																			 //
+	int																	//
 	write_angular_frequency_grids_hdf5(const std::string &output_file); //
 
 	int
@@ -746,14 +746,19 @@ class RT_problem
 	// read inputs
 	void
 	read_atom(input_string filename);
+
 	void
 	read_depth(input_string filename);
+
 	void
 	read_frequency(input_string filename, const bool use_wavelength = false);
+
 	void
 	read_atmosphere_1D(input_string filename);
+
 	void
 	read_bulk_velocity_1D(input_string filename);
+
 	void
 	read_magnetic_field_1D(input_string filename);
 
@@ -763,13 +768,17 @@ class RT_problem
 	// read 3D input from pmd file
 	void
 	read_3D(const char *filename);
+
 	void
 	read_3D(const char *filename_pmd, const char *filename_cul, const char *filename_qel, const char *filename_llp,
 			const char *filename_back);
+
 	std::vector<Real>
 	read_single_node(MPI_File fh, const int i, const int j, const int k);
+
 	Real
 	read_single_node_single_field(MPI_File fh, const int i, const int j, const int k);
+
 	void
 	read_single_node_triple_field(MPI_File input_file, const int i, const int j, const int k, Real &kappa, Real &sigma,
 								  Real &epsilon);
@@ -777,8 +786,10 @@ class RT_problem
 	// compute polarization tensors (vector of six components)
 	std::vector<std::complex<Real>>
 	compute_T_KQ(const int stokes_i, const Real theta, const Real chi);
+
 	std::complex<Real>
 	get_TKQi(const int i_stokes, const int K, const int Q, const int j, const int k);
+
 	std::complex<Real>
 	get_TKQi(const std::vector<std::complex<Real>> T_KQ_i, const int K, const int Q);
 

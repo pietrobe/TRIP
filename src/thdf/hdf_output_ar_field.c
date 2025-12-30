@@ -278,7 +278,7 @@ THDF_write_ard_directions(hid_t                        file_id,           //
   }
 
   H5LTmake_dataset_double(dir_group, "mu", 1, (hsize_t[]){ard_directions->N_directions}, ard_directions->mu);
-  H5LTmake_dataset_double(dir_group, "chi", 1, (hsize_t[]){ard_directions->N_directions}, ard_directions->theta);
+  H5LTmake_dataset_double(dir_group, "chi", 1, (hsize_t[]){ard_directions->N_directions}, ard_directions->chi);
   H5LTmake_dataset_int(dir_group, "N_directions", 1, (hsize_t[]){1}, &ard_directions->N_directions);
 
   H5Gclose(dir_group);

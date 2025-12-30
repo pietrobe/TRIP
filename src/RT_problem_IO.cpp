@@ -351,7 +351,7 @@ int																							//
 RT_problem::write_beams_frequency_grids_Omega_hdf5(const std::vector<BeamDirection> &beams, //
 												   const std::string				&output_file)
 {
-	const int N_beams = static_cast<int>(beams.size());
+	const int N_directions = static_cast<int>(beams.size());
 
 	// Only MPI rank 0 AND the process owning global spatial coords (0,0) should create the file
 	const auto g_dev = space_grid_->view_device();
@@ -363,10 +363,10 @@ RT_problem::write_beams_frequency_grids_Omega_hdf5(const std::vector<BeamDirecti
 		return EXIT_SUCCESS;
 	}
 
-	std::vector<double> mu_beams(N_beams);
-	std::vector<double> chi_beams(N_beams);
+	std::vector<double> mu_beams(N_directions);
+	std::vector<double> chi_beams(N_directions);
 
-	for (int b = 0; b < N_beams; ++b)
+	for (int b = 0; b < N_directions; ++b)
 	{
 		mu_beams[b]	 = beams[b].mu;
 		chi_beams[b] = beams[b].chi;
@@ -376,12 +376,12 @@ RT_problem::write_beams_frequency_grids_Omega_hdf5(const std::vector<BeamDirecti
 	plist_id = H5Pcreate(H5P_FILE_ACCESS);
 	file_id	 = H5Fcreate(output_file.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
 
-	THDF_beams_grid_t beams_grid;
-	beams_grid.N_beams	 = N_beams;
-	beams_grid.mu_beams	 = mu_beams.data();
-	beams_grid.chi_beams = chi_beams.data();
+	THDF_ard_directions_t ard_directions;
+	ard_directions.N_directions = N_directions;
+	ard_directions.mu			= mu_beams.data();
+	ard_directions.chi			= chi_beams.data();
 
-	if (THDF_write_beams_grid_to_hdf5(file_id, &beams_grid) != 0)
+	if (THDF_write_ard_directions(file_id, &ard_directions) != 0)
 	{
 		fprintf(stderr, "Error writing beams grid to HDF5 file, rank %d, file: %s:%d\n", mpi_rank_, __FILE__, __LINE__);
 		return EXIT_FAILURE;
@@ -392,7 +392,7 @@ RT_problem::write_beams_frequency_grids_Omega_hdf5(const std::vector<BeamDirecti
 	ard_freqs.N_frequencies = N_nu_;
 	ard_freqs.frequencies	= nu_grid_.data();
 
-	if (THDF_write_ard_frequencies_to_hdf5(file_id, &ard_freqs) != 0)
+	if (THDF_write_ard_frequencies(file_id, &ard_freqs) != 0)
 	{
 		fprintf(stderr, "Error writing ARD frequencies to HDF5 file, rank %d, file: %s:%d\n", mpi_rank_, __FILE__,
 				__LINE__);
@@ -404,15 +404,17 @@ RT_problem::write_beams_frequency_grids_Omega_hdf5(const std::vector<BeamDirecti
 }
 
 int
-write_emergent_field_Omega_hdf5(const std::string				 &output_file,	  //
-								MPI_Comm						  write_comm,	  //
-								const std::vector<BeamDirection> &beams,		  //
-								const int						  beam_index,	  //
-								std::vector<double>				 &surface_data_I, //
-								std::vector<double>				 &surface_data_Q, //
-								std::vector<double>				 &surface_data_U, //
-								std::vector<double>				 &surface_data_V)
+RT_problem::write_emergent_field_Omega_hdf5(const std::string				 &output_file,	  //
+											MPI_Comm						  write_comm,	  //
+											const std::vector<BeamDirection> &beams,		  //
+											const int						  beam_index,	  //
+											std::vector<double>				 &surface_data_I, //
+											std::vector<double>				 &surface_data_Q, //
+											std::vector<double>				 &surface_data_U, //
+											std::vector<double>				 &surface_data_V)
 {
+	const auto g_dev = space_grid_->view_device();
+
 	// indeces
 	const int i_start = g_dev.margin[0];
 	const int j_start = g_dev.margin[1];
@@ -429,15 +431,19 @@ write_emergent_field_Omega_hdf5(const std::string				 &output_file,	  //
 	const int i_global = g_dev.global_coord(0, i_start);
 	const int j_global = g_dev.global_coord(1, j_start);
 
+	hid_t file_id, plist_id;
+	plist_id = H5Pcreate(H5P_FILE_ACCESS);
+	file_id	 = H5Fcreate(output_file.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
+
 	// Create ARD field handler for this direction
-	THDF_ard_field_handler *dset_handler =						//
-		THDF_create_ard_field_handler_mp(file_id,				//
-										 beams[beam_index].mu,	//
-										 beams[beam_index].chi, //
-										 this->N_x_,			//
-										 this->N_y_,			//
-										 beams.size(),			//
-										 this->N_nu_);
+	THDF_ard_field_handler *dset_handler =						 //
+		THDF_create_ard_field_handler_mpi(file_id,				 //
+										  beams[beam_index].mu,	 //
+										  beams[beam_index].chi, //
+										  this->N_x_,			 //
+										  this->N_y_,			 //
+										  beams.size(),			 //
+										  this->N_nu_);
 
 	if (dset_handler == NULL)
 	{
@@ -449,7 +455,7 @@ write_emergent_field_Omega_hdf5(const std::string				 &output_file,	  //
 	output_field.index_i		  = i_global;
 	output_field.index_j		  = j_global;
 	output_field.index_k		  = 0;
-	output_field.index_beam		  = beam_index;
+	output_field.beam_index		  = beam_index;
 	output_field.N_frequencies	  = this->N_nu_;
 	// assign data pointers
 	output_field.stokes_I  = surface_data_I.data();
@@ -458,11 +464,11 @@ write_emergent_field_Omega_hdf5(const std::string				 &output_file,	  //
 	output_field.stokes_VI = surface_data_V.data();
 
 	// Write local output field surface data
-	const int ret = THDF_write_ard_field_dataset_to_hdf5(dset_handler,		 //
-														 &output_field,		 //
-														 i_global, j_global, //
-														 size_i, size_j,	 //
-														 this->N_nu_);		 //
+	const int ret = THDF_write_ard_field_to_hdf5(dset_handler,		 //
+												 &output_field,		 //
+												 i_global, j_global, //
+												 size_i, size_j,	 //
+												 this->N_nu_);		 //
 
 	if (ret != 0)
 	{
@@ -470,7 +476,7 @@ write_emergent_field_Omega_hdf5(const std::string				 &output_file,	  //
 		return EXIT_FAILURE;
 	}
 
-	THDF_close_ard_field_handler_mp(dset_handler);
+	THDF_close_ard_field_handler_mpi(dset_handler);
 	H5Fclose(file_id);
 
 	return EXIT_SUCCESS;
