@@ -1,12 +1,18 @@
 # I/O
-input_directory: /capstor/scratch/cscs/sriva/PORTA/
+input_directory: /capstor/scratch/cscs/sriva/PORTA_II/
 # input_file: cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_32x32x133.pmd
-input_file:      cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd
+input_file:      AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix_conv_KQ_MC.pmd
+input_llp:       AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix_conv_KQ_MC.llp
+
+input_cul:      AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.cul
+input_qel:      AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.qel
+input_back:     AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.back
+
 frequency_file:  frequency/96F/frequency.dat
 
 output: true
 output_overwrite_prevention: true
-output_directory: /capstor/scratch/cscs/sriva/PORTA/output/o4/
+output_directory: /capstor/scratch/cscs/sriva/PORTA_II/output_II/
 
 use_B: true
 use_continuum: false
@@ -27,13 +33,13 @@ use_prec: true
 
 solver:
   ksp_solver_type: KSPFGMRES
-  ksp_rtol: 1e-6
-  ksp_max_it: 4
+  ksp_rtol: 1e-7
+  ksp_max_it: 10
 
 prec:
   pc_solver_type: KSPGMRES
-  pc_rtol: 1e-4
-  pc_max_it: 20
+  pc_rtol: 1e-7
+  pc_max_it: 70
 
 default_chi: &default_chi 0.0
 
@@ -49,3 +55,7 @@ arbitrary_beams:
 
   - mu: 1.0
     chi: *default_chi
+
+  - mu:  3.30009478207572e-01
+    chi: 1.96349540849362e-01
+

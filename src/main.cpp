@@ -8,8 +8,6 @@
 int
 main(int argc, char *argv[])
 {
-	std::filesystem::path output_info_file_name; // TODO remove
-
 	MPI_CHECK(MPI_Init(&argc, &argv));
 	print_PETSc_mem();
 
@@ -40,7 +38,8 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	std::stringstream ss_a, ss_b;
+	std::stringstream	  ss_a, ss_b;
+	std::filesystem::path output_info_file_name;
 
 	// print some info
 	if (mpi_rank == 0)
@@ -193,7 +192,8 @@ main(int argc, char *argv[])
 
 			// New HDF5 output .... TESTING
 			////////////////////////////////////////////////////////////////////////////////////////////////
-			write_emergent_field_hdf5(*rt_problem_ptr, (output_path / "emergent_field.h5").string());
+			write_emergent_field_hdf5(*rt_problem_ptr,											  //
+									  (output_path / "emergent_field_angular_grid.h5").string()); //
 
 			////////////////////////////////////////////////////////////////////////////////////////////////
 			// compute arbitrary beams
@@ -203,8 +203,11 @@ main(int argc, char *argv[])
 			rt_problem_ptr->free_fields_memory();
 			rt_solver.free_fields_memory();
 
-			process_arbitrary_beams_hdf(cfg.arbitrary_beams, rt_solver, rt_problem_ptr,
-										(output_path / "emergent_AR_Omega_field.h5").string(), output_info_file_name);
+			process_arbitrary_beams_hdf(cfg.arbitrary_beams,										 //
+										rt_solver,													 //
+										rt_problem_ptr,												 //
+										(output_path / "emergent_field_abitrary_Omega.h5").string(), //
+										output_info_file_name);										 //
 
 			const double main_end_time = MPI_Wtime();
 
@@ -255,8 +258,11 @@ main(int argc, char *argv[])
 				ss_mem << "Total number of devices (accelerators) used: " << devices_cnt << std::endl;
 #endif // ACC_SOLAR_3D
 
-				ss_mem << format_execution_time_summary(rt_problem_ptr->mpi_size_, main_start_time, main_setup_time,
-														main_solve_end_time, main_end_time);
+				ss_mem << format_execution_time_summary(rt_problem_ptr->mpi_size_, //
+														main_start_time,		   //
+														main_setup_time,		   //
+														main_solve_end_time,	   //
+														main_end_time);			   //
 
 				std::cout << ss_mem.str();
 
@@ -281,7 +287,7 @@ main(int argc, char *argv[])
 	PetscFinalize(); // CHKERRQ(ierr);
 
 	MPI_Barrier(MPI_COMM_WORLD);
-	if (mpi_rank == 0) std::cout << "Program ended successfully." << std::endl;
+	if (mpi_rank == 0) std::cout << "TRIP ended successfully at: " << getCurrentDateTime() << std::endl;
 
 	MPI_CHECK(MPI_Finalize());
 

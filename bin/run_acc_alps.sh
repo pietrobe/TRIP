@@ -1,20 +1,20 @@
 #!/bin/bash -l
 
 ### to be defined, 12288 is tested !!!!!!!!!
-### #SBATCH --ntasks=12288
+#SBATCH --ntasks=12288
 ### #SBATCH --ntasks=16384
 #### #SBATCH --ntasks=6144
-#SBATCH --ntasks=512
+#### #SBATCH --ntasks=512
 
 ## to be defined !!!!!!!!! 
-#SBATCH --time=00:30:00
+#SBATCH --time=04:30:00
 
 #SBATCH --job-name="TRIP_PRD_3D"
 
 #SBATCH --exclusive
 #SBATCH --cpus-per-task=1
 #SBATCH --account=c40
-#SBATCH --partition=debug
+#SBATCH --partition=normal
 #SBATCH --ntasks-per-socket=46
 
 
@@ -64,7 +64,7 @@ echo ""
 
 # Define arguments as a bash array
 ARGS=(
-    "--yaml_config" "$HOME/git/TRIP/bin/config_acc_alps.yml" 
+    "--yaml_config" "$HOME/git/TRIP/bin/config_acc_alps_t64.yml"
     "-ksp_monitor"
     "-ksp_monitor_true_residual" 
     "-ksp_converged_reason"
