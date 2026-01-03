@@ -617,10 +617,8 @@ main_example_ar_domain_dec(int argc, char **argv)
 		// write arbitrary directions
 		THDF_ard_directions_t ard_directions;
 		ard_directions.N_directions = N_DIRECTIONS;
-
-		ard_directions.mu  = muv;
-		ard_directions.chi = chiv;
-
+		ard_directions.mu			= muv;
+		ard_directions.chi			= chiv;
 		if (THDF_write_ard_directions(file_id, &ard_directions) != 0)
 		{
 			fprintf(stderr, "Error writing ARD directions to HDF5 file\n");

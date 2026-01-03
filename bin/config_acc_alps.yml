@@ -6,7 +6,7 @@ frequency_file:  frequency/96F/frequency.dat
 
 output: true
 output_overwrite_prevention: true
-output_directory: /capstor/scratch/cscs/sriva/PORTA/output/o4/
+output_directory: /capstor/scratch/cscs/sriva/PORTA/output/o5/
 
 use_B: true
 use_continuum: false
@@ -26,9 +26,9 @@ input_back_string: ""
 use_prec: true
 
 solver:
-  ksp_solver_type: KSPFGMRES
-  ksp_rtol: 1e-6
-  ksp_max_it: 4
+  ksp_solver_type: KSPPGMRES
+  ksp_rtol: 1e-7
+  ksp_max_it: 9
 
 prec:
   pc_solver_type: KSPGMRES
@@ -49,3 +49,6 @@ arbitrary_beams:
 
   - mu: 1.0
     chi: *default_chi
+
+  - mu:  3.30009478207572e-01
+    chi: 1.96349540849362e-01

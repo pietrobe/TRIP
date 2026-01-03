@@ -4,6 +4,7 @@ inline KSPType toKSPType(const std::string& name)
 {
     if (name == "KSPGMRES")  return KSPGMRES;
     if (name == "KSPFGMRES") return KSPFGMRES;  // PETSc literal
+    if (name == "KSPPGMRES") return KSPPGMRES; 
     if (name == "KSPBCGS")   return KSPBCGS;
     if (name == "KSPPREONLY") return KSPPREONLY;
 
