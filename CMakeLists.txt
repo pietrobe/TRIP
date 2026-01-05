@@ -59,7 +59,6 @@ list(APPEND SOURCES_FILES
     src/RT_problem_IO.cpp
     src/RT_solver.cpp
     src/Utilities.cpp
-    src/Test_rii_include.cpp
     src/RT_utility.cpp
     src/RT_arbitrary_beam.cpp
 )
@@ -72,7 +71,6 @@ list(APPEND HEADERS_FILES
     src/RT_problem.hpp
     src/RT_solver.hpp
     src/Utilities.hpp
-    src/Test_rii_include.hpp
     src/RT_utility.hpp
     src/RT_arbitrary_beam.hpp
     src/RT_types.hpp

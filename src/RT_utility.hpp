@@ -209,6 +209,9 @@ struct AppConfig
 AppConfig
 loadConfig(const std::string &filename);
 
+void
+writeConfigResume(const AppConfig &cfg, std::ostream &os);
+
 // std::shared_ptr<RT_problem>
 // create_rt_problem(const AppConfig &cfg, const std::filesystem::path &input_file_path,
 // 				  const std::filesystem::path &frequencies_input_path, emissivity_model emissivity_model_var,

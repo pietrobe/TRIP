@@ -1,6 +1,5 @@
 #include "RT_arbitrary_beam.hpp"
 #include "RT_solver.hpp"
-#include "Test_rii_include.hpp"
 
 //////////////////////////////////////////////////////////////////////////
 // Main function
@@ -77,6 +76,11 @@ main(int argc, char *argv[])
 	set_RII_contrib_block_size(1);
 
 #endif // ACC_SOLAR_3D
+
+	if (mpi_rank == 0)
+	{
+		writeConfigResume(cfg, ss_b);
+	}
 
 	{ // start scope for RT_problem and RT_solver
 
