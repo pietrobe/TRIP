@@ -1,7 +1,9 @@
 # Compiler and flags
 CC ?= gcc
 MPICC ?= mpicc
-CFLAGS += -Wall -Wextra -O3 -std=c99 --pedantic -I.
+CFLAGS += -O3 -std=c99
+CFLAGS += -Wall -Wextra --pedantic 
+CFLAGS += -I. 
 
 # HDF5 configuration (use pkg-config or hdf5 compiler wrapper)
 HDF5_CFLAGS = $(shell pkg-config --cflags hdf5 2>/dev/null || h5cc -showconfig | grep -i cflags)
@@ -14,7 +16,7 @@ LDFLAGS = $(HDF5_LIBS) -lm
 BUILD_DIR = build
 
 # Source files
-SRCS = hdf_output_field.c hdf_output_ar_field.c
+SRCS = hdf_output_field.c hdf_output_ar_field.c hdf_output_JKQ.c
 OBJS = $(SRCS:%.c=$(BUILD_DIR)/%.o)
 DEPS = $(SRCS:%.c=$(BUILD_DIR)/%.d)
 

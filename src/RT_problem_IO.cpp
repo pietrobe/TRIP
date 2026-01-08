@@ -256,10 +256,10 @@ RT_problem::accumulate_surface_domain_data(std::vector<double> &surface_data_I, 
 
 	for (int i = i_start; i < i_end; ++i)
 	{
-		i_global = g_dev.global_coord(0, i);
+		// i_global = g_dev.global_coord(0, i);
 		for (int j = j_start; j < j_end; ++j)
 		{
-			j_global = g_dev.global_coord(1, j);
+			// j_global = g_dev.global_coord(1, j);
 			for (int j_theta = N_theta_ / 2; j_theta < N_theta_; ++j_theta)
 			{
 				for (int k_chi = 0; k_chi < N_chi_; ++k_chi)
@@ -437,7 +437,7 @@ RT_problem::write_emergent_field_Omega_hdf5(const std::string				 &output_file,	
 	hid_t file_id, plist_id;
 	plist_id = H5Pcreate(H5P_FILE_ACCESS);
 	H5Pset_fapl_mpio(plist_id, write_comm, MPI_INFO_NULL);
-	file_id	 = H5Fopen(output_file.c_str(), H5F_ACC_RDWR, plist_id);
+	file_id = H5Fopen(output_file.c_str(), H5F_ACC_RDWR, plist_id);
 
 	H5Pclose(plist_id);
 
@@ -486,6 +486,42 @@ RT_problem::write_emergent_field_Omega_hdf5(const std::string				 &output_file,	
 	H5Fclose(file_id);
 
 	return EXIT_SUCCESS;
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Accumulate JKQ values over a given subdomain
+// accumulate_JKQ_values
+//////////////////////////////////////////////////////////////////////////
+int
+RT_problem::accumulate_JKQ_values(const int			   x_strat,		   //
+								  const int			   y_strat,		   //
+								  const int			   z_strat,		   //
+								  const int			   x_end,		   //
+								  const int			   y_end,		   //
+								  const int			   z_end,		   //
+								  std::vector<double> &JKQ_real,	   //
+								  std::vector<double> &JKQ_imag,	   //
+								  std::vector<double> &KQ_matrix,	   //
+								  std::vector<double> &KQ_matrix_real, //
+								  std::vector<double> &KQ_matrix_imag)
+{
+	const auto f_dev = I_field_->view_device();
+
+	for (int k = z_strat; k < z_end; ++k)
+	{
+		for (int j = y_strat; j < y_end; ++j)
+		{
+			for (int i = x_strat; i < x_end; ++i)
+			{
+				const Real_t *block_ptr = f_dev.block(i, j, k);
+				// capture JKQ values from block_ptr
+
+				// accumulate into JKQ_real and JKQ_imag
+			}
+		}
+	}
+
+	return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////

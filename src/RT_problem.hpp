@@ -462,16 +462,41 @@ class RT_problem
 	std::tuple<int, int>
 	make_write_surface_MPI_Comm(const MPI_Comm MPI_Comm_MAIN, MPI_Comm &write_comm);
 
-	// int
-	// accumulate_surface_data(const int i_space, const int j_space, //
-	// 						std::vector<double> &surface_data_I, std::vector<double> &surface_data_Q,
-	// 						std::vector<double> &surface_data_U, std::vector<double> &surface_data_V);
-
 	int
 	accumulate_surface_domain_data(std::vector<double> &surface_data_I,	 //
 								   std::vector<double> &surface_data_Q,	 //
 								   std::vector<double> &surface_data_U,	 //
 								   std::vector<double> &surface_data_V); //
+
+	/**
+	 * Accumulate J, K, Q values over a given subdomain
+	 * @param x_strat Starting index in the local x-direction
+	 * @param y_strat Starting index in the local y-direction
+	 * @param z_strat Starting index in the local z-direction
+	 * @param x_end Ending index in the local x-direction (exclusive)
+	 * @param y_end Ending index in the local y-direction (exclusive)
+	 * @param z_end Ending index in the local z-direction (exclusive)
+	 * @param JKQ_real Vector to accumulate real parts of JKQ values
+	 * @param JKQ_imag Vector to accumulate imaginary parts of JKQ values
+	 * @param KQ_matrix Matrix (9x2) to put KQ matrix values (the number of KQ values is 9, namely the size divided by 2).
+	 * @param KQ_matrix_real Matrix (6x2) to put the used KQ values for the real part after the compression.
+	 * @param KQ_matrix_imag Matrix (3x2) to put the used KQ values for the imaginary part after the compression.
+	 * @note the number of KQ values after the compression can be obtained from the size of KQ_matrix_real and
+	 * KQ_matrix_imag divided by 2 (wich is 6 and 3 respectively).
+	 * @return MPI status code
+	 */
+	int
+	accumulate_JKQ_values(const int			   x_strat,			//
+						  const int			   y_strat,			//
+						  const int			   z_strat,			//
+						  const int			   x_end,			//
+						  const int			   y_end,			//
+						  const int			   z_end,			//
+						  std::vector<double> &JKQ_real,		//
+						  std::vector<double> &JKQ_imag,		//
+						  std::vector<double> &KQ_matrix,		//
+						  std::vector<double> &KQ_matrix_real,	//
+						  std::vector<double> &KQ_matrix_imag); //
 
 	int																	//
 	write_angular_frequency_grids_hdf5(const std::string &output_file); //
@@ -480,6 +505,10 @@ class RT_problem
 	write_emergent_field_hdf5(const std::string &output_file, MPI_Comm write_comm, std::vector<double> &surface_data_I,
 							  std::vector<double> &surface_data_Q, std::vector<double> &surface_data_U,
 							  std::vector<double> &surface_data_V);
+
+	int
+	write_JKQ_field_hdf5(const std::string &output_file, MPI_Comm write_comm, std::vector<double> &JKQ_real,
+						 std::vector<double> &JKQ_imag);
 
 	int
 	accumulate_surface_profiles_Omega_domain_data(std::vector<double> &surface_data_I,	//
