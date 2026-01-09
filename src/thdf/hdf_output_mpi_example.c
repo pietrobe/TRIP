@@ -462,6 +462,7 @@ main_JKQ_domain_dec(int argc, char **argv) {
     hid_t file_id, plist_id;
     plist_id = H5Pcreate(H5P_FILE_ACCESS);
     file_id  = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
+    H5Pclose(plist_id);
 
     // write frequencies grid
     THDF_frequencies_grid_t freq_grid;

@@ -3,6 +3,10 @@
 
 #include "hdf_output_field.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef float  THDF_JKQ_float_t;
 typedef double THDF_JKQ_n_float_t;
 
@@ -123,5 +127,9 @@ THDF_write_JKQ_field_to_hdf5(THDF_JKQ_handler_t *handler,    //
 int
 THDF_write_KQ_matrix_to_hdf5(hid_t             file,        //
                              THDF_KQ_matrix_t *KQ_matrix);  //
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // __§HDF_OUTPUT_JKQ_H__

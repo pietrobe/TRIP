@@ -3,6 +3,7 @@
 
 #include "RT_utility.hpp"
 #include "sgrid_Core.hpp"
+#include "thdf.h"
 
 // Type for storing fields
 using Real_t = double;
@@ -486,17 +487,22 @@ class RT_problem
 	 * @return MPI status code
 	 */
 	int
-	accumulate_JKQ_values(const int			   x_strat,			//
-						  const int			   y_strat,			//
-						  const int			   z_strat,			//
-						  const int			   x_end,			//
-						  const int			   y_end,			//
-						  const int			   z_end,			//
-						  std::vector<double> &JKQ_real,		//
-						  std::vector<double> &JKQ_imag,		//
-						  std::vector<double> &KQ_matrix,		//
-						  std::vector<double> &KQ_matrix_real,	//
-						  std::vector<double> &KQ_matrix_imag); //
+	accumulate_JKQ_values(const int						 x_strat,	//
+						  const int						 y_strat,	//
+						  const int						 z_strat,	//
+						  const int						 x_end,		//
+						  const int						 y_end,		//
+						  const int						 z_end,		//
+						  std::vector<THDF_JKQ_float_t> &JKQ_real,	//
+						  std::vector<THDF_JKQ_float_t> &JKQ_imag); //
+
+	int
+	get_KQ_values(std::vector<int> &KQ_values,					//
+				  std::vector<int> &KQ_values_real_compressed,	//
+				  std::vector<int> &KQ_values_imag_compressed); //
+
+	int
+	write_JKQ_field_hdf5(const std::string &output_file); //
 
 	int																	//
 	write_angular_frequency_grids_hdf5(const std::string &output_file); //
@@ -505,10 +511,6 @@ class RT_problem
 	write_emergent_field_hdf5(const std::string &output_file, MPI_Comm write_comm, std::vector<double> &surface_data_I,
 							  std::vector<double> &surface_data_Q, std::vector<double> &surface_data_U,
 							  std::vector<double> &surface_data_V);
-
-	int
-	write_JKQ_field_hdf5(const std::string &output_file, MPI_Comm write_comm, std::vector<double> &JKQ_real,
-						 std::vector<double> &JKQ_imag);
 
 	int
 	accumulate_surface_profiles_Omega_domain_data(std::vector<double> &surface_data_I,	//

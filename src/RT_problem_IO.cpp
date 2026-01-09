@@ -1,3 +1,4 @@
+#include <rii_JKQ.h>
 #include "RT_problem.hpp"
 #include "thdf.h"
 
@@ -493,19 +494,20 @@ RT_problem::write_emergent_field_Omega_hdf5(const std::string				 &output_file,	
 // accumulate_JKQ_values
 //////////////////////////////////////////////////////////////////////////
 int
-RT_problem::accumulate_JKQ_values(const int			   x_strat,		   //
-								  const int			   y_strat,		   //
-								  const int			   z_strat,		   //
-								  const int			   x_end,		   //
-								  const int			   y_end,		   //
-								  const int			   z_end,		   //
-								  std::vector<double> &JKQ_real,	   //
-								  std::vector<double> &JKQ_imag,	   //
-								  std::vector<double> &KQ_matrix,	   //
-								  std::vector<double> &KQ_matrix_real, //
-								  std::vector<double> &KQ_matrix_imag)
+RT_problem::accumulate_JKQ_values(const int						 x_strat,  //
+								  const int						 y_strat,  //
+								  const int						 z_strat,  //
+								  const int						 x_end,	   //
+								  const int						 y_end,	   //
+								  const int						 z_end,	   //
+								  std::vector<THDF_JKQ_float_t> &JKQ_real, //
+								  std::vector<THDF_JKQ_float_t> &JKQ_imag)
 {
-	const auto f_dev = I_field_->view_device();
+	const auto f_dev			 = I_field_->view_device();
+	auto	   Doppler_width_dev = Doppler_width_->view_device();
+
+	std::vector<double> u_vec;
+	u_vec.resize(this->N_nu_);
 
 	for (int k = z_strat; k < z_end; ++k)
 	{
@@ -514,14 +516,133 @@ RT_problem::accumulate_JKQ_values(const int			   x_strat,		   //
 			for (int i = x_strat; i < x_end; ++i)
 			{
 				const Real_t *block_ptr = f_dev.block(i, j, k);
-				// capture JKQ values from block_ptr
+				const double  dnd		= Doppler_width_dev.ref(i, j, k);
 
-				// accumulate into JKQ_real and JKQ_imag
+				for (int ui = 0; ui < this->N_nu_; ++ui)
+				{
+					const double nu = this->nu_grid_[ui];
+					u_vec[ui]		= (this->nu_0_ - nu) / dnd;
+				}
+
+				auto JKQ_matrix_sh_ptr =												   //
+					rii_include::make_JKQ_matrix_norm_comp(block_ptr,					   //
+														   u_vec.data(),				   //
+														   this->N_nu_,					   //
+														   this->N_theta_,				   //
+														   this->N_chi_,				   //
+														   4,							   //
+														   4 * this->N_chi_ * this->N_nu_, //
+														   4 * this->N_nu_,				   //
+														   1);							   //
+
+				const int size_JKQ_real_comp = JKQ_matrix_sh_ptr->size_KQ_real_compressed();
+				const int size_JKQ_imag_comp = JKQ_matrix_sh_ptr->size_KQ_imag_compressed();
+
+				for (int idx = 0; idx < size_JKQ_real_comp; ++idx)
+				{
+					for (int ui = 0; ui < this->N_nu_; ++ui)
+					{
+						JKQ_real.push_back(JKQ_matrix_sh_ptr->real_compressed(idx, ui));
+					}
+				}
+
+				for (int idx = 0; idx < size_JKQ_imag_comp; ++idx)
+				{
+					for (int ui = 0; ui < this->N_nu_; ++ui)
+					{
+						JKQ_imag.push_back(JKQ_matrix_sh_ptr->imag_compressed(idx, ui));
+					}
+				}
 			}
 		}
 	}
 
 	return 0;
+}
+
+int
+RT_problem::get_KQ_values(std::vector<int> &KQ_values,				   //
+						  std::vector<int> &KQ_values_real_compressed, //
+						  std::vector<int> &KQ_values_imag_compressed)
+{
+	rii_include::make_KQ_values(KQ_values,					//
+								KQ_values_real_compressed,	//
+								KQ_values_imag_compressed); //
+
+	return 0;
+}
+
+int
+RT_problem::write_JKQ_field_hdf5(const std::string &output_file)
+{
+	const auto g_dev = space_grid_->view_device();
+
+	// indeces
+	const int i_start = g_dev.margin[0];
+	const int j_start = g_dev.margin[1];
+	const int k_start = g_dev.margin[2];
+
+	const int i_end = i_start + g_dev.dim[0];
+	const int j_end = j_start + g_dev.dim[1];
+	const int k_end = k_start + g_dev.dim[2];
+
+	const int size_i = g_dev.dim[0];
+	const int size_j = g_dev.dim[1];
+	const int size_k = g_dev.dim[2];
+
+	std::vector<int> KQ_values;
+	std::vector<int> KQ_values_real_compressed;
+	std::vector<int> KQ_values_imag_compressed;
+
+	this->get_KQ_values(KQ_values, KQ_values_real_compressed, KQ_values_imag_compressed);
+
+	if (this->mpi_rank_ == 0)
+	{
+		std::cout << " Writing JKQ field to HDF5 file: " << output_file << std::endl;
+
+		hid_t file_id, plist_id;
+		plist_id = H5Pcreate(H5P_FILE_ACCESS);
+		file_id	 = H5Fcreate(output_file.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
+		H5Pclose(plist_id);
+
+		THDF_frequencies_grid_t freq_grid;
+		freq_grid.N_frequencies = this->N_nu_;
+		freq_grid.frequencies	= this->nu_grid_.data();
+		if (THDF_write_frequencies_grid_to_hdf5(file_id, &freq_grid) != 0)
+		{
+			fprintf(stderr, "Error writing frequencies grid to HDF5 file\n");
+			MPI_Abort(MPI_COMM_WORLD, -1);
+		}
+
+		// write JKQ KQ matrix
+		THDF_KQ_matrix_t KQ_matrix;
+		KQ_matrix.KQ_size				  = KQ_values.size() / 2;
+		KQ_matrix.KQ_matrix				  = KQ_values.data();
+		KQ_matrix.KQ_compressed_size_real = KQ_values_real_compressed.size() / 2;
+		KQ_matrix.KQ_compressed_size_imag = KQ_values_imag_compressed.size() / 2;
+		KQ_matrix.KQ_compressed_real	  = KQ_values_real_compressed.data();
+		KQ_matrix.KQ_compressed_imag	  = KQ_values_imag_compressed.data();
+
+		if (THDF_write_KQ_matrix_to_hdf5(file_id, &KQ_matrix) != 0)
+		{
+			fprintf(stderr, "Error writing KQ matrix to HDF5 file\n");
+			MPI_Abort(MPI_COMM_WORLD, -1);
+		}
+
+		H5Fclose(file_id);
+	}
+
+	MPI_Barrier(MPI_COMM_WORLD);
+
+	std::vector<THDF_JKQ_float_t> JKQ_real;
+	std::vector<THDF_JKQ_float_t> JKQ_imag;
+
+	JKQ_real.reserve(this->N_nu_ * size_i * size_j * size_k * KQ_values_real_compressed.size() / 2);
+	JKQ_imag.reserve(this->N_nu_ * size_i * size_j * size_k * KQ_values_imag_compressed.size() / 2);
+
+	this->accumulate_JKQ_values(i_start, j_start, k_start, //
+								i_end, j_end, k_end,	   //
+								JKQ_real, JKQ_imag);	   //
 }
 
 //////////////////////////////////////////////////////////////////////////

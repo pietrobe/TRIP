@@ -43,6 +43,11 @@ Thumbs.db
 *.app
 *.exe
 *.war
+*.a
+*.h5
+*.o
+*.so
+*.dylib
 
 # Large media files
 *.mp4
