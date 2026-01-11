@@ -57,6 +57,7 @@ list(APPEND SOURCES_FILES
     src/Rotation_matrix.cpp
     src/RT_problem.cpp
     src/RT_problem_IO.cpp
+    src/RT_problem_txt_IO.cpp
     src/RT_solver.cpp
     src/Utilities.cpp
     src/RT_utility.cpp
@@ -195,6 +196,7 @@ if(TRUE)
         OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a
         COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf make CC=mpicc lib
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf
+        BYPRODUCTS ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a
         DEPENDS ${THDF_SOURCES}
         COMMENT "Building libhdf_output.a in thdf using Makefile"
     )
@@ -211,4 +213,18 @@ if(TRUE)
 
     # Link the static library
     target_link_libraries(solar_3D PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a)
+
+    # Provide a clean target for the thdf subproject
+    add_custom_target(thdf_clean
+        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf make clean
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf
+        COMMENT "Cleaning thdf subproject (make clean)"
+    )
+
+    # Convenience target to clean both top-level and thdf subproject
+    add_custom_target(clean-all
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target clean
+        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf make clean
+        COMMENT "Clean top-level build and thdf subproject"
+    )
 endif()

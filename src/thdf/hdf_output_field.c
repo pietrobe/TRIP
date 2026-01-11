@@ -3,6 +3,84 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+//============================================================================
+// MPI Utility Functions
+//============================================================================
+
+hid_t
+THDF_open_file_MPI(const char *filename, MPI_Comm mpi_comm) {
+  hid_t file_id, plist_id;
+
+  // Create file access property list
+  plist_id = H5Pcreate(H5P_FILE_ACCESS);
+  if (plist_id < 0) {
+    fprintf(stderr, "Error creating file access property list\n");
+    return -1;
+  }
+
+  // Set MPI-IO file access
+  herr_t status = H5Pset_fapl_mpio(plist_id, mpi_comm, MPI_INFO_NULL);
+  if (status < 0) {
+    fprintf(stderr, "Error setting MPI-IO file access property\n");
+    H5Pclose(plist_id);
+    return -1;
+  }
+
+  // Open the file
+  file_id = H5Fopen(filename, H5F_ACC_RDWR, plist_id);
+  if (file_id < 0) {
+    fprintf(stderr, "Error opening file '%s' in MPI mode\n", filename);
+    H5Pclose(plist_id);
+    return -1;
+  }
+
+  // Close the property list
+  H5Pclose(plist_id);
+
+  return file_id;
+}
+
+//============================================================================
+// File Creation Functions
+//============================================================================
+
+hid_t
+THDF_open_file(const char *filename) {  //
+  hid_t file_id, plist_id;
+
+  // Create file access property list
+  plist_id = H5Pcreate(H5P_FILE_ACCESS);
+  if (plist_id < 0) {
+    fprintf(stderr, "Error creating file access property list\n");
+    return -1;
+  }
+
+  // Create the file (truncate if exists)
+  file_id = H5Fcreate(filename,           //
+                      H5F_ACC_TRUNC,      //
+                      H5P_DEFAULT,        //
+                      plist_id);          //
+  if (file_id < 0) {
+    fprintf(stderr, "Error creating file '%s'\n", filename);
+    H5Pclose(plist_id);
+    return -1;
+  }
+
+  // Close the property list
+  H5Pclose(plist_id);
+
+  return file_id;
+}
+
+void                              //
+THDF_close_file(hid_t file_id) {  //
+  H5Fclose(file_id);
+}
+
+//============================================================================
+// Type and Datatype Functions
+//============================================================================
+
 THDF_float_type_t
 THDF_get_float_type(void) {
   switch (sizeof(THDF_float_t)) {

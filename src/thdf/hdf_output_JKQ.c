@@ -43,41 +43,108 @@ THDF_create_JKQ_field_handler_mpi(hid_t file,           //
   hsize_t dims_norm_re[4] = {N_x, N_y, N_z, N_JKQ_real};
   hsize_t dims_norm_im[4] = {N_x, N_y, N_z, N_JKQ_imag};
 
-  // Create group for JKQ datasets
+  // Create group for JKQ datasets (or open if it already exists)
+  // Suppress errors temporarily to allow "group already exists" errors
+  H5E_auto_t old_func;
+  void      *old_client_data;
+  H5Eget_auto(H5E_DEFAULT, &old_func, &old_client_data);
+  H5Eset_auto(H5E_DEFAULT, NULL, NULL);
+
   handler->group_id = H5Gcreate2(file, "/JKQ", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  HDF5_CHECK_STATUS(handler->group_id, "Error creating JKQ group in HDF5 file\n", handler);
 
-  // Create dataset creation property list for MPI-IO (collective I/O)
-  hid_t dcpl_id = H5Pcreate(H5P_DATASET_CREATE);
+  // Restore error handling
+  H5Eset_auto(H5E_DEFAULT, old_func, old_client_data);
 
-  // Create datasets for JKQ real part
-  handler->dataspace_id_JKQ_re = H5Screate_simple(5, dims_re, NULL);
-  handler->dataset_id_JKQ_re = H5Dcreate2(handler->group_id, "JKQ_re", handler->datatype_id, handler->dataspace_id_JKQ_re,
-                                          H5P_DEFAULT, dcpl_id, H5P_DEFAULT);
-  HDF5_CHECK_STATUS(handler->dataset_id_JKQ_re, "Error creating JKQ_re dataset in HDF5 file\n", handler);
+  if (handler->group_id < 0) {
+    // Group already exists, open it
+    handler->group_id = H5Gopen2(file,          //
+                                 "/JKQ",        //
+                                 H5P_DEFAULT);  //
+    HDF5_CHECK_STATUS(handler->group_id, "Error opening existing JKQ group in HDF5 file\n", handler);
 
-  // Create datasets for JKQ imaginary part
-  handler->dataspace_id_JKQ_im = H5Screate_simple(5, dims_im, NULL);
-  handler->dataset_id_JKQ_im = H5Dcreate2(handler->group_id, "JKQ_im", handler->datatype_id, handler->dataspace_id_JKQ_im,
-                                          H5P_DEFAULT, dcpl_id, H5P_DEFAULT);
-  HDF5_CHECK_STATUS(handler->dataset_id_JKQ_im, "Error creating JKQ_im dataset in HDF5 file\n", handler);
+    // Open existing datasets
+    handler->dataset_id_JKQ_re = H5Dopen2(handler->group_id,  //
+                                          "JKQ_re",           //
+                                          H5P_DEFAULT);       //
+    HDF5_CHECK_STATUS(handler->dataset_id_JKQ_re, "Error opening JKQ_re dataset in HDF5 file\n", handler);
 
-  // Create datasets for normalization multipliers (real part)
+    handler->dataset_id_JKQ_im = H5Dopen2(handler->group_id,  //
+                                          "JKQ_im",           //
+                                          H5P_DEFAULT);       //
+    HDF5_CHECK_STATUS(handler->dataset_id_JKQ_im, "Error opening JKQ_im dataset in HDF5 file\n", handler);
 
-  handler->dataspace_JKQ_norm_mult_re = H5Screate_simple(4, dims_norm_re, NULL);
-  handler->dataset_JKQ_norm_mult_re =
-      H5Dcreate2(handler->group_id, "JKQ_norm_re", handler->datatype_norm_mult_id, handler->dataspace_JKQ_norm_mult_re,
-                 H5P_DEFAULT, dcpl_id, H5P_DEFAULT);
-  HDF5_CHECK_STATUS(handler->dataset_JKQ_norm_mult_re, "Error creating JKQ_norm_re dataset in HDF5 file\n", handler);
+    handler->dataset_JKQ_norm_mult_re = H5Dopen2(handler->group_id,  //
+                                                 "JKQ_norm_re",      //
+                                                 H5P_DEFAULT);       //
+    HDF5_CHECK_STATUS(handler->dataset_JKQ_norm_mult_re, "Error opening JKQ_norm_re dataset in HDF5 file\n", handler);
 
-  // Create datasets for normalization multipliers (imaginary part)
-  handler->dataspace_JKQ_norm_mult_im = H5Screate_simple(4, dims_norm_im, NULL);
-  handler->dataset_JKQ_norm_mult_im =
-      H5Dcreate2(handler->group_id, "JKQ_norm_im", handler->datatype_norm_mult_id, handler->dataspace_JKQ_norm_mult_im,
-                 H5P_DEFAULT, dcpl_id, H5P_DEFAULT);
-  HDF5_CHECK_STATUS(handler->dataset_JKQ_norm_mult_im, "Error creating JKQ_norm_im dataset in HDF5 file\n", handler);
+    handler->dataset_JKQ_norm_mult_im = H5Dopen2(handler->group_id,  //
+                                                 "JKQ_norm_im",      //
+                                                 H5P_DEFAULT);       //
+    HDF5_CHECK_STATUS(handler->dataset_JKQ_norm_mult_im, "Error opening JKQ_norm_im dataset in HDF5 file\n", handler);
 
-  H5Pclose(dcpl_id);
+    // Retrieve dataspaces
+    handler->dataspace_id_JKQ_re = H5Dget_space(handler->dataset_id_JKQ_re);  //
+    HDF5_CHECK_STATUS(handler->dataspace_id_JKQ_re, "Error getting dataspace for JKQ_re dataset\n", handler);
+
+    handler->dataspace_id_JKQ_im = H5Dget_space(handler->dataset_id_JKQ_im);  //
+    HDF5_CHECK_STATUS(handler->dataspace_id_JKQ_im, "Error getting dataspace for JKQ_im dataset\n", handler);
+
+    handler->dataspace_JKQ_norm_mult_re = H5Dget_space(handler->dataset_JKQ_norm_mult_re);  //
+    HDF5_CHECK_STATUS(handler->dataspace_JKQ_norm_mult_re, "Error getting dataspace for JKQ_norm_re dataset\n", handler);
+
+    handler->dataspace_JKQ_norm_mult_im = H5Dget_space(handler->dataset_JKQ_norm_mult_im);  //
+    HDF5_CHECK_STATUS(handler->dataspace_JKQ_norm_mult_im, "Error getting dataspace for JKQ_norm_im dataset\n", handler);
+  } else {
+    // Group was created, create the datasets
+    hid_t dcpl_id = H5Pcreate(H5P_DATASET_CREATE);
+
+    // Create datasets for JKQ real part
+    handler->dataspace_id_JKQ_re = H5Screate_simple(5, dims_re, NULL);
+    handler->dataset_id_JKQ_re   = H5Dcreate2(handler->group_id,             //
+                                              "JKQ_re",                      //
+                                              handler->datatype_id,          //
+                                              handler->dataspace_id_JKQ_re,  //
+                                              H5P_DEFAULT,                   //
+                                              dcpl_id,                       //
+                                              H5P_DEFAULT);                  //
+    HDF5_CHECK_STATUS(handler->dataset_id_JKQ_re, "Error creating JKQ_re dataset in HDF5 file\n", handler);
+
+    // Create datasets for JKQ imaginary part
+    handler->dataspace_id_JKQ_im = H5Screate_simple(5, dims_im, NULL);
+    handler->dataset_id_JKQ_im   = H5Dcreate2(handler->group_id,             //
+                                              "JKQ_im",                      //
+                                              handler->datatype_id,          //
+                                              handler->dataspace_id_JKQ_im,  //
+                                              H5P_DEFAULT,                   //
+                                              dcpl_id,                       //
+                                              H5P_DEFAULT);                  //
+    HDF5_CHECK_STATUS(handler->dataset_id_JKQ_im, "Error creating JKQ_im dataset in HDF5 file\n", handler);
+
+    // Create datasets for normalization multipliers (real part)
+    handler->dataspace_JKQ_norm_mult_re = H5Screate_simple(4, dims_norm_re, NULL);
+    handler->dataset_JKQ_norm_mult_re   = H5Dcreate2(handler->group_id,                    //
+                                                     "JKQ_norm_re",                        //
+                                                     handler->datatype_norm_mult_id,       //
+                                                     handler->dataspace_JKQ_norm_mult_re,  //
+                                                     H5P_DEFAULT,                          //
+                                                     dcpl_id,                              //
+                                                     H5P_DEFAULT);                         //
+    HDF5_CHECK_STATUS(handler->dataset_JKQ_norm_mult_re, "Error creating JKQ_norm_re dataset in HDF5 file\n", handler);
+
+    // Create datasets for normalization multipliers (imaginary part)
+    handler->dataspace_JKQ_norm_mult_im = H5Screate_simple(4, dims_norm_im, NULL);
+    handler->dataset_JKQ_norm_mult_im   = H5Dcreate2(handler->group_id,                    //
+                                                     "JKQ_norm_im",                        //
+                                                     handler->datatype_norm_mult_id,       //
+                                                     handler->dataspace_JKQ_norm_mult_im,  //
+                                                     H5P_DEFAULT,                          //
+                                                     dcpl_id,                              //
+                                                     H5P_DEFAULT);                         //
+    HDF5_CHECK_STATUS(handler->dataset_JKQ_norm_mult_im, "Error creating JKQ_norm_im dataset in HDF5 file\n", handler);
+
+    H5Pclose(dcpl_id);
+  }
 
   return handler;
 }
@@ -220,8 +287,12 @@ THDF_write_JKQ_field_to_hdf5(THDF_JKQ_handler_t *handler,    //
   HDF5_CHECK_JKQ_STATUS(status, "Error selecting hyperslab for JKQ_re dataset\n", -1);
 
   hid_t memspace_id_re = H5Screate_simple(5, file_count_re, NULL);
-  status               = H5Dwrite(handler->dataset_id_JKQ_re,  //
-                                  handler->datatype_id, memspace_id_re, handler->dataspace_id_JKQ_re, dxpl_id, JKQ_field->JKQ_re);
+  status               = H5Dwrite(handler->dataset_id_JKQ_re,    //
+                                  handler->datatype_id,          //
+                                  memspace_id_re,                //
+                                  handler->dataspace_id_JKQ_re,  //
+                                  dxpl_id,                       //
+                                  JKQ_field->JKQ_re);            //
   HDF5_CHECK_JKQ_STATUS(status, "Error writing JKQ_re data to HDF5 file\n", -1);
 
   H5Sclose(memspace_id_re);
@@ -231,8 +302,12 @@ THDF_write_JKQ_field_to_hdf5(THDF_JKQ_handler_t *handler,    //
   HDF5_CHECK_JKQ_STATUS(status, "Error selecting hyperslab for JKQ_im dataset\n", -1);
 
   hid_t memspace_id_im = H5Screate_simple(5, file_count_im, NULL);
-  status               = H5Dwrite(handler->dataset_id_JKQ_im,  //
-                                  handler->datatype_id, memspace_id_im, handler->dataspace_id_JKQ_im, dxpl_id, JKQ_field->JKQ_im);
+  status               = H5Dwrite(handler->dataset_id_JKQ_im,    //
+                                  handler->datatype_id,          //
+                                  memspace_id_im,                //
+                                  handler->dataspace_id_JKQ_im,  //
+                                  dxpl_id,                       //
+                                  JKQ_field->JKQ_im);            //
   HDF5_CHECK_JKQ_STATUS(status, "Error writing JKQ_im data to HDF5 file\n", -1);
 
   H5Sclose(memspace_id_im);
@@ -246,9 +321,12 @@ THDF_write_JKQ_field_to_hdf5(THDF_JKQ_handler_t *handler,    //
   HDF5_CHECK_JKQ_STATUS(status, "Error selecting hyperslab for JKQ_norm_re dataset\n", -1);
 
   hid_t memspace_id_norm_re = H5Screate_simple(4, file_count_norm_re, NULL);
-  status                    = H5Dwrite(handler->dataset_JKQ_norm_mult_re,  //
-                                       handler->datatype_norm_mult_id, memspace_id_norm_re, handler->dataspace_JKQ_norm_mult_re, dxpl_id,
-                                       JKQ_field->norm_multiplier_JKQ_re);
+  status                    = H5Dwrite(handler->dataset_JKQ_norm_mult_re,    //
+                                       handler->datatype_norm_mult_id,       //
+                                       memspace_id_norm_re,                  //
+                                       handler->dataspace_JKQ_norm_mult_re,  //
+                                       dxpl_id,                              //
+                                       JKQ_field->norm_multiplier_JKQ_re);   //
   HDF5_CHECK_JKQ_STATUS(status, "Error writing JKQ_norm_re data to HDF5 file\n", -1);
 
   H5Sclose(memspace_id_norm_re);
@@ -262,8 +340,11 @@ THDF_write_JKQ_field_to_hdf5(THDF_JKQ_handler_t *handler,    //
   HDF5_CHECK_JKQ_STATUS(status, "Error selecting hyperslab for JKQ_norm_im dataset\n", -1);
 
   hid_t memspace_id_norm_im = H5Screate_simple(4, file_count_norm_im, NULL);
-  status                    = H5Dwrite(handler->dataset_JKQ_norm_mult_im,  //
-                                       handler->datatype_norm_mult_id, memspace_id_norm_im, handler->dataspace_JKQ_norm_mult_im, dxpl_id,
+  status                    = H5Dwrite(handler->dataset_JKQ_norm_mult_im,    //
+                                       handler->datatype_norm_mult_id,       //
+                                       memspace_id_norm_im,                  //
+                                       handler->dataspace_JKQ_norm_mult_im,  //
+                                       dxpl_id,                              //
                                        JKQ_field->norm_multiplier_JKQ_im);
   HDF5_CHECK_JKQ_STATUS(status, "Error writing JKQ_norm_im data to HDF5 file\n", -1);
 

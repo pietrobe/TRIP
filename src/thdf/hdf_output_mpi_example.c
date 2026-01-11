@@ -459,10 +459,7 @@ main_JKQ_domain_dec(int argc, char **argv) {
   if (mpi_rank == 0) {
     printf("Creating MPI-enabled JKQ dataset... from rank 0\n");
 
-    hid_t file_id, plist_id;
-    plist_id = H5Pcreate(H5P_FILE_ACCESS);
-    file_id  = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
-    H5Pclose(plist_id);
+    hid_t file_id = THDF_open_file(filename);  //
 
     // write frequencies grid
     THDF_frequencies_grid_t freq_grid;
@@ -504,11 +501,13 @@ main_JKQ_domain_dec(int argc, char **argv) {
            N_z - 1);
     fflush(stdout);
 
-    hid_t file_id, plist_id;
-    plist_id = H5Pcreate(H5P_FILE_ACCESS);
-    H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
-    file_id = H5Fopen(filename, H5F_ACC_RDWR, plist_id);
-    H5Pclose(plist_id);
+    // hid_t file_id, plist_id;
+    // plist_id = H5Pcreate(H5P_FILE_ACCESS);
+    // H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
+    // file_id = H5Fopen(filename, H5F_ACC_RDWR, plist_id);
+    // H5Pclose(plist_id);
+
+    hid_t file_id = THDF_open_file_MPI(filename, MPI_COMM_WORLD);
 
     THDF_JKQ_handler_t *JKQ_dset_handler =
         THDF_create_JKQ_field_handler_mpi(file_id, N_x, N_y, N_z, N_JKQ_real, N_JKQ_imag, N_frequencies);
@@ -532,7 +531,7 @@ main_JKQ_domain_dec(int argc, char **argv) {
                                  N_z);              //
 
     THDF_close_JKQ_field_handler_mpi(JKQ_dset_handler);
-    H5Fclose(file_id);
+    THDF_close_file(file_id);
 
     destroy_example_JKQ_field(JKQ_field);
   }

@@ -7,6 +7,7 @@
 
 #include <hdf5.h>
 #include <hdf5_hl.h>
+#include <mpi.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -266,6 +267,38 @@ THDF_write_frequencies_grid_to_hdf5(hid_t                          file,        
  */
 THDF_frequencies_grid_t                            //
 THDF_read_frequencies_grid_from_hdf5(hid_t file);  //
+
+//============================================================================
+// MPI Utility Functions
+//============================================================================
+
+/**
+ * @brief Open an HDF5 file in MPI parallel mode.
+ *
+ * Opens an HDF5 file for parallel access using the specified MPI communicator.
+ * The file is opened with read/write access.
+ *
+ * @param filename Path to the HDF5 file to open.
+ * @param mpi_comm MPI communicator to use for parallel I/O.
+ * @return HDF5 file identifier on success, negative value on failure.
+ */
+hid_t
+THDF_open_file_MPI(const char *filename, MPI_Comm mpi_comm);
+
+/**
+ * @brief Create and open an HDF5 file for sequential I/O
+ *
+ * Creates a new HDF5 file or truncates an existing file with the given filename.
+ * This is for non-MPI sequential file creation.
+ *
+ * @param filename Path to the HDF5 file to create.
+ * @return HDF5 file identifier on success, negative value on failure.
+ */
+hid_t
+THDF_open_file(const char *filename);  //
+
+void                             //
+THDF_close_file(hid_t file_id);  //
 
 //============================================================================
 // Empty structure builders
