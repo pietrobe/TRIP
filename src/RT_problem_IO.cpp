@@ -658,6 +658,21 @@ RT_problem::write_JKQ_field_hdf5(const std::string &output_file)
 
 	hid_t file_id = THDF_open_file_MPI(output_file.c_str(), MPI_COMM_WORLD);
 
+	THDF_JKQ_field_t JKQ_field;
+	JKQ_field.JKQ_re				 = JKQ_real.data();
+	JKQ_field.JKQ_im				 = JKQ_imag.data();
+	JKQ_field.norm_multiplier_JKQ_re = JKQ_real_norm_mult.data();
+	JKQ_field.norm_multiplier_JKQ_im = JKQ_imag_norm_mult.data();
+
+	const int i_start_global = g_dev.global_coord(0, i_start);
+	const int j_start_global = g_dev.global_coord(1, j_start);
+	const int k_start_global = g_dev.global_coord(2, k_start);
+
+	if (mpi_rank_ == 0)
+	{
+		std::cout << " Writing JKQ field data to HDF5 file: " << output_file << std::endl;
+	}
+
 	THDF_JKQ_handler_t *JKQ_handler =											//
 		THDF_create_JKQ_field_handler_mpi(file_id,								//
 										  this->N_x_,							//
@@ -667,17 +682,13 @@ RT_problem::write_JKQ_field_hdf5(const std::string &output_file)
 										  KQ_values_imag_compressed.size() / 2, //
 										  this->N_nu_);							//
 
-	THDF_JKQ_field_t JKQ_field;
-	JKQ_field.JKQ_re				 = JKQ_real.data();
-	JKQ_field.JKQ_im				 = JKQ_imag.data();
-	JKQ_field.norm_multiplier_JKQ_re = JKQ_real_norm_mult.data();
-	JKQ_field.norm_multiplier_JKQ_im = JKQ_imag_norm_mult.data();
-
-	THDF_write_JKQ_field_to_hdf5(JKQ_handler,				//
-								 &JKQ_field,				//
-								 i_start, j_start, k_start, //
-								 size_i, size_j, size_k);	//
+	THDF_write_JKQ_field_to_hdf5(JKQ_handler,									 //
+								 &JKQ_field,									 //
+								 i_start_global, j_start_global, k_start_global, //
+								 size_i, size_j, size_k);						 //
 
 	THDF_close_JKQ_field_handler_mpi(JKQ_handler);
 	THDF_close_file(file_id);
+
+	return EXIT_SUCCESS;
 }

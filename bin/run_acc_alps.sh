@@ -66,8 +66,6 @@ echo ""
 ARGS=(
     "--yaml_config" "$HOME/git/TRIP/bin/config_acc_alps.yml"
     "-ksp_monitor"
-    "-ksp_monitor_true_residual" 
-    "-ksp_converged_reason"
     "-ksp_view"
 )
 

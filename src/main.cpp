@@ -194,10 +194,12 @@ main(int argc, char *argv[])
 				}
 			}
 
-			// New HDF5 output .... TESTING
+			// New HDF5 output .... TESTING PASSED
 			////////////////////////////////////////////////////////////////////////////////////////////////
 			write_emergent_field_hdf5(*rt_problem_ptr,											  //
 									  (output_path / "emergent_field_angular_grid.h5").string()); //
+
+			rt_problem_ptr->write_JKQ_field_hdf5((output_path / "JKQ_field.h5").string()); //
 
 			////////////////////////////////////////////////////////////////////////////////////////////////
 			// compute arbitrary beams

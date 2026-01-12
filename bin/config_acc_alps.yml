@@ -6,13 +6,13 @@ frequency_file:  frequency/96F/frequency.dat
 
 output: true
 output_overwrite_prevention: true
-output_directory: /capstor/scratch/cscs/sriva/PORTA/output/o5/
+output_directory: /capstor/scratch/cscs/sriva/PORTA/output/o6/
 
 use_B: true
 use_continuum: false
 formal_solver: BESSER
 
-emissivity_model: PRD
+emissivity_model: CRD_limit  
 
 # used only for FAL-C input
 N_theta: 8
@@ -26,14 +26,14 @@ input_back_string: ""
 use_prec: true
 
 solver:
-  ksp_solver_type: KSPPGMRES
+  ksp_solver_type: KSPGMRES
   ksp_rtol: 1e-7
-  ksp_max_it: 9
+  ksp_max_it: 2
 
 prec:
   pc_solver_type: KSPGMRES
   pc_rtol: 1e-4
-  pc_max_it: 20
+  pc_max_it: 15
 
 default_chi: &default_chi 0.0
 
