@@ -487,14 +487,16 @@ class RT_problem
 	 * @return MPI status code
 	 */
 	int
-	accumulate_JKQ_values(const int						 x_strat,	//
-						  const int						 y_strat,	//
-						  const int						 z_strat,	//
-						  const int						 x_end,		//
-						  const int						 y_end,		//
-						  const int						 z_end,		//
-						  std::vector<THDF_JKQ_float_t> &JKQ_real,	//
-						  std::vector<THDF_JKQ_float_t> &JKQ_imag); //
+	accumulate_JKQ_values(const int						   x_strat,		   //
+						  const int						   y_strat,		   //
+						  const int						   z_strat,		   //
+						  const int						   x_end,		   //
+						  const int						   y_end,		   //
+						  const int						   z_end,		   //
+						  std::vector<THDF_JKQ_float_t>	  &JKQ_real,	   //
+						  std::vector<THDF_JKQ_float_t>	  &JKQ_imag,	   //
+						  std::vector<THDF_JKQ_n_float_t> &JKQ_real_norm,  //
+						  std::vector<THDF_JKQ_n_float_t> &JKQ_imag_norm); //
 
 	int
 	get_KQ_values(std::vector<int> &KQ_values,					//

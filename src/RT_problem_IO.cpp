@@ -494,14 +494,16 @@ RT_problem::write_emergent_field_Omega_hdf5(const std::string				 &output_file,	
 // accumulate_JKQ_values
 //////////////////////////////////////////////////////////////////////////
 int
-RT_problem::accumulate_JKQ_values(const int						 x_strat,  //
-								  const int						 y_strat,  //
-								  const int						 z_strat,  //
-								  const int						 x_end,	   //
-								  const int						 y_end,	   //
-								  const int						 z_end,	   //
-								  std::vector<THDF_JKQ_float_t> &JKQ_real, //
-								  std::vector<THDF_JKQ_float_t> &JKQ_imag)
+RT_problem::accumulate_JKQ_values(const int						   x_strat,		  //
+								  const int						   y_strat,		  //
+								  const int						   z_strat,		  //
+								  const int						   x_end,		  //
+								  const int						   y_end,		  //
+								  const int						   z_end,		  //
+								  std::vector<THDF_JKQ_float_t>	  &JKQ_real,	  //
+								  std::vector<THDF_JKQ_float_t>	  &JKQ_imag,	  //
+								  std::vector<THDF_JKQ_n_float_t> &JKQ_real_norm, //
+								  std::vector<THDF_JKQ_n_float_t> &JKQ_imag_norm)
 {
 	const auto f_dev			 = I_field_->view_device();
 	auto	   Doppler_width_dev = Doppler_width_->view_device();
@@ -539,6 +541,8 @@ RT_problem::accumulate_JKQ_values(const int						 x_strat,  //
 
 				for (int idx = 0; idx < size_JKQ_real_comp; ++idx)
 				{
+					JKQ_real_norm.push_back(JKQ_matrix_sh_ptr->norm_mult_real_compressed(idx));
+
 					for (int ui = 0; ui < this->N_nu_; ++ui)
 					{
 						JKQ_real.push_back(JKQ_matrix_sh_ptr->real_compressed(idx, ui));
@@ -547,6 +551,8 @@ RT_problem::accumulate_JKQ_values(const int						 x_strat,  //
 
 				for (int idx = 0; idx < size_JKQ_imag_comp; ++idx)
 				{
+					JKQ_imag_norm.push_back(JKQ_matrix_sh_ptr->norm_mult_imag_compressed(idx));
+
 					for (int ui = 0; ui < this->N_nu_; ++ui)
 					{
 						JKQ_imag.push_back(JKQ_matrix_sh_ptr->imag_compressed(idx, ui));
@@ -633,13 +639,45 @@ RT_problem::write_JKQ_field_hdf5(const std::string &output_file)
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	std::vector<THDF_JKQ_float_t> JKQ_real;
-	std::vector<THDF_JKQ_float_t> JKQ_imag;
+	std::vector<THDF_JKQ_float_t>	JKQ_real;
+	std::vector<THDF_JKQ_float_t>	JKQ_imag;
+	std::vector<THDF_JKQ_n_float_t> JKQ_real_norm_mult;
+	std::vector<THDF_JKQ_n_float_t> JKQ_imag_norm_mult;
 
 	JKQ_real.reserve(this->N_nu_ * size_i * size_j * size_k * KQ_values_real_compressed.size() / 2);
 	JKQ_imag.reserve(this->N_nu_ * size_i * size_j * size_k * KQ_values_imag_compressed.size() / 2);
+	JKQ_real_norm_mult.reserve(size_i * size_j * size_k * KQ_values_real_compressed.size() / 2);
+	JKQ_imag_norm_mult.reserve(size_i * size_j * size_k * KQ_values_imag_compressed.size() / 2);
 
 	this->accumulate_JKQ_values(i_start, j_start, k_start, //
 								i_end, j_end, k_end,	   //
-								JKQ_real, JKQ_imag);	   //
+								JKQ_real,				   //
+								JKQ_imag,				   //
+								JKQ_real_norm_mult,		   //
+								JKQ_imag_norm_mult);	   //
+
+	hid_t file_id = THDF_open_file_MPI(output_file.c_str(), MPI_COMM_WORLD);
+
+	THDF_JKQ_handler_t *JKQ_handler =											//
+		THDF_create_JKQ_field_handler_mpi(file_id,								//
+										  this->N_x_,							//
+										  this->N_y_,							//
+										  this->N_z_,							//
+										  KQ_values_real_compressed.size() / 2, //
+										  KQ_values_imag_compressed.size() / 2, //
+										  this->N_nu_);							//
+
+	THDF_JKQ_field_t JKQ_field;
+	JKQ_field.JKQ_re				 = JKQ_real.data();
+	JKQ_field.JKQ_im				 = JKQ_imag.data();
+	JKQ_field.norm_multiplier_JKQ_re = JKQ_real_norm_mult.data();
+	JKQ_field.norm_multiplier_JKQ_im = JKQ_imag_norm_mult.data();
+
+	THDF_write_JKQ_field_to_hdf5(JKQ_handler,				//
+								 &JKQ_field,				//
+								 i_start, j_start, k_start, //
+								 size_i, size_j, size_k);	//
+
+	THDF_close_JKQ_field_handler_mpi(JKQ_handler);
+	THDF_close_file(file_id);
 }
