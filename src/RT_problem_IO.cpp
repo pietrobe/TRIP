@@ -507,6 +507,8 @@ RT_problem::accumulate_JKQ_values(const int						   x_strat,		  //
 {
 	const auto f_dev			 = I_field_->view_device();
 	auto	   Doppler_width_dev = Doppler_width_->view_device();
+	auto	   temp_dev			 = T_->view_device();
+	auto	   bulk_velocity_dev = v_b_->view_device();
 
 	std::vector<double> u_vec;
 	u_vec.resize(this->N_nu_);
@@ -525,6 +527,12 @@ RT_problem::accumulate_JKQ_values(const int						   x_strat,		  //
 					u_vec[ui]		= (this->nu_0_ - nu) / dnd;
 				}
 
+				const double v_b	   = bulk_velocity_dev.block(i, j, k)[0];
+				const double v_b_theta = bulk_velocity_dev.block(i, j, k)[1];
+				const double v_b_chi   = bulk_velocity_dev.block(i, j, k)[2];
+				const double T		   = temp_dev.ref(i, j, k);
+
+				// This calculate JKQ in the comoving frame
 				auto JKQ_matrix_sh_ptr =												   //
 					rii_include::make_JKQ_matrix_norm_comp(block_ptr,					   //
 														   u_vec.data(),				   //
@@ -534,7 +542,13 @@ RT_problem::accumulate_JKQ_values(const int						   x_strat,		  //
 														   4,							   //
 														   4 * this->N_chi_ * this->N_nu_, //
 														   4 * this->N_nu_,				   //
-														   1);							   //
+														   1,							   //
+														   v_b,							   //
+														   v_b_theta,					   //
+														   v_b_chi,						   //
+														   T,							   //
+														   this->atomic_mass(),			   //
+														   0.0);						   //
 
 				const int size_JKQ_real_comp = JKQ_matrix_sh_ptr->size_KQ_real_compressed();
 				const int size_JKQ_imag_comp = JKQ_matrix_sh_ptr->size_KQ_imag_compressed();
