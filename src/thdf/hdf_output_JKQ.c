@@ -185,33 +185,33 @@ THDF_close_JKQ_field_handler_mpi(THDF_JKQ_handler_t *handler) {  //
   }
 
 //////////////////////////////////////////////////////////////
-/// THDF_write_KQ_matrix_to_hdf5
+/// THDF_write_KQ_table_to_hdf5
 //////////////////////////////////////////////////////////////
 int
-THDF_write_KQ_matrix_to_hdf5(hid_t             file,         //
-                             THDF_KQ_matrix_t *KQ_matrix) {  //
+THDF_write_KQ_table_to_hdf5(hid_t            file,        //
+                            THDF_KQ_table_t *KQ_table) {  //
 
   // Create group for KQ matrix
-  hid_t group_id = H5Gcreate2(file, "/KQ_matrix", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  HDF5_CHECK_KQ_STATUS(group_id, "Error creating KQ_matrix group in HDF5 file\n", -1);
+  hid_t group_id = H5Gcreate2(file, "/KQ_table", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  HDF5_CHECK_KQ_STATUS(group_id, "Error creating KQ_table group in HDF5 file\n", -1);
 
   // Create dataset for KQ matrix
-  hsize_t dims_KQ[2]      = {KQ_matrix->KQ_size, 2};  // 2 columns: K and Q
+  hsize_t dims_KQ[2]      = {KQ_table->KQ_size, 2};  // 2 columns: K and Q
   hid_t   dataspace_id_KQ = H5Screate_simple(2, dims_KQ, NULL);
   hid_t   dataset_id_KQ   = H5Dcreate2(group_id,  //
-                                       "KQ_matrix", H5T_NATIVE_INT, dataspace_id_KQ, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  HDF5_CHECK_KQ_STATUS(dataset_id_KQ, "Error creating KQ_matrix dataset in HDF5 file\n", -1);
+                                       "KQ_table", H5T_NATIVE_INT, dataspace_id_KQ, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  HDF5_CHECK_KQ_STATUS(dataset_id_KQ, "Error creating KQ_table dataset in HDF5 file\n", -1);
 
   // Write KQ matrix data
-  herr_t status = H5Dwrite(dataset_id_KQ, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, KQ_matrix->KQ_matrix);
-  HDF5_CHECK_KQ_STATUS(status, "Error writing KQ_matrix data to HDF5 file\n", -1);
+  herr_t status = H5Dwrite(dataset_id_KQ, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, KQ_table->KQ_table);
+  HDF5_CHECK_KQ_STATUS(status, "Error writing KQ_table data to HDF5 file\n", -1);
 
   // Close resources
   H5Dclose(dataset_id_KQ);
   H5Sclose(dataspace_id_KQ);
 
-  hsize_t dims_comp_KQ_real_comm[2] = {KQ_matrix->KQ_compressed_size_real, 2};
-  hsize_t dims_comp_KQ_imag_comm[2] = {KQ_matrix->KQ_compressed_size_imag, 2};
+  hsize_t dims_comp_KQ_real_comm[2] = {KQ_table->KQ_compressed_size_real, 2};
+  hsize_t dims_comp_KQ_imag_comm[2] = {KQ_table->KQ_compressed_size_imag, 2};
 
   // Create dataset for compressed KQ real part
   hid_t dataspace_id_comp_KQ_real = H5Screate_simple(2, dims_comp_KQ_real_comm, NULL);
@@ -220,8 +220,8 @@ THDF_write_KQ_matrix_to_hdf5(hid_t             file,         //
   HDF5_CHECK_KQ_STATUS(dataset_id_comp_KQ_real, "Error creating KQ_compressed_real dataset in HDF5 file\n", -1);
 
   // Write compressed KQ real part data
-  status = H5Dwrite(dataset_id_comp_KQ_real,                                                        //
-                    H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, KQ_matrix->KQ_compressed_real);  //
+  status = H5Dwrite(dataset_id_comp_KQ_real,                                                       //
+                    H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, KQ_table->KQ_compressed_real);  //
   HDF5_CHECK_KQ_STATUS(status, "Error writing KQ_compressed_real data to HDF5 file\n", -1);
 
   // Create dataset for compressed KQ imaginary part
@@ -231,12 +231,12 @@ THDF_write_KQ_matrix_to_hdf5(hid_t             file,         //
   HDF5_CHECK_KQ_STATUS(dataset_id_comp_KQ_imag, "Error creating KQ_compressed_imag dataset in HDF5 file\n", -1);
 
   // Write compressed KQ imaginary part data
-  status = H5Dwrite(dataset_id_comp_KQ_imag,                                                        //
-                    H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, KQ_matrix->KQ_compressed_imag);  //
+  status = H5Dwrite(dataset_id_comp_KQ_imag,                                                       //
+                    H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, KQ_table->KQ_compressed_imag);  //
   HDF5_CHECK_KQ_STATUS(status, "Error writing KQ_compressed_imag data to HDF5 file\n", -1);
 
-  status = H5Dwrite(dataset_id_comp_KQ_imag,                                                        //
-                    H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, KQ_matrix->KQ_compressed_imag);  //
+  status = H5Dwrite(dataset_id_comp_KQ_imag,                                                       //
+                    H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, KQ_table->KQ_compressed_imag);  //
   HDF5_CHECK_KQ_STATUS(status, "Error writing KQ_compressed_imag data to HDF5 file\n", -1);
 
   // Close resources

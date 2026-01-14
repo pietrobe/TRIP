@@ -64,7 +64,7 @@ typedef struct {
   int KQ_size;  // The number of elements (rows) in the KQ matrix
                 // note: the number of columns is always 2 (K and Q)
 
-  int *KQ_matrix;  // The KQ matrix data stored in a 1D array (row-major order)
+  int *KQ_table;  // The KQ matrix data stored in a 1D array (row-major order)
 
   ////////////////////////////////////////////////////////////////////////////////////
   int KQ_compressed_size_real;  // Size of compressed indices for real part
@@ -73,7 +73,7 @@ typedef struct {
   int *KQ_compressed_real;  // Compressed indices for real part
   int *KQ_compressed_imag;  // Compressed indices for imaginary part
 
-} THDF_KQ_matrix_t;
+} THDF_KQ_table_t;
 
 /**
  * @brief Create and initialize a JKQ field handler for HDF5 output with MPI support.
@@ -125,8 +125,8 @@ THDF_write_JKQ_field_to_hdf5(THDF_JKQ_handler_t *handler,    //
                              hsize_t             count_k);               //
 
 int
-THDF_write_KQ_matrix_to_hdf5(hid_t             file,        //
-                             THDF_KQ_matrix_t *KQ_matrix);  //
+THDF_write_KQ_table_to_hdf5(hid_t             file,        //
+                             THDF_KQ_table_t *KQ_table);  //
 
 #ifdef __cplusplus
 }

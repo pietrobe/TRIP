@@ -448,13 +448,36 @@ main_JKQ_domain_dec(int argc, char **argv) {
 
   KQ_values = (int *)malloc(9 * 2 * sizeof(int));  //
   // Fill KQ_values with example data
-  for (int i = 0; i < 9 * 2; i++) KQ_values[i] = i + 1;
+  int i = 0;
+  for (int K = 0; K <= 2; K++) {
+    for (int Q = -K; Q <= K; Q++) {
+      KQ_values[i * 2]     = K;
+      KQ_values[i * 2 + 1] = Q;
+      i++;
+    }
+  }
 
   KQ_values_commpressed_real = (int *)malloc(N_JKQ_real * 2 * sizeof(int));  //
   KQ_values_commpressed_imag = (int *)malloc(N_JKQ_imag * 2 * sizeof(int));  //
+
   // Fill compressed KQ values with example data
-  for (int i = 0; i < N_JKQ_real * 2; i++) KQ_values_commpressed_real[i] = i + 1;
-  for (int i = 0; i < N_JKQ_imag * 2; i++) KQ_values_commpressed_imag[i] = i + 11;
+  int i_re = 0;
+  int i_im = 0;
+  for (int K = 0; K <= 2; K++) {
+    for (int Q = -K; Q <= K; Q++) {
+      if (Q <= 0) {
+        KQ_values_commpressed_real[i_re * 2]     = K;
+        KQ_values_commpressed_real[i_re * 2 + 1] = Q;
+        i_re++;
+      }
+
+      if (Q < 0) {
+        KQ_values_commpressed_imag[i_im * 2]     = K;
+        KQ_values_commpressed_imag[i_im * 2 + 1] = Q;
+        i_im++;
+      }
+    }
+  }
 
   if (mpi_rank == 0) {
     printf("Creating MPI-enabled JKQ dataset... from rank 0\n");
@@ -471,15 +494,15 @@ main_JKQ_domain_dec(int argc, char **argv) {
     }
 
     // write JKQ KQ matrix
-    THDF_KQ_matrix_t KQ_matrix;
-    KQ_matrix.KQ_size                 = 9;
-    KQ_matrix.KQ_matrix               = KQ_values;
-    KQ_matrix.KQ_compressed_size_real = N_JKQ_real;
-    KQ_matrix.KQ_compressed_size_imag = N_JKQ_imag;
-    KQ_matrix.KQ_compressed_real      = KQ_values_commpressed_real;
-    KQ_matrix.KQ_compressed_imag      = KQ_values_commpressed_imag;
+    THDF_KQ_table_t KQ_table;
+    KQ_table.KQ_size                 = 9;
+    KQ_table.KQ_table               = KQ_values;
+    KQ_table.KQ_compressed_size_real = N_JKQ_real;
+    KQ_table.KQ_compressed_size_imag = N_JKQ_imag;
+    KQ_table.KQ_compressed_real      = KQ_values_commpressed_real;
+    KQ_table.KQ_compressed_imag      = KQ_values_commpressed_imag;
 
-    if (THDF_write_KQ_matrix_to_hdf5(file_id, &KQ_matrix) != 0) {
+    if (THDF_write_KQ_table_to_hdf5(file_id, &KQ_table) != 0) {
       fprintf(stderr, "Error writing KQ matrix to HDF5 file\n");
       MPI_Abort(MPI_COMM_WORLD, -1);
     }
