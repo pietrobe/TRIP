@@ -6,7 +6,7 @@
 #define TWOLEVEL_HEADER1    4
 #define TWOLEVEL_HEADER2    32 
 
-#define GAUSS_TO_LARMOR_FREQUENCY(BB__) ((BB__) * 1399600.0) // [Gauss] -> [Hz]
+#define GAUSS_TO_LARMOR_FREQUENCY(BB__) ((BB__) * (1399600.0)) // [Gauss] -> [Hz]
 
 // read atom and grid quantities 
 void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, const char* filename_qel, const char* filename_llp, const char* filename_back)
@@ -20,8 +20,8 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	// use two quadrature intervals for the theta grid
 	const bool double_GL = false; ////////// DANGER: HARDCODED 
 
-	const bool zero_velocities = false;
-	if (mpi_rank_ == 0 and zero_velocities) std::cout << "WARNING: ZERO velocities HARDCODED!" << std::endl;
+	
+	if (mpi_rank_ == 0 and not(this->use_bulk_velocity_)) std::cout << "WARNING: ZERO velocities HARDCODED!" << std::endl;
 
 	// reading atom and grids from file
 	MPI_File fh, f_cul, f_qel, f_llp, f_back;
@@ -215,9 +215,21 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 														  tmp_vector[5]);	
 		if (use_magnetic_field_)
 		{								
-			B_dev.block(i, j, k)[0] = B_spherical[0] * 1399600.0; // converting to Larmor frequency					
-			B_dev.block(i, j, k)[1] = B_spherical[1]; 					
-			B_dev.block(i, j, k)[2] = B_spherical[2]; 
+			if (use_uniform_magnetic_field_)
+			{
+
+				if (mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) {
+					std::cout << "WARNING: USING UNIFORM MAGNETIC FIELD: " << uniform_magnetic_field_value_ << " Gauss, theta: " << uniform_magnetic_field_theta_ << " rad, chi: " << uniform_magnetic_field_chi_ << " rad" << std::endl;
+				}
+
+				B_dev.block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(uniform_magnetic_field_value_); // converting to Larmor frequency					
+				B_dev.block(i, j, k)[1] = uniform_magnetic_field_theta_; 					
+				B_dev.block(i, j, k)[2] = uniform_magnetic_field_chi_;
+			} else {
+				B_dev.block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(B_spherical[0]); // converting to Larmor frequency					
+				B_dev.block(i, j, k)[1] = B_spherical[1]; 					
+				B_dev.block(i, j, k)[2] = B_spherical[2];
+			}
 
 			// // /*  hardcoded B field */ ////////////////////
 			
@@ -243,7 +255,7 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 		}
 		
 		
-		if (zero_velocities)
+		if (not(this->use_bulk_velocity_))
 		{
 			v_b_dev.block(i, j, k)[0] = 0.0;					
 			v_b_dev.block(i, j, k)[1] = 0.0;					
@@ -366,9 +378,8 @@ void RT_problem::read_single_node_triple_field(MPI_File input_file, const int i,
 
 // read atom and grid quantities 
 void RT_problem::read_3D(const char* filename){
-
-	const bool zero_velocities = false;
-	if (mpi_rank_ == 0 and zero_velocities) std::cout << "ZERO velocities HARDCODED!" << std::endl;
+	
+	if (mpi_rank_ == 0 and not(this->use_bulk_velocity_)) std::cout << "ZERO velocities HARDCODED!" << std::endl;
 
 	// reading atom and grids from file
 	MPI_File fh;
@@ -591,9 +602,25 @@ void RT_problem::read_3D(const char* filename){
 														  tmp_vector[5]);	
 		if (use_magnetic_field_)
 		{								
-			B_dev.block(i, j, k)[0] = B_spherical[0] * 1399600.0; // converting to Larmor frequency					
-			B_dev.block(i, j, k)[1] = B_spherical[1]; 					
-			B_dev.block(i, j, k)[2] = B_spherical[2]; 
+			// B_dev.block(i, j, k)[0] = B_spherical[0] * 1399600.0; // converting to Larmor frequency					
+			// B_dev.block(i, j, k)[1] = B_spherical[1]; 					
+			// B_dev.block(i, j, k)[2] = B_spherical[2]; 
+
+			if (use_uniform_magnetic_field_)
+			{
+
+				if (mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) {
+					std::cout << "WARNING: USING HARD UNIFORM MAGNETIC FIELD: " << uniform_magnetic_field_value_ << " Gauss, theta: " << uniform_magnetic_field_theta_ << " rad, chi: " << uniform_magnetic_field_chi_ << " rad" << std::endl;
+				}
+
+				B_dev.block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(uniform_magnetic_field_value_); // converting to Larmor frequency					
+				B_dev.block(i, j, k)[1] = uniform_magnetic_field_theta_; 					
+				B_dev.block(i, j, k)[2] = uniform_magnetic_field_chi_;
+			} else {
+				B_dev.block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(B_spherical[0]); // converting to Larmor frequency					
+				B_dev.block(i, j, k)[1] = B_spherical[1]; 					
+				B_dev.block(i, j, k)[2] = B_spherical[2];
+			}
 
 			// // /*  hardcoded B field */ ////////////////////
 			
@@ -620,7 +647,7 @@ void RT_problem::read_3D(const char* filename){
 		}
 		
 		
-		if (zero_velocities)
+		if (not(this->use_bulk_velocity_))
 		{
 			v_b_dev.block(i, j, k)[0] = 0.0;					
 			v_b_dev.block(i, j, k)[1] = 0.0;					

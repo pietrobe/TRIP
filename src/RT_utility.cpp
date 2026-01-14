@@ -107,12 +107,31 @@ loadConfig(const std::string &filename)
 	if (config["use_B"]) cfg.use_B = config["use_B"].as<bool>();
 	if (config["use_1_5D_approx"]) cfg.use_1_5D_approx = config["use_1_5D_approx"].as<bool>();
 	if (config["enable_continuum"]) cfg.enable_continuum = config["enable_continuum"].as<bool>();
+	if (config["use_Vb"]) cfg.use_Vb = config["use_Vb"].as<bool>();
 
 	// Formal solver
 	if (config["formal_solver"])
 	{
 		std::string fs	  = config["formal_solver"].as<std::string>();
 		cfg.formal_solver = validateFormalSolver(fs);
+	}
+
+	// Set constant B
+	if (config["set_uniform_B"]) cfg.set_uniform_B = config["set_uniform_B"].as<bool>();
+	if (config["B_field"])
+	{
+		auto B_field_node = config["B_field"];
+		if (B_field_node.IsSequence() && B_field_node.size() == 3)
+		{
+			for (size_t i = 0; i < 3; ++i)
+			{
+				cfg.B_field[i] = B_field_node[i].as<double>();
+			}
+		}
+		else
+		{
+			throw std::runtime_error("B_field must be a sequence of three numbers.");
+		}
 	}
 
 	// Integers
@@ -182,7 +201,7 @@ loadConfig(const std::string &filename)
 void
 writeConfigResume(const AppConfig &cfg, std::ostream &os)
 {
-	const int label_width = 36;
+	const int label_width = 44;
 	auto	  print		  = [&](const std::string &label, const std::string &value)
 	{ os << std::left << std::setw(label_width) << (label + ":") << value << std::endl; };
 
@@ -195,6 +214,7 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 	print("Output Overwrite Prevention", (cfg.output_overwrite_prevention ? "Yes" : "No"));
 	print("Emissivity Model", emissivity_model_to_string_long(cfg.emissivity_model));
 	print("Use Magnetic Field", (cfg.use_B ? "Yes" : "No"));
+	print("Use Bulk Velocity", (cfg.use_Vb ? "Yes" : "No"));
 	print("Enable Continuum", (cfg.enable_continuum ? "Yes" : "No"));
 	print("Use 1.5D Approximation", (cfg.use_1_5D_approx ? "Yes" : "No"));
 	print("Formal Solver", cfg.formal_solver);
@@ -208,6 +228,13 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 	print("Input LLP File", cfg.input_llp.string());
 	print("Input BACK File", cfg.input_back.string());
 	print("Use Preconditioner", (cfg.use_prec ? "Yes" : "No"));
+	print("Set Uniform Magnetic Field", (cfg.set_uniform_B ? "Yes" : "No"));
+	if (cfg.set_uniform_B)
+	{
+		print("* Uniform Magnetic Field Value (Gauss)", std::to_string(cfg.B_field[0]));
+		print("* Uniform Magnetic Field Theta (rad)", std::to_string(cfg.B_field[1]));
+		print("* Uniform Magnetic Field Chi (rad)", std::to_string(cfg.B_field[2]));
+	}
 
 	os << std::endl << "Solver Configuration:" << std::endl;
 	print("KSP Solver Type", KSPTypeToString(cfg.solver.ksp_solver_type));

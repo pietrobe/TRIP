@@ -113,6 +113,15 @@ class RT_problem
 		emissivity_model_	= cfg_.emissivity_model;
 		enable_continuum_	= cfg_.enable_continuum;
 		use_1_5D_approx_	= cfg_.use_1_5D_approx;
+		use_bulk_velocity_  = cfg_.use_Vb;
+
+		use_uniform_magnetic_field_ = cfg_.set_uniform_B;
+		if (use_uniform_magnetic_field_)
+		{
+			uniform_magnetic_field_value_ = cfg_.B_field[0];
+			uniform_magnetic_field_theta_ = cfg_.B_field[1];
+			uniform_magnetic_field_chi_   = cfg_.B_field[2];
+		}
 
 		// set input files
 		const auto input_file_path		  = cfg_.input_directory / cfg_.input_file;
@@ -717,9 +726,16 @@ class RT_problem
 	}
 
    private:
-	const bool use_ghost_layers_   = false;
-	bool	   use_PORTA_input_	   = false;
-	bool	   use_magnetic_field_ = false;
+	const bool use_ghost_layers_            = false;
+	bool	   use_PORTA_input_	            = false;
+	bool	   use_magnetic_field_          = false;
+	bool       use_bulk_velocity_           = false;
+	
+	bool       use_uniform_magnetic_field_   = false;
+	double     uniform_magnetic_field_value_ = 0.0; // Gauss
+	double     uniform_magnetic_field_theta_ = 0.0; // rad
+	double     uniform_magnetic_field_chi_   = 0.0; // rad
+
 
 	// physical constants
 	const double c_	  = 2.99792458e+10;

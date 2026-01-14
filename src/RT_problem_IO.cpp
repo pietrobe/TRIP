@@ -555,9 +555,9 @@ RT_problem::accumulate_JKQ_values(const int						   x_strat,		  //
 														   4 * this->N_chi_ * this->N_nu_, //
 														   4 * this->N_nu_,				   //
 														   1,							   //
-														   v_b,							   //
-														   v_b_theta,					   //
-														   v_b_chi,						   //
+														   0.0 * v_b,					   //
+														   0.0 * v_b_theta,				   //
+														   0.0 * v_b_chi,				   //
 														   T,							   //
 														   this->atomic_mass(),			   //
 														   0.0);						   //

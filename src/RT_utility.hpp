@@ -5,6 +5,7 @@
 #include <petscsys.h>
 #include <rii_emission_coefficient_3D.h>
 #include <yaml-cpp/yaml.h>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <filesystem>
@@ -174,7 +175,12 @@ struct AppConfig
 
 	// Physical switches
 	bool use_B			  = true;
+	bool use_Vb 		  = true;
 	bool enable_continuum = true;
+
+	// Set constant magnetic field
+	bool				  set_uniform_B = false;
+	std::array<double, 3> B_field		= {0.0, 0.0, 0.0};
 
 	// numerical inputs
 	bool		use_1_5D_approx = false;
