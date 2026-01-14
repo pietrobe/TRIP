@@ -122,9 +122,11 @@ RT_problem::write_angular_frequency_grids_hdf5(const std::string &output_file) /
 	angular_grid.inclinations_indices = inclinations_indices.data();
 	angular_grid.azimuthal_indices	  = azimuthal_indices.data();
 
-	hid_t file_id, plist_id;
-	plist_id = H5Pcreate(H5P_FILE_ACCESS);
-	file_id	 = H5Fcreate(output_file.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
+	// hid_t file_id, plist_id;
+	// plist_id = H5Pcreate(H5P_FILE_ACCESS);
+	// file_id	 = H5Fcreate(output_file.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
+
+	hid_t file_id = THDF_open_file(output_file.c_str());
 
 	if (THDF_write_angular_grid_to_hdf5(file_id, &angular_grid) != 0)
 	{
@@ -144,7 +146,8 @@ RT_problem::write_angular_frequency_grids_hdf5(const std::string &output_file) /
 		return EXIT_FAILURE;
 	}
 
-	H5Fclose(file_id);
+	// H5Fclose(file_id);
+	THDF_close_file(file_id);
 
 	return EXIT_SUCCESS;
 }
@@ -173,11 +176,13 @@ RT_problem::write_emergent_field_hdf5(const std::string &output_file, MPI_Comm w
 	const int j_start_global = g_dev.global_coord(1, j_start);
 
 	// Create HDF5 file with MPI I/O access property list
-	hid_t file_id, plist_id;
-	plist_id = H5Pcreate(H5P_FILE_ACCESS);
-	H5Pset_fapl_mpio(plist_id, write_comm, MPI_INFO_NULL);
-	file_id = H5Fopen(output_file.c_str(), H5F_ACC_RDWR, plist_id);
-	H5Pclose(plist_id);
+	// hid_t file_id, plist_id;
+	// plist_id = H5Pcreate(H5P_FILE_ACCESS);
+	// H5Pset_fapl_mpio(plist_id, write_comm, MPI_INFO_NULL);
+	// file_id = H5Fopen(output_file.c_str(), H5F_ACC_RDWR, plist_id);
+	// H5Pclose(plist_id);
+
+	hid_t file_id = THDF_open_file_MPI(output_file.c_str(), write_comm);
 
 	THDF_field_handler_t *output_dset_handler = THDF_create_field_handler_mpi(file_id,						//
 																			  N_x_, N_y_,					//
@@ -209,7 +214,9 @@ RT_problem::write_emergent_field_hdf5(const std::string &output_file, MPI_Comm w
 									 N_theta_ / 2, N_chi_, N_nu_);		   //
 
 	THDF_close_field_handler_mpi(output_dset_handler);
-	H5Fclose(file_id);
+
+	// H5Fclose(file_id);
+	THDF_close_file(file_id);
 
 	return EXIT_SUCCESS;
 }
@@ -373,11 +380,12 @@ RT_problem::write_beams_frequency_grids_Omega_hdf5(const std::vector<BeamDirecti
 		chi_beams[b] = beams[b].chi;
 	}
 
-	hid_t file_id, plist_id;
-	plist_id = H5Pcreate(H5P_FILE_ACCESS);
-	file_id	 = H5Fcreate(output_file.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
+	// hid_t file_id, plist_id;
+	// plist_id = H5Pcreate(H5P_FILE_ACCESS);
+	// file_id	 = H5Fcreate(output_file.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
+	// H5Pclose(plist_id);
 
-	H5Pclose(plist_id);
+	hid_t file_id = THDF_open_file(output_file.c_str());
 
 	THDF_ard_directions_t ard_directions;
 	ard_directions.N_directions = N_directions;
@@ -402,7 +410,8 @@ RT_problem::write_beams_frequency_grids_Omega_hdf5(const std::vector<BeamDirecti
 		return EXIT_FAILURE;
 	}
 
-	H5Fclose(file_id);
+	// H5Fclose(file_id);
+	THDF_close_file(file_id);
 
 	return EXIT_SUCCESS;
 }
@@ -435,12 +444,13 @@ RT_problem::write_emergent_field_Omega_hdf5(const std::string				 &output_file,	
 	const int i_global = g_dev.global_coord(0, i_start);
 	const int j_global = g_dev.global_coord(1, j_start);
 
-	hid_t file_id, plist_id;
-	plist_id = H5Pcreate(H5P_FILE_ACCESS);
-	H5Pset_fapl_mpio(plist_id, write_comm, MPI_INFO_NULL);
-	file_id = H5Fopen(output_file.c_str(), H5F_ACC_RDWR, plist_id);
+	// hid_t file_id, plist_id;
+	// plist_id = H5Pcreate(H5P_FILE_ACCESS);
+	// H5Pset_fapl_mpio(plist_id, write_comm, MPI_INFO_NULL);
+	// file_id = H5Fopen(output_file.c_str(), H5F_ACC_RDWR, plist_id);
+	// H5Pclose(plist_id);
 
-	H5Pclose(plist_id);
+	hid_t file_id = THDF_open_file_MPI(output_file.c_str(), write_comm);
 
 	// Create ARD field handler for this direction
 	THDF_ard_field_handler *dset_handler =						 //
@@ -484,7 +494,9 @@ RT_problem::write_emergent_field_Omega_hdf5(const std::string				 &output_file,	
 	}
 
 	THDF_close_ard_field_handler_mpi(dset_handler);
-	H5Fclose(file_id);
+
+	// H5Fclose(file_id);
+	THDF_close_file(file_id);
 
 	return EXIT_SUCCESS;
 }
@@ -619,10 +631,12 @@ RT_problem::write_JKQ_field_hdf5(const std::string &output_file)
 	{
 		std::cout << " Writing JKQ field to HDF5 file: " << output_file << std::endl;
 
-		hid_t file_id, plist_id;
-		plist_id = H5Pcreate(H5P_FILE_ACCESS);
-		file_id	 = H5Fcreate(output_file.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
-		H5Pclose(plist_id);
+		// hid_t file_id, plist_id;
+		// plist_id = H5Pcreate(H5P_FILE_ACCESS);
+		// file_id	 = H5Fcreate(output_file.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
+		// H5Pclose(plist_id);
+
+		hid_t file_id = THDF_open_file(output_file.c_str());
 
 		THDF_frequencies_grid_t freq_grid;
 		freq_grid.N_frequencies = this->N_nu_;
@@ -634,21 +648,21 @@ RT_problem::write_JKQ_field_hdf5(const std::string &output_file)
 		}
 
 		// write JKQ KQ matrix
-		THDF_KQ_matrix_t KQ_matrix;
+		THDF_KQ_table_t KQ_matrix;
 		KQ_matrix.KQ_size				  = KQ_values.size() / 2;
-		KQ_matrix.KQ_matrix				  = KQ_values.data();
+		KQ_matrix.KQ_table				  = KQ_values.data();
 		KQ_matrix.KQ_compressed_size_real = KQ_values_real_compressed.size() / 2;
 		KQ_matrix.KQ_compressed_size_imag = KQ_values_imag_compressed.size() / 2;
 		KQ_matrix.KQ_compressed_real	  = KQ_values_real_compressed.data();
 		KQ_matrix.KQ_compressed_imag	  = KQ_values_imag_compressed.data();
 
-		if (THDF_write_KQ_matrix_to_hdf5(file_id, &KQ_matrix) != 0)
+		if (THDF_write_KQ_table_to_hdf5(file_id, &KQ_matrix) != 0)
 		{
 			fprintf(stderr, "Error writing KQ matrix to HDF5 file\n");
 			MPI_Abort(MPI_COMM_WORLD, -1);
 		}
 
-		H5Fclose(file_id);
+		THDF_close_file(file_id);
 	}
 
 	MPI_Barrier(MPI_COMM_WORLD);
