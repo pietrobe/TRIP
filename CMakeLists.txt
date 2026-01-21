@@ -5,6 +5,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${SOLAR_3D_ROOT_PATH}/cmake")
 
 project(par_moonolith_usage VERSION 1.0.0)
 
+find_package(HDF5 REQUIRED)
+find_package(HDF5 COMPONENTS HL REQUIRED)
+
 include(CMakeFindDependencyMacro)
 find_package(PkgConfig REQUIRED)
 
@@ -13,13 +16,27 @@ find_package(yaml-cpp QUIET)
 find_package(MPI REQUIRED) # Added Melanie
 
 if(NOT yaml-cpp_FOUND)
-    message(STATUS "yaml-cpp not found on system, fetching from Git...")
-    include(FetchContent)
-    FetchContent_Declare(
-      yaml-cpp
-      GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
-      GIT_TAG 0.8.0 # Can be a tag (yaml-cpp-x.x.x), a commit hash, or a branch name (master)
-    )
+
+    if (DEFINED YAML_CPP_URL)
+        message(STATUS "yaml-cpp not found on system, fetching from URL...")
+        include(FetchContent)
+        FetchContent_Declare(
+            yaml-cpp
+            URL ${YAML_CPP_URL}
+            # Optional: add hash for integrity check
+            # URL_HASH SHA256=<hash_value>
+        )
+
+    else()
+
+        message(STATUS "yaml-cpp not found on system, fetching from Git...")
+        include(FetchContent)
+        FetchContent_Declare(
+            yaml-cpp
+            GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+            GIT_TAG 0.8.0 # Can be a tag (yaml-cpp-x.x.x), a commit hash, or a branch name (master)
+        )
+    endif()
     FetchContent_MakeAvailable(yaml-cpp)
 else()
     message(STATUS "Found yaml-cpp on system: ${yaml-cpp_VERSION}")
@@ -40,9 +57,10 @@ list(APPEND SOURCES_FILES
     src/main.cpp 
     src/Rotation_matrix.cpp
     src/RT_problem.cpp
+    src/RT_problem_IO.cpp
+    src/RT_problem_txt_IO.cpp
     src/RT_solver.cpp
     src/Utilities.cpp
-    src/Test_rii_include.cpp
     src/RT_utility.cpp
     src/RT_arbitrary_beam.cpp
 )
@@ -55,7 +73,6 @@ list(APPEND HEADERS_FILES
     src/RT_problem.hpp
     src/RT_solver.hpp
     src/Utilities.hpp
-    src/Test_rii_include.hpp
     src/RT_utility.hpp
     src/RT_arbitrary_beam.hpp
     src/RT_types.hpp
@@ -134,6 +151,8 @@ configure_file(
 
 # we use one of our examples here
 add_executable(solar_3D ${CMAKE_SOURCE_DIR}/src/main.cpp)
+
+target_include_directories(solar_3D PUBLIC ${HDF5_INCLUDE_DIRS})
 set(CMAKE_CXX_FLAGS  " -O3 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option ")
 
 #set(CMAKE_CXX_FLAGS  " -Ofast -fno-signed-zeros -fno-trapping-math -fassociative-math -march=native -mtune=native -mprefer-vector-width=512 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option -pedantic ")
@@ -147,6 +166,9 @@ message( STATUS  "RII path: ${RII_ROOT_PATH}")
 target_link_libraries(solar_3D PUBLIC rii ${Boost_LIBRARIES})
 
 target_link_libraries(solar_3D PUBLIC MPI::MPI_CXX) # Added Melanie
+
+target_link_libraries(solar_3D PUBLIC ${HDF5_LIBRARIES})
+target_link_libraries(solar_3D PUBLIC ${HDF5_HL_LIBRARIES})
 
 target_sources(solar_3D PUBLIC ${SOURCES_FILES})
 target_include_directories(solar_3D PUBLIC  
@@ -165,4 +187,47 @@ endif()
 
 target_compile_definitions(solar_3D PUBLIC ${PETSC_DEFINITIONS})
 
+# Build thdf/libhdf_output.a using its Makefile
+if(TRUE)
+    # Collect all C source and header files in src/thdf
+    file(GLOB THDF_SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/*.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/*.h"
+    )
 
+    add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a
+        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf make CC=mpicc lib
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf
+        BYPRODUCTS ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a
+        DEPENDS ${THDF_SOURCES}
+        COMMENT "Building libhdf_output.a in thdf using Makefile"
+    )
+
+    add_custom_target(hdf_output_lib ALL
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a
+    )
+
+    # Ensure solar_3D depends on the static library
+    add_dependencies(solar_3D hdf_output_lib)
+
+    # Include thdf headers
+    target_include_directories(solar_3D PUBLIC src/thdf/)
+
+    # Link the static library
+    target_link_libraries(solar_3D PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a)
+
+    # Provide a clean target for the thdf subproject
+    add_custom_target(thdf_clean
+        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf make clean
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf
+        COMMENT "Cleaning thdf subproject (make clean)"
+    )
+
+    # Convenience target to clean both top-level and thdf subproject
+    add_custom_target(clean-all
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target clean
+        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf make clean
+        COMMENT "Clean top-level build and thdf subproject"
+    )
+endif()

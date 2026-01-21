@@ -6,7 +6,7 @@
 #define TWOLEVEL_HEADER1    4
 #define TWOLEVEL_HEADER2    32 
 
-#define GAUSS_TO_LARMOR_FREQUENCY(BB__) ((BB__) * 1399600.0) // [Gauss] -> [Hz]
+#define GAUSS_TO_LARMOR_FREQUENCY(BB__) ((BB__) * (1399600.0)) // [Gauss] -> [Hz]
 
 // read atom and grid quantities 
 void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, const char* filename_qel, const char* filename_llp, const char* filename_back)
@@ -20,8 +20,8 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	// use two quadrature intervals for the theta grid
 	const bool double_GL = false; ////////// DANGER: HARDCODED 
 
-	const bool zero_velocities = false;
-	if (mpi_rank_ == 0 and zero_velocities) std::cout << "WARNING: ZERO velocities HARDCODED!" << std::endl;
+	
+	if (mpi_rank_ == 0 and not(this->use_bulk_velocity_)) std::cout << "WARNING: ZERO velocities HARDCODED!" << std::endl;
 
 	// reading atom and grids from file
 	MPI_File fh, f_cul, f_qel, f_llp, f_back;
@@ -227,7 +227,7 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 		}
 		
 		
-		if (zero_velocities)
+		if (not(this->use_bulk_velocity_))
 		{
 			v_b_->block(i, j, k)[0] = 0.0;					
 			v_b_->block(i, j, k)[1] = 0.0;					
@@ -350,9 +350,8 @@ void RT_problem::read_single_node_triple_field(MPI_File input_file, const int i,
 
 // read atom and grid quantities 
 void RT_problem::read_3D(const char* filename){
-
-	const bool zero_velocities = false;
-	if (mpi_rank_ == 0 and zero_velocities) std::cout << "ZERO velocities HARDCODED!" << std::endl;
+	
+	if (mpi_rank_ == 0 and not(this->use_bulk_velocity_)) std::cout << "ZERO velocities HARDCODED!" << std::endl;
 
 	// reading atom and grids from file
 	MPI_File fh;
@@ -589,7 +588,7 @@ void RT_problem::read_3D(const char* filename){
 		}
 		
 		
-		if (zero_velocities)
+		if (not(this->use_bulk_velocity_))
 		{
 			v_b_->block(i, j, k)[0] = 0.0;					
 			v_b_->block(i, j, k)[1] = 0.0;					

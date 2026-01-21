@@ -2909,8 +2909,8 @@ void MF_context::set_up_emission_module(){
     // set emissivity module
     switch (RT_problem_->emissivity_model_)
     {
-    case emissivity_model::PRD:
-    case emissivity_model::PRD_FAST:
+    case emissivity_model_t::PRD:
+    case emissivity_model_t::PRD_FAST:
         // Default PRD model
         components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB_FAST);
         components.push_back(emission_coefficient_components::epsilon_R_III_GL);
@@ -2920,7 +2920,7 @@ void MF_context::set_up_emission_module(){
 
         break;
 
-    case emissivity_model::PRD_NORMAL:
+    case emissivity_model_t::PRD_NORMAL:
 
         components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB);
         components.push_back(emission_coefficient_components::epsilon_R_III_GL);
@@ -2930,7 +2930,7 @@ void MF_context::set_up_emission_module(){
 
         break;
 
-    case emissivity_model::PRD_MEDIUM:
+    case emissivity_model_t::PRD_MEDIUM:
 
         components.push_back(emission_coefficient_components::epsilon_R_II_CONTRIB_MEDIUM);
         components.push_back(emission_coefficient_components::epsilon_R_III_GL);
@@ -2941,7 +2941,7 @@ void MF_context::set_up_emission_module(){
         break;
         
     
-    case emissivity_model::CRD_limit:
+    case emissivity_model_t::CRD_limit:
         
         components.push_back(emission_coefficient_components::epsilon_pCRD_GL_limit);             
         components.push_back(emission_coefficient_components::epsilon_csc);      
@@ -2950,7 +2950,7 @@ void MF_context::set_up_emission_module(){
 
         break;
 
-    case emissivity_model::CRD_limit_VHP:
+    case emissivity_model_t::CRD_limit_VHP:
 
         components.push_back(emission_coefficient_components::epsilon_pCRD_VHP_limit);
         components.push_back(emission_coefficient_components::epsilon_csc);      
@@ -2959,7 +2959,7 @@ void MF_context::set_up_emission_module(){
 
         break;
 
-    case emissivity_model::PRD_AA:
+    case emissivity_model_t::PRD_AA:
 
         components.push_back(emission_coefficient_components::epsilon_R_II_AA_FAST);
         components.push_back(emission_coefficient_components::epsilon_R_III_GL);
@@ -2969,7 +2969,7 @@ void MF_context::set_up_emission_module(){
 
         break;
 
-    case emissivity_model::PRD_AA_MAPV:
+    case emissivity_model_t::PRD_AA_MAPV:
 
         components.push_back(emission_coefficient_components::epsilon_R_II_AA_FAST_MAPV);
         components.push_back(emission_coefficient_components::epsilon_R_III_GL);
@@ -2979,7 +2979,7 @@ void MF_context::set_up_emission_module(){
 
         break;
 
-    case emissivity_model::ZERO:
+    case emissivity_model_t::ZERO:
         
         components.push_back(emission_coefficient_components::epsilon_zero);             
         if (mpi_rank_ == 0) std::cout << "\nUsing ZERO emission, components:"<< std::endl;

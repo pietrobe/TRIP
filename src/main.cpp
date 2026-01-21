@@ -1,6 +1,5 @@
-#include "RT_solver.hpp"
 #include "RT_arbitrary_beam.hpp"
-#include "Test_rii_include.hpp"
+#include "RT_solver.hpp"
 
 //////////////////////////////////////////////////////////////////////////
 // Main function
@@ -8,8 +7,6 @@
 int
 main(int argc, char *argv[])
 {
-	std::filesystem::path output_info_file_name; // TODO remove
-
 	MPI_CHECK(MPI_Init(&argc, &argv));
 	print_PETSc_mem();
 
@@ -40,7 +37,8 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	std::stringstream ss_a, ss_b;
+	std::stringstream	  ss_a, ss_b;
+	std::filesystem::path output_info_file_name;
 
 	// print some info
 	if (mpi_rank == 0)
@@ -79,10 +77,15 @@ main(int argc, char *argv[])
 
 #endif // ACC_SOLAR_3D
 
+	if (mpi_rank == 0)
+	{
+		writeConfigResume(cfg, ss_b);
+	}
+
 	{ // start scope for RT_problem and RT_solver
-		
+
 		// create problem object
-		auto rt_problem_ptr = std::make_shared<RT_problem>(cfg); 
+		auto rt_problem_ptr = std::make_shared<RT_problem>(cfg);
 
 		// create solver object
 		RT_solver rt_solver(rt_problem_ptr);
@@ -166,13 +169,14 @@ main(int argc, char *argv[])
 			const int N_x = rt_problem_ptr->N_x_;
 			const int N_y = rt_problem_ptr->N_y_;
 
+			// Old scool output ....
+			// Where the output is written in separate files for each emergent spatial point
+			////////////////////////////////////////////////////////////////////////////////////////////////
 			for (int i = 0; i < N_x; ++i)
 			{
 				for (int j = 0; j < N_y; ++j)
 				{
 					// const std::string output_file_Omega_mu	   = output_file + "_mu" + mu_str + "_chi" + chi_str;
-					const std::string output_file_frequencies  = (output_path / "frequencies_grid_Hz").string();
-					const std::string output_file_angular_grid = (output_path / "angular_grid").string();
 
 					rt_problem_ptr->write_surface_point_profiles(output_file, i, j);
 
@@ -181,11 +185,21 @@ main(int argc, char *argv[])
 
 					if (rt_problem_ptr->mpi_rank_ == 0 and i == 0 and j == 0)
 					{
+						const std::string output_file_frequencies  = (output_path / "frequencies_grid_Hz").string();
+						const std::string output_file_angular_grid = (output_path / "angular_grid").string();
+
 						rt_problem_ptr->write_angular_grid_csv(output_file_angular_grid, i, j);
 						rt_problem_ptr->write_frequencies_grid_csv(output_file_frequencies, i, j);
 					}
 				}
 			}
+
+			// New HDF5 output .... TESTING PASSED
+			////////////////////////////////////////////////////////////////////////////////////////////////
+			write_emergent_field_hdf5(*rt_problem_ptr,											  //
+									  (output_path / "emergent_field_angular_grid.h5").string()); //
+
+			rt_problem_ptr->write_JKQ_field_hdf5((output_path / "JKQ_field.h5").string()); //
 
 			////////////////////////////////////////////////////////////////////////////////////////////////
 			// compute arbitrary beams
@@ -195,7 +209,11 @@ main(int argc, char *argv[])
 			rt_problem_ptr->free_fields_memory();
 			rt_solver.free_fields_memory();
 
-			process_arbitrary_beams(cfg.arbitrary_beams, rt_solver, rt_problem_ptr, output_file, output_info_file_name);
+			process_arbitrary_beams_hdf(cfg.arbitrary_beams,										 //
+										rt_solver,													 //
+										rt_problem_ptr,												 //
+										(output_path / "emergent_field_abitrary_Omega.h5").string(), //
+										output_info_file_name);										 //
 
 			const double main_end_time = MPI_Wtime();
 
@@ -246,8 +264,11 @@ main(int argc, char *argv[])
 				ss_mem << "Total number of devices (accelerators) used: " << devices_cnt << std::endl;
 #endif // ACC_SOLAR_3D
 
-				ss_mem << format_execution_time_summary(rt_problem_ptr->mpi_size_, main_start_time, main_setup_time,
-														main_solve_end_time, main_end_time);
+				ss_mem << format_execution_time_summary(rt_problem_ptr->mpi_size_, //
+														main_start_time,		   //
+														main_setup_time,		   //
+														main_solve_end_time,	   //
+														main_end_time);			   //
 
 				std::cout << ss_mem.str();
 
@@ -270,6 +291,10 @@ main(int argc, char *argv[])
 
 	// Kokkos::finalize();
 	PetscFinalize(); // CHKERRQ(ierr);
+
+	MPI_Barrier(MPI_COMM_WORLD);
+	if (mpi_rank == 0) std::cout << "TRIP ended successfully at: " << getCurrentDateTime() << std::endl;
+
 	MPI_CHECK(MPI_Finalize());
 
 	return 0;
