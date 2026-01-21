@@ -3,7 +3,6 @@
 
 #include "GridManager/GridManager.hpp"
 #include "RT_utility.hpp"
-#include "sgrid_Core.hpp"
 #include "thdf.h"
 
 // Type for storing fields
@@ -643,7 +642,7 @@ class RT_problem
 	void allocate_fields_Omega(); 
 	void set_eta_and_rhos_Omega(const Real theta, const Real chi);	
 
-	// allcoate reduced data structeres
+	// allocate reduced data structeres
 	void allocate_unpolarized_fields();	
 	void allocate_J_KQ_field();	
 
@@ -656,74 +655,6 @@ class RT_problem
 	Field_ptr_t eta_field_Omega_; 
 	Field_ptr_t rho_field_Omega_; 
 
-	inline void free_fields_memory()
-	{
-		return mass_;
-	}
-	inline double
-	atomic_El() const
-	{
-		return El_;
-	}
-	inline double
-	atomic_Eu() const
-	{
-		return Eu_;
-	}
-	inline int
-	atomic_Jl2() const
-	{
-		return Jl2_;
-	}
-	inline int
-	atomic_Ju2() const
-	{
-		return Ju2_;
-	}
-	inline double
-	atomic_gl() const
-	{
-		return gl_;
-	}
-	inline double
-	atomic_gu() const
-	{
-		return gu_;
-	}
-	inline double
-	atomic_Aul() const
-	{
-		return Aul_;
-	}
-	inline Field_ptr_t
-	get_D2() const
-	{
-		return D2_;
-	}
-
-	bool
-	field_is_zero(const Field_ptr_t field);
-
-	// auxiliary_fields for single direction Omega outside theta and chi grids
-	void
-	allocate_fields_Omega();
-	void
-	set_eta_and_rhos_Omega(const Real theta, const Real chi);
-
-	// allcoate reduced data structeres
-	void
-	allocate_unpolarized_fields();
-	void
-	allocate_J_KQ_field();
-
-	// polarized_to_unpolarized
-	void
-	polarized_to_unpolarized_field(const Field_ptr_t field, Field_ptr_t field_unpol);
-
-	Field_ptr_t I_field_Omega_; // intensity
-	Field_ptr_t S_field_Omega_; // source function
-	Field_ptr_t eta_field_Omega_;
-	Field_ptr_t rho_field_Omega_;
 
 	inline void
 	free_fields_memory()

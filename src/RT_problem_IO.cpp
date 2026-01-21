@@ -36,20 +36,20 @@ write_emergent_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 	const int N_theta = rt_problem.N_theta_;
 	const int N_chi	  = rt_problem.N_chi_;
 
-	const auto f_dev = rt_problem.I_field_->view_device();
-	const auto g_dev = rt_problem.space_grid_->view_device();
+	const auto f_dev = rt_problem.I_field_;
+	const auto g_dev = rt_problem.space_grid_;
 
 	// indeces
-	const int i_start = g_dev.margin[0];
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
+	const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
+	const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
-	const int k_end = k_start + g_dev.dim[2];
+	const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
+	const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
+	const int k_end = k_start + g_dev->getLocalSizeZ();
 
-	const int size_i = g_dev.dim[0];
-	const int size_j = g_dev.dim[1];
+	const int size_i = g_dev->getLocalSizeX();//g_dev.dim[0];
+	const int size_j = g_dev->getLocalSizeY();//g_dev.dim[1];
 
 	rt_problem.accumulate_surface_domain_data(surface_data_I, surface_data_Q, surface_data_U, surface_data_V);
 
@@ -69,9 +69,7 @@ write_emergent_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 std::tuple<int, int>
 RT_problem::make_write_surface_MPI_Comm(const MPI_Comm MPI_Comm_MAIN, MPI_Comm &write_comm)
 {
-	const auto g_dev = space_grid_->view_device();
-
-	const int color = (g_dev.global_coord(2, g_dev.margin[2]) == 0) ? 1 : 0;
+	const int color = (space_grid_->local_to_global_coordinate(2, space_grid_->getGlobalStartZ() /*g_dev.margin[2]*/) == 0) ? 1 : 0;
 
 	const int mpi_status =						//
 		MPI_Comm_split(MPI_Comm_MAIN,			//
@@ -88,13 +86,11 @@ RT_problem::make_write_surface_MPI_Comm(const MPI_Comm MPI_Comm_MAIN, MPI_Comm &
 int																			   //
 RT_problem::write_angular_frequency_grids_hdf5(const std::string &output_file) //
 {
-	const auto g_dev = space_grid_->view_device();
-
 	// Only MPI rank 0 AND the process owning global spatial coords (0,0) should create the file
 	if (not(this->mpi_rank_ == 0 and						//
-			g_dev.global_coord(0, g_dev.margin[0]) == 0 and //
-			g_dev.global_coord(1, g_dev.margin[1]) == 0 and //
-			g_dev.global_coord(2, g_dev.margin[2]) == 0))	//
+			space_grid_->local_to_global_coordinate(0, space_grid_->getGlobalStartX()) == 0 and //
+			space_grid_->local_to_global_coordinate(1, space_grid_->getGlobalStartY()) == 0 and //
+			space_grid_->local_to_global_coordinate(2, space_grid_->getGlobalStartZ()) == 0))	//
 	{
 		return EXIT_SUCCESS;
 	}
@@ -161,19 +157,18 @@ RT_problem::write_emergent_field_hdf5(const std::string &output_file, MPI_Comm w
 									  std::vector<double> &surface_data_I, std::vector<double> &surface_data_Q,
 									  std::vector<double> &surface_data_U, std::vector<double> &surface_data_V)
 {
-	const auto g_dev   = space_grid_->view_device();
-	const int  k_start = g_dev.margin[2];
+	const int  k_start = space_grid_->getGlobalStartZ();
 
-	if (g_dev.global_coord(2, k_start) != 0) return EXIT_SUCCESS;
+	if (space_grid_->local_to_global_coordinate(2, k_start) != 0) return EXIT_SUCCESS;
 
-	const int i_size = g_dev.dim[0];
-	const int j_size = g_dev.dim[1];
+	const int i_size = space_grid_->getLocalSizeX();
+	const int j_size = space_grid_->getLocalSizeY();
 
-	const int i_start = g_dev.margin[0];
-	const int j_start = g_dev.margin[1];
+	const int i_start = space_grid_->getGlobalStartX();
+	const int j_start = space_grid_->getGlobalStartY();
 
-	const int i_start_global = g_dev.global_coord(0, i_start);
-	const int j_start_global = g_dev.global_coord(1, j_start);
+	const int i_start_global = space_grid_->local_to_global_coordinate(0, i_start);
+	const int j_start_global = space_grid_->local_to_global_coordinate(1, j_start);
 
 	// Create HDF5 file with MPI I/O access property list
 	// hid_t file_id, plist_id;
@@ -229,23 +224,20 @@ int
 RT_problem::accumulate_surface_domain_data(std::vector<double> &surface_data_I, std::vector<double> &surface_data_Q,
 										   std::vector<double> &surface_data_U, std::vector<double> &surface_data_V)
 {
-	const auto f_dev = I_field_->view_device();
-	const auto g_dev = space_grid_->view_device();
-
 	// indeces
-	const int i_start = g_dev.margin[0];
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const int i_start = space_grid_->getGlobalStartX(); //g_dev.margin[0];
+	const int j_start = space_grid_->getGlobalStartY(); //g_dev.margin[1];
+	const int k_start = space_grid_->getGlobalStartZ();
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); //g_dev.dim[0];
+	const int j_end = j_start + space_grid_->getLocalSizeY(); //g_dev.dim[1];
 
-	const int size_i = g_dev.dim[0];
-	const int size_j = g_dev.dim[1];
+	const int size_i = space_grid_->getLocalSizeX();
+	const int size_j = space_grid_->getLocalSizeY();
 
 	int i_global, j_global;
 
-	if (g_dev.global_coord(2, k_start) != 0) return 0;
+	if (space_grid_->local_to_global_coordinate(2, k_start) != 0) return 0;
 
 	const int N_nu	  = this->N_nu_;
 	const int N_theta = this->N_theta_;
@@ -258,28 +250,28 @@ RT_problem::accumulate_surface_domain_data(std::vector<double> &surface_data_I, 
 
 	std::cout << "Rank " << mpi_rank_ << " accumulating surface data from domain: i[" << i_start << ", " << i_end
 			  << ")  j[" << j_start << ", " << j_end << ")" << std::endl
-			  << " global coords: i[" << g_dev.global_coord(0, i_start) << ", " << g_dev.global_coord(0, i_end - 1)
-			  << "]  j[" << g_dev.global_coord(1, j_start) << ", " << g_dev.global_coord(1, j_end - 1) << "]"
+			  << " global coords: i[" << space_grid_->local_to_global_coordinate(0, i_start) << ", " << space_grid_->local_to_global_coordinate(0, i_end - 1)
+			  << "]  j[" << space_grid_->local_to_global_coordinate(1, j_start) << ", " << space_grid_->local_to_global_coordinate(1, j_end - 1) << "]"
 			  << std::endl;
 
 	for (int i = i_start; i < i_end; ++i)
 	{
-		// i_global = g_dev.global_coord(0, i);
+		// i_global = g_dev.local_to_global_coordinate(0, i);
 		for (int j = j_start; j < j_end; ++j)
 		{
-			// j_global = g_dev.global_coord(1, j);
+			// j_global = g_dev.local_to_global_coordinate(1, j);
 			for (int j_theta = N_theta_ / 2; j_theta < N_theta_; ++j_theta)
 			{
 				for (int k_chi = 0; k_chi < N_chi_; ++k_chi)
 				{
-					const int b_start = local_to_block(j_theta, k_chi, 0);
+					const int b_start = I_field_->local_to_block(j_theta, k_chi, 0);
 
 					for (int b = 0; b < 4 * N_nu_; b = b + 4)
 					{
-						const double I = f_dev.block(i, j, k_start)[b_start + b + 0];
-						const double Q = f_dev.block(i, j, k_start)[b_start + b + 1];
-						const double U = f_dev.block(i, j, k_start)[b_start + b + 2];
-						const double V = f_dev.block(i, j, k_start)[b_start + b + 3];
+						const double I = I_field_->block(i, j, k_start)[b_start + b + 0];
+						const double Q = I_field_->block(i, j, k_start)[b_start + b + 1];
+						const double U = I_field_->block(i, j, k_start)[b_start + b + 2];
+						const double V = I_field_->block(i, j, k_start)[b_start + b + 3];
 
 						surface_data_I.push_back(I);
 						surface_data_Q.push_back(Q / I * 100.0);
@@ -300,24 +292,20 @@ RT_problem::accumulate_surface_profiles_Omega_domain_data(std::vector<double> &s
 														  std::vector<double> &surface_data_U, //
 														  std::vector<double> &surface_data_V)
 {
-	const auto f_dev = I_field_->view_device();
-	const auto g_dev = space_grid_->view_device();
-	const auto I_dev = I_field_Omega_->view_device();
-
 	// indeces
-	const int i_start = g_dev.margin[0];
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const int i_start = space_grid_->getGlobalStartX(); //g_dev.margin[0];
+	const int j_start = space_grid_->getGlobalStartY(); //g_dev.margin[1];
+	const int k_start = space_grid_->getGlobalStartZ(); //g_dev.margin[2];
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); //g_dev.dim[0];
+	const int j_end = j_start + space_grid_->getLocalSizeY(); //g_dev.dim[1];
 
-	const int size_i = g_dev.dim[0];
-	const int size_j = g_dev.dim[1];
+	const int size_i = space_grid_->getLocalSizeX();
+	const int size_j = space_grid_->getLocalSizeY();
 
 	int i_global, j_global;
 
-	if (g_dev.global_coord(2, k_start) != 0) return 0;
+	if (space_grid_->local_to_global_coordinate(2, k_start) != 0) return 0;
 
 	const int N_nu	  = this->N_nu_;
 	const int N_theta = this->N_theta_;
@@ -330,19 +318,19 @@ RT_problem::accumulate_surface_profiles_Omega_domain_data(std::vector<double> &s
 
 	for (int i = i_start; i < i_end; ++i)
 	{
-		i_global = g_dev.global_coord(0, i);
+		i_global = space_grid_->local_to_global_coordinate(0, i);
 		for (int j = j_start; j < j_end; ++j)
 		{
-			j_global = g_dev.global_coord(1, j);
+			j_global = space_grid_->local_to_global_coordinate(1, j);
 
 			for (int b = 0; b < 4 * N_nu_; b = b + 4)
 			{
-				I_dev.block(i, j, k_start)[b];
+				I_field_Omega_->block(i, j, k_start)[b];
 
-				const double I = I_dev.block(i, j, k_start)[b + 0];
-				const double Q = I_dev.block(i, j, k_start)[b + 1];
-				const double U = I_dev.block(i, j, k_start)[b + 2];
-				const double V = I_dev.block(i, j, k_start)[b + 3];
+				const double I = I_field_Omega_->block(i, j, k_start)[b + 0];
+				const double Q = I_field_Omega_->block(i, j, k_start)[b + 1];
+				const double U = I_field_Omega_->block(i, j, k_start)[b + 2];
+				const double V = I_field_Omega_->block(i, j, k_start)[b + 3];
 
 				surface_data_I.push_back(I);
 				surface_data_Q.push_back(Q / I * 100.0);
@@ -362,11 +350,10 @@ RT_problem::write_beams_frequency_grids_Omega_hdf5(const std::vector<BeamDirecti
 	const int N_directions = static_cast<int>(beams.size());
 
 	// Only MPI rank 0 AND the process owning global spatial coords (0,0) should create the file
-	const auto g_dev = space_grid_->view_device();
 	if (not(this->mpi_rank_ == 0 and						//
-			g_dev.global_coord(0, g_dev.margin[0]) == 0 and //
-			g_dev.global_coord(1, g_dev.margin[1]) == 0 and //
-			g_dev.global_coord(2, g_dev.margin[2]) == 0))	//
+			space_grid_->local_to_global_coordinate(0, space_grid_->getGlobalStartX()) == 0 and //
+			space_grid_->local_to_global_coordinate(1, space_grid_->getGlobalStartY()) == 0 and //
+			space_grid_->local_to_global_coordinate(2, space_grid_->getGlobalStartZ()) == 0))	//
 	{
 		return EXIT_SUCCESS;
 	}
@@ -426,23 +413,21 @@ RT_problem::write_emergent_field_Omega_hdf5(const std::string				 &output_file,	
 											std::vector<double>				 &surface_data_U, //
 											std::vector<double>				 &surface_data_V)
 {
-	const auto g_dev = space_grid_->view_device();
-
 	// indeces
-	const int i_start = g_dev.margin[0];
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const int i_start = space_grid_->getGlobalStartX(); //g_dev.margin[0];
+	const int j_start = space_grid_->getGlobalStartY(); //g_dev.margin[1];
+	const int k_start = space_grid_->getGlobalStartZ(); //g_dev.margin[2];
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); //g_dev.dim[0];
+	const int j_end = j_start + space_grid_->getLocalSizeY(); //g_dev.dim[1];
 
-	const int size_i = g_dev.dim[0];
-	const int size_j = g_dev.dim[1];
+	const int size_i = space_grid_->getLocalSizeX();
+	const int size_j = space_grid_->getLocalSizeY();
 
-	if (g_dev.global_coord(2, k_start) != 0) return EXIT_SUCCESS;
+	if (space_grid_->local_to_global_coordinate(2, k_start) != 0) return EXIT_SUCCESS;
 
-	const int i_global = g_dev.global_coord(0, i_start);
-	const int j_global = g_dev.global_coord(1, j_start);
+	const int i_global = space_grid_->local_to_global_coordinate(0, i_start);
+	const int j_global = space_grid_->local_to_global_coordinate(1, j_start);
 
 	// hid_t file_id, plist_id;
 	// plist_id = H5Pcreate(H5P_FILE_ACCESS);
@@ -517,11 +502,6 @@ RT_problem::accumulate_JKQ_values(const int						   x_strat,		  //
 								  std::vector<THDF_JKQ_n_float_t> &JKQ_real_norm, //
 								  std::vector<THDF_JKQ_n_float_t> &JKQ_imag_norm)
 {
-	const auto f_dev			 = I_field_->view_device();
-	auto	   Doppler_width_dev = Doppler_width_->view_device();
-	auto	   temp_dev			 = T_->view_device();
-	auto	   bulk_velocity_dev = v_b_->view_device();
-
 	std::vector<double> u_vec;
 	u_vec.resize(this->N_nu_);
 	for (int i = x_strat; i < x_end; ++i)
@@ -530,8 +510,8 @@ RT_problem::accumulate_JKQ_values(const int						   x_strat,		  //
 		{
 			for (int k = z_strat; k < z_end; ++k)
 			{
-				const Real_t *block_ptr = f_dev.block(i, j, k);
-				const double  dnd		= Doppler_width_dev.ref(i, j, k);
+				const Real_t *block_ptr = I_field_->block(i, j, k);
+				const double  dnd		= Doppler_width_->ref(i, j, k);
 
 				for (int ui = 0; ui < this->N_nu_; ++ui)
 				{
@@ -539,10 +519,10 @@ RT_problem::accumulate_JKQ_values(const int						   x_strat,		  //
 					u_vec[ui]		= (this->nu_0_ - nu) / dnd;
 				}
 
-				const double v_b	   = bulk_velocity_dev.block(i, j, k)[0];
-				const double v_b_theta = bulk_velocity_dev.block(i, j, k)[1];
-				const double v_b_chi   = bulk_velocity_dev.block(i, j, k)[2];
-				const double T		   = temp_dev.ref(i, j, k);
+				const double v_b	   = v_b_->block(i, j, k)[0];
+				const double v_b_theta = v_b_->block(i, j, k)[1];
+				const double v_b_chi   = v_b_->block(i, j, k)[2];
+				const double T		   = T_->ref(i, j, k);
 
 				// This calculate JKQ in the comoving frame
 				auto JKQ_matrix_sh_ptr =												   //
@@ -606,20 +586,18 @@ RT_problem::get_KQ_values(std::vector<int> &KQ_values,				   //
 int
 RT_problem::write_JKQ_field_hdf5(const std::string &output_file)
 {
-	const auto g_dev = space_grid_->view_device();
-
 	// indeces
-	const int i_start = g_dev.margin[0];
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const int i_start = space_grid_->getGlobalStartX(); //g_dev.margin[0];
+	const int j_start = space_grid_->getGlobalStartY(); //g_dev.margin[1];
+	const int k_start = space_grid_->getGlobalStartZ(); //g_dev.margin[2];
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
-	const int k_end = k_start + g_dev.dim[2];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); //g_dev.dim[0];
+	const int j_end = j_start + space_grid_->getLocalSizeY(); //g_dev.dim[1];
+	const int k_end = k_start + space_grid_->getLocalSizeZ();
 
-	const int size_i = g_dev.dim[0];
-	const int size_j = g_dev.dim[1];
-	const int size_k = g_dev.dim[2];
+	const int size_i = space_grid_->getLocalSizeX();
+	const int size_j = space_grid_->getLocalSizeY();
+	const int size_k = space_grid_->getLocalSizeZ();
 
 	std::vector<int> KQ_values;
 	std::vector<int> KQ_values_real_compressed;
@@ -692,9 +670,9 @@ RT_problem::write_JKQ_field_hdf5(const std::string &output_file)
 	JKQ_field.norm_multiplier_JKQ_re = JKQ_real_norm_mult.data();
 	JKQ_field.norm_multiplier_JKQ_im = JKQ_imag_norm_mult.data();
 
-	const int i_start_global = g_dev.global_coord(0, i_start);
-	const int j_start_global = g_dev.global_coord(1, j_start);
-	const int k_start_global = g_dev.global_coord(2, k_start);
+	const int i_start_global = space_grid_->local_to_global_coordinate(0, i_start);
+	const int j_start_global = space_grid_->local_to_global_coordinate(1, j_start);
+	const int k_start_global = space_grid_->local_to_global_coordinate(2, k_start);
 
 	if (mpi_rank_ == 0)
 	{
