@@ -56,7 +56,7 @@ main(int argc, char *argv[])
 	}
 
 	PetscInitialize(&argc, &argv, (char *)0, NULL);
-	Kokkos::initialize(argc, argv);
+	// Kokkos::initialize(argc, argv);
 
 #if ACC_SOLAR_3D == _ON_
 
@@ -268,7 +268,7 @@ main(int argc, char *argv[])
 	RII_epsilon_contrib::RII_contrib_MPI_Finalize();
 #endif // ACC_SOLAR_3D
 
-	Kokkos::finalize();
+	// Kokkos::finalize();
 	PetscFinalize(); // CHKERRQ(ierr);
 	MPI_CHECK(MPI_Finalize());
 

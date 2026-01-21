@@ -9,7 +9,7 @@ int test_rii_3D_include(int argc, char *argv[]) {
 
   MPI_CHECK(MPI_Init(&argc, &argv));
   PetscInitialize(&argc, &argv, (char *)0, NULL);
-  Kokkos::initialize(argc, argv);
+//   Kokkos::initialize(argc, argv);
 
   {
     const int N_theta = atoi(argv[1]);
@@ -96,7 +96,7 @@ int test_rii_3D_include(int argc, char *argv[]) {
     // rt_solver_sh_ptr->solve();
   }
 
-  Kokkos::finalize();
+//   Kokkos::finalize();
   PetscFinalize();
   MPI_CHECK(MPI_Finalize());
 

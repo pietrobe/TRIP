@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <vector>
 #include <iostream>
+#include <memory>
 
 
 /** @brief wrapper around PETSc DMDA describing a 3D spatial grid. */

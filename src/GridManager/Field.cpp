@@ -57,6 +57,19 @@ Real* Field::block(PetscInt i,PetscInt j,PetscInt k)
 }
 Real* Field::operator()(PetscInt i,PetscInt j,PetscInt k) { return block(i,j,k); }
 
+Real* Field::ref(PetscInt i,PetscInt j,PetscInt k)
+{
+    assert(i >= 0 && i < xm);
+    assert(j >= 0 && j < ym);
+    assert(k >= 0 && k < zm);
+    assert(data_host != nullptr);
+
+    PetscInt linear_block = (i * ym + j) * zm + k;
+    PetscInt idx = linear_block * block_size;
+    return &data_host[idx];
+}
+
+
 
 std::vector<PetscInt> Field::block_to_local(PetscInt b) const 
 {

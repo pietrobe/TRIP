@@ -542,7 +542,7 @@ void RT_problem::read_3D(const char* filename){
 		D2_->block(i,j,k)[0]      = tmp_vector[11];
 		
 		// hardcoding xi
-		xi_->block(i,j,k) = 0; // with conversion to cm/s
+		xi_->block(i,j,k)[0] = 0; // with conversion to cm/s
 
 		// RH Doppler_width to compute Qel
 		const double xi = 1e5 * xi_vec[k_reverse];; // with conversion to cm/s
@@ -1306,8 +1306,8 @@ void const RT_problem::print_info(){
 void RT_problem::polarized_to_unpolarized_field(const Field_ptr_t field, Field_ptr_t field_unpol){
 	space_grid_->parallel_for(
 		[&](int i, int j, int k){
-			auto *block       = field_dev.block(i, j, k);
-	   		auto *block_unpol = field_unpol_dev.block(i, j, k);
+			auto *block       = field->block(i, j, k);
+	   		auto *block_unpol = field_unpol->block(i, j, k);
 
 			for (int b = 0; b < block_size_; b = b + 4) block_unpol[b/4] = block[b];	
 		}
@@ -1400,7 +1400,7 @@ void RT_problem::init_field(Field_ptr_t input_field, const Real input_value){
 	auto grid = input_field->getGrid();
     grid->parallel_for(
 		[&](int i, int j, int k) {         
-			auto *block = field_dev->block(i, j, k);
+			auto *block = input_field->block(i, j, k);
 			for (int b = 0; b < block_size_; ++b) 
 				block[b] = input_value;        	
     	}
@@ -1700,7 +1700,7 @@ void RT_problem::set_eta_and_rhos(){
         Rotation_matrix R(0.0, -theta_B, -chi_B);
         
         // indeces
-        std::vector<int> local_idx;
+        std::vector<PetscInt> local_idx;
         int j_theta, k_chi, n_nu;
          
         for (int b = 0; b < block_size_; b = b + 4) 
@@ -2264,9 +2264,9 @@ void const RT_problem::print_surface_QI_point(const int i_space, const int j_spa
 
 					if (j_global == j_space)
 					{
-						const int b_start = field->local_to_block(j_theta, k_chi, n_nu);
-						const double I   = field->block(i,j,k_start)[b_start];
-						const double QUV = field->block(i,j,k_start)[b_start + i_stokes];							
+						const int b_start = I_field_->local_to_block(j_theta, k_chi, n_nu);
+						const double I   = I_field_->block(i,j,k_start)[b_start];
+						const double QUV = I_field_->block(i,j,k_start)[b_start + i_stokes];							
 
 						std::cout << QUV/I << std::endl; 													
 
@@ -2442,7 +2442,7 @@ RT_problem::write_surface_point_profiles(input_string file_name, const int i_spa
 
 										for (int b = 0; b < 4 * N_nu_; b = b + 4)
 										{
-											I = f_dev->block(i, j, k_start)[b_start + b];
+											I = I_field_->block(i, j, k_start)[b_start + b];
 
 											if (i_stokes == 0)
 											{
@@ -2450,7 +2450,7 @@ RT_problem::write_surface_point_profiles(input_string file_name, const int i_spa
 											}
 											else
 											{
-												QUV = f_dev->block(i, j, k_start)[b_start + b + i_stokes];
+												QUV = I_field_->block(i, j, k_start)[b_start + b + i_stokes];
 
 												outputFile << std::scientific << std::setprecision(15) << 100.0 * QUV / I
 														   << " ";

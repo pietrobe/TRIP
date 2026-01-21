@@ -6,6 +6,7 @@
 #include <iostream>
 #include <omp.h>
 #include <iomanip>
+#include <memory>
 #include <fstream>
 #include <type_traits>
 #include "Grid3D.hpp"

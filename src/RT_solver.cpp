@@ -1248,7 +1248,7 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
     
     // write eta and rhos to the serial grid
     // sgrid::ReMap<Field_t> tmp_remap;
-    ReMap3D tmp_remap(RT_problem_->space_grid, space_grid_serial_, blockRT_problem_->block_size_, tile_size_);
+    ReMap3D tmp_remap(RT_problem_->space_grid_, space_grid_serial_, RT_problem_->block_size_, tile_size_);
 
     // tmp_remap.init(*(RT_problem_->eta_field_Omega_), *eta_field_serial_Omega_);
     // tmp_remap.from_pgrid_to_pblock(*(RT_problem_->eta_field_Omega_), *eta_field_serial_Omega_, 0); 
@@ -1999,7 +1999,7 @@ void MF_context::formal_solve_1_5D(Field_ptr_t I_field, const Field_ptr_t S_fiel
     
     const auto eta_dev = RT_problem_->eta_field_ ; 
     const auto rho_dev = RT_problem_->rho_field_ ; 
-    const auto g_dev   = RT_problem_->space_grid_-; 
+    const auto g_dev   = RT_problem_->space_grid_; 
 
     // input fields 
     const auto I_dev = I_field ; 

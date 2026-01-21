@@ -10,6 +10,8 @@ find_package(PkgConfig REQUIRED)
 
 find_package(yaml-cpp QUIET)
 
+find_package(MPI REQUIRED) # Added Melanie
+
 if(NOT yaml-cpp_FOUND)
     message(STATUS "yaml-cpp not found on system, fetching from Git...")
     include(FetchContent)
@@ -25,7 +27,7 @@ endif()
 
 #target_link_libraries(YOUR_LIBRARY PUBLIC yaml-cpp::yaml-cpp) # The library or executable that require yaml-cpp library
 
-find_package(sgrid 0 REQUIRED)
+# find_package(sgrid 0 REQUIRED)
 find_package(Boost 1.61 COMPONENTS program_options regex serialization filesystem  atomic  REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIRS})
@@ -141,8 +143,10 @@ set_property(TARGET rii PROPERTY IMPORTED_LOCATION "${RII_ROOT_PATH}/build/libri
 
 message( STATUS  "RII path: ${RII_ROOT_PATH}")
 
-# import all the dependencies and targets
-target_link_libraries(solar_3D PUBLIC  sgrid::sgrid rii ${Boost_LIBRARIES})
+# import all the dependencies and targets # removed sgrid::sgrid
+target_link_libraries(solar_3D PUBLIC rii ${Boost_LIBRARIES})
+
+target_link_libraries(solar_3D PUBLIC MPI::MPI_CXX) # Added Melanie
 
 target_sources(solar_3D PUBLIC ${SOURCES_FILES})
 target_include_directories(solar_3D PUBLIC  

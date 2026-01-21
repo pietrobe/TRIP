@@ -150,7 +150,7 @@ print_parallel_memory_usage(const std::string &tag = "")
 	MPI_Reduce(local_array.data(), sum.data(), fields.size(), MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	MPI_Reduce(local_array.data(), min.data(), fields.size(), MPI_LONG, MPI_MIN, 0, MPI_COMM_WORLD);
 	MPI_Reduce(local_array.data(), max.data(), fields.size(), MPI_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
-OSU
+
 	if (rank == 0)
 	{
 		std::cout << "\n===== MPI Memory Usage Summary " << (tag.empty() ? "" : "(" + tag + ")") << " =====\n";

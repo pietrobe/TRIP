@@ -1,6 +1,7 @@
 #pragma once
 #include "Grid3D.hpp"
 #include <algorithm>
+#include <memory>
 #include <vector>
 #include <array>
 #include <stdexcept>
@@ -150,6 +151,9 @@ public:
     
     /** @brief returns pointer to block (i,j,k) */
     Real* block(PetscInt i,PetscInt j,PetscInt k);
+
+    /** @brief returns pointer to (i,j,k)[0] */
+    Real* ref(PetscInt i,PetscInt j,PetscInt k);
 
     /** @brief same as block(i,j,k) but with less verbose syntax (field(i,j,k) instead of field.block(i,j,k)) */
     Real* operator()(PetscInt i,PetscInt j,PetscInt k);

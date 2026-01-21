@@ -317,7 +317,7 @@ public:
 		
 	    print_info();	    
 
-	   	MPI_Barrier(space_grid_->raw_comm()); Real end = MPI_Wtime(); 	    
+	   	MPI_Barrier(space_grid_->getComm()); Real end = MPI_Wtime(); 	    
 	    if (mpi_rank_ == 0) printf("Set up time:\t\t%g (seconds)\n", end - start);	      		
 	}
 
@@ -340,7 +340,9 @@ public:
 		set_sizes();
 							
 		// init grid
-		space_grid_ = std::make_shared<Grid_t>(MPI_COMM_WORLD, N_x_, N_y_, N_z_);
+		space_grid_ = std::make_shared<Grid3D>(
+			MPI_COMM_WORLD, N_x_, N_y_, N_z_
+		);
 
 		// init fields
 		allocate_fields();				
