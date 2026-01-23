@@ -2367,7 +2367,7 @@ bool RT_problem::field_is_zero(const Field_ptr_t field)
 	// indeces
 	const int i_start = space_grid_->getGlobalStartX(); 
 	const int j_start = space_grid_->getGlobalStartY(); 
-	const int k_start = space_grid_->getGlobalStartX(); 
+	const int k_start = space_grid_->getGlobalStartZ(); 
 
 	const int i_end = i_start + space_grid_->getLocalSizeX();
 	const int j_end = j_start + space_grid_->getLocalSizeY();

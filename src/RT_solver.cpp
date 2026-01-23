@@ -3720,7 +3720,7 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
             counter_j++;
         }
 
-        if (counter_j == j_end - g_dev->getGlobalStartX()/*g_dev.margin[1]*/)
+        if (counter_j == j_end - g_dev->getGlobalStartY()/*g_dev.margin[1]*/)
         {
             counter_j = 0;
             counter_k++;
