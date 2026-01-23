@@ -30,14 +30,13 @@ public:
      * @param Nphysical_ number of physical quantities per spatial cell.
      * @param Nparam_size vector of sizes of each independent parameters. 
      * @param allocate_PETSc_vec flag indicating whether PETSc Vec is needed (set to true) or not (set to false). 
-     * By default, allocate_PETSc_vec = false.
      */
     Field(
         const std::string &fieldName, 
         Grid_ptr grid_,
         const PetscInt Nphysical_, 
         const std::vector<PetscInt>& Nparam_size_,
-        const bool allocate_PETSc_vec = false)
+        const bool allocate_PETSc_vec)
         : name(fieldName), 
           grid(grid_), 
           Nphysical(Nphysical_), 
@@ -60,7 +59,6 @@ public:
      * @param fieldName name of the field.
      * @param grid_ pointer to associated local Grid3D.
      * @param allocate_PETSc_vec flag indicating whether PETSc Vec is needed (set to true) or not (set to false). 
-     * By default, allocate_PETSc_vec = false.
      */
     Field(
         const std::string &fieldName, 
@@ -83,13 +81,12 @@ public:
      * @param grid_ pointer to associated local Grid3D.
      * @param Nphysical_ number of physical quantities per spatial cell.
      * @param allocate_PETSc_vec flag indicating whether PETSc Vec is needed (set to true) or not (set to false). 
-     * By default, allocate_PETSc_vec = false.
      */
     Field(
         const std::string &fieldName, 
         Grid_ptr grid_, 
         const PetscInt Nphysical_,
-        const bool allocate_PETSc_vec = false)
+        const bool allocate_PETSc_vec)
         : name(fieldName), grid(grid_), 
           Nphysical(Nphysical_), 
           block_size(Nphysical_),
@@ -209,6 +206,6 @@ private:
 
 
     /** @brief allocate PETSc Vec. */
-    void allocate(bool allocate_vec = false);
+    void allocate(bool allocate_vec);
     
 };

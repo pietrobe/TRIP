@@ -167,6 +167,7 @@ target_link_libraries(solar_3D PUBLIC rii ${Boost_LIBRARIES})
 
 target_link_libraries(solar_3D PUBLIC MPI::MPI_CXX) # Added Melanie
 
+
 target_link_libraries(solar_3D PUBLIC ${HDF5_LIBRARIES})
 target_link_libraries(solar_3D PUBLIC ${HDF5_HL_LIBRARIES})
 
@@ -231,3 +232,18 @@ if(TRUE)
         COMMENT "Clean top-level build and thdf subproject"
     )
 endif()
+
+# Add Grid Manager
+add_library(GridManager
+    src/GridManager/Grid3D.cpp
+    src/GridManager/Field.cpp
+    src/GridManager/ReMap3D.cpp
+)
+target_include_directories(GridManager PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}src/GridManager
+)
+target_link_libraries(GridManager PUBLIC
+    PkgConfig::PETSC
+    MPI::MPI_CXX  
+)
+target_link_libraries(solar_3D PUBLIC GridManager)

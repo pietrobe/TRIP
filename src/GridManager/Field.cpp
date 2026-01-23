@@ -1,11 +1,13 @@
 #include "Grid3D.hpp"
+#include "Field.hpp"
 #include <algorithm>
 #include <vector>
 #include <array>
 #include <stdexcept>
 #include <iostream>
 #include <petscerror.h>
-#include "Field.hpp"
+#include <cassert>
+
 
 void Field::print_info()
 {
@@ -100,7 +102,7 @@ PetscInt Field::local_to_block(const std::vector<PetscInt>& idx) const
     return Nphysical * block_index;
 }
 
-void Field::allocate(bool allocate_vec = false)
+void Field::allocate(bool allocate_vec)
 {
     MPI_Comm comm = grid->getComm();
     PetscErrorCode ierr;

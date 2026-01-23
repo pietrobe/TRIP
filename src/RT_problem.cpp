@@ -1320,11 +1320,11 @@ void RT_problem::allocate_fields(){
 	I_field_   = std::make_shared<Field>(
 		"I", space_grid_, N_pol_, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_}, true); // allocate PETSc vec
 	S_field_   = std::make_shared<Field>(
-		"S",   space_grid_, N_pol_, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_});
+		"S",   space_grid_, N_pol_, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_}, false);
 	eta_field_ = std::make_shared<Field>(
-		"eta", space_grid_, N_pol_, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_});
+		"eta", space_grid_, N_pol_, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_}, false);
 	rho_field_ = std::make_shared<Field>(
-		"rho", space_grid_, N_pol_, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_});
+		"rho", space_grid_, N_pol_, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_}, false);
 }
 
 
@@ -1341,7 +1341,7 @@ void RT_problem::allocate_unpolarized_fields(){
 	I_unpol_field_ = std::make_shared<Field>(
 		"I_unpolarized", space_grid_,  1, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_}, true); 
 	S_unpol_field_ = std::make_shared<Field>(
-		"S_unpolarized", space_grid_,  1, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_});
+		"S_unpolarized", space_grid_,  1, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_}, false);
 }
 
 
@@ -1354,44 +1354,44 @@ void RT_problem::allocate_fields_Omega() {
 	I_field_Omega_   = std::make_shared<Field>(
 		"I_Omega",   space_grid_, N_pol_, std::vector<PetscInt>{N_nu_}, true); 
 	S_field_Omega_   = std::make_shared<Field>(
-		"S_Omega",   space_grid_, N_pol_, std::vector<PetscInt>{N_nu_});
+		"S_Omega",   space_grid_, N_pol_, std::vector<PetscInt>{N_nu_}, false);
 	eta_field_Omega_ = std::make_shared<Field>(
-		"eta_Omega", space_grid_, N_pol_, std::vector<PetscInt>{N_nu_});
+		"eta_Omega", space_grid_, N_pol_, std::vector<PetscInt>{N_nu_}, false);
 	rho_field_Omega_ = std::make_shared<Field>(
-		"rho_Omega", space_grid_, N_pol_, std::vector<PetscInt>{N_nu_});	
+		"rho_Omega", space_grid_, N_pol_, std::vector<PetscInt>{N_nu_}, false);	
 }
 
 
 void RT_problem::allocate_atmosphere() {
 	
 	// create atmospheric quantities 
-	D1_  = std::make_shared<Field>("D1",   space_grid_);
-	D2_  = std::make_shared<Field>("D2",   space_grid_);
-	Nl_  = std::make_shared<Field>("Nl",   space_grid_);
-	T_   = std::make_shared<Field>("T",    space_grid_);
-	xi_  = std::make_shared<Field>("xi",   space_grid_);
-	Cul_ = std::make_shared<Field>("Cul",  space_grid_);
-	Qel_ = std::make_shared<Field>("Qel",  space_grid_);
-	a_   = std::make_shared<Field>("a",    space_grid_);
-	W_T_ = std::make_shared<Field>("W_T",  space_grid_);
-	// Nu_   = std::make_shared<Field>("Nu",   space_grid);
+	D1_  = std::make_shared<Field>("D1",   space_grid_, false);
+	D2_  = std::make_shared<Field>("D2",   space_grid_, false);
+	Nl_  = std::make_shared<Field>("Nl",   space_grid_, false);
+	T_   = std::make_shared<Field>("T",    space_grid_, false);
+	xi_  = std::make_shared<Field>("xi",   space_grid_, false);
+	Cul_ = std::make_shared<Field>("Cul",  space_grid_, false);
+	Qel_ = std::make_shared<Field>("Qel",  space_grid_, false);
+	a_   = std::make_shared<Field>("a",    space_grid_, false);
+	W_T_ = std::make_shared<Field>("W_T",  space_grid_, false);
+	// Nu_   = std::make_shared<Field>("Nu",   space_grid_, false);
 
 	// magnetic field 
-	B_ = std::make_shared<Field>("B", space_grid_, PetscInt{3}); 	
+	B_ = std::make_shared<Field>("B", space_grid_, PetscInt{3}, false); 	
 
 	// bulk velocities, in polar coordinates
-	v_b_ = std::make_shared<Field>("v_b", space_grid_, PetscInt{3});    
+	v_b_ = std::make_shared<Field>("v_b", space_grid_, PetscInt{3}), false;    
 	
 	// quantities depending on position that can be precomputed
-	Doppler_width_ = std::make_shared<Field>("Doppler_width", space_grid_);
-	k_L_           = std::make_shared<Field>("k_L", 		    space_grid_);
-	epsilon_       = std::make_shared<Field>("epsilon_", 		space_grid_);
+	Doppler_width_ = std::make_shared<Field>("Doppler_width", space_grid_, false);
+	k_L_           = std::make_shared<Field>("k_L", space_grid_, false);
+	epsilon_       = std::make_shared<Field>("epsilon_", space_grid_, false);
 
 	// input quantities depending on position and frequency 
-	u_        = std::make_shared<Field>("u",        space_grid_, N_nu_);  
-	sigma_    = std::make_shared<Field>("sigma",    space_grid_, N_nu_);
-	k_c_      = std::make_shared<Field>("k_c",      space_grid_, N_nu_);
-	eps_c_th_ = std::make_shared<Field>("eps_c_th", space_grid_, N_nu_);
+	u_        = std::make_shared<Field>("u",        space_grid_, N_nu_, false);  
+	sigma_    = std::make_shared<Field>("sigma",    space_grid_, N_nu_, false);
+	k_c_      = std::make_shared<Field>("k_c",      space_grid_, N_nu_, false);
+	eps_c_th_ = std::make_shared<Field>("eps_c_th", space_grid_, N_nu_, false);
 }
 
 

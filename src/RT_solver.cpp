@@ -3829,19 +3829,19 @@ void MF_context::init_serial_fields(const int n_tiles){
     
     // create serial fields 
     I_field_serial_ = std::make_shared<Field>(
-        "I_serial", space_grid_serial_, tile_size_
+        "I_serial", space_grid_serial_, tile_size_, false
     ); 
     S_field_serial_ = std::make_shared<Field>(
-        "S_serial", space_grid_serial_, tile_size_
+        "S_serial", space_grid_serial_, tile_size_, false
     );
 
     if (n_tiles_ != 1) std::cout << "ERROR: n_tiles_ should be 1 for now (for b indexing eta and rho) " << std::endl;
 
     eta_field_serial_ = std::make_shared<Field>(
-        "eta_serial", space_grid_serial_, n_local_rays_
+        "eta_serial", space_grid_serial_, n_local_rays_, false
     ); // here could tiles also be used to reduce mem footprint
     rho_field_serial_ = std::make_shared<Field>(
-        "rho_serial", space_grid_serial_, n_local_rays_
+        "rho_serial", space_grid_serial_, n_local_rays_, false
     );
 
     // init remaps //TODO we could use just one remap
@@ -3883,10 +3883,10 @@ void MF_context::init_unpol_fields(){
     
     // create serial fields 
     I_unpol_field_serial_ = std::make_shared<Field>(
-        "I_unpol_serial", space_grid_serial_, n_local_rays_unpol_
+        "I_unpol_serial", space_grid_serial_, n_local_rays_unpol_, false
     ); 
     S_unpol_field_serial_ = std::make_shared<Field>(
-        "S_unpol_serial", space_grid_serial_, n_local_rays_unpol_
+        "S_unpol_serial", space_grid_serial_, n_local_rays_unpol_, false
     );        
 
     // init remaps // TODO we could use just one remap
@@ -4033,17 +4033,17 @@ void MF_context::init_serial_fields_Omega(){
         
     // create serial fields 
     I_field_serial_Omega_   = std::make_shared<Field>(
-        "I_serial", space_grid_serial_, local_block_size_
+        "I_serial", space_grid_serial_, local_block_size_, false
     ); 
     S_field_serial_Omega_   = std::make_shared<Field>(
-        "S_serial", space_grid_serial_, local_block_size_
+        "S_serial", space_grid_serial_, local_block_size_, false
     );    
 
     eta_field_serial_Omega_ = std::make_shared<Field>(
-        "eta_serial", space_grid_serial_, local_block_size_
+        "eta_serial", space_grid_serial_, local_block_size_, false
     ); // here could tiles also be used to reduce mem footprint
     rho_field_serial_Omega_ = std::make_shared<Field>(
-        "rho_serial", space_grid_serial_, local_block_size_
+        "rho_serial", space_grid_serial_, local_block_size_, false
     );   
 
     // init remaps // TODO use just one remao
@@ -4145,12 +4145,12 @@ void RT_solver::assemble_rhs(){
     {     
     	// create rhs field (temporary)
     	auto rhs_field = std::make_shared<Field>(
-            "RHS", space_grid, block_size
+            "RHS", space_grid, block_size, false
         );
     	
     	// create eps_th field (temporary)
     	auto eps_th_field = std::make_shared<Field>(
-            "EPS_TH", space_grid, block_size
+            "EPS_TH", space_grid, block_size, false
         );
 
     	const auto eps_th_dev = eps_th_field;	 

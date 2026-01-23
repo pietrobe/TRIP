@@ -22,7 +22,7 @@ void check_mpi(int err) {
     }
 }
 
-void ReMap3D::from_space_to_block_distributed(Field_ptr space_distr, Field_ptr block_distr, int num_tiles = 0)
+void ReMap3D::from_space_to_block_distributed(Field_ptr space_distr, Field_ptr block_distr, int num_tiles)
 {
     if (space_distr->getBlockSize() != block_size) 
         throw std::runtime_error("In ReMap3D::from_space_to_block_distributed, provided spatially-distributed field does not have the right block size!");
@@ -80,7 +80,7 @@ void ReMap3D::from_space_to_block_distributed(Field_ptr space_distr, Field_ptr b
 }
 
 
-void ReMap3D::from_block_to_space_distributed(Field_ptr block_distr, Field_ptr space_distr, PetscInt num_tiles = 0)
+void ReMap3D::from_block_to_space_distributed(Field_ptr block_distr, Field_ptr space_distr, PetscInt num_tiles)
 {
     if (space_distr->getBlockSize() != block_size) 
         throw std::runtime_error("In ReMap3D::from_block_to_space_distributed, provided spatially-distributed field does not have the right block size!");
@@ -236,7 +236,7 @@ void ReMap3D::init(
 void ReMap3D::init(
     Grid_ptr space_grid_, Grid_ptr block_grid_,
     PetscInt block_size_, PetscInt tile_size_,
-    PetscInt num_tiles_per_block_ = -1)
+    PetscInt num_tiles_per_block_)
 {
     space_grid = space_grid_;
     block_grid = block_grid_;
