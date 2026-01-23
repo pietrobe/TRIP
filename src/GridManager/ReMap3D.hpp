@@ -1,4 +1,5 @@
-#pragma once
+#ifndef REMAP3D_HH
+#define REMAP3D_HH 
 #include <petsc.h>
 #include <vector>
 #include <array>
@@ -138,3 +139,4 @@ private:
     }
 
 };
+#endif

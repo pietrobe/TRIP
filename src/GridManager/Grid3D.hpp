@@ -1,4 +1,5 @@
-#pragma once
+#ifndef GRID3D_HH
+#define GRID3D_HH 
 #include <petsc.h>
 #include <petscdm.h>
 #include <petscdmda.h>
@@ -103,3 +104,4 @@ private:
         std::array<DMBoundaryType,3> boundary_type);
 
 };
+#endif

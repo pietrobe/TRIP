@@ -1,4 +1,6 @@
-#pragma once
+#ifndef FIELD_HH
+#define FIELD_HH 
+
 #include "Grid3D.hpp"
 #include <algorithm>
 #include <memory>
@@ -209,3 +211,5 @@ private:
     void allocate(bool allocate_vec);
     
 };
+
+#endif
