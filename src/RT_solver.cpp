@@ -1956,7 +1956,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
         if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
         start_comm = MPI_Wtime();    
         
-        I_remap_.from_block_to_space_distributed(I_field_serial_, I_field, tile_number); 
+        I_remap_.from_block_to_space_distributed(I_field_serial_, I_field, tile_number); // TOFIX
 
         comm_timer2 += MPI_Wtime() - start_comm; 
     }                
@@ -3856,8 +3856,8 @@ void MF_context::init_serial_fields(const int n_tiles){
         RT_problem_->space_grid_, space_grid_serial_, block_size, tile_size_
     );
 
-    tmp_remap.from_space_to_block_distributed(RT_problem_->eta_field_, eta_field_serial_); 
-    tmp_remap.from_space_to_block_distributed(RT_problem_->rho_field_, rho_field_serial_); 
+    tmp_remap.from_space_to_block_distributed(RT_problem_->eta_field_, eta_field_serial_); // TOFIX
+    tmp_remap.from_space_to_block_distributed(RT_problem_->rho_field_, rho_field_serial_); // TOFIX
 
     if (not RT_problem_->use_1_5D_approx_)
     {        
@@ -4064,7 +4064,7 @@ void MF_context::init_serial_fields_Omega(){
         // just in max depth
         if (g_dev->local_to_global_coordinate(2, k) == (N_z - 1))        
         {       
-            const Real W_T_deep = W_T_dev->block(i,j,k)[0];            
+            const Real W_T_deep = W_T_dev->ref(i,j,k);            
             
             for (int b = 0; b < block_size; b = b + 4) 
             {
@@ -4115,7 +4115,7 @@ void RT_solver::assemble_rhs(){
 
   	if (mpi_rank_ == 0)
     {
-                  std::cout << "\n++++++ Assembling right hand side...+++++++++";
+        std::cout << "\n++++++ Assembling right hand side...+++++++++";
         if (test) std::cout << "\n+++++++++++ RHS TEST RHS TEST +++++++++++++";
     } 
  
@@ -4179,12 +4179,12 @@ void RT_solver::assemble_rhs(){
     					value = eps_c_th_dev->block(i,j,k)[index_nu];
 
     					// eps_l_th		
-    					value += epsilon_dev->block(i,j,k)[0] * W_T_dev->block(i,j,k)[0] * (eta_i - k_c_dev->block(i,j,k)[index_nu]);				
+    					value += epsilon_dev->ref(i,j,k) * W_T_dev->ref(i,j,k) * (eta_i - k_c_dev->block(i,j,k)[index_nu]);				
     				}
     				else
     				{
     					// eps_l_th
-    					value = epsilon_dev->block(i,j,k)[0] * W_T_dev->block(i,j,k)[0] * eta_i;				
+    					value = epsilon_dev->ref(i,j,k) * W_T_dev->ref(i,j,k) * eta_i;				
     				}
 
     				// (eps_c_th + eps_l_th_) / eta_I
@@ -4196,7 +4196,7 @@ void RT_solver::assemble_rhs(){
     				double eta_I = eta_dev->block(i,j,k)[b - local_idx[3]];
 
     				// eps_l_th / eta_i_l
-    				value = eta_i * epsilon_dev->block(i,j,k)[0] * W_T_dev->block(i,j,k)[0] / eta_I;	
+    				value = eta_i * epsilon_dev->ref(i,j,k) * W_T_dev->ref(i,j,k) / eta_I;	
     			}	                
 
     			// finally se eps_th

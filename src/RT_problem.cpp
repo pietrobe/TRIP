@@ -167,23 +167,23 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 		auto tmp_vector = read_single_node(fh,i_global,j_global,k_reverse);			
 
 		// epsilon_dev.ref(i,j,k) = tmp_vector[0];		
-		// Cul_dev.ref(i,j,k)     = tmp_vector[1];		
-		(*T_)(i,j,k)[0]       = tmp_vector[2];			
-		// Nl_dev.ref(i,j,k)      = tmp_vector[9];		
-		(*a_)(i,j,k)[0]       = tmp_vector[10];		
-		(*D2_)(i,j,k)[0]     = tmp_vector[11];
+		// Cul_dev->ref(i,j,k)     = tmp_vector[1];		
+		T_->ref(i,j,k)      = tmp_vector[2];			
+		// Nl_dev->ref(i,j,k)      = tmp_vector[9];		
+		a_->ref(i,j,k)       = tmp_vector[10];		
+		D2_->ref(i,j,k)     = tmp_vector[11];
 
 		// hardcoding xi to zero
-		(*xi_)(i,j,k)[0] = 0; 
+		xi_->ref(i,j,k) = 0; 
 		
 		// compute Qel and Cul
-		(*Cul_)(i,j,k)[0] = read_single_node_single_field(f_cul,i_global,j_global,k_reverse);					
-		(*Qel_)(i,j,k)[0] = read_single_node_single_field(f_qel,i_global,j_global,k_reverse);		
-		(*Nl_)(i,j,k)[0]  = read_single_node_single_field(f_llp,i_global,j_global,k_reverse);		
+		Cul_->ref(i,j,k) = read_single_node_single_field(f_cul,i_global,j_global,k_reverse);					
+		Qel_->ref(i,j,k) = read_single_node_single_field(f_qel,i_global,j_global,k_reverse);		
+		Nl_->ref(i,j,k)  = read_single_node_single_field(f_llp,i_global,j_global,k_reverse);		
 
         // compute thermalization param 
      // epsilon_dev.ref(i,j,k) = Cul_dev.ref(i,j,k)/(Cul_dev.ref(i,j,k) + Aul_);
-        (*epsilon_)(i,j,k)[0] = (*Cul_)(i,j,k)[0]/((*Cul_)(i,j,k)[0] + Aul_);
+        epsilon_->ref(i,j,k) = Cul_->ref(i,j,k)/(Cul_->ref(i,j,k) + Aul_);
 
 		// /// Hardcoded Qel
 		// const double C_lu = 0.0; // hardcoded to zero
@@ -191,7 +191,7 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 		// Qel_dev.ref(i,j,k) =  (4.0 * PI * Doppler_width_dev.ref(i,j,k)) * a_dev.ref(i,j,k)  - Aul_ - Cul_dev.ref(i,j,k) - C_lu;
 		
 		// compute thermalization param 
-		(*epsilon_)(i,j,k)[0] = (*Cul_)(i,j,k)[0]/((*Cul_)(i,j,k)[0] + Aul_);		
+		epsilon_->ref(i,j,k) = Cul_->ref(i,j,k)/(Cul_->ref(i,j,k) + Aul_);		
 
 		// convert to spherical coordinates
 		auto B_spherical = convert_cartesian_to_spherical(tmp_vector[3], 
@@ -533,22 +533,22 @@ void RT_problem::read_3D(const char* filename){
 
 		auto tmp_vector = read_single_node(fh,i_global,j_global,k_reverse);			
 
-		epsilon_->block(i,j,k)[0] = tmp_vector[0];		
-		Cul_->block(i,j,k)[0]     = tmp_vector[1];		
-		T_->block(i,j,k)[0]       = tmp_vector[2];			
-		Nl_->block(i,j,k)[0]     = tmp_vector[9];		
-		a_->block(i,j,k)[0]      = tmp_vector[10];		
-		D2_->block(i,j,k)[0]      = tmp_vector[11];
+		epsilon_->ref(i,j,k) = tmp_vector[0];		
+		Cul_->ref(i,j,k)     = tmp_vector[1];		
+		T_->ref(i,j,k)       = tmp_vector[2];			
+		Nl_->ref(i,j,k)      = tmp_vector[9];		
+		a_->ref(i,j,k)       = tmp_vector[10];		
+		D2_->ref(i,j,k)      = tmp_vector[11];
 		
 		// hardcoding xi
-		xi_->block(i,j,k)[0] = 0; // with conversion to cm/s
+		xi_->ref(i,j,k) = 0; // with conversion to cm/s
 
 		// RH Doppler_width to compute Qel
 		const double xi = 1e5 * xi_vec[k_reverse];; // with conversion to cm/s
 		const double Dw_RH = Eu_ * std::sqrt(xi * xi + 2 * k_B_ * T_->block(i,j,k)[0] / mass_real_RH);	
 
 		// compute Qel
-		Qel_->block(i,j,k)[0] = a_->block(i,j,k)[0] * (4 * PI * Dw_RH) - Aul_RH;
+		Qel_->ref(i,j,k) = a_->ref(i,j,k) * (4 * PI * Dw_RH) - Aul_RH;
 
 		// compute thermalization param 
       // epsilon_->block(i,j,k)[0] = Cul_->block(i,j,k)[0]/(Cul_->block(i,j,k)[0] + Aul_RH);
@@ -1104,18 +1104,18 @@ void RT_problem::read_atmosphere_1D(input_string filename){
 
 			const double T_ijk = T_vec[k_global] * cos(2.0 * PI * x) * cos(2.0 * PI * y) / 2.0;
 
-			T_->block(i,j,k)[0] = T_vec[k_global] + T_ijk;
+			T_->ref(i,j,k) = T_vec[k_global] + T_ijk;
 		}
 		else
 		{
-			T_->block(i,j,k)[0] = T_vec[k_global];
+			T_->ref(i,j,k) = T_vec[k_global];
 		}		
 
-		xi_->block( i, j, k)[0] =  xi_vec[k_global];		
-		a_->block(  i, j, k)[0] =   a_vec[k_global];		
-		Nl_->block( i, j, k)[0] =  Nl_vec[k_global];		
-		Cul_->block(i, j, k)[0] = Cul_vec[k_global];		
-		Qel_->block(i, j, k)[0] = Qel_vec[k_global];						
+		xi_->ref( i, j, k) =  xi_vec[k_global];		
+		a_->ref(  i, j, k) =   a_vec[k_global];		
+		Nl_->ref( i, j, k) =  Nl_vec[k_global];		
+		Cul_->ref(i, j, k) = Cul_vec[k_global];		
+		Qel_->ref(i, j, k) = Qel_vec[k_global];						
 	});
 
 	// T_->write("T32.raw");          
@@ -1247,7 +1247,7 @@ void RT_problem::set_sizes(){
 	}	
 }
 
-void const RT_problem::print_info(){
+void RT_problem::print_info() const{
 	
 	if (mpi_rank_ == 0) 		
 	{		
@@ -1305,8 +1305,8 @@ void const RT_problem::print_info(){
 void RT_problem::polarized_to_unpolarized_field(const Field_ptr_t field, Field_ptr_t field_unpol){
 	space_grid_->parallel_for(
 		[&](int i, int j, int k){
-			auto *block       = field->block(i, j, k);
-	   		auto *block_unpol = field_unpol->block(i, j, k);
+			auto block       = field->block(i, j, k);
+	   		auto block_unpol = field_unpol->block(i, j, k);
 
 			for (int b = 0; b < block_size_; b = b + 4) block_unpol[b/4] = block[b];	
 		}
@@ -1315,7 +1315,6 @@ void RT_problem::polarized_to_unpolarized_field(const Field_ptr_t field, Field_p
 
 
 void RT_problem::allocate_fields(){ 
-
 	// create fields 
 	I_field_   = std::make_shared<Field>(
 		"I", space_grid_, N_pol_, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_}, true); // allocate PETSc vec
@@ -1380,7 +1379,7 @@ void RT_problem::allocate_atmosphere() {
 	B_ = std::make_shared<Field>("B", space_grid_, PetscInt{3}, false); 	
 
 	// bulk velocities, in polar coordinates
-	v_b_ = std::make_shared<Field>("v_b", space_grid_, PetscInt{3}), false;    
+	v_b_ = std::make_shared<Field>("v_b", space_grid_, PetscInt{3}, false);    
 	
 	// quantities depending on position that can be precomputed
 	Doppler_width_ = std::make_shared<Field>("Doppler_width", space_grid_, false);
@@ -1395,11 +1394,11 @@ void RT_problem::allocate_atmosphere() {
 }
 
 
-void RT_problem::init_field(Field_ptr_t input_field, const Real input_value){
+void RT_problem::init_field(Field_ptr_t input_field, const Real input_value){ //UNUSED
 	auto grid = input_field->getGrid();
     grid->parallel_for(
 		[&](int i, int j, int k) {         
-			auto *block = input_field->block(i, j, k);
+			auto block = input_field->block(i, j, k);
 			for (int b = 0; b < block_size_; ++b) 
 				block[b] = input_value;        	
     	}
@@ -1673,15 +1672,16 @@ std::complex<Real> RT_problem::get_TKQi(const std::vector<std::complex<Real>> T_
 
 
 void RT_problem::set_eta_and_rhos(){
-    space_grid_->parallel_for([&](int i, int j, int k) 
+    space_grid_->parallel_for(
+		[&](int i, int j, int k) 
     {         
-        auto *block_eta = eta_field_->block(i, j, k);
-        auto *block_rho = rho_field_->block(i, j, k);
+        auto block_eta = eta_field_->block(i, j, k);
+        auto block_rho = rho_field_->block(i, j, k);
         
-        auto *u   =   u_->block(i, j, k);	// or (*u_)(i,j,k):	
-		auto *k_c = k_c_->block(i, j, k);		
-		auto *B   =   B_->block(i, j, k);       
-        auto *v_b = v_b_->block(i, j, k);                        
+        auto u   =   u_->block(i, j, k);	
+		auto k_c = k_c_->block(i, j, k);		
+		auto B   =   B_->block(i, j, k);       
+        auto v_b = v_b_->block(i, j, k);                        
                         
         // assign some variables for readability
         Real theta_v_b = v_b[1];
@@ -1691,22 +1691,22 @@ void RT_problem::set_eta_and_rhos(){
         Real theta_B = B[1];
         Real chi_B   = B[2];
 
-        Real Doppler_width = (*Doppler_width_)(i,j,k)[0]; // ref is basically the first element of the block in the scalar case
-    	Real k_L           = (*k_L_)(i,j,k)[0];
-		Real a             = (*a_)(i,j,k)[0];
+        Real Doppler_width = Doppler_width_->ref(i,j,k); // ref is basically the first element of the block in the scalar case
+    	Real k_L           = k_L_->ref(i,j,k);
+		Real a             = a_->ref(i,j,k);
 
 		// init rotation matrix
         Rotation_matrix R(0.0, -theta_B, -chi_B);
         
         // indeces
-        std::vector<PetscInt> local_idx;
+        std::vector<int> local_idx;
         int j_theta, k_chi, n_nu;
          
         for (int b = 0; b < block_size_; b = b + 4) 
         {        	        	
         	block_rho[b + 1] = 0;
 
-			local_idx = eta_field_->block_to_local(b);
+			local_idx = /*eta_field_->*/block_to_local(b);
 
         	j_theta = local_idx[0];
         	k_chi   = local_idx[1];
@@ -1817,13 +1817,13 @@ void RT_problem::set_eta_and_rhos_Omega(const Real theta, const Real chi){
 	
     space_grid_->parallel_for([&](int i, int j, int k) 
     {             	
-        auto *block_eta = eta_field_Omega_->block(i, j, k);
-        auto *block_rho = rho_field_Omega_->block(i, j, k);
+        auto block_eta = eta_field_Omega_->block(i, j, k);
+        auto block_rho = rho_field_Omega_->block(i, j, k);
         
-        auto *u   =   u_->block(i, j, k);		
-		auto *k_c = k_c_->block(i, j, k);		
-		auto *B   =   B_->block(i, j, k);       
-        auto *v_b = v_b_->block(i, j, k);           
+        auto u   =   u_->block(i, j, k);		
+		auto k_c = k_c_->block(i, j, k);		
+		auto B   =   B_->block(i, j, k);       
+        auto v_b = v_b_->block(i, j, k);           
                         
         // assign some variables for readability
         Real theta_v_b = v_b[1];
@@ -1833,9 +1833,9 @@ void RT_problem::set_eta_and_rhos_Omega(const Real theta, const Real chi){
         Real theta_B = B[1];
         Real chi_B   = B[2];
 
-        Real Doppler_width = (*Doppler_width_)(i,j,k)[0];
-    	Real k_L           = (*k_L_)(i,j,k)[0];
-		Real a             = (*a_)(i,j,k)[0];
+        Real Doppler_width = Doppler_width_->ref(i,j,k);
+    	Real k_L           = k_L_->ref(i,j,k);
+		Real a             = a_->ref(i,j,k);
 
 		// init rotation matrix
         Rotation_matrix R(0.0, -theta_B, -chi_B);
@@ -1949,8 +1949,7 @@ void RT_problem::set_TKQ_tensor()
 			for (int k = 0; k < N_chi_; ++k)
 			{
 				auto T_KQ = compute_T_KQ(i, theta_grid_[j], chi_grid_[k]);
-			
-				T_KQ_.push_back(T_KQ);							
+				T_KQ_.push_back(T_KQ);			
 			}
 		}
 	}
@@ -2028,57 +2027,56 @@ void RT_problem::set_up(){
 	const Real mass_real = mass_ * 1.6605e-24;
 
 	// compute atmospheric quantities 
-   space_grid_->parallel_for([&](int i, int j, int k) 
-   {       	
-    	auto *u = u_->block(i, j, k);
+	space_grid_->parallel_for([&](int i, int j, int k) 
+	{       	
+    	auto u = u_->block(i, j, k);
 
     	// assign some variables for readability
-    	Real T   =   (*T_)(i,j,k)[0];    	    	
-    	Real xi  =  (*xi_)(i,j,k)[0];
-    	Real Cul = (*Cul_)(i,j,k)[0];
+    	Real T   =   T_->ref(i,j,k);    	    	
+    	Real xi  =   xi_->ref(i,j,k);
+    	Real Cul =   Cul_->ref(i,j,k);
         
 		// precompute quantities depening only on position
 		if (not use_PORTA_input_) 
 		{
-			(*D2_)(i,j,k)[0]  = 0.5 * (*Qel_)(i,j,k)[0]; 
-			(*epsilon_)(i,j,k)[0] = Cul/(Cul + Aul_);	
+			D2_->ref(i,j,k)  = 0.5 * Qel_->ref(i,j,k); 
+			epsilon_->ref(i,j,k) = Cul/(Cul + Aul_);	
 		}
 
-		(*D1_)(i,j,k)[0]  = tmp_const3 * (*D2_)(i,j,k)[0];
+		D1_->ref(i,j,k)  = tmp_const3 * D2_->ref(i,j,k);
 
-		(*k_L_)(i,j,k)[0] = tmp_const * (*Nl_)(i,j,k)[0];		
+		k_L_->ref(i,j,k) = tmp_const * Nl_->ref(i,j,k);		
 		
-		(*Doppler_width_)(i,j,k)[0] = dE * std::sqrt(xi * xi + 2 * k_B_ * T / mass_real);	
+		Doppler_width_->ref(i,j,k) = dE * std::sqrt(xi * xi + 2 * k_B_ * T / mass_real);	
 
 		// const double C_lu = 0.0; // hardcoded to zero?
 		// const double Pi = 3.1415926535897932384626433;
-		// (*Qel_)(i,j,k)[0] =  (4.0 * PI * (*Doppler_width_)(i,j,k)[0]) * (*a_)(i,j,k)[0]  - Aul_ - (*Cul_)(i,j,k)[0] - C_lu;		
-		// (*Qel_)(i,j,k)[0] =  (4.0 * PI * Doppler_width_dev.ref(i,j,k)) * a_dev.ref(i,j,k)  - Aul_ - Cul;
-		// (*Qel_)(i,j,k)[0] = 0.0; // DANGER - hardcoded to zero
+		// Qel_->ref(i,j,k) =  (4.0 * PI * Doppler_width_->ref(i,j,k)) * a_->ref(i,j,k)  - Aul_ - Cul_->ref(i,j,k) - C_lu;		
+		// Qel_->ref(i,j,k) =  (4.0 * PI * Doppler_width_dev->ref(i,j,k)) * a_dev->ref(i,j,k)  - Aul_ - Cul;
+		// Qel_->ref(i,j,k) = 0.0; // DANGER - hardcoded to zero
  
-		// if (use_PORTA_input_) (*a_)(i,j,k)[0] = (Aul_ + Cul + (*Qel_)(i,j,k)[0]) / (4 * PI * (*Doppler_width_)(i,j,k)[0]);
+		// if (use_PORTA_input_) a_->ref(i,j,k) = (Aul_ + Cul + Qel_->ref(i,j,k)) / (4 * PI * Doppler_width_->ref(i,j,k));
 
-		(*W_T_)(i,j,k)[0] = tmp_const2 * std::exp(- h_ * nu_0_ / (k_B_ * T));		
+		W_T_->ref(i,j,k) = tmp_const2 * std::exp(- h_ * nu_0_ / (k_B_ * T));		
 		
 		// on position and frequency
 		for (int n = 0; n < N_nu_; ++n)
 		{
-			u[n] = (nu_0_ - nu_grid_[n]) / (*Doppler_width_)(i,j,k)[0];						
+			u[n] = (nu_0_ - nu_grid_[n]) / Doppler_width_->ref(i,j,k);						
 		}		
 
 		// TEST
 		//if (mpi_rank_ == 0)
 	   //{
 	   //	std::cout << "i,j,k = " << i << ", " << j << ", " << k << std::endl;	    
-	   // 	std::cout << "k_L = "<<  (*k_L_)(i,j,k)[0] << std::endl;	    
-	   //	std::cout << "Doppler_width_dev = "<< (*Doppler_width_)(i,j,k)[0] << std::endl;	 
+	   // 	std::cout << "k_L = "<<  k_L_->ref(i,j,k) << std::endl;	    
+	   //	std::cout << "Doppler_width_dev = "<< Doppler_width_->ref(i,j,k) << std::endl;	 
 	   //}	
    });			 
 
-
 	// precompute polarization tensors T_KQ
 	set_TKQ_tensor();
-	   	
+	   		
 	// compute etas and rhos
 	set_eta_and_rhos();
 
@@ -2088,7 +2086,7 @@ void RT_problem::set_up(){
 }
 
 
-void const RT_problem::print_surface_profile(const Field_ptr_t field, const int i_stoke, const int i_space, const int j_space, const int j_theta, const int k_chi){
+void RT_problem::print_surface_profile(const Field_ptr_t field, const int i_stoke, const int i_space, const int j_space, const int j_theta, const int k_chi) const {
 		
 	MPI_Barrier(MPI_COMM_WORLD);
 	// indeces
@@ -2150,8 +2148,8 @@ void const RT_problem::print_surface_profile(const Field_ptr_t field, const int 
 }
 
 
-void const RT_problem::print_surface_QI_profile(const Field_ptr_t field, const int i_space, const int j_space, 
-	 const int j_theta, const int k_chi, const int i_stokes, const bool center_line){
+void RT_problem::print_surface_QI_profile(const Field_ptr_t field, const int i_space, const int j_space, 
+	 const int j_theta, const int k_chi, const int i_stokes, const bool center_line) const {
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
@@ -2226,8 +2224,8 @@ void const RT_problem::print_surface_QI_profile(const Field_ptr_t field, const i
 
 
 
-void const RT_problem::print_surface_QI_point(const int i_space, const int j_space, const int j_theta, 
-											  const int k_chi, const int n_nu, const int i_stokes)
+void RT_problem::print_surface_QI_point(const int i_space, const int j_space, const int j_theta, 
+											  const int k_chi, const int n_nu, const int i_stokes) const
 {
 	MPI_Barrier(MPI_COMM_WORLD);
 
@@ -2282,9 +2280,9 @@ void const RT_problem::print_surface_QI_point(const int i_space, const int j_spa
 
 
 
-void const RT_problem::print_profile(const Field_ptr_t field, const int i_stoke, 
+void RT_problem::print_profile(const Field_ptr_t field, const int i_stoke, 
 									 const int i_space, const int j_space, const int k_space, 
-									 const int j_theta, const int k_chi)
+									 const int j_theta, const int k_chi) const 
 {
 
 	if (mpi_rank_ == 0)

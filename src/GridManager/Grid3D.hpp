@@ -75,7 +75,7 @@ public:
     template<typename Function>
     void parallel_for(Function&& f) const 
     {
-        #pragma omp parallel for collapse(3)
+        // #pragma omp parallel for collapse(3)
         for (PetscInt k = 0; k < local_sizes[2]; k++) {
             for (PetscInt j = 0; j < local_sizes[1]; j++) {
                 for (PetscInt i = 0; i < local_sizes[0]; i++) {

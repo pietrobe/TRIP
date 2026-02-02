@@ -407,47 +407,47 @@ class RT_problem
 	inline int local_to_block_unpol(const int j, const int k, const int n) { return N_nu_ * ( N_chi_ * j + k ) + n; }
 
 	// print I_field on surface
-	void const
+	void
 	print_surface_profile(const Field_ptr_t field, const int i_stoke = 0, const int i_space = 0, const int j_space = 0,
-						  const int j_theta = 0, const int k_chi = 0);
+						  const int j_theta = 0, const int k_chi = 0) const;
 
-	void const
+	void 
 	print_surface_QI_profile(const Field_ptr_t field, const int i_space = 0, const int j_space = 0, const int j_theta = 0,
-							 const int k_chi = 0, const int i_stokes = 1, const bool center_line = false);
+							 const int k_chi = 0, const int i_stokes = 1, const bool center_line = false) const;
 
-	void const
+	void 
 	print_surface_QI_point(const int i_space = 0, const int j_space = 0, const int j_theta = 0, const int k_chi = 0,
-						   const int n_nu = 0, const int i_stokes = 1);
+						   const int n_nu = 0, const int i_stokes = 1) const;
 
-	void const
+	void 
 	print_profile(const Field_ptr_t field, const int i_stoke = 0, const int i_space = 0, const int j_space = 0,
-				  const int k_space = 0, const int j_theta = 0, const int k_chi = 0);
+				  const int k_space = 0, const int j_theta = 0, const int k_chi = 0) const;
 
 	// write surface profile in file in MATLAB format in onw point and all surface
-	void const
-	write_surface_point_profiles(input_string file_name, const int i_space, const int j_space);
-	void const
-	write_surface_point_profiles_Omega(input_string file_name, const int i_space, const int j_space);
-	void const
-	write_surface_profiles(input_string file_name);
-	void const
-	write_surface_profiles_Omega(input_string file_name);
+	void 
+	write_surface_point_profiles(input_string file_name, const int i_space, const int j_space) const;
+	void 
+	write_surface_point_profiles_Omega(input_string file_name, const int i_space, const int j_space) const;
+	void 
+	write_surface_profiles(input_string file_name) const;
+	void 
+	write_surface_profiles_Omega(input_string file_name) const;
 
-	void const
+	void 
 	write_surface_point_profiles_csv(input_string file_name, const int i_space, const int j_space,
-									 const unsigned int precision = 14);
+									 const unsigned int precision = 14) const;
 
-	void const
+	void 
 	write_angular_grid_csv(input_string file_name, const int i_space, const int j_space,
-						   const unsigned int precision = 14);
+						   const unsigned int precision = 14) const;
 
-	void const
+	void 
 	write_frequencies_grid_csv(input_string file_name, const int i_space, const int j_space,
-							   const unsigned int precision = 14);
+							   const unsigned int precision = 14) const;
 
-	void const
+	void 
 	write_surface_point_profiles_Omega_csv(input_string file_name, const int i_space, const int j_space,
-										   const unsigned int precision);
+										   const unsigned int precision) const;
 
 	std::tuple<int, int>
 	make_write_surface_MPI_Comm(const MPI_Comm MPI_Comm_MAIN, MPI_Comm &write_comm);
@@ -720,7 +720,7 @@ class RT_problem
 
 	// init fields
 	void
-	init_field(Field_ptr_t input_field, const Real input_value);
+	init_field(Field_ptr_t input_field, const Real input_value); // UNUSED
 
 	// set grids and sizes
 	void
@@ -794,8 +794,8 @@ class RT_problem
 	set_up();
 
 	// print infos on screen
-	void const
-	print_info();
+	void
+	print_info() const;
 };
 
 #endif

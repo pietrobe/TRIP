@@ -203,7 +203,7 @@ public:
     	else
     	{
     		const int n_tiles = 1; 
-	    	mf_ctx_.init_serial_fields(n_tiles);	    	
+	    	mf_ctx_.init_serial_fields(n_tiles);	
     	}
     	
     	// init unpolarized formal solver and data structures
@@ -394,7 +394,7 @@ public:
 
 		// RT_problem_->space_grid_->parallel_for([&](int i, int j, int k) 
 		// {         
-		// 	auto *block = S_dev->block(i, j, k);
+		// 	auto block = S_dev->block(i, j, k);
 
 		// 	for (int b = 0; b < (int)RT_problem_->block_size_; ++b) 
 		// 	{	    

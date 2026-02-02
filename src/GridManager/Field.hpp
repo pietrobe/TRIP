@@ -123,10 +123,10 @@ public:
     Grid_ptr getGrid() const;
 
     /** @brief return number of values per block. */ 
-    const PetscInt getBlockSize() const;
+    PetscInt getBlockSize() const;
 
     /** @brief return number of blocks in local vector. */ 
-    const PetscInt getNumLocalBlocks() const;
+    PetscInt getNumLocalBlocks() const;
 
     /** @brief return local PETSc vector. 
      * @note any changes done to PETSc vector are automatically synched to the 'standard' vector.
@@ -139,8 +139,8 @@ public:
     Real* getData();
 
     /** @brief return start and end indices of the local vector. */ 
-    const PetscInt getStartIndex() const;
-    const PetscInt getEndIndex() const;
+    PetscInt getStartIndex() const;
+    PetscInt getEndIndex() const;
 
     std::string getName() const;
     PetscInt getNPhysical() const;
@@ -156,6 +156,8 @@ public:
 
     /** @brief same as block(i,j,k) but with less verbose syntax (field(i,j,k) instead of field.block(i,j,k)) */
     Real* operator()(PetscInt i,PetscInt j,PetscInt k);
+
+    void set_to_zero();
 
     /** @brief convert linear block index to multi-dimensional indices */
     std::vector<PetscInt> block_to_local(PetscInt b) const;

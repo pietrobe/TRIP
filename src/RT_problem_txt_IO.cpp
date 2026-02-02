@@ -4,8 +4,8 @@
 // Write surface point profiles to file
 // write_surface_point_profiles
 //////////////////////////////////////////////////////////////////////////
-void const
-RT_problem::write_surface_point_profiles(input_string file_name, const int i_space, const int j_space)
+void 
+RT_problem::write_surface_point_profiles(input_string file_name, const int i_space, const int j_space) const
 {
 	// // a single MPI rank writes output
 	// if (mpi_rank_ == 0) std::cout << " Writing output in spatial point (" << i_space << ", " << j_space << ")" <<
@@ -123,9 +123,9 @@ RT_problem::write_surface_point_profiles(input_string file_name, const int i_spa
 // Write surface point angular grid to file
 // write_angular_grid_csv
 //////////////////////////////////////////////////////////////////////////
-void const
+void 
 RT_problem::write_angular_grid_csv(input_string file_name, const int i_space, const int j_space,
-								   const unsigned int precision)
+								   const unsigned int precision) const
 {
 	// indeces
 	const int i_start = space_grid_->getGlobalStartX(); //g_dev.margin[0];
@@ -189,9 +189,9 @@ RT_problem::write_angular_grid_csv(input_string file_name, const int i_space, co
 // Write surface point frequency grid to file
 // write_frequencies_grid_csv
 //////////////////////////////////////////////////////////////////////////
-void const
+void 
 RT_problem::write_frequencies_grid_csv(input_string file_name, const int i_space, const int j_space,
-									   const unsigned int precision)
+									   const unsigned int precision) const
 {
 	// indeces
 	const int i_start = space_grid_->getGlobalStartX(); //g_dev.margin[0];
@@ -248,9 +248,9 @@ RT_problem::write_frequencies_grid_csv(input_string file_name, const int i_space
 // Write surface point profiles to file in CSV format
 // write_surface_point_profiles_csv
 //////////////////////////////////////////////////////////////////////////
-void const
+void 
 RT_problem::write_surface_point_profiles_csv(input_string file_name, const int i_space, const int j_space,
-											 const unsigned int precision)
+											 const unsigned int precision) const
 {
 	// indeces
 	const int i_start = space_grid_->getGlobalStartX(); //g_dev.margin[0];
@@ -341,8 +341,8 @@ RT_problem::write_surface_point_profiles_csv(input_string file_name, const int i
 ////////////////////////////////////////////////////////////////////////////
 // write_surface_profiles
 ////////////////////////////////////////////////////////////////////////////
-void const
-RT_problem::write_surface_profiles(input_string file_name)
+void 
+RT_problem::write_surface_profiles(input_string file_name) const
 {
 	if (mpi_size_x_ > 1 or mpi_size_y_ > 1)
 	{
@@ -450,9 +450,9 @@ RT_problem::write_surface_profiles(input_string file_name)
 // Write surface point profiles to file in CSV format
 // write_surface_point_profiles_Omega_csv
 ////////////////////////////////////////////////////////////////////////////
-void const
+void 
 RT_problem::write_surface_point_profiles_Omega_csv(input_string file_name, const int i_space, const int j_space,
-												   const unsigned int precision)
+												   const unsigned int precision) const
 {
 	const int block_size = 4 * N_nu_;
 
@@ -533,8 +533,8 @@ RT_problem::write_surface_point_profiles_Omega_csv(input_string file_name, const
 // write surface profile in one single point
 // write_surface_point_profiles_Omega
 ////////////////////////////////////////////////////////////////////////////
-void const
-RT_problem::write_surface_point_profiles_Omega(input_string file_name, const int i_space, const int j_space)
+void 
+RT_problem::write_surface_point_profiles_Omega(input_string file_name, const int i_space, const int j_space) const
 {
 	// // a single MPI rank writes output
 	// if (mpi_rank_ == 0) std::cout << " Writing output in spatial point (" << i_space << ", " << j_space << ")" <<
@@ -622,8 +622,8 @@ RT_problem::write_surface_point_profiles_Omega(input_string file_name, const int
 // write surface profile for arbitrary direction
 // write_surface_profiles_Omega
 ////////////////////////////////////////////////////////////////////////////
-void const
-RT_problem::write_surface_profiles_Omega(input_string file_name)
+void 
+RT_problem::write_surface_profiles_Omega(input_string file_name) const
 {
 	if (mpi_size_x_ > 1 or mpi_size_y_ > 1)
 	{

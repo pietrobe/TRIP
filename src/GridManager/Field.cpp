@@ -21,9 +21,9 @@ void Field::print_info()
 
 Grid_ptr Field::getGrid() const { return grid; }
 
-const PetscInt Field::getBlockSize() const { return block_size; }
+PetscInt Field::getBlockSize() const { return block_size; }
 
-const PetscInt Field::getNumLocalBlocks() const { return n_local_blocks; }
+PetscInt Field::getNumLocalBlocks() const { return n_local_blocks; }
 
 Vec Field::getVec() { 
     if (!is_Vec_allocated) throw std::runtime_error("getVec(): PETSc Vec not allocated for field " + name);
@@ -32,8 +32,8 @@ Vec Field::getVec() {
 
 Real* Field::getData() { return data_host; }
 
-const PetscInt Field::getStartIndex() const { return start_index; }
-const PetscInt Field::getEndIndex() const { return end_index; }
+PetscInt Field::getStartIndex() const { return start_index; }
+PetscInt Field::getEndIndex() const { return end_index; }
 
 std::string Field::getName() const { return name; }
 PetscInt Field::getNPhysical() const { return Nphysical; } 
@@ -48,12 +48,12 @@ PetscInt Field::getParamSize(int p) const {
 
 Real* Field::block(PetscInt i,PetscInt j,PetscInt k)
 {
-    assert(i >= 0 && i < xm);
-    assert(j >= 0 && j < ym);
-    assert(k >= 0 && k < zm);
-    assert(data_host != nullptr);
+    // if (i < 0 || i >= xm) throw std::out_of_range("i index out of bounds in Field::block() for " + name);
+    // if (j < 0 || j >= ym) throw std::out_of_range("j index out of bounds in Field::block() for " + name);
+    // if (k < 0 || k >= zm) throw std::out_of_range("k index out of bounds in Field::block() for " + name);
+    if (!data_host) throw std::runtime_error("Data not allocated in Field::block() for " + name);
 
-    PetscInt linear_block = (i * ym + j) * zm + k;
+    PetscInt linear_block = (i * ym + j) * zm + k; // z-fastest
     PetscInt idx = linear_block * block_size;
     return &data_host[idx];
 }
@@ -102,6 +102,13 @@ PetscInt Field::local_to_block(const std::vector<PetscInt>& idx) const
     return Nphysical * block_index;
 }
 
+void Field::set_to_zero()
+{
+    PetscInt n = xm * ym * zm * block_size;
+    std::fill(data_host, data_host + n, Real(0));
+}
+
+
 void Field::allocate(bool allocate_vec)
 {
     MPI_Comm comm = grid->getComm();
@@ -109,8 +116,8 @@ void Field::allocate(bool allocate_vec)
     PetscInt local_dofs = xm * ym * zm * block_size;
     n_local_blocks = local_dofs / block_size;
     if (allocate_vec) {
-        ierr = VecCreate(comm, &vec);  CHKERRABORT(comm, ierr); // TODO check memory, flag per abiliate/disabilitare
-        ierr = VecSetSizes(vec, local_dofs, PETSC_DECIDE);  CHKERRABORT(comm, ierr); // TOFIX check if it allocates memory
+        ierr = VecCreate(comm, &vec);  CHKERRABORT(comm, ierr); 
+        ierr = VecSetSizes(vec, local_dofs, PETSC_DECIDE);  CHKERRABORT(comm, ierr); 
         ierr = VecSetFromOptions(vec);  CHKERRABORT(comm, ierr);
         // Bind host array to Vec, so that data_host is the Vec’s internal storage
         ierr = PetscCalloc(local_dofs * sizeof(Real), &data_host); CHKERRABORT(comm, ierr);

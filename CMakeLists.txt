@@ -5,15 +5,20 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${SOLAR_3D_ROOT_PATH}/cmake")
 
 project(par_moonolith_usage VERSION 1.0.0)
 
+find_package(MPI REQUIRED) # Added Melanie
 find_package(HDF5 REQUIRED)
-find_package(HDF5 COMPONENTS HL REQUIRED)
+find_package(HDF5 COMPONENTS C HL REQUIRED)
+
+if(NOT HDF5_INCLUDE_DIRS)
+    set(HDF5_INCLUDE_DIRS "${HDF5_ROOT}/include")
+    set(HDF5_LIBRARIES "${HDF5_ROOT}/lib/libhdf5.so;${HDF5_ROOT}/lib/libhdf5_hl.so")
+endif()
+
 
 include(CMakeFindDependencyMacro)
 find_package(PkgConfig REQUIRED)
 
 find_package(yaml-cpp QUIET)
-
-find_package(MPI REQUIRED) # Added Melanie
 
 if(NOT yaml-cpp_FOUND)
 
@@ -54,7 +59,7 @@ list(APPEND SOURCES_FILES
     src/Faddeeva.cpp 
     src/Formal_solver.cpp 
     src/Legendre_rule.cpp 
-    src/main.cpp 
+    # src/main.cpp 
     src/Rotation_matrix.cpp
     src/RT_problem.cpp
     src/RT_problem_IO.cpp
@@ -159,17 +164,15 @@ set(CMAKE_CXX_FLAGS  " -O3 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno
 
 add_library(rii SHARED IMPORTED)
 set_property(TARGET rii PROPERTY IMPORTED_LOCATION "${RII_ROOT_PATH}/build/librii.so")
-
 message( STATUS  "RII path: ${RII_ROOT_PATH}")
 
 # import all the dependencies and targets # removed sgrid::sgrid
-target_link_libraries(solar_3D PUBLIC rii ${Boost_LIBRARIES})
-
+target_link_libraries(solar_3D PUBLIC rii)
+target_link_libraries(solar_3D PUBLIC ${Boost_LIBRARIES})
 target_link_libraries(solar_3D PUBLIC MPI::MPI_CXX) # Added Melanie
-
-
 target_link_libraries(solar_3D PUBLIC ${HDF5_LIBRARIES})
 target_link_libraries(solar_3D PUBLIC ${HDF5_HL_LIBRARIES})
+
 
 target_sources(solar_3D PUBLIC ${SOURCES_FILES})
 target_include_directories(solar_3D PUBLIC  
