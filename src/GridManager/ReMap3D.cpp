@@ -25,9 +25,17 @@ void check_mpi(int err) {
 void ReMap3D::from_space_to_block_distributed(Field_ptr space_distr, Field_ptr block_distr, int num_tiles)
 {
     if (space_distr->getBlockSize() != block_size) 
-        throw std::runtime_error("In ReMap3D::from_space_to_block_distributed, provided spatially-distributed field does not have the right block size!");
+        throw std::runtime_error(
+            "In ReMap3D::from_space_to_block_distributed, provided spatially-distributed field does not have the right block size! (" 
+            + std::to_string(block_size) + "-" 
+            + std::to_string(space_distr->getBlockSize()) + ")"
+        );
     if (block_distr->getBlockSize() != tile_size) 
-        throw std::runtime_error("In ReMap3D::from_space_to_block_distributed, provided block-distributed field does not have the right tile size!");
+        throw std::runtime_error(
+            "In ReMap3D::from_space_to_block_distributed, provided block-distributed field does not have the right tile size! (" 
+            + std::to_string(tile_size) + "-" 
+            + std::to_string(block_distr->getBlockSize()) + ")"
+        );
 
     // pack local data into communication buffer
     double t_pack = 0.0, t_mpi = 0.0, t_unpack = 0.0;
@@ -156,6 +164,8 @@ void ReMap3D::init(
     assert(block_grid->getMPISize() == 1);
     assert(space_grid->getGlobalNumNodes() == block_grid->getLocalNumNodes());
 
+    block_size = block_size_;
+    tile_size = tile_size_;
     num_tiles_per_block = num_tiles_per_block_;
 
     // collect starts and dims from other ranks
@@ -306,9 +316,9 @@ void ReMap3D::unpack_space_distr_field(Field_ptr space_field, PetscInt num_tiles
 
 void ReMap3D::pack_block_distr_field(Field_ptr field)
 {
-    if (size >= num_tiles_per_block) return;
+    // if (size >= num_tiles_per_block) return;
 
-    #pragma omp parallel for
+    // #pragma omp parallel for
     for (int r = 0; r < size; ++r) {
         const auto &s = local_starts[r];
         const auto &d = local_sizes[r];
@@ -317,7 +327,7 @@ void ReMap3D::pack_block_distr_field(Field_ptr field)
         PetscInt rank_offset = recv_offsets[r];
 
         // iterate over local block in global indices
-        #pragma omp parallel for collapse(3)
+        // #pragma omp parallel for collapse(3)
         for (PetscInt k = 0; k < zm; ++k) {
             for (PetscInt j = 0; j < ym; ++j) {
                 for (PetscInt i = 0; i < xm; ++i) {
@@ -335,10 +345,10 @@ void ReMap3D::pack_block_distr_field(Field_ptr field)
 
 void ReMap3D::unpack_block_distr_field(Field_ptr field)
 {
-    if (size >= num_tiles_per_block) return;
+    // if (size >= num_tiles_per_block) return;
 
     // For each rank r, take the slice at recv_offsets[r] and write into serial at global starts[r]
-    #pragma omp parallel for
+    // #pragma omp parallel for
     for (PetscInt r = 0; r < size; ++r) {
         const auto &s = local_starts[r];
         const auto &d = local_sizes[r];
@@ -346,7 +356,7 @@ void ReMap3D::unpack_block_distr_field(Field_ptr field)
         PetscInt xm = d[0], ym = d[1], zm = d[2];
         PetscInt rank_offset = recv_offsets[r];
 
-        #pragma omp parallel for collapse(3)
+        // #pragma omp parallel for collapse(3)
         for (PetscInt k = 0; k < zm; ++k) {
             for (PetscInt j = 0; j < ym; ++j) {
                 for (PetscInt i = 0; i < xm; ++i) {

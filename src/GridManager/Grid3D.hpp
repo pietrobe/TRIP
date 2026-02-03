@@ -94,7 +94,7 @@ private:
     
     MPI_Comm comm = PETSC_COMM_WORLD; // MPI communicator 
     int rank, mpi_size;
-    std::array<PetscInt,3> local_sizes = {0,0,0}; // local sizes owned by this MPI process
+    std::array<PetscInt,3> local_sizes; // local sizes owned by this MPI process
     std::array<PetscInt,3> start_indices = {0,0,0};    // Global start indices of this process
     std::string name = "Grid";
 

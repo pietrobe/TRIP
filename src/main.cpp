@@ -155,7 +155,7 @@ main(int argc, char *argv[])
 
 		///////////////////////////////////////////////////
 		// solve //////////////////////////////////////////
-		rt_solver.solve();
+		rt_solver.solve(); 
 		// rt_solver.apply_formal_solver();
 
 		const double main_solve_end_time = MPI_Wtime();

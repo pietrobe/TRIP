@@ -1641,9 +1641,9 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
         if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
         Real start_comm = MPI_Wtime();                                    
         
-        // write S to the serial grid and I to get initial condition              
-        S_remap_.from_block_to_space_distributed(S_field, S_field_serial_, tile_number);                        
-        // I_remap_.from_pgrid_to_pblock(*I_field, *I_field_serial_, tile_number); // TODO: this is a bit redundant, only one xy plane is needed                
+        // write S to the serial grid and I to get initial condition 
+        S_remap_.from_space_to_block_distributed(S_field, S_field_serial_, tile_number);                        
+        // I_remap_.from_space_to_block_distributed(*I_field, *I_field_serial_, tile_number); // TODO: this is a bit redundant, only one xy plane is needed                
                                 
         comm_timer1 += MPI_Wtime() - start_comm;      
 
@@ -1955,7 +1955,6 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
           
         if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
         start_comm = MPI_Wtime();    
-        
         I_remap_.from_block_to_space_distributed(I_field_serial_, I_field, tile_number); // TOFIX
 
         comm_timer2 += MPI_Wtime() - start_comm; 
@@ -2861,6 +2860,7 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
     
     start_comm = MPI_Wtime();    
     
+    std::cout << "from_block_to_space_distributed I_unpol_field_serial\n" << std::flush;
     I_unpol_remap_.from_block_to_space_distributed(I_unpol_field_serial_, I_field); 
 
     comm_timer += MPI_Wtime() - start_comm;              
@@ -2886,7 +2886,6 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
 void MF_context::set_up_emission_module(){
 
     if (mpi_rank_ == 0) std::cout << "\nSetting up emission module...";
-    
     // set some aliases 
     using rii_eps_comp_3D                 = rii_include::emission_coefficient_computation_3D;
     using rii_formal_solver_factory       = rii_include::formal_solver_factory_from_3D_RT_problem;
@@ -2895,13 +2894,9 @@ void MF_context::set_up_emission_module(){
 
     // Build module
     ecc_sh_ptr_ = rii_eps_comp_3D::make_emission_coefficient_computation_3D_shared_ptr();
-
     auto fsf_sh_ptr = rii_formal_solver_factory::make_formal_solver_factory_from_3D_RT_problem_shared_ptr();
-
     in_RT_problem_3D::add_models(RT_problem_, ecc_sh_ptr_, fsf_sh_ptr, true);
-
     fsf_sh_ptr->make_formal_solver();
-
     ecc_sh_ptr_->set_RII_contrib_block_size(get_RII_contrib_block_size());
 
     std::list<emission_coefficient_components> components;    
@@ -3027,10 +3022,8 @@ void MF_context::set_up_emission_module(){
 
         // function for emissivity csc only 
         epsilon_fun_csc_ = ecc_sh_ptr_->make_computation_function(components_csc_only);
-        
         // function to get emissivity from JKQ, CRD by default 
         epsilon_fun_J_KQ_ = ecc_sh_ptr_->make_computation_function_eps_from_JKQ();
-
         // function to get JKQ, from input field
         compute_JKQ_values_ = ecc_sh_ptr_->make_computation_JKQ_CRD_values();
     }

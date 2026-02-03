@@ -134,18 +134,21 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	tot_size_   = (PetscInt) N_s_ * block_size_;	
 	
 	// create space grid
-	mpi_size_x_ = PETSC_DECIDE;
-	mpi_size_y_ = PETSC_DECIDE;
-	if (use_1_5D_approx_) {			
-		mpi_size_z_ = 1;
-	} else {
-		mpi_size_z_ = PETSC_DECIDE;
-	}
+	// mpi_size_x_ = PETSC_DECIDE;
+	// mpi_size_y_ = PETSC_DECIDE;
+	// if (use_1_5D_approx_) {			
+	// 	mpi_size_z_ = 1;
+	// } else {
+	// 	mpi_size_z_ = PETSC_DECIDE;
+	// }
 	space_grid_ = std::make_shared<Grid3D>(
 		MPI_COMM_WORLD, 
 		N_x_, N_y_, N_z_, 
-		std::array<PetscInt, 3>{mpi_size_x_, mpi_size_y_, mpi_size_z_}
+		std::array<PetscInt, 3>{PETSC_DECIDE, PETSC_DECIDE, (use_1_5D_approx_ ? 1 : PETSC_DECIDE)}
 	);	
+	mpi_size_x_ = space_grid_->getLocalSizeX();
+	mpi_size_y_ = space_grid_->getLocalSizeY();
+	if (!use_1_5D_approx_) mpi_size_z_ = space_grid_->getLocalSizeZ();
 		
 	// init fields
 	allocate_fields();				
@@ -493,18 +496,18 @@ void RT_problem::read_3D(const char* filename){
 	tot_size_   = (PetscInt) N_s_ * block_size_;	
 	
 	// create space grid
-	mpi_size_x_ = PETSC_DECIDE;
-	mpi_size_y_ = PETSC_DECIDE;
-	if (use_1_5D_approx_) {			
-		mpi_size_z_ = 1;
-	} else {
-		mpi_size_z_ = PETSC_DECIDE;
-	}
 	space_grid_ = std::make_shared<Grid3D>(
 		MPI_COMM_WORLD, 
 		N_x_, N_y_, N_z_, 
-		std::array<PetscInt, 3>{mpi_size_x_, mpi_size_y_, mpi_size_z_}
+		std::array<PetscInt, 3>{
+			PETSC_DECIDE, 
+			PETSC_DECIDE, 
+			(use_1_5D_approx_ ? 1 : PETSC_DECIDE)
+		}
 	);	
+	mpi_size_x_ = space_grid_->getLocalSizeX();
+	mpi_size_y_ = space_grid_->getLocalSizeY();
+	mpi_size_z_ = space_grid_->getLocalSizeZ();
 	
 	// init fields
 	allocate_fields();				
@@ -1324,6 +1327,11 @@ void RT_problem::allocate_fields(){
 		"eta", space_grid_, N_pol_, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_}, false);
 	rho_field_ = std::make_shared<Field>(
 		"rho", space_grid_, N_pol_, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_}, false);
+
+	local_size_ = block_size_ * space_grid_->getLocalSizeX() * space_grid_->getLocalSizeY() * space_grid_->getLocalSizeZ();
+	PetscErrorCode ierr = VecCreate(PETSC_COMM_WORLD, &I_vec_);CHKERRV(ierr);	
+	ierr = VecSetSizes(I_vec_, local_size_, tot_size_);CHKERRV(ierr);			
+	ierr = VecSetFromOptions(I_vec_);CHKERRV(ierr);		
 }
 
 

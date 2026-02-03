@@ -338,7 +338,7 @@ public:
 
 		Real start = MPI_Wtime();	
 				
-		if (mpi_rank_ == 0) std::cout << "\nStart linear solve..." << std::endl;			
+		if (mpi_rank_ == 0) std::cout << "\nStart linear solve..." << std::endl;	
 		ierr = KSPSolve(ksp_solver_, rhs_, RT_problem_->I_vec_);CHKERRV(ierr); // TODO RT_problem_->I_vec_ => field.getVec()
 
 		MPI_Barrier(MPI_COMM_WORLD); Real end = MPI_Wtime();
