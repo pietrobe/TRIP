@@ -24,9 +24,10 @@ public:
      */
     Grid3D(
         MPI_Comm c, 
-        PetscInt nx, PetscInt ny, PetscInt nz,
+        int nx, int ny, int nz,
         std::array<PetscInt, 3> p = {PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE}, 
         std::array<DMBoundaryType,3> boundary_type = {DM_BOUNDARY_PERIODIC, DM_BOUNDARY_PERIODIC, DM_BOUNDARY_NONE},
+        int ghost_width = 0,
         std::string name_ = "Grid")
         : comm(c), Nx(nx), Ny(ny), Nz(nz)
     {
@@ -34,7 +35,7 @@ public:
         MPI_Comm_rank(c, &rank);
         MPI_Comm_size(c, &mpi_size);
         if (name_.compare("Grid") != 0) name = "Grid " + name_;
-        create(p, boundary_type);
+        create(p, boundary_type, ghost_width);
     }
 
     /** @brief destructor that destroys the DMDA object if it exists. */
@@ -48,19 +49,32 @@ public:
     MPI_Comm getComm() const;
     int getRank() const;
     int getMPISize() const;
-    PetscInt getNx() const;
-    PetscInt getNy() const;
-    PetscInt getNz() const;
+    int getNx() const;
+    int getNy() const;
+    int getNz() const;
     PetscInt getGlobalNumNodes() const;
     PetscInt getLocalNumNodes() const;
+    PetscInt getLocalNumNodesWithGhosts() const;
+
     PetscInt getLocalSizeX() const;
     PetscInt getLocalSizeY() const;
     PetscInt getLocalSizeZ() const;
     std::array<PetscInt,3> getLocalSizes() const;
+
     PetscInt getGlobalStartX() const;
     PetscInt getGlobalStartY() const;
     PetscInt getGlobalStartZ() const;
     std::array<PetscInt,3> getGlobalStarts() const;
+
+    PetscInt getLocalSizeWithGhostX() const;
+    PetscInt getLocalSizeWithGhostY() const;
+    PetscInt getLocalSizeWithGhostZ() const;
+    std::array<PetscInt,3> getLocalSizesWithGhost() const;
+    
+    PetscInt getGhostMarginX() const;
+    PetscInt getGhostMarginY() const;
+    PetscInt getGhostMarginZ() const;
+    std::array<PetscInt,3> getGhostMargins() const;
 
     /** @brief method that given a dimension and the local coordinate of a cell, returns the global coordinate of the 
      * cell in that direction.
@@ -76,9 +90,25 @@ public:
     void parallel_for(Function&& f) const 
     {
         // #pragma omp parallel for collapse(3)
-        for (PetscInt k = 0; k < local_sizes[2]; k++) {
-            for (PetscInt j = 0; j < local_sizes[1]; j++) {
-                for (PetscInt i = 0; i < local_sizes[0]; i++) {
+        for (int k = margin_start[2]; k < local_sizes[2] + margin_start[2]; k++) {
+            for (int j = margin_start[1]; j < local_sizes[1] + margin_start[1]; j++) {
+                for (int i = margin_start[0]; i < local_sizes[0] + margin_start[0]; i++) {
+                    f(i,j,k);
+                }
+            }
+        }
+    }
+
+    /** @brief iterates over the local domain (including ghost layers) of this process and 
+     * applies the passed lambda function f. 
+     */
+    template<typename Function>
+    void parallel_for_with_ghosts(Function&& f) const 
+    {
+        // #pragma omp parallel for collapse(3)
+        for (int k = 0; k < local_ghosted_sizes[2]; k++) {
+            for (int j = 0; j < local_ghosted_sizes[1]; j++) {
+                for (int i = 0; i < local_ghosted_sizes[0]; i++) {
                     f(i,j,k);
                 }
             }
@@ -89,19 +119,25 @@ public:
 
 private:
     DM da = nullptr; // PETSc DMDA grid (only topology)
-    PetscInt Nx = 0, Ny = 0, Nz = 0, Nr = 0; // Spatial grid dimensions
+    int Nx, Ny, Nz, Nr; // Spatial grid dimensions
     PetscInt Px = PETSC_DECIDE, Py = PETSC_DECIDE, Pz = PETSC_DECIDE; // number of processors in each direction
     
-    MPI_Comm comm = PETSC_COMM_WORLD; // MPI communicator 
+    MPI_Comm comm; // MPI communicator 
     int rank, mpi_size;
-    std::array<PetscInt,3> local_sizes; // local sizes owned by this MPI process
-    std::array<PetscInt,3> start_indices = {0,0,0};    // Global start indices of this process
+    std::array<PetscInt,3> local_sizes          = {0,0,0}; // local sizes owned by this MPI process (excluding ghost layers)
+    std::array<PetscInt,3> global_start         = {0,0,0}; // Global start indices of this process  (excluding ghost layers)
+    std::array<PetscInt,3> margin_start         = {0,0,0}; // Margin created by ghost layers at the start of the subdomain
+    std::array<PetscInt,3> margin_end           = {0,0,0}; // Margin created by ghost layers at the end of the subdomain
+    std::array<PetscInt,3> global_ghosted_start = {0,0,0}; // Global start indices of this process (including ghost layers)
+    std::array<PetscInt,3> local_ghosted_sizes  = {0,0,0}; // local sizes owned by this MPI process (including ghost layers)
     std::string name = "Grid";
 
     /** @brief create the 3D DMDA grid. */
     void create(
         std::array<PetscInt, 3> p, 
-        std::array<DMBoundaryType,3> boundary_type);
+        std::array<DMBoundaryType,3> boundary_type,
+        int ghost_width
+    );
 
 };
 #endif

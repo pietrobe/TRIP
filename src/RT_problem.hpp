@@ -295,6 +295,7 @@ class RT_problem
 		space_grid_ = std::make_shared<Grid3D>(
 			MPI_COMM_WORLD, N_x_, N_y_, N_z_
 		);
+		space_grid_->print_info();
 
 		// init fields
 		allocate_fields();
@@ -339,6 +340,7 @@ class RT_problem
 		space_grid_ = std::make_shared<Grid3D>(
 			MPI_COMM_WORLD, N_x_, N_y_, N_z_
 		);
+		space_grid_->print_info();
 
 		// init fields
 		allocate_fields();

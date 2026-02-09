@@ -13,7 +13,7 @@ frequency_file:  frequency/96F/frequency.dat
 
 output: true
 output_overwrite_prevention: false
-output_directory: /home/melanie/output
+output_directory: ../../output
 
 use_B: true
 enable_continuum: true
@@ -21,7 +21,10 @@ formal_solver: BESSER
 enable_continuum: true
 use_1_5D_approx: false
 
-emissivity_model: CRD_limit
+set_uniform_B: true
+B_field: [12.0, 0.78, 0.78]
+
+emissivity_model: PRD
 
 # used only for FAL-C input
 N_theta: 8
@@ -37,7 +40,7 @@ N_y: 10
 use_prec: true
 
 solver:
-  ksp_solver_type: KSPFGMRES
+  ksp_solver_type: KSPGMRES
   ksp_rtol: 1e-7
   ksp_max_it: 1000
   # gmres_restart: 20

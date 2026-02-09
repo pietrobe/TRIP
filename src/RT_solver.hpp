@@ -498,9 +498,9 @@ public:
 		const auto block_size = RT_problem_->block_size_;
 
 		// indeces
-		const int i_start = g_dev->getGlobalStartX(); 
-		const int j_start = g_dev->getGlobalStartY();
-		const int k_start = g_dev->getGlobalStartZ();
+		const auto [i_start, j_start, k_start] = g_dev->getGhostMargins(); 
+		// const int j_start = g_dev->getGlobalStartY();
+		// const int k_start = g_dev->getGlobalStartZ();
 
 		const int i_end = i_start + g_dev->getLocalSizeX();
 		const int j_end = j_start + g_dev->getLocalSizeY();

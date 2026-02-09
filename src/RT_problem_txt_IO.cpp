@@ -11,12 +11,10 @@ RT_problem::write_surface_point_profiles(input_string file_name, const int i_spa
 	// if (mpi_rank_ == 0) std::cout << " Writing output in spatial point (" << i_space << ", " << j_space << ")" <<
 	// std::endl;
 	// indeces
-	const int i_start = space_grid_->getGlobalStartX(); //g_dev.margin[0];
-	const int j_start = space_grid_->getGlobalStartY(); //g_dev.margin[1];
-	const int k_start = space_grid_->getGlobalStartZ(); //g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
-	const int i_end = i_start + space_grid_->getLocalSizeX(); //g_dev.dim[0];
-	const int j_end = j_start + space_grid_->getLocalSizeY(); //g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); 
+	const int j_end = j_start + space_grid_->getLocalSizeY();
 
 	int i_global, j_global;
 
@@ -128,12 +126,10 @@ RT_problem::write_angular_grid_csv(input_string file_name, const int i_space, co
 								   const unsigned int precision) const
 {
 	// indeces
-	const int i_start = space_grid_->getGlobalStartX(); //g_dev.margin[0];
-	const int j_start = space_grid_->getGlobalStartY(); //g_dev.margin[1];
-	const int k_start = space_grid_->getGlobalStartZ(); //g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
-	const int i_end = i_start + space_grid_->getLocalSizeX(); //g_dev.dim[0];
-	const int j_end = j_start + space_grid_->getLocalSizeY(); //g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); 
+	const int j_end = j_start + space_grid_->getLocalSizeY(); 
 
 
 	int i_global, j_global;
@@ -194,12 +190,10 @@ RT_problem::write_frequencies_grid_csv(input_string file_name, const int i_space
 									   const unsigned int precision) const
 {
 	// indeces
-	const int i_start = space_grid_->getGlobalStartX(); //g_dev.margin[0];
-	const int j_start = space_grid_->getGlobalStartY(); //g_dev.margin[1];
-	const int k_start = space_grid_->getGlobalStartZ(); //g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
-	const int i_end = i_start + space_grid_->getLocalSizeX(); //g_dev.dim[0];
-	const int j_end = j_start + space_grid_->getLocalSizeY(); //g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX();
+	const int j_end = j_start + space_grid_->getLocalSizeY();
 
 	int i_global, j_global;
 
@@ -253,12 +247,10 @@ RT_problem::write_surface_point_profiles_csv(input_string file_name, const int i
 											 const unsigned int precision) const
 {
 	// indeces
-	const int i_start = space_grid_->getGlobalStartX(); //g_dev.margin[0];
-	const int j_start = space_grid_->getGlobalStartY(); //g_dev.margin[1];
-	const int k_start = space_grid_->getGlobalStartZ(); //g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
-	const int i_end = i_start + space_grid_->getLocalSizeX(); //g_dev.dim[0];
-	const int j_end = j_start + space_grid_->getLocalSizeY(); //g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX();
+	const int j_end = j_start + space_grid_->getLocalSizeY();
 
 	int i_global, j_global;
 
@@ -350,12 +342,10 @@ RT_problem::write_surface_profiles(input_string file_name) const
 	}
 
 	// indeces
-	const int i_start = space_grid_->getGlobalStartX(); //g_dev.margin[0];
-	const int j_start = space_grid_->getGlobalStartY(); //g_dev.margin[1];
-	const int k_start = space_grid_->getGlobalStartZ(); //g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
-	const int i_end = i_start + space_grid_->getLocalSizeX(); //g_dev.dim[0];
-	const int j_end = j_start + space_grid_->getLocalSizeY(); //g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX();
+	const int j_end = j_start + space_grid_->getLocalSizeY();
 
 	int i_global, j_global;
 
@@ -457,12 +447,10 @@ RT_problem::write_surface_point_profiles_Omega_csv(input_string file_name, const
 	const int block_size = 4 * N_nu_;
 
 	// indeces
-	const int i_start = space_grid_->getGlobalStartX(); //g_dev.margin[0];
-	const int j_start = space_grid_->getGlobalStartY(); //g_dev.margin[1];
-	const int k_start = space_grid_->getGlobalStartZ(); //g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
-	const int i_end = i_start + space_grid_->getLocalSizeX(); //g_dev.dim[0];
-	const int j_end = j_start + space_grid_->getLocalSizeY(); //g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX();
+	const int j_end = j_start + space_grid_->getLocalSizeY(); 
 
 	int i_global, j_global;
 
@@ -543,12 +531,10 @@ RT_problem::write_surface_point_profiles_Omega(input_string file_name, const int
 	const int block_size = 4 * N_nu_;
 
 	// indeces
-	const int i_start = space_grid_->getGlobalStartX(); //g_dev.margin[0];
-	const int j_start = space_grid_->getGlobalStartY(); //g_dev.margin[1];
-	const int k_start = space_grid_->getGlobalStartZ(); //g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
-	const int i_end = i_start + space_grid_->getLocalSizeX(); //g_dev.dim[0];
-	const int j_end = j_start + space_grid_->getLocalSizeY(); //g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); 
+	const int j_end = j_start + space_grid_->getLocalSizeY(); 
 
 	int i_global, j_global;
 
@@ -633,12 +619,10 @@ RT_problem::write_surface_profiles_Omega(input_string file_name) const
 	const int block_size = 4 * N_nu_;
 
 	// indeces
-	const int i_start = space_grid_->getGlobalStartX(); //g_dev.margin[0];
-	const int j_start = space_grid_->getGlobalStartY(); //g_dev.margin[1];
-	const int k_start = space_grid_->getGlobalStartZ(); //g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
-	const int i_end = i_start + space_grid_->getLocalSizeX(); //g_dev.dim[0];
-	const int j_end = j_start + space_grid_->getLocalSizeY(); //g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); 
+	const int j_end = j_start + space_grid_->getLocalSizeY(); 
 
 	int i_global, j_global;
 

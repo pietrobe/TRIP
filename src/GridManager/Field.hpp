@@ -44,9 +44,6 @@ public:
           Nphysical(Nphysical_), 
           Nparam(Nparam_size_.size()), 
           Nparam_size(Nparam_size_),
-          xm(grid_->getLocalSizeX()), 
-          ym(grid_->getLocalSizeY()), 
-          zm(grid_->getLocalSizeZ()),
           is_Vec_allocated(allocate_PETSc_vec)
     {
         block_size = Nphysical_;
@@ -67,9 +64,6 @@ public:
         Grid_ptr grid_, 
         const bool allocate_PETSc_vec = false)
         : name(fieldName), grid(grid_), 
-          xm(grid_->getLocalSizeX()), 
-          ym(grid_->getLocalSizeY()), 
-          zm(grid_->getLocalSizeZ()),
           is_Vec_allocated(allocate_PETSc_vec)
     {
         allocate(allocate_PETSc_vec);
@@ -92,9 +86,6 @@ public:
         : name(fieldName), grid(grid_), 
           Nphysical(Nphysical_), 
           block_size(Nphysical_),
-          xm(grid_->getLocalSizeX()), 
-          ym(grid_->getLocalSizeY()), 
-          zm(grid_->getLocalSizeZ()),
           is_Vec_allocated(allocate_PETSc_vec)
     {
         allocate(allocate_PETSc_vec);
@@ -168,38 +159,41 @@ public:
     template<typename... Indices>
     PetscInt local_to_block(Indices... indices) const 
     {
-        std::array<int, sizeof...(Indices)> idx{indices...};
+        std::array<PetscInt, sizeof...(Indices)> idx{indices...};
         if (idx.size() != ((Nparam == 0) ? 1 : Nparam)) {
             throw std::runtime_error("Number of indices does not match layout of Field.");
         }
         // out of bound indices
         if (Nparam == 0 && (idx[0] < 0 || idx[0] >= Nphysical)) throw std::out_of_range("Index out of bounds in local_to_block.");
-        for (int k = 0; k < Nparam; ++k) {
+        for (PetscInt k = 0; k < Nparam; ++k) {
             if (idx[k] < 0 || idx[k] >= Nparam_size[k]) {
                 throw std::out_of_range("Index out of bounds in local_to_block.");
             }
         }
 
-        int block_index = 0;
-        int stride = 1;
+        PetscInt block_index = 0;
+        PetscInt stride = 1;
         if(Nparam == 0) return idx[0];
 
-        for (int i = idx.size() - 1; i >= 0; --i) {
+        for (PetscInt i = idx.size() - 1; i >= 0; --i) {
             block_index += idx[i] * stride;
             stride *= Nparam_size[i];
         }
         return Nphysical * block_index;
     }
 
+    // TODO: exchange_ghosts, future work if necessary
 private:
     std::string name;
     Grid_ptr grid; // pointer to associated Grid3D
     Vec vec = nullptr; // PETSc distributed global vector
-    bool is_Vec_allocated = false; 
+    bool is_Vec_allocated; 
     Real* data_host = nullptr; // host array bound to Vec
-    PetscInt xm = 0, ym = 0, zm = 0; // local grid sizes
-    PetscInt start_index = 0; // start index of local PETSc vector
-    PetscInt end_index = 0; // end index of local PETSc vector
+    PetscInt start_index = 0; // start index of local PETSc vector (excluding ghosts)
+    PetscInt end_index = 0; // end index of local PETSc vector (excluding ghosts)
+    PetscInt ghosted_start_index = 0; // start index of local PETSc vector (including ghosts)
+    PetscInt ghosted_end_index = 0; // end index of local PETSc vector (including ghosts) 
+
 
     // generic block layout
     PetscInt block_size = 1; 

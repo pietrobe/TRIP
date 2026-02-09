@@ -5,7 +5,24 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${SOLAR_3D_ROOT_PATH}/cmake")
 
 project(par_moonolith_usage VERSION 1.0.0)
 
-find_package(MPI REQUIRED) # Added Melanie
+### DEBUG OPTION
+option(DEBUG "Build with debugging symbols and flags" OFF)
+if(DEBUG)
+    message(STATUS "Configuring Debug build")
+    add_definitions(-DDEBUG)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -Wall -Wextra -std=c++17")
+    # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0 -Wall -Wextra -fsanitize=address,undefined -fno-omit-frame-pointer")
+    # set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address,undefined")
+    set(EXECUTABLE_NAME "solar_3D_debug")
+else()
+    message(STATUS "Configuring Release build")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option")
+    #set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Ofast -fno-signed-zeros -fno-trapping-math -fassociative-math -march=native -mtune=native -mprefer-vector-width=512 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option -pedantic ")
+    set(EXECUTABLE_NAME "solar_3D")
+endif()
+
+### DEPENDENCIES
+find_package(MPI REQUIRED) 
 find_package(HDF5 REQUIRED)
 find_package(HDF5 COMPONENTS C HL REQUIRED)
 
@@ -14,13 +31,13 @@ if(NOT HDF5_INCLUDE_DIRS)
     set(HDF5_LIBRARIES "${HDF5_ROOT}/lib/libhdf5.so;${HDF5_ROOT}/lib/libhdf5_hl.so")
 endif()
 
-
 include(CMakeFindDependencyMacro)
 find_package(PkgConfig REQUIRED)
 
 find_package(yaml-cpp QUIET)
 
-if(NOT yaml-cpp_FOUND)
+# if(NOT yaml-cpp_FOUND)
+if(TRUE)
 
     if (DEFINED YAML_CPP_URL)
         message(STATUS "yaml-cpp not found on system, fetching from URL...")
@@ -49,12 +66,13 @@ endif()
 
 #target_link_libraries(YOUR_LIBRARY PUBLIC yaml-cpp::yaml-cpp) # The library or executable that require yaml-cpp library
 
-# find_package(sgrid 0 REQUIRED)
 find_package(Boost 1.61 COMPONENTS program_options regex serialization filesystem  atomic  REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIRS})
 set(Boost_LIBRARY_DIRS "${BOOST_ROOT}/lib")
 
+
+### SOURCE FILES
 list(APPEND SOURCES_FILES 
     src/Faddeeva.cpp 
     src/Formal_solver.cpp 
@@ -83,6 +101,7 @@ list(APPEND HEADERS_FILES
     src/RT_types.hpp
 )
 
+### RII LINKAGE
 set(RII_INCLUDES "${RII_ROOT_PATH}")
 message(${RII_INCLUDES})
 
@@ -133,7 +152,7 @@ if(USE_ACC)
     include_directories(${RII_INCLUDES}/src_acc/src)
 endif()
 
-# find dependencies
+### PETSC DEPENDENCY
 message(STATUS "Search Petsc")
 
 set(PETSC_TEST_RUNS TRUE)
@@ -155,41 +174,39 @@ configure_file(
 )
 
 # we use one of our examples here
-add_executable(solar_3D ${CMAKE_SOURCE_DIR}/src/main.cpp)
+add_executable(${EXECUTABLE_NAME} ${CMAKE_SOURCE_DIR}/src/main.cpp)
 
-target_include_directories(solar_3D PUBLIC ${HDF5_INCLUDE_DIRS})
-set(CMAKE_CXX_FLAGS  " -O3 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option ")
+target_include_directories(${EXECUTABLE_NAME} PUBLIC ${HDF5_INCLUDE_DIRS})
 
-#set(CMAKE_CXX_FLAGS  " -Ofast -fno-signed-zeros -fno-trapping-math -fassociative-math -march=native -mtune=native -mprefer-vector-width=512 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option -pedantic ")
 
 add_library(rii SHARED IMPORTED)
 set_property(TARGET rii PROPERTY IMPORTED_LOCATION "${RII_ROOT_PATH}/build/librii.so")
 message( STATUS  "RII path: ${RII_ROOT_PATH}")
 
 # import all the dependencies and targets # removed sgrid::sgrid
-target_link_libraries(solar_3D PUBLIC rii)
-target_link_libraries(solar_3D PUBLIC ${Boost_LIBRARIES})
-target_link_libraries(solar_3D PUBLIC MPI::MPI_CXX) # Added Melanie
-target_link_libraries(solar_3D PUBLIC ${HDF5_LIBRARIES})
-target_link_libraries(solar_3D PUBLIC ${HDF5_HL_LIBRARIES})
+target_link_libraries(${EXECUTABLE_NAME} PUBLIC rii)
+target_link_libraries(${EXECUTABLE_NAME} PUBLIC ${Boost_LIBRARIES})
+target_link_libraries(${EXECUTABLE_NAME} PUBLIC MPI::MPI_CXX) # Added Melanie
+target_link_libraries(${EXECUTABLE_NAME} PUBLIC ${HDF5_LIBRARIES})
+target_link_libraries(${EXECUTABLE_NAME} PUBLIC ${HDF5_HL_LIBRARIES})
 
 
-target_sources(solar_3D PUBLIC ${SOURCES_FILES})
-target_include_directories(solar_3D PUBLIC  
+target_sources(${EXECUTABLE_NAME} PUBLIC ${SOURCES_FILES})
+target_include_directories(${EXECUTABLE_NAME} PUBLIC  
     src
     ${CMAKE_CURRENT_BINARY_DIR}  # Add binary dir for configure.h
 )
 
-target_include_directories(solar_3D SYSTEM PUBLIC ${PETSC_INCLUDES})
-target_link_libraries(solar_3D PUBLIC PkgConfig::PETSC)
 
 if(NOT yaml-cpp_FOUND)
-    target_link_libraries(solar_3D PUBLIC yaml-cpp::yaml-cpp)
+    target_link_libraries(${EXECUTABLE_NAME} PUBLIC yaml-cpp::yaml-cpp)
 else()
-    target_link_libraries(solar_3D PUBLIC yaml-cpp)
+    target_link_libraries(${EXECUTABLE_NAME} PUBLIC yaml-cpp)
 endif()
 
-target_compile_definitions(solar_3D PUBLIC ${PETSC_DEFINITIONS})
+target_include_directories(${EXECUTABLE_NAME} SYSTEM PUBLIC ${PETSC_INCLUDES})
+target_link_libraries(${EXECUTABLE_NAME} PUBLIC PkgConfig::PETSC)
+target_compile_definitions(${EXECUTABLE_NAME} PUBLIC ${PETSC_DEFINITIONS})
 
 # Build thdf/libhdf_output.a using its Makefile
 if(TRUE)
@@ -213,13 +230,13 @@ if(TRUE)
     )
 
     # Ensure solar_3D depends on the static library
-    add_dependencies(solar_3D hdf_output_lib)
+    add_dependencies(${EXECUTABLE_NAME} hdf_output_lib)
 
     # Include thdf headers
-    target_include_directories(solar_3D PUBLIC src/thdf/)
+    target_include_directories(${EXECUTABLE_NAME} PUBLIC src/thdf/)
 
     # Link the static library
-    target_link_libraries(solar_3D PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a)
+    target_link_libraries(${EXECUTABLE_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a)
 
     # Provide a clean target for the thdf subproject
     add_custom_target(thdf_clean
@@ -243,10 +260,14 @@ add_library(GridManager
     src/GridManager/ReMap3D.cpp
 )
 target_include_directories(GridManager PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}src/GridManager
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/GridManager
 )
+
+target_include_directories(GridManager SYSTEM PUBLIC ${PETSC_INCLUDES})
 target_link_libraries(GridManager PUBLIC
     PkgConfig::PETSC
     MPI::MPI_CXX  
 )
-target_link_libraries(solar_3D PUBLIC GridManager)
+target_compile_definitions(GridManager PUBLIC ${PETSC_DEFINITIONS})
+
+target_link_libraries(${EXECUTABLE_NAME} PUBLIC GridManager)

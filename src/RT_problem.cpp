@@ -160,10 +160,10 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	space_grid_->parallel_for([&](int i, int j, int k) {
 
 		// get global indeces form local ones
-		const int i_global  = space_grid_->getGlobalStartX() + i;// - g_dev.margin[0];
-		const int j_global  = space_grid_->getGlobalStartY() + j;// - g_dev.margin[1];
-		const int k_global  = space_grid_->getGlobalStartZ() + k;// - g_dev.margin[2];
-		
+		const int i_global  = space_grid_->local_to_global_coordinate(0, i); //space_grid_->getGlobalStartX() + i - space_grid_->getGhostMarginX();
+		const int j_global  = space_grid_->local_to_global_coordinate(1, j);//space_grid_->getGlobalStartY() + j - space_grid_->getGhostMarginY();
+		const int k_global  = space_grid_->local_to_global_coordinate(2, k);//space_grid_->getGlobalStartZ() + k - space_grid_->getGhostMarginZ();
+
 		// reversing z index because of input ordering 
 		const int k_reverse = (N_z_ - k_global - 1);  
 
@@ -527,9 +527,9 @@ void RT_problem::read_3D(const char* filename){
 	space_grid_->parallel_for([&](int i, int j, int k) {
 
 		// get global indeces form local ones
-		const int i_global  = space_grid_->getGlobalStartX() + i;// - g_dev.margin[0];
-		const int j_global  = space_grid_->getGlobalStartY() + j;// - g_dev.margin[1];
-		const int k_global  = space_grid_->getGlobalStartZ() + k;// - g_dev.margin[2];
+		const int i_global  = space_grid_->local_to_global_coordinate(0,i); //space_grid_->getGlobalStartX() + i - space_grid_->getGhostMarginX();
+		const int j_global  = space_grid_->local_to_global_coordinate(1,j);//space_grid_->getGlobalStartY() + j - space_grid_->getGhostMarginY();
+		const int k_global  = space_grid_->local_to_global_coordinate(2,k);//space_grid_->getGlobalStartZ() + k - space_grid_->getGhostMarginZ();
 		
 		// reversing z index because of input ordering 
 		const int k_reverse = (N_z_ - k_global - 1);  
@@ -857,7 +857,7 @@ void RT_problem::read_continumm_1D(input_string filename_sigma, input_string fil
 
 		for (int n = 0; n < N_nu_; ++n)
 		{
-			k_global = N_nu_ * (space_grid_->getGlobalStartZ() + k /*- g_dev.margin[2]*/) + n;
+			k_global = N_nu_ * (space_grid_->getGlobalStartZ() + k - space_grid_->getGhostMarginZ()) + n;
 
 			sigma_->block(   i, j, k)[n] = sigma_vec[k_global];		
 			k_c_->block(     i, j, k)[n] = k_c_vec[k_global];		
@@ -925,9 +925,9 @@ void RT_problem::read_magnetic_field_1D(input_string filename){
 	// fill field
 	space_grid_->parallel_for([&](int i, int j, int k) {
 				
-		const int i_global = space_grid_->getGlobalStartX() + i;// - g_dev.margin[0];
-		const int j_global = space_grid_->getGlobalStartY() + j;// - g_dev.margin[1];
-		const int k_global = space_grid_->getGlobalStartZ() + k;// - g_dev.margin[2];
+		const int i_global = space_grid_->getGlobalStartX() + i - space_grid_->getGhostMarginX();
+		const int j_global = space_grid_->getGlobalStartY() + j - space_grid_->getGhostMarginY();
+		const int k_global = space_grid_->getGlobalStartZ() + k - space_grid_->getGhostMarginZ();
 
 		if (B_etero)
 		{
@@ -1003,7 +1003,7 @@ void RT_problem::read_bulk_velocity_1D(input_string filename){
 	// fill field
 	space_grid_->parallel_for([&](int i, int j, int k) {
 		
-		const int k_global = space_grid_->getGlobalStartZ() + k;// - g_dev.margin[2];
+		const int k_global = space_grid_->getGlobalStartZ() + k - space_grid_->getGhostMarginZ();
 
 		v_b_->block(i, j, k)[0] =     v_b_vec[k_global];					
 		v_b_->block(i, j, k)[1] = theta_b_vec[k_global];					
@@ -1095,12 +1095,12 @@ void RT_problem::read_atmosphere_1D(input_string filename){
 	// fill field 
 	space_grid_->parallel_for([&](int i, int j, int k) {
 
-		const int k_global = space_grid_->getGlobalStartZ() + k;// - g_dev.margin[2];
+		const int k_global = space_grid_->getGlobalStartZ() + k - space_grid_->getGhostMarginZ();
 
 		if (N_x_ > 1 and test_etero)
 		{
-			const int i_global = space_grid_->getGlobalStartX() + i;// - g_dev.margin[0];
-			const int j_global = space_grid_->getGlobalStartY()  + j;// - g_dev.margin[1];
+			const int i_global = space_grid_->getGlobalStartX() + i - space_grid_->getGhostMarginX();
+			const int j_global = space_grid_->getGlobalStartY()  + j - space_grid_->getGhostMarginY();
 
 			const double x = i_global / (N_x_ - 1.0);
 			const double y = j_global / (N_y_ - 1.0);
@@ -1327,6 +1327,11 @@ void RT_problem::allocate_fields(){
 		"eta", space_grid_, N_pol_, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_}, false);
 	rho_field_ = std::make_shared<Field>(
 		"rho", space_grid_, N_pol_, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_}, false);
+
+	// I_field_->set_to_zero(); //DEBUG
+	// S_field_->set_to_zero(); //DEBUG
+	// eta_field_->set_to_zero(); //DEBUG
+	// rho_field_->set_to_zero(); //DEBUG
 
 	local_size_ = block_size_ * space_grid_->getLocalSizeX() * space_grid_->getLocalSizeY() * space_grid_->getLocalSizeZ();
 	PetscErrorCode ierr = VecCreate(PETSC_COMM_WORLD, &I_vec_);CHKERRV(ierr);	
@@ -1683,13 +1688,13 @@ void RT_problem::set_eta_and_rhos(){
     space_grid_->parallel_for(
 		[&](int i, int j, int k) 
     {         
-        auto block_eta = eta_field_->block(i, j, k);
-        auto block_rho = rho_field_->block(i, j, k);
+        auto *block_eta = eta_field_->block(i, j, k);
+        auto *block_rho = rho_field_->block(i, j, k);
         
-        auto u   =   u_->block(i, j, k);	
-		auto k_c = k_c_->block(i, j, k);		
-		auto B   =   B_->block(i, j, k);       
-        auto v_b = v_b_->block(i, j, k);                        
+        auto *u   =   u_->block(i, j, k);	
+		auto *k_c = k_c_->block(i, j, k);		
+		auto *B   =   B_->block(i, j, k);       
+        auto *v_b = v_b_->block(i, j, k);                        
                         
         // assign some variables for readability
         Real theta_v_b = v_b[1];
@@ -1699,7 +1704,7 @@ void RT_problem::set_eta_and_rhos(){
         Real theta_B = B[1];
         Real chi_B   = B[2];
 
-        Real Doppler_width = Doppler_width_->ref(i,j,k); // ref is basically the first element of the block in the scalar case
+        Real Doppler_width = Doppler_width_->ref(i,j,k); 
     	Real k_L           = k_L_->ref(i,j,k);
 		Real a             = a_->ref(i,j,k);
 
@@ -2037,7 +2042,7 @@ void RT_problem::set_up(){
 	// compute atmospheric quantities 
 	space_grid_->parallel_for([&](int i, int j, int k) 
 	{       	
-    	auto u = u_->block(i, j, k);
+    	auto *u = u_->block(i, j, k);
 
     	// assign some variables for readability
     	Real T   =   T_->ref(i,j,k);    	    	
@@ -2098,9 +2103,7 @@ void RT_problem::print_surface_profile(const Field_ptr_t field, const int i_stok
 		
 	MPI_Barrier(MPI_COMM_WORLD);
 	// indeces
-	const int i_start = space_grid_->getGlobalStartX(); //g_dev.margin[0];
-	const int j_start = space_grid_->getGlobalStartY(); //g_dev.margin[1];
-	const int k_start = space_grid_->getGlobalStartZ(); //g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins(); //g_dev.margin[0];
 
 	const int i_end = i_start + space_grid_->getLocalSizeX(); //g_dev.dim[0];
 	const int j_end = j_start + space_grid_->getLocalSizeY(); //g_dev.dim[1];
@@ -2171,9 +2174,9 @@ void RT_problem::print_surface_QI_profile(const Field_ptr_t field, const int i_s
 	if (mpi_rank_ == 0) std::cout << "i,j =  " << i_space << ", " << j_space << std::endl;	
 
 	// indeces
-	const int i_start = space_grid_->getGlobalStartX();//g_dev.margin[0]; 
-	const int j_start = space_grid_->getGlobalStartY();
-	const int k_start = space_grid_->getGlobalStartZ();
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();//g_dev.margin[0]; 
+	// const int j_start = space_grid_->getGlobalStartY();
+	// const int k_start = space_grid_->getGlobalStartZ();
 
 	const int i_end = i_start + space_grid_->getLocalSizeX(); // g_dev.dim[0];
 	const int j_end = j_start + space_grid_->getLocalSizeY(); 
@@ -2246,9 +2249,9 @@ void RT_problem::print_surface_QI_point(const int i_space, const int j_space, co
 	if (mpi_rank_ == 0) std::cout << "mu =  " << mu_grid_[j_theta] << ", chi =  " << chi_grid_[k_chi] << ", nu =  " << nu_grid_[n_nu] << std::endl;		
 
 	// indeces
-	const int i_start = space_grid_->getGlobalStartX();//g_dev.margin[0]; 
-	const int j_start = space_grid_->getGlobalStartY();
-	const int k_start = space_grid_->getGlobalStartZ();
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();//g_dev.margin[0]; 
+	// const int j_start = space_grid_->getGlobalStartY();
+	// const int k_start = space_grid_->getGlobalStartZ();
 
 	const int i_end = i_start + space_grid_->getLocalSizeX(); // g_dev.dim[0];
 	const int j_end = j_start + space_grid_->getLocalSizeY(); 
@@ -2319,9 +2322,9 @@ void RT_problem::print_profile(const Field_ptr_t field, const int i_stoke,
 	}
 
 	// indeces
-	const int i_start = space_grid_->getGlobalStartX();//g_dev.margin[0]; 
-	const int j_start = space_grid_->getGlobalStartY();
-	const int k_start = space_grid_->getGlobalStartZ();
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();//g_dev.margin[0]; 
+	// const int j_start = space_grid_->getGlobalStartY();
+	// const int k_start = space_grid_->getGlobalStartZ();
 
 	const int i_end = i_start + space_grid_->getLocalSizeX(); // g_dev.dim[0];
 	const int j_end = j_start + space_grid_->getLocalSizeY(); 
@@ -2371,9 +2374,9 @@ bool RT_problem::field_is_zero(const Field_ptr_t field)
 	bool field_is_zero = true;
 
 	// indeces
-	const int i_start = space_grid_->getGlobalStartX(); 
-	const int j_start = space_grid_->getGlobalStartY(); 
-	const int k_start = space_grid_->getGlobalStartZ(); 
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins(); 
+	// const int j_start = space_grid_->getGlobalStartY(); 
+	// const int k_start = space_grid_->getGlobalStartZ(); 
 
 	const int i_end = i_start + space_grid_->getLocalSizeX();
 	const int j_end = j_start + space_grid_->getLocalSizeY();

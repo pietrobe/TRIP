@@ -69,9 +69,9 @@ void MF_context::field_to_vec(const Field_ptr_t field, Vec &v, const int block_s
     const int bs = (block_size == -1) ? RT_problem_->block_size_ : block_size;
 
 	// indeces
-	const int i_start = space_grid->getGlobalStartX(); //g_dev.margin[0];
-	const int j_start = space_grid->getGlobalStartY(); //g_dev.margin[1];
-	const int k_start = space_grid->getGlobalStartZ(); //g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = space_grid->getGhostMargins();
+	// const int j_start = 0; //g_dev.margin[1];
+	// const int k_start = 0; //g_dev.margin[2];
 
 	const int i_end = i_start + space_grid->getLocalSizeX(); //g_dev.dim[0];
 	const int j_end = j_start + space_grid->getLocalSizeY(); //g_dev.dim[1];
@@ -125,9 +125,9 @@ void MF_context::vec_to_field(Field_ptr_t field, const Vec &v, const int block_s
     const int bs = (block_size == -1) ? RT_problem_->block_size_ : block_size;
 
 	// indeces
-	const int i_start = space_grid->getGlobalStartX(); //g_dev.margin[0];
-	const int j_start = space_grid->getGlobalStartY(); //g_dev.margin[1];
-	const int k_start = space_grid->getGlobalStartZ(); //g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = space_grid->getGhostMargins(); //g_dev.margin[0];
+	// const int j_start = space_grid->getGlobalStartY(); //g_dev.margin[1];
+	// const int k_start = space_grid->getGlobalStartZ(); //g_dev.margin[2];
 
 	const int i_end = i_start + space_grid->getLocalSizeX(); //g_dev.dim[0];
 	const int j_end = j_start + space_grid->getLocalSizeY(); //g_dev.dim[1];
@@ -1199,9 +1199,9 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
     const auto space_grid = space_grid_serial_;
 
     // indeces
-    const int i_start = space_grid->getGlobalStartX(); //g_dev.margin[0];
-	const int j_start = space_grid->getGlobalStartY(); //g_dev.margin[1];
-	const int k_start = space_grid->getGlobalStartZ(); //g_dev.margin[2];
+    const auto [i_start, j_start, k_start] = space_grid->getGhostMargins(); //g_dev.margin[0];
+	// const int j_start = space_grid->getGlobalStartY(); //g_dev.margin[1];
+	// const int k_start = space_grid->getGlobalStartZ(); //g_dev.margin[2];
 
     if (i_start > 0 or j_start > 0 or k_start > 0) std::cout << "WARNING: periodic BC hardcoded for margin = 0!" << std::endl;
 
@@ -1287,7 +1287,7 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
             {                
                 for (int i = i_start; i < i_end; ++i)
                 {                          
-                    k_aux = (mu > 0.0) ? k_end - 1 - k + space_grid->getGlobalStartZ()/*g_dev.margin[2]*/: k; 
+                    k_aux = (mu > 0.0) ? k_end - 1 - k + space_grid->getGhostMarginZ() : k; 
 
                     // depth index
                     k_global = space_grid->local_to_global_coordinate(2, k_aux);                             
@@ -1299,8 +1299,8 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
                         // set vertical box size
                         dz = (mu > 0) ? depth_grid[k_global] -  depth_grid[k_global + 1] : depth_grid[k_global - 1] - depth_grid[k_global];                                                                
                             
-                        i_aux = (cos(chi) < 0.0) ? i_end - 1 - i + space_grid->getGlobalStartX()/*g_dev.margin[0]*/: i;  
-                        j_aux = (sin(chi) < 0.0) ? j_end - 1 - j + space_grid->getGlobalStartY()/*g_dev.margin[1]*/: j;                                      
+                        i_aux = (cos(chi) < 0.0) ? i_end - 1 - i + space_grid->getGhostMarginX()/*g_dev.margin[0]*/: i;  
+                        j_aux = (sin(chi) < 0.0) ? j_end - 1 - j + space_grid->getGhostMarginY()/*g_dev.margin[1]*/: j;                                      
                         
                         find_intersection(theta, chi, dz, dz, L, &intersection_data); 
 
@@ -1581,9 +1581,9 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 	const auto g_dev = space_grid_serial_;   
 
 	// indeces
-	const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
-	const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
-	const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = g_dev->getGhostMargins(); //g_dev.margin[0];
+	// const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
+	// const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
 
 	if (i_start > 0 or j_start > 0 or k_start > 0) std::cout << "WARNING: periodic BC hardcoded for margin = 0!" << std::endl;
 
@@ -1687,7 +1687,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     						theta = theta_grid[j_theta];
     						mu    = mu_grid[j_theta];						
 
-    						k_aux = (mu > 0.0) ? k_end - 1 - k + g_dev->getGlobalStartZ()/*.margin[2]*/: k; 
+    						k_aux = (mu > 0.0) ? k_end - 1 - k + g_dev->getGhostMarginZ()/*.margin[2]*/: k; 
 
     						// depth index
     						k_global = g_dev->local_to_global_coordinate(2, k_aux);	                             
@@ -1703,8 +1703,8 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     							{	                                
     								chi = chi_grid[k_chi]; 
     							
-    								i_aux = (cos(chi) < 0.0) ? i_end - 1 - i + g_dev->getGlobalStartX()/*margin[0]*/: i;	
-    								j_aux = (sin(chi) < 0.0) ? j_end - 1 - j + g_dev->getGlobalStartY()/*margin[1]*/: j;		                                                               
+    								i_aux = (cos(chi) < 0.0) ? i_end - 1 - i + g_dev->getGhostMarginX()/*margin[0]*/: i;	
+    								j_aux = (sin(chi) < 0.0) ? j_end - 1 - j + g_dev->getGhostMarginY()/*margin[1]*/: j;		                                                               
                                     
     								find_intersection(theta, chi, dz, dz, L, &intersection_data); 
 
@@ -2005,9 +2005,9 @@ void MF_context::formal_solve_1_5D(Field_ptr_t I_field, const Field_ptr_t S_fiel
     const auto S_dev = S_field ;   
 
     // indeces
-    const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
-	const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
-	const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
+    const auto [i_start, j_start, k_start] = g_dev->getGhostMargins(); //g_dev.margin[0];
+	// const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
+	// const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
 
     const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
     const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
@@ -2564,9 +2564,10 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
     const auto g_dev = space_grid_serial_;   
 
     // indeces
-    const int i_start = g_dev->getGlobalStartX(); //.margin[0]; 
-    const int j_start = g_dev->getGlobalStartY(); //.margin[1];
-    const int k_start = g_dev->getGlobalStartZ(); //.margin[2];
+    const auto [i_start, j_start, k_start] = g_dev->getGhostMargins();
+    // const int i_start = g_dev->getGlobalStartX(); //.margin[0]; 
+    // const int j_start = g_dev->getGlobalStartY(); //.margin[1];
+    // const int k_start = g_dev->getGlobalStartZ(); //.margin[2];
 
     if (i_start > 0 or j_start > 0 or k_start > 0) std::cout << "WARNING: periodic BC hardcoded for margin = 0!" << std::endl;
 
@@ -2664,7 +2665,7 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
                         theta = theta_grid[j_theta];
                         mu    = mu_grid[j_theta];                       
 
-                        k_aux = (mu > 0.0) ? k_end - 1 - k + g_dev->getGlobalStartZ()/*.margin[2]*/: k; 
+                        k_aux = (mu > 0.0) ? k_end - 1 - k + g_dev->getGhostMarginZ()/*.margin[2]*/: k; 
 
                         // depth index
                         k_global = g_dev->local_to_global_coordinate(2, k_aux);                                 
@@ -2680,8 +2681,8 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
                             {                                   
                                 chi = chi_grid[k_chi]; 
                             
-                                i_aux = (cos(chi) < 0.0) ? i_end - 1 - i + g_dev->getGlobalStartX()/*.margin[0]*/: i;  
-                                j_aux = (sin(chi) < 0.0) ? j_end - 1 - j + g_dev->getGlobalStartY()/*.margin[1]*/: j;                                                                     
+                                i_aux = (cos(chi) < 0.0) ? i_end - 1 - i + g_dev->getGhostMarginX()/*.margin[0]*/: i;  
+                                j_aux = (sin(chi) < 0.0) ? j_end - 1 - j + g_dev->getGhostMarginY()/*.margin[1]*/: j;                                                                     
                                 
                                 find_intersection(theta, chi, dz, dz, L, &intersection_data); 
 
@@ -3061,13 +3062,20 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
     const auto S_dev   = RT_problem_->S_field_; 
 
     // field range indeces 
-    const int i_start = g_dev->getGlobalStartX();//.margin[0]; 
-    const int j_start = g_dev->getGlobalStartY();//.margin[1];
-    const int k_start = g_dev->getGlobalStartZ();//.margin[2];
+    const auto [i_start, j_start, k_start] = g_dev->getGhostMargins();
+    // const int i_start = g_dev->getGlobalStartX();//.margin[0]; 
+    // const int j_start = g_dev->getGlobalStartY();//.margin[1];
+    // const int k_start = g_dev->getGlobalStartZ();//.margin[2];
 
-    const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
-	const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
-	const int k_end = k_start + g_dev->getLocalSizeZ(); //g_dev.dim[2];	   
+    const auto [size_i, size_j, size_k] = g_dev->getLocalSizes();
+    // const int size_j = g_dev->getLocalSizeY();
+    // const int size_k = g_dev->getLocalSizeZ();
+
+    const int i_end = i_start + size_i; //g_dev.dim[0];
+	const int j_end = j_start + size_j; //g_dev.dim[1];
+	const int k_end = k_start + size_k; //g_dev.dim[2];
+    
+    
 
     const PetscInt block_size = RT_problem_->block_size_;   
 	
@@ -3181,7 +3189,7 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
 		// }
 
 		// compute grid indeces from Vec index i_vec
-        i = i_start + counter_i;
+        i = i_start + counter_i; 
         j = j_start + counter_j;
         k = k_start + counter_k;     
 
@@ -3189,7 +3197,8 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
         if (j >= j_end) std::cout << "ERROR with counters in update_emission(), j = " << j << std::endl;
         if (k >= k_end) std::cout << "ERROR with counters in update_emission(), k = " << k << std::endl;
 
-    	// set input field
+    	// set input field // DEBUG
+        // if (mpi_rank_ == 0) std::cout << "+++++++++++++ UPDATE_INCOMING_FIELD call in RT_Solver>update_emission\n" << std::flush;
         ecc_sh_ptr_->update_incoming_field(i, j, k, offset_fun_, input.data());
 
 #ifdef CLOCK_EPSILON
@@ -3246,13 +3255,13 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
         // update counters
         counter_i++;
 
-        if (counter_i == i_end - g_dev->getGlobalStartX()/*.margin[0]*/)
+        if (counter_i == i_end - g_dev->getGhostMarginX()/*.margin[0]*/) 
         {
             counter_i = 0;
             counter_j++;
         }
 
-        if (counter_j == j_end - g_dev->getGlobalStartY()/*.margin[1]*/)
+        if (counter_j == j_end - g_dev->getGhostMarginY()/*.margin[1]*/) 
         {
             counter_j = 0;
             counter_k++;
@@ -3273,9 +3282,10 @@ void MF_context::update_emission_J_KQ(const Vec &J_KQ_vec){
     const auto S_dev   = RT_problem_->S_field_ ; 
 
     // field range indeces 
-    const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
-	const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
-	const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
+    const auto [i_start, j_start, k_start] = g_dev->getGhostMargins();
+    // const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
+	// const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
+	// const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
 
     const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
 	const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
@@ -3314,7 +3324,7 @@ void MF_context::update_emission_J_KQ(const Vec &J_KQ_vec){
         ierr = VecGetValues(J_KQ_vec, J_KQ_size_, ix, &input[0]);CHKERRV(ierr);   
 
         // compute grid indeces from Vec index i_vec
-        i = i_start + counter_i;
+        i = i_start + counter_i; 
         j = j_start + counter_j;
         k = k_start + counter_k;     
 
@@ -3367,13 +3377,13 @@ void MF_context::update_emission_J_KQ(const Vec &J_KQ_vec){
         // update counters
         counter_i++;
 
-        if (counter_i == i_end - g_dev->getGlobalStartX()/*g_dev.margin[0]*/)
+        if (counter_i == i_end - g_dev->getGhostMarginX()/*g_dev.margin[0]*/)
         {
             counter_i = 0;
             counter_j++;
         }
 
-        if (counter_j == j_end - g_dev->getGlobalStartY()/*g_dev.margin[1]*/)
+        if (counter_j == j_end - g_dev->getGhostMarginY()/*g_dev.margin[1]*/)
         {
             counter_j = 0;
             counter_k++;
@@ -3392,9 +3402,10 @@ void MF_context::I_vec_to_J_KQ_vec(const Vec &I_vec, Vec &J_KQ_vec){
     const auto g_dev = RT_problem_->space_grid_;  
 
     // field range indeces 
-    const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
-	const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
-	const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
+    const auto [i_start, j_start, k_start] = g_dev->getGhostMargins();
+    // const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
+	// const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
+	// const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
 
     const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
 	const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
@@ -3436,7 +3447,7 @@ void MF_context::I_vec_to_J_KQ_vec(const Vec &I_vec, Vec &J_KQ_vec){
         ierr = VecGetValues(I_vec, block_size, ix, &input[0]);CHKERRV(ierr);   
 
         // compute grid indeces from Vec index i_vec
-        i = i_start + counter_i;
+        i = i_start + counter_i; 
         j = j_start + counter_j;
         k = k_start + counter_k;     
 
@@ -3479,9 +3490,10 @@ void MF_context::I_field_to_J_KQ_vec(const Field_ptr_t field, Vec &J_KQ_vec){
 
     auto g_dev = space_grid;
     // indeces
-    const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
-	const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
-	const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
+    const auto [i_start, j_start, k_start] = g_dev->getGhostMargins();
+    // const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
+	// const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
+	// const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
 
     const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
 	const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
@@ -3574,9 +3586,10 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
     const auto N_nu      = RT_problem_->N_nu_;     
     
     // field range indeces 
-    const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
-	const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
-	const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
+    const auto [i_start, j_start, k_start] = g_dev->getGhostMargins();
+    // const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
+	// const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
+	// const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
 
     const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
 	const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
@@ -3707,13 +3720,13 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
         // update counters
         counter_i++;
 
-        if (counter_i == i_end - g_dev->getGlobalStartX()/*g_dev.margin[0]*/)
+        if (counter_i == i_end - g_dev->getGhostMarginX()/*g_dev.margin[0]*/)
         {
             counter_i = 0;
             counter_j++;
         }
 
-        if (counter_j == j_end - g_dev->getGlobalStartY()/*g_dev.margin[1]*/)
+        if (counter_j == j_end - g_dev->getGhostMarginY()/*g_dev.margin[1]*/)
         {
             counter_j = 0;
             counter_k++;
@@ -4225,7 +4238,8 @@ PetscErrorCode UserMult(Mat mat, Vec x, Vec y){
 
     Real start = MPI_Wtime();       
     
-    // compute new emission in S_field_ 
+    // compute new emission in S_field_
+    // std::cout << "**********UPDATE_EMISSION>UserMult\n" << std::flush; // DEBUG
     mf_ctx_->update_emission(x);  
 
     // timer
@@ -4298,9 +4312,10 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
         auto S_dev = RT_problem->S_field_; 
 
         // indeces
-        const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
-        const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
-        const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
+        const auto [i_start, j_start, k_start] = g_dev->getGhostMargins();
+        // const int i_start = 0; //g_dev.margin[0];
+        // const int j_start = 0; //g_dev.margin[1];
+        // const int k_start = 0; //g_dev.margin[2];
 
         const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
         const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
