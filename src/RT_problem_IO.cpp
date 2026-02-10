@@ -152,10 +152,7 @@ RT_problem::write_emergent_field_hdf5(const std::string &output_file, MPI_Comm w
 
 	const int i_size = space_grid_->getLocalSizeX();
 	const int j_size = space_grid_->getLocalSizeY();
-
-	// const int i_start = space_grid_->getGlobalStartX();
-	// const int j_start = space_grid_->getGlobalStartY();
-
+	
 	const int i_start_global = space_grid_->local_to_global_coordinate(0, i_start);
 	const int j_start_global = space_grid_->local_to_global_coordinate(1, j_start);
 

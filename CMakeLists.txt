@@ -36,9 +36,7 @@ find_package(PkgConfig REQUIRED)
 
 find_package(yaml-cpp QUIET)
 
-# if(NOT yaml-cpp_FOUND)
-if(TRUE)
-
+if(NOT yaml-cpp_FOUND)
     if (DEFINED YAML_CPP_URL)
         message(STATUS "yaml-cpp not found on system, fetching from URL...")
         include(FetchContent)
@@ -254,20 +252,6 @@ if(TRUE)
 endif()
 
 # Add Grid Manager
-add_library(GridManager
-    src/GridManager/Grid3D.cpp
-    src/GridManager/Field.cpp
-    src/GridManager/ReMap3D.cpp
-)
-target_include_directories(GridManager PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/GridManager
-)
-
-target_include_directories(GridManager SYSTEM PUBLIC ${PETSC_INCLUDES})
-target_link_libraries(GridManager PUBLIC
-    PkgConfig::PETSC
-    MPI::MPI_CXX  
-)
-target_compile_definitions(GridManager PUBLIC ${PETSC_DEFINITIONS})
-
+add_subdirectory(src/GridManager)
 target_link_libraries(${EXECUTABLE_NAME} PUBLIC GridManager)
+
