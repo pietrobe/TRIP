@@ -70,12 +70,10 @@ void MF_context::field_to_vec(const Field_ptr_t field, Vec &v, const int block_s
 
 	// indeces
 	const auto [i_start, j_start, k_start] = space_grid->getGhostMargins();
-	// const int j_start = 0; //g_dev.margin[1];
-	// const int k_start = 0; //g_dev.margin[2];
 
-	const int i_end = i_start + space_grid->getLocalSizeX(); //g_dev.dim[0];
-	const int j_end = j_start + space_grid->getLocalSizeY(); //g_dev.dim[1];
-	const int k_end = k_start + space_grid->getLocalSizeZ(); //g_dev.dim[2];	
+	const int i_end = i_start + space_grid->getLocalSizeX();
+	const int j_end = j_start + space_grid->getLocalSizeY();
+	const int k_end = k_start + space_grid->getLocalSizeZ();
 
 	PetscInt istart, row;
 
@@ -125,14 +123,11 @@ void MF_context::vec_to_field(Field_ptr_t field, const Vec &v, const int block_s
     const int bs = (block_size == -1) ? RT_problem_->block_size_ : block_size;
 
 	// indeces
-	const auto [i_start, j_start, k_start] = space_grid->getGhostMargins(); //g_dev.margin[0];
-	// const int j_start = space_grid->getGlobalStartY(); //g_dev.margin[1];
-	// const int k_start = space_grid->getGlobalStartZ(); //g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = space_grid->getGhostMargins(); 
 
-	const int i_end = i_start + space_grid->getLocalSizeX(); //g_dev.dim[0];
-	const int j_end = j_start + space_grid->getLocalSizeY(); //g_dev.dim[1];
-	const int k_end = k_start + space_grid->getLocalSizeZ(); //g_dev.dim[2];	
-
+	const int i_end = i_start + space_grid->getLocalSizeX(); 
+	const int j_end = j_start + space_grid->getLocalSizeY(); 
+	const int k_end = k_start + space_grid->getLocalSizeZ(); 	
 
 	PetscInt istart, row;
 
@@ -196,7 +191,7 @@ void MF_context::apply_bc(Field_ptr_t I_field, const Real I0, const bool polariz
         // just in max depth
         if (space_grid->local_to_global_coordinate(2, k) == (N_z - 1))        
         {       
-            const Real W_T_deep = I0 * W_T->block(i,j,k)[0];
+            const Real W_T_deep = I0 * W_T->ref(i,j,k);
                         
             for (int b = 0; b < block_size; b = b + increment) 
             {
@@ -1199,15 +1194,13 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
     const auto space_grid = space_grid_serial_;
 
     // indeces
-    const auto [i_start, j_start, k_start] = space_grid->getGhostMargins(); //g_dev.margin[0];
-	// const int j_start = space_grid->getGlobalStartY(); //g_dev.margin[1];
-	// const int k_start = space_grid->getGlobalStartZ(); //g_dev.margin[2];
+    const auto [i_start, j_start, k_start] = space_grid->getGhostMargins(); 
 
     if (i_start > 0 or j_start > 0 or k_start > 0) std::cout << "WARNING: periodic BC hardcoded for margin = 0!" << std::endl;
 
-    const int i_end = i_start + space_grid->getLocalSizeX(); //g_dev.dim[0];
-	const int j_end = j_start + space_grid->getLocalSizeY(); //g_dev.dim[1];
-    const int k_end = k_start + space_grid->getLocalSizeZ(); //g_dev.dim[2];          
+    const int i_end = i_start + space_grid->getLocalSizeX(); 
+	const int j_end = j_start + space_grid->getLocalSizeY(); 
+    const int k_end = k_start + space_grid->getLocalSizeZ();           
 
     const int stencil_size = formal_solver_.get_stencil_size();
 
@@ -1299,8 +1292,8 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
                         // set vertical box size
                         dz = (mu > 0) ? depth_grid[k_global] -  depth_grid[k_global + 1] : depth_grid[k_global - 1] - depth_grid[k_global];                                                                
                             
-                        i_aux = (cos(chi) < 0.0) ? i_end - 1 - i + space_grid->getGhostMarginX()/*g_dev.margin[0]*/: i;  
-                        j_aux = (sin(chi) < 0.0) ? j_end - 1 - j + space_grid->getGhostMarginY()/*g_dev.margin[1]*/: j;                                      
+                        i_aux = (cos(chi) < 0.0) ? i_end - 1 - i + space_grid->getGhostMarginX(): i;  
+                        j_aux = (sin(chi) < 0.0) ? j_end - 1 - j + space_grid->getGhostMarginY(): j;                                      
                         
                         find_intersection(theta, chi, dz, dz, L, &intersection_data); 
 
@@ -1581,15 +1574,13 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 	const auto g_dev = space_grid_serial_;   
 
 	// indeces
-	const auto [i_start, j_start, k_start] = g_dev->getGhostMargins(); //g_dev.margin[0];
-	// const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
-	// const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = g_dev->getGhostMargins();
 
 	if (i_start > 0 or j_start > 0 or k_start > 0) std::cout << "WARNING: periodic BC hardcoded for margin = 0!" << std::endl;
 
-	const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
-	const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
-	const int k_end = k_start + g_dev->getLocalSizeZ(); //g_dev.dim[2];	    
+	const int i_end = i_start + g_dev->getLocalSizeX();
+	const int j_end = j_start + g_dev->getLocalSizeY();
+	const int k_end = k_start + g_dev->getLocalSizeZ();	    
 
     const int stencil_size = formal_solver_.get_stencil_size();
 
@@ -1703,8 +1694,8 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     							{	                                
     								chi = chi_grid[k_chi]; 
     							
-    								i_aux = (cos(chi) < 0.0) ? i_end - 1 - i + g_dev->getGhostMarginX()/*margin[0]*/: i;	
-    								j_aux = (sin(chi) < 0.0) ? j_end - 1 - j + g_dev->getGhostMarginY()/*margin[1]*/: j;		                                                               
+    								i_aux = (cos(chi) < 0.0) ? i_end - 1 - i + g_dev->getGhostMarginX(): i;	
+    								j_aux = (sin(chi) < 0.0) ? j_end - 1 - j + g_dev->getGhostMarginY(): j;		                                                               
                                     
     								find_intersection(theta, chi, dz, dz, L, &intersection_data); 
 
@@ -2005,13 +1996,11 @@ void MF_context::formal_solve_1_5D(Field_ptr_t I_field, const Field_ptr_t S_fiel
     const auto S_dev = S_field ;   
 
     // indeces
-    const auto [i_start, j_start, k_start] = g_dev->getGhostMargins(); //g_dev.margin[0];
-	// const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
-	// const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
+    const auto [i_start, j_start, k_start] = g_dev->getGhostMargins(); 
 
-    const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
-    const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
-    const int k_end = k_start + g_dev->getLocalSizeZ(); //g_dev.dim[2];     
+    const int i_end = i_start + g_dev->getLocalSizeX(); 
+    const int j_end = j_start + g_dev->getLocalSizeY(); 
+    const int k_end = k_start + g_dev->getLocalSizeZ();  
 
     // some checks
     if (i_start > 0 or j_start > 0) std::cout << "WARNING: margins shoulb be 0!" << std::endl;
@@ -2564,16 +2553,13 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
     const auto g_dev = space_grid_serial_;   
 
     // indeces
-    const auto [i_start, j_start, k_start] = g_dev->getGhostMargins();
-    // const int i_start = g_dev->getGlobalStartX(); //.margin[0]; 
-    // const int j_start = g_dev->getGlobalStartY(); //.margin[1];
-    // const int k_start = g_dev->getGlobalStartZ(); //.margin[2];
+    const auto [i_start, j_start, k_start] = g_dev->getGhostMargins(); 
 
     if (i_start > 0 or j_start > 0 or k_start > 0) std::cout << "WARNING: periodic BC hardcoded for margin = 0!" << std::endl;
 
-    const int i_end = i_start + g_dev->getLocalSizeX(); //.dim[0];
-    const int j_end = j_start + g_dev->getLocalSizeY(); //.dim[1];
-    const int k_end = k_start + g_dev->getLocalSizeZ(); //.dim[2];       
+    const int i_end = i_start + g_dev->getLocalSizeX(); 
+    const int j_end = j_start + g_dev->getLocalSizeY(); 
+    const int k_end = k_start + g_dev->getLocalSizeZ();        
 
     const int stencil_size = formal_solver_unpol_.get_stencil_size();
 
@@ -2665,7 +2651,7 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
                         theta = theta_grid[j_theta];
                         mu    = mu_grid[j_theta];                       
 
-                        k_aux = (mu > 0.0) ? k_end - 1 - k + g_dev->getGhostMarginZ()/*.margin[2]*/: k; 
+                        k_aux = (mu > 0.0) ? k_end - 1 - k + g_dev->getGhostMarginZ(): k; 
 
                         // depth index
                         k_global = g_dev->local_to_global_coordinate(2, k_aux);                                 
@@ -2681,8 +2667,8 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
                             {                                   
                                 chi = chi_grid[k_chi]; 
                             
-                                i_aux = (cos(chi) < 0.0) ? i_end - 1 - i + g_dev->getGhostMarginX()/*.margin[0]*/: i;  
-                                j_aux = (sin(chi) < 0.0) ? j_end - 1 - j + g_dev->getGhostMarginY()/*.margin[1]*/: j;                                                                     
+                                i_aux = (cos(chi) < 0.0) ? i_end - 1 - i + g_dev->getGhostMarginX(): i;  
+                                j_aux = (sin(chi) < 0.0) ? j_end - 1 - j + g_dev->getGhostMarginY(): j;                                                                     
                                 
                                 find_intersection(theta, chi, dz, dz, L, &intersection_data); 
 
@@ -3062,21 +3048,14 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
     const auto S_dev   = RT_problem_->S_field_; 
 
     // field range indeces 
-    const auto [i_start, j_start, k_start] = g_dev->getGhostMargins();
-    // const int i_start = g_dev->getGlobalStartX();//.margin[0]; 
-    // const int j_start = g_dev->getGlobalStartY();//.margin[1];
-    // const int k_start = g_dev->getGlobalStartZ();//.margin[2];
+    const auto [i_start, j_start, k_start] = g_dev->getGhostMargins(); 
 
     const auto [size_i, size_j, size_k] = g_dev->getLocalSizes();
-    // const int size_j = g_dev->getLocalSizeY();
-    // const int size_k = g_dev->getLocalSizeZ();
 
-    const int i_end = i_start + size_i; //g_dev.dim[0];
-	const int j_end = j_start + size_j; //g_dev.dim[1];
-	const int k_end = k_start + size_k; //g_dev.dim[2];
+    const int i_end = i_start + size_i;
+	const int j_end = j_start + size_j;
+	const int k_end = k_start + size_k;
     
-    
-
     const PetscInt block_size = RT_problem_->block_size_;   
 	
     std::vector<double>  input(block_size);        
@@ -3255,13 +3234,13 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
         // update counters
         counter_i++;
 
-        if (counter_i == i_end - g_dev->getGhostMarginX()/*.margin[0]*/) 
+        if (counter_i == i_end - g_dev->getGhostMarginX()) // TOFIX
         {
             counter_i = 0;
             counter_j++;
         }
 
-        if (counter_j == j_end - g_dev->getGhostMarginY()/*.margin[1]*/) 
+        if (counter_j == j_end - g_dev->getGhostMarginY())  // TOFIX
         {
             counter_j = 0;
             counter_k++;
@@ -3283,13 +3262,10 @@ void MF_context::update_emission_J_KQ(const Vec &J_KQ_vec){
 
     // field range indeces 
     const auto [i_start, j_start, k_start] = g_dev->getGhostMargins();
-    // const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
-	// const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
-	// const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
 
-    const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
-	const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
-	const int k_end = k_start + g_dev->getLocalSizeZ(); //g_dev.dim[2];	      
+    const int i_end = i_start + g_dev->getLocalSizeX();
+	const int j_end = j_start + g_dev->getLocalSizeY();
+	const int k_end = k_start + g_dev->getLocalSizeZ();    
 
     const int block_size = RT_problem_->block_size_;     
     
@@ -3377,13 +3353,13 @@ void MF_context::update_emission_J_KQ(const Vec &J_KQ_vec){
         // update counters
         counter_i++;
 
-        if (counter_i == i_end - g_dev->getGhostMarginX()/*g_dev.margin[0]*/)
+        if (counter_i == i_end - g_dev->getGhostMarginX()) // TOFIX
         {
             counter_i = 0;
             counter_j++;
         }
 
-        if (counter_j == j_end - g_dev->getGhostMarginY()/*g_dev.margin[1]*/)
+        if (counter_j == j_end - g_dev->getGhostMarginY()) // TOFIX
         {
             counter_j = 0;
             counter_k++;
@@ -3403,13 +3379,10 @@ void MF_context::I_vec_to_J_KQ_vec(const Vec &I_vec, Vec &J_KQ_vec){
 
     // field range indeces 
     const auto [i_start, j_start, k_start] = g_dev->getGhostMargins();
-    // const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
-	// const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
-	// const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
 
-    const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
-	const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
-	const int k_end = k_start + g_dev->getLocalSizeZ(); //g_dev.dim[2];	
+    const int i_end = i_start + g_dev->getLocalSizeX();
+	const int j_end = j_start + g_dev->getLocalSizeY();
+	const int k_end = k_start + g_dev->getLocalSizeZ();
 
     const int block_size = RT_problem_->block_size_;   
     
@@ -3491,13 +3464,10 @@ void MF_context::I_field_to_J_KQ_vec(const Field_ptr_t field, Vec &J_KQ_vec){
     auto g_dev = space_grid;
     // indeces
     const auto [i_start, j_start, k_start] = g_dev->getGhostMargins();
-    // const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
-	// const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
-	// const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
 
-    const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
-	const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
-	const int k_end = k_start + g_dev->getLocalSizeZ(); //g_dev.dim[2];	     
+    const int i_end = i_start + g_dev->getLocalSizeX();
+	const int j_end = j_start + g_dev->getLocalSizeY();
+	const int k_end = k_start + g_dev->getLocalSizeZ();     
 
     PetscInt *ix_J_KQ;
     ierr = PetscMalloc1(J_KQ_size_, &ix_J_KQ);CHKERRV(ierr);   
@@ -3587,13 +3557,10 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
     
     // field range indeces 
     const auto [i_start, j_start, k_start] = g_dev->getGhostMargins();
-    // const int i_start = g_dev->getGlobalStartX(); //g_dev.margin[0];
-	// const int j_start = g_dev->getGlobalStartY(); //g_dev.margin[1];
-	// const int k_start = g_dev->getGlobalStartZ(); //g_dev.margin[2];
 
-    const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
-	const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
-	const int k_end = k_start + g_dev->getLocalSizeZ(); //g_dev.dim[2];	 
+    const int i_end = i_start + g_dev->getLocalSizeX();
+	const int j_end = j_start + g_dev->getLocalSizeY();
+	const int k_end = k_start + g_dev->getLocalSizeZ(); 
 
     std::vector<double> input(block_size);        
 
@@ -3720,13 +3687,13 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
         // update counters
         counter_i++;
 
-        if (counter_i == i_end - g_dev->getGhostMarginX()/*g_dev.margin[0]*/)
+        if (counter_i == i_end - g_dev->getGhostMarginX()) // TOFIX
         {
             counter_i = 0;
             counter_j++;
         }
 
-        if (counter_j == j_end - g_dev->getGhostMarginY()/*g_dev.margin[1]*/)
+        if (counter_j == j_end - g_dev->getGhostMarginY()) // TOFIX
         {
             counter_j = 0;
             counter_k++;
@@ -3862,8 +3829,8 @@ void MF_context::init_serial_fields(const int n_tiles){
         RT_problem_->space_grid_, space_grid_serial_, block_size, tile_size_
     );
 
-    tmp_remap.from_space_to_block_distributed(RT_problem_->eta_field_, eta_field_serial_); // TOFIX
-    tmp_remap.from_space_to_block_distributed(RT_problem_->rho_field_, rho_field_serial_); // TOFIX
+    tmp_remap.from_space_to_block_distributed(RT_problem_->eta_field_, eta_field_serial_); 
+    tmp_remap.from_space_to_block_distributed(RT_problem_->rho_field_, rho_field_serial_); 
 
     if (not RT_problem_->use_1_5D_approx_)
     {        
@@ -4313,13 +4280,10 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
 
         // indeces
         const auto [i_start, j_start, k_start] = g_dev->getGhostMargins();
-        // const int i_start = 0; //g_dev.margin[0];
-        // const int j_start = 0; //g_dev.margin[1];
-        // const int k_start = 0; //g_dev.margin[2];
 
-        const int i_end = i_start + g_dev->getLocalSizeX(); //g_dev.dim[0];
-        const int j_end = j_start + g_dev->getLocalSizeY(); //g_dev.dim[1];
-        const int k_end = k_start + g_dev->getLocalSizeZ(); //g_dev.dim[2];	 
+        const int i_end = i_start + g_dev->getLocalSizeX(); 
+        const int j_end = j_start + g_dev->getLocalSizeY(); 
+        const int k_end = k_start + g_dev->getLocalSizeZ();  
 
         std::cout << "S = " << std::endl;
         std::cout << S_dev->block(i_start, j_start, k_start)[0] << std::endl; 

@@ -36,8 +36,8 @@ public:
     Field(
         const std::string &fieldName, 
         Grid_ptr grid_,
-        const PetscInt Nphysical_, 
-        const std::vector<PetscInt>& Nparam_size_,
+        const Int Nphysical_, 
+        const std::vector<Int>& Nparam_size_,
         const bool allocate_PETSc_vec)
         : name(fieldName), 
           grid(grid_), 
@@ -81,7 +81,7 @@ public:
     Field(
         const std::string &fieldName, 
         Grid_ptr grid_, 
-        const PetscInt Nphysical_,
+        const Int Nphysical_,
         const bool allocate_PETSc_vec)
         : name(fieldName), grid(grid_), 
           Nphysical(Nphysical_), 
@@ -114,10 +114,10 @@ public:
     Grid_ptr getGrid() const;
 
     /** @brief return number of values per block. */ 
-    PetscInt getBlockSize() const;
+    Int getBlockSize() const;
 
     /** @brief return number of blocks in local vector. */ 
-    PetscInt getNumLocalBlocks() const;
+    Int getNumLocalBlocks() const;
 
     /** @brief return local PETSc vector. 
      * @note any changes done to PETSc vector are automatically synched to the 'standard' vector.
@@ -130,52 +130,52 @@ public:
     Real* getData();
 
     /** @brief return start and end indices of the local vector. */ 
-    PetscInt getStartIndex() const;
-    PetscInt getEndIndex() const;
+    Int getStartIndex() const;
+    Int getEndIndex() const;
 
     std::string getName() const;
-    PetscInt getNPhysical() const;
-    PetscInt getNparam() const;
-    std::vector<PetscInt> getNParamSizes() const;
-    PetscInt getParamSize(int p) const;
+    Int getNPhysical() const;
+    Int getNparam() const;
+    std::vector<Int> getNParamSizes() const;
+    Int getParamSize(int p) const;
     
     /** @brief returns pointer to block (i,j,k) */
-    Real* block(PetscInt i,PetscInt j,PetscInt k);
+    Real* block(Int i,Int j,Int k);
 
     /** @brief returns reference to first element in block (i,j,k) */
-    Real& ref(PetscInt i,PetscInt j,PetscInt k);
+    Real& ref(Int i,Int j,Int k);
 
     /** @brief same as block(i,j,k) but with less verbose syntax (field(i,j,k) instead of field.block(i,j,k)) */
-    Real* operator()(PetscInt i,PetscInt j,PetscInt k);
+    Real* operator()(Int i,Int j,Int k);
 
     void set_to_zero();
 
     /** @brief convert linear block index to multi-dimensional indices */
-    std::vector<PetscInt> block_to_local(PetscInt b) const;
+    std::vector<Int> block_to_local(Int b) const;
 
     /** @brief convert multi-dimensional indices to linear block index */
-    PetscInt local_to_block(const std::vector<PetscInt>& idx) const;
+    Int local_to_block(const std::vector<Int>& idx) const;
 
     template<typename... Indices>
-    PetscInt local_to_block(Indices... indices) const 
+    Int local_to_block(Indices... indices) const 
     {
-        std::array<PetscInt, sizeof...(Indices)> idx{indices...};
+        std::array<Int, sizeof...(Indices)> idx{indices...};
         if (idx.size() != ((Nparam == 0) ? 1 : Nparam)) {
             throw std::runtime_error("Number of indices does not match layout of Field.");
         }
         // out of bound indices
         if (Nparam == 0 && (idx[0] < 0 || idx[0] >= Nphysical)) throw std::out_of_range("Index out of bounds in local_to_block.");
-        for (PetscInt k = 0; k < Nparam; ++k) {
+        for (Int k = 0; k < Nparam; ++k) {
             if (idx[k] < 0 || idx[k] >= Nparam_size[k]) {
                 throw std::out_of_range("Index out of bounds in local_to_block.");
             }
         }
 
-        PetscInt block_index = 0;
-        PetscInt stride = 1;
+        Int block_index = 0;
+        Int stride = 1;
         if(Nparam == 0) return idx[0];
 
-        for (PetscInt i = idx.size() - 1; i >= 0; --i) {
+        for (Int i = idx.size() - 1; i >= 0; --i) {
             block_index += idx[i] * stride;
             stride *= Nparam_size[i];
         }
@@ -189,18 +189,18 @@ private:
     Vec vec = nullptr; // PETSc distributed global vector
     bool is_Vec_allocated; 
     Real* data_host = nullptr; // host array bound to Vec
-    PetscInt start_index = 0; // start index of local PETSc vector (excluding ghosts)
-    PetscInt end_index = 0; // end index of local PETSc vector (excluding ghosts)
-    PetscInt ghosted_start_index = 0; // start index of local PETSc vector (including ghosts)
-    PetscInt ghosted_end_index = 0; // end index of local PETSc vector (including ghosts) 
+    Int start_index = 0; // start index of local PETSc vector (excluding ghosts)
+    Int end_index = 0; // end index of local PETSc vector (excluding ghosts)
+    Int ghosted_start_index = 0; // start index of local PETSc vector (including ghosts)
+    Int ghosted_end_index = 0; // end index of local PETSc vector (including ghosts) 
 
 
     // generic block layout
-    PetscInt block_size = 1; 
-    PetscInt n_local_blocks = 0; // number of blocks in the local PETSc vector
-    PetscInt Nphysical = 1; // number of physical quantities per spatial cell 
-    PetscInt Nparam = 0; // number of independent values for each physical quantities 
-    std::vector<PetscInt> Nparam_size = {}; // size of each independent values. The order matters!
+    Int block_size = 1; 
+    Int n_local_blocks = 0; // number of blocks in the local PETSc vector
+    Int Nphysical = 1; // number of physical quantities per spatial cell 
+    Int Nparam = 0; // number of independent values for each physical quantities 
+    std::vector<Int> Nparam_size = {}; // size of each independent values. The order matters!
 
 
     /** @brief allocate PETSc Vec. */

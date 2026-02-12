@@ -499,8 +499,6 @@ public:
 
 		// indeces
 		const auto [i_start, j_start, k_start] = g_dev->getGhostMargins(); 
-		// const int j_start = g_dev->getGlobalStartY();
-		// const int k_start = g_dev->getGlobalStartZ();
 
 		const int i_end = i_start + g_dev->getLocalSizeX();
 		const int j_end = j_start + g_dev->getLocalSizeY();

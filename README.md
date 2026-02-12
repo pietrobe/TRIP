@@ -2,7 +2,8 @@
 Three-dimensional Radiative transfer Including Polarization and PRD
 
 ### Cite 
-```
+If you use TRIP in your research, please cite:
+```bibtex
 @article{benedusi2023scalable,
   title={Scalable matrix-free solver for 3D transfer of polarized radiation in stellar atmospheres},
   author={Benedusi, Pietro and Riva, Simone and Zulian, Patrick and {\v{S}}t{\v{e}}p{\'a}n, Ji{\v{r}}{\'\i} and Belluzzi, Luca and Krause, Rolf},
@@ -17,10 +18,18 @@ Three-dimensional Radiative transfer Including Polarization and PRD
 ## Dependencies
 * [PETSc](https://petsc.org/release/)
 * rii    (Add link)
+* MPI implementation (e.g., OpenMPI or MPICH)
 
-## Compilation
-### Prerequisite
-Firstly, build *rii*:
+Optional dependencies:
+* CUDA (for accelerator support)
+
+## Compilation and Execution
+We assume the following environment variables:
+- `TRIP_MAIN_DIR` — root directory of TRIP
+- `RII_MAIN_DIR` — root directory of rii
+
+### Prerequisite: Build rii
+Clone the *rii* repository, then:
 ```bash
 mkdir -p ${RII_MAIN_DIR}/rii-c/build/;
 cd ${RII_MAIN_DIR}/rii-c/build/;
@@ -35,20 +44,22 @@ cmake .. -DDYNAMIC_LIBRARY=ON \
 make -j
 ```
 
-For **accelerator support**, build the RII accelerated module in the RII source directory:
+**Accelerator support (optional)**
+
+Build the *rii* accelerated module:
 ```bash
 cd ${RII_MAIN_DIR}/rii-c/src_acc;
 make clean;
 make cuda_arch=90 -j12;
 ```
-The `cuda_arch=90` works for the NVIDIA H100 GPUs on the MareNostrum 5 ACC and Alps Daint systems. Modify the cuda_arch flag as needed for other GPU architectures.
+The `cuda_arch=90` option targets the NVIDIA H100 GPUs (e.g. on the MareNostrum 5 ACC and Alps Daint systems). Adjust this flag for other GPU architectures.
 
-For the MareNostrum 5 ACC system, use the options:
+For the MareNostrum 5 ACC system, use:
 ```bash
 make cuda_arch=90 CXX=/apps/ACC/GCC/11.4.0/bin/g++ -j12
 ```
 
-Then:
+Then rebuild *rii* with accelerator support:
 ```bash
 mkdir -p ${RII_MAIN_DIR}/rii-c/build/;
 cd ${RII_MAIN_DIR}/rii-c/build/;
@@ -62,60 +73,32 @@ cmake .. -DDYNAMIC_LIBRARY=ON \
 make -j
 ```
 
-Note to add others flags to the `cmake` command if needed.
+Add additional `cmake` flags if needed.
 
 ### Standard build
+After cloning the TRIP repository:
 ```bash
-cd bin
-cmake .. -DRII_ROOT_PATH=/path_to_rii/rii/rii-c/
+mkdir -p ${TRIP_MAIN_DIR}/build/;
+cd ${TRIP_MAIN_DIR}/build/;
+cmake .. -DRII_ROOT_PATH=/path_to_rii/rii/rii-c/;
 make
 ```
 
 ### Build with accelerator support
-For ACC support, make sure that the RII library is compiled with ACC support as well.
-First build the RII accelerated module in the RII source directory:
-
-```bash 
-cd ${RII_MAIN_DIR}/rii-c/src_acc;
-make clean;
-make cuda_arch=90 -j12;
-```
-The ```cuda_arch=90``` works for the NVIDIA H100 GPUs on the MareNostrum 5 ACC and Alps Daint systems.
-Modify the cuda_arch flag as needed for other GPU architectures.
-
+Ensure that the *rii* library is compiled with ACC support.
 Then build TRIP:
 ```bash
-cd bin
+mkdir -p ${TRIP_MAIN_DIR}/build/;
+cd ${TRIP_MAIN_DIR}/build/;
 cmake .. -DRII_ROOT_PATH=/path_to_rii/rii/rii-c/ \
          -DUSE_ACC=ON;
-make
-```
-For the MareNostrum 5 ACC system, use the options:
-```bash
-make cuda_arch=90 CXX=/apps/ACC/GCC/11.4.0/bin/g++ -j12
-```
-
-Then, in the *rii* configure step of RII, use the flag:
-```bash
-
-mkdir -p ${RII_MAIN_DIR}/rii-c/build/;
-cd ${RII_MAIN_DIR}/rii-c/build/;
-
-cmake .. -DDYNAMIC_LIBRARY=ON \
-         -DENABLE_MPI=ON \
-         -DGPU_AWARE_MPI=ON \
-         -DUSE_ACCELERATOR=cuda \
-         -DOUT_LOG_LEVEL=0 \
-         -DRII_GLOBALJUMP=64;
-```
-
-add the others flags as needed, and then build the RII library:
-```bash
-make -j12
+make -j
 ```
 
 ## Input
-The input is encoded in the `bin/config.yml` file, to be changed as necessary.
+Input is provided via a YAML configuration file.
+Example configuration files are available in `bin/` and can be changed as necessary.
+
 The scattering module can be changed via the `emissivity_model` field, between the following options:
 
 | `emissivity_model`  | Description                                                        |
@@ -134,11 +117,10 @@ The scattering module can be changed via the `emissivity_model` field, between t
 
 ## Running TRIP
 ```bash
-srun ./solar_3D
+srun ./solar_3D --yaml_config ${PATH_TO_YAML_CONFIG}
 ```
 
-## Contributors
+# Contributors
 
 **TRIP** is developed by [Pietro Benedusi](https://pietrobe.github.io/), Simone Riva, and [Melanie Tonarelli](https://github.com/melanie-t27) in Luca Belluzzi's group at [IRSOL](https://www.irsol.usi.ch/).
-
 

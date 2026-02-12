@@ -15,7 +15,7 @@ output: true
 output_overwrite_prevention: false
 output_directory: ../../output
 
-use_B: true
+use_B: false
 enable_continuum: true
 formal_solver: BESSER
 enable_continuum: true
@@ -24,13 +24,13 @@ use_1_5D_approx: false
 set_uniform_B: true
 B_field: [12.0, 0.78, 0.78]
 
-emissivity_model: PRD
+emissivity_model: CRD_limit
 
 # used only for FAL-C input
 N_theta: 8
 N_chi: 16
-N_x: 10
-N_y: 10
+N_x: 5
+N_y: 5
 
 # input_cul:  "AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.cul"
 # input_qel:  "AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.qel"
@@ -40,7 +40,7 @@ N_y: 10
 use_prec: true
 
 solver:
-  ksp_solver_type: KSPGMRES
+  ksp_solver_type: KSPFGMRES
   ksp_rtol: 1e-7
   ksp_max_it: 1000
   # gmres_restart: 20

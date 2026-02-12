@@ -212,15 +212,12 @@ RT_problem::accumulate_surface_domain_data(std::vector<double> &surface_data_I, 
 {
 	// indeces
 	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
-	// const int i_start = space_grid_->getGlobalStartX(); //g_dev.margin[0];
-	// const int j_start = space_grid_->getGlobalStartY(); //g_dev.margin[1];
-	// const int k_start = space_grid_->getGlobalStartZ();
 
 	const int size_i = space_grid_->getLocalSizeX();
 	const int size_j = space_grid_->getLocalSizeY();
 
-	const int i_end = i_start + size_i; //g_dev.dim[0];
-	const int j_end = j_start + size_j; //g_dev.dim[1];
+	const int i_end = i_start + size_i;
+	const int j_end = j_start + size_j;
 
 	int i_global, j_global;
 
@@ -281,15 +278,12 @@ RT_problem::accumulate_surface_profiles_Omega_domain_data(std::vector<double> &s
 {
 	// indeces
 	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
-	// const int i_start = space_grid_->getGlobalStartX(); //g_dev.margin[0];
-	// const int j_start = space_grid_->getGlobalStartY(); //g_dev.margin[1];
-	// const int k_start = space_grid_->getGlobalStartZ(); //g_dev.margin[2];
 
 	const int size_i = space_grid_->getLocalSizeX();
 	const int size_j = space_grid_->getLocalSizeY();
 
-	const int i_end = i_start + size_i; //g_dev.dim[0];
-	const int j_end = j_start + size_j; //g_dev.dim[1];
+	const int i_end = i_start + size_i; 
+	const int j_end = j_start + size_j; 
 
 
 	int i_global, j_global;
@@ -314,8 +308,6 @@ RT_problem::accumulate_surface_profiles_Omega_domain_data(std::vector<double> &s
 
 			for (int b = 0; b < 4 * N_nu_; b = b + 4)
 			{
-				I_field_Omega_->block(i, j, k_start)[b]; 
-
 				const double I = I_field_Omega_->block(i, j, k_start)[b + 0]; 
 				const double Q = I_field_Omega_->block(i, j, k_start)[b + 1];
 				const double U = I_field_Omega_->block(i, j, k_start)[b + 2];
@@ -404,15 +396,12 @@ RT_problem::write_emergent_field_Omega_hdf5(const std::string				 &output_file,	
 {
 	// indeces
 	auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
-	// const int i_start = space_grid_->getGlobalStartX(); //g_dev.margin[0];
-	// const int j_start = space_grid_->getGlobalStartY(); //g_dev.margin[1];
-	// const int k_start = space_grid_->getGlobalStartZ(); //g_dev.margin[2];
 
 	const int size_i = space_grid_->getLocalSizeX();
 	const int size_j = space_grid_->getLocalSizeY();
 
-	const int i_end = i_start + size_i; //g_dev.dim[0];
-	const int j_end = j_start + size_j; //g_dev.dim[1];
+	const int i_end = i_start + size_i; 
+	const int j_end = j_start + size_j; 
 
 	if (space_grid_->local_to_global_coordinate(2, k_start) != 0) return EXIT_SUCCESS;
 
@@ -578,14 +567,11 @@ RT_problem::write_JKQ_field_hdf5(const std::string &output_file)
 {
 	// indeces
 	auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
-	// const int i_start = space_grid_->getGlobalStartX(); //g_dev.margin[0];
-	// const int j_start = space_grid_->getGlobalStartY(); //g_dev.margin[1];
-	// const int k_start = space_grid_->getGlobalStartZ(); //g_dev.margin[2];
 
 	auto [size_i, size_j, size_k] = space_grid_->getLocalSizes();
 
-	const int i_end = i_start + size_i; //g_dev.dim[0];
-	const int j_end = j_start + size_j; //g_dev.dim[1];
+	const int i_end = i_start + size_i; 
+	const int j_end = j_start + size_j; 
 	const int k_end = k_start + size_k;
 
 	std::vector<int> KQ_values;

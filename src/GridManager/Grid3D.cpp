@@ -10,8 +10,8 @@
 
 void Grid3D::print_info()
 {
-    PetscInt local_owned = getLocalNumNodes();
-    PetscInt local_ghosted = getLocalNumNodesWithGhosts();
+    Int local_owned = getLocalNumNodes();
+    Int local_ghosted = getLocalNumNodesWithGhosts();
 
     std::cout << "[Rank " << rank << "] " << name << ":\n"
               << "  Global size       = (" << Nx << ", " << Ny << ", " << Nz << ") = " << Nr << " nodes\n"
@@ -32,50 +32,50 @@ std::string Grid3D::getName() { return name; }
 MPI_Comm Grid3D::getComm() const { return comm; }
 int Grid3D::getRank() const { return rank; }
 int Grid3D::getMPISize() const { return mpi_size; }
-int Grid3D::getNx() const { return Nx; }
-int Grid3D::getNy() const { return Ny; }
-int Grid3D::getNz() const { return Nz; }
-PetscInt Grid3D::getGlobalNumNodes() const { return Nr; } 
-PetscInt Grid3D::getLocalNumNodes() const { 
+Int Grid3D::getNx() const { return Nx; }
+Int Grid3D::getNy() const { return Ny; }
+Int Grid3D::getNz() const { return Nz; }
+Int Grid3D::getGlobalNumNodes() const { return Nr; } 
+Int Grid3D::getLocalNumNodes() const { 
     return local_sizes[0] * local_sizes[1] * local_sizes[2]; 
 } 
-PetscInt Grid3D::getLocalNumNodesWithGhosts() const {
+Int Grid3D::getLocalNumNodesWithGhosts() const {
     return getLocalSizeWithGhostX() * getLocalSizeWithGhostY() * getLocalSizeWithGhostZ(); 
 }
-PetscInt Grid3D::getLocalSizeX() const { return local_sizes[0]; }
-PetscInt Grid3D::getLocalSizeY() const { return local_sizes[1]; }
-PetscInt Grid3D::getLocalSizeZ() const { return local_sizes[2]; }
-std::array<PetscInt,3> Grid3D::getLocalSizes() const { return local_sizes; }
-PetscInt Grid3D::getLocalSizeWithGhostX() const { return local_ghosted_sizes[0]; }
-PetscInt Grid3D::getLocalSizeWithGhostY() const { return local_ghosted_sizes[1]; }
-PetscInt Grid3D::getLocalSizeWithGhostZ() const { return local_ghosted_sizes[2]; }
-std::array<PetscInt,3> Grid3D::getLocalSizesWithGhost() const { return local_ghosted_sizes; }
-PetscInt Grid3D::getGlobalStartX() const { return global_start[0]; }
-PetscInt Grid3D::getGlobalStartY() const { return global_start[1]; }
-PetscInt Grid3D::getGlobalStartZ() const { return global_start[2]; }
-std::array<PetscInt,3> Grid3D::getGlobalStarts() const { return global_start; }
-PetscInt Grid3D::getGhostMarginX() const { return margin_start[0]; }
-PetscInt Grid3D::getGhostMarginY() const { return margin_start[1]; }
-PetscInt Grid3D::getGhostMarginZ() const { return margin_start[2]; }
-std::array<PetscInt,3> Grid3D::getGhostMargins() const { return margin_start; }
+Int Grid3D::getLocalSizeX() const { return local_sizes[0]; }
+Int Grid3D::getLocalSizeY() const { return local_sizes[1]; }
+Int Grid3D::getLocalSizeZ() const { return local_sizes[2]; }
+std::array<Int,3> Grid3D::getLocalSizes() const { return local_sizes; }
+Int Grid3D::getLocalSizeWithGhostX() const { return local_ghosted_sizes[0]; }
+Int Grid3D::getLocalSizeWithGhostY() const { return local_ghosted_sizes[1]; }
+Int Grid3D::getLocalSizeWithGhostZ() const { return local_ghosted_sizes[2]; }
+std::array<Int,3> Grid3D::getLocalSizesWithGhost() const { return local_ghosted_sizes; }
+Int Grid3D::getGlobalStartX() const { return global_start[0]; }
+Int Grid3D::getGlobalStartY() const { return global_start[1]; }
+Int Grid3D::getGlobalStartZ() const { return global_start[2]; }
+std::array<Int,3> Grid3D::getGlobalStarts() const { return global_start; }
+Int Grid3D::getGhostMarginX() const { return margin_start[0]; }
+Int Grid3D::getGhostMarginY() const { return margin_start[1]; }
+Int Grid3D::getGhostMarginZ() const { return margin_start[2]; }
+std::array<Int,3> Grid3D::getGhostMargins() const { return margin_start; }
+std::array<Int,3> Grid3D::getDecomposition() const { return {Px, Py, Pz}; }
 
-PetscInt Grid3D::local_to_global_coordinate(const int d, const PetscInt local_coord) const { 
+Int Grid3D::local_to_global_coordinate(const int d, const Int local_coord) const { 
     return global_ghosted_start[d] + local_coord;
 }
 
 void Grid3D::create(
-    std::array<PetscInt, 3> p, 
+    std::array<Int, 3> p, 
     std::array<DMBoundaryType,3> boundary_type,
-    int ghost_width)
+    Int ghost_width)
 {
-    Px = p[0]; Py = p[1]; Pz = p[2];
     // create DMDA
     PetscErrorCode ierr = DMDACreate3d(
         comm,
         boundary_type[0], boundary_type[1], boundary_type[2], 
         DMDA_STENCIL_BOX,
         Nx, Ny, Nz,
-        Px, Py, Pz, // MPI decomposition
+        p[0], p[1], p[2], // MPI decomposition
         /*dof*/ 1, 
         ghost_width,
         NULL, NULL, NULL, // uniform partitioning
@@ -84,6 +84,13 @@ void Grid3D::create(
     if (ierr) throw std::runtime_error("DMDACreate3d failed in Grid3D::create.");
     ierr = DMSetUp(da);
     if (ierr) throw std::runtime_error("DMSetUp failed in Grid3D::create.");
+
+    // retrieve actual decomposition chosen by petsc
+    ierr = DMDAGetInfo(
+        da, NULL, NULL, NULL, NULL,
+        &Px, &Py, &Pz,
+        NULL, NULL, NULL, NULL, NULL, NULL
+    );
     // get local sizes without ghost layers
     ierr = DMDAGetCorners(
         da, 

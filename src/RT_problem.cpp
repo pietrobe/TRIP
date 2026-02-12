@@ -146,9 +146,10 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 		N_x_, N_y_, N_z_, 
 		std::array<PetscInt, 3>{PETSC_DECIDE, PETSC_DECIDE, (use_1_5D_approx_ ? 1 : PETSC_DECIDE)}
 	);	
-	mpi_size_x_ = space_grid_->getLocalSizeX();
-	mpi_size_y_ = space_grid_->getLocalSizeY();
-	if (!use_1_5D_approx_) mpi_size_z_ = space_grid_->getLocalSizeZ();
+	auto decomp = space_grid_->getDecomposition();
+    mpi_size_x_ = decomp[0];
+    mpi_size_y_ = decomp[1];
+    mpi_size_z_ = decomp[2];
 		
 	// init fields
 	allocate_fields();				
@@ -169,10 +170,10 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 
 		auto tmp_vector = read_single_node(fh,i_global,j_global,k_reverse);			
 
-		// epsilon_dev.ref(i,j,k) = tmp_vector[0];		
-		// Cul_dev->ref(i,j,k)     = tmp_vector[1];		
+		// epsilon_->ref(i,j,k) = tmp_vector[0];		
+		// Cul_->ref(i,j,k)     = tmp_vector[1];		
 		T_->ref(i,j,k)      = tmp_vector[2];			
-		// Nl_dev->ref(i,j,k)      = tmp_vector[9];		
+		// Nl_->ref(i,j,k)      = tmp_vector[9];		
 		a_->ref(i,j,k)       = tmp_vector[10];		
 		D2_->ref(i,j,k)     = tmp_vector[11];
 
@@ -185,13 +186,13 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 		Nl_->ref(i,j,k)  = read_single_node_single_field(f_llp,i_global,j_global,k_reverse);		
 
         // compute thermalization param 
-     // epsilon_dev.ref(i,j,k) = Cul_dev.ref(i,j,k)/(Cul_dev.ref(i,j,k) + Aul_);
+     // epsilon_->ref(i,j,k) = Cul_->ref(i,j,k)/(Cul_->ref(i,j,k) + Aul_);
         epsilon_->ref(i,j,k) = Cul_->ref(i,j,k)/(Cul_->ref(i,j,k) + Aul_);
 
 		// /// Hardcoded Qel
 		// const double C_lu = 0.0; // hardcoded to zero
 		// // const double Pi = 3.1415926535897932384626433;
-		// Qel_dev.ref(i,j,k) =  (4.0 * PI * Doppler_width_dev.ref(i,j,k)) * a_dev.ref(i,j,k)  - Aul_ - Cul_dev.ref(i,j,k) - C_lu;
+		// Qel_->ref(i,j,k) =  (4.0 * PI * Doppler_width_->ref(i,j,k)) * a_->ref(i,j,k)  - Aul_ - Cul_->ref(i,j,k) - C_lu;
 		
 		// compute thermalization param 
 		epsilon_->ref(i,j,k) = Cul_->ref(i,j,k)/(Cul_->ref(i,j,k) + Aul_);		
@@ -202,9 +203,19 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 														  tmp_vector[5]);	
 		if (use_magnetic_field_)
 		{								
-			B_->block(i, j, k)[0] = B_spherical[0] * 1399600.0; // converting to Larmor frequency					
-			B_->block(i, j, k)[1] = B_spherical[1]; 					
-			B_->block(i, j, k)[2] = B_spherical[2]; 
+			if (use_uniform_magnetic_field_)
+			{
+				if (mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) {
+					std::cout << "WARNING: USING UNIFORM MAGNETIC FIELD: " << uniform_magnetic_field_value_ << " Gauss, theta: " << uniform_magnetic_field_theta_ << " rad, chi: " << uniform_magnetic_field_chi_ << " rad" << std::endl;
+				}
+				B_->block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(uniform_magnetic_field_value_); // converting to Larmor frequency					
+				B_->block(i, j, k)[1] = uniform_magnetic_field_theta_; 					
+				B_->block(i, j, k)[2] = uniform_magnetic_field_chi_;
+			} else {
+				B_->block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(B_spherical[0]); // converting to Larmor frequency					
+				B_->block(i, j, k)[1] = B_spherical[1]; 					
+				B_->block(i, j, k)[2] = B_spherical[2]; 
+			}
 
 			// // /*  hardcoded B field */ ////////////////////
 			
@@ -505,9 +516,10 @@ void RT_problem::read_3D(const char* filename){
 			(use_1_5D_approx_ ? 1 : PETSC_DECIDE)
 		}
 	);	
-	mpi_size_x_ = space_grid_->getLocalSizeX();
-	mpi_size_y_ = space_grid_->getLocalSizeY();
-	mpi_size_z_ = space_grid_->getLocalSizeZ();
+	auto decomp = space_grid_->getDecomposition();
+    mpi_size_x_ = decomp[0];
+    mpi_size_y_ = decomp[1];
+    mpi_size_z_ = decomp[2];
 	
 	// init fields
 	allocate_fields();				
@@ -548,13 +560,13 @@ void RT_problem::read_3D(const char* filename){
 
 		// RH Doppler_width to compute Qel
 		const double xi = 1e5 * xi_vec[k_reverse];; // with conversion to cm/s
-		const double Dw_RH = Eu_ * std::sqrt(xi * xi + 2 * k_B_ * T_->block(i,j,k)[0] / mass_real_RH);	
+		const double Dw_RH = Eu_ * std::sqrt(xi * xi + 2 * k_B_ * T_->ref(i,j,k) / mass_real_RH);	
 
 		// compute Qel
 		Qel_->ref(i,j,k) = a_->ref(i,j,k) * (4 * PI * Dw_RH) - Aul_RH;
 
 		// compute thermalization param 
-      // epsilon_->block(i,j,k)[0] = Cul_->block(i,j,k)[0]/(Cul_->block(i,j,k)[0] + Aul_RH);
+      // epsilon_->ref(i,j,k) = Cul_->ref(i,j,k)/(Cul_->ref(i,j,k) + Aul_RH);
 		
 		// convert to spherical coordinates
 		auto B_spherical = convert_cartesian_to_spherical(tmp_vector[3], 
@@ -562,9 +574,19 @@ void RT_problem::read_3D(const char* filename){
 														  tmp_vector[5]);	
 		if (use_magnetic_field_)
 		{								
-			B_->block(i, j, k)[0] = B_spherical[0] * 1399600.0; // converting to Larmor frequency					
-			B_->block(i, j, k)[1] = B_spherical[1]; 					
-			B_->block(i, j, k)[2] = B_spherical[2]; 
+			if (use_uniform_magnetic_field_)
+			{
+				if (mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) {
+					std::cout << "WARNING: USING UNIFORM MAGNETIC FIELD: " << uniform_magnetic_field_value_ << " Gauss, theta: " << uniform_magnetic_field_theta_ << " rad, chi: " << uniform_magnetic_field_chi_ << " rad" << std::endl;
+				}
+				B_->block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(uniform_magnetic_field_value_); // converting to Larmor frequency					
+				B_->block(i, j, k)[1] = uniform_magnetic_field_theta_; 					
+				B_->block(i, j, k)[2] = uniform_magnetic_field_chi_;
+			} else {
+				B_->block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(B_spherical[0]); // converting to Larmor frequency					
+				B_->block(i, j, k)[1] = B_spherical[1]; 					
+				B_->block(i, j, k)[2] = B_spherical[2]; 
+			}
 
 			// // /*  hardcoded B field */ ////////////////////
 			
@@ -857,7 +879,7 @@ void RT_problem::read_continumm_1D(input_string filename_sigma, input_string fil
 
 		for (int n = 0; n < N_nu_; ++n)
 		{
-			k_global = N_nu_ * (space_grid_->getGlobalStartZ() + k - space_grid_->getGhostMarginZ()) + n;
+			k_global = N_nu_ * (space_grid_->local_to_global_coordinate(2, k)/* space_grid_->getGlobalStartZ() + k - space_grid_->getGhostMarginZ() */) + n;
 
 			sigma_->block(   i, j, k)[n] = sigma_vec[k_global];		
 			k_c_->block(     i, j, k)[n] = k_c_vec[k_global];		
@@ -925,9 +947,9 @@ void RT_problem::read_magnetic_field_1D(input_string filename){
 	// fill field
 	space_grid_->parallel_for([&](int i, int j, int k) {
 				
-		const int i_global = space_grid_->getGlobalStartX() + i - space_grid_->getGhostMarginX();
-		const int j_global = space_grid_->getGlobalStartY() + j - space_grid_->getGhostMarginY();
-		const int k_global = space_grid_->getGlobalStartZ() + k - space_grid_->getGhostMarginZ();
+		const int i_global = space_grid_->local_to_global_coordinate(0, i);// space_grid_->getGlobalStartX() + i - space_grid_->getGhostMarginX();
+		const int j_global = space_grid_->local_to_global_coordinate(1, j); // space_grid_->getGlobalStartY() + j - space_grid_->getGhostMarginY();
+		const int k_global = space_grid_->local_to_global_coordinate(2, k); //space_grid_->getGlobalStartZ() + k - space_grid_->getGhostMarginZ();
 
 		if (B_etero)
 		{
@@ -1003,7 +1025,7 @@ void RT_problem::read_bulk_velocity_1D(input_string filename){
 	// fill field
 	space_grid_->parallel_for([&](int i, int j, int k) {
 		
-		const int k_global = space_grid_->getGlobalStartZ() + k - space_grid_->getGhostMarginZ();
+		const int k_global = space_grid_->local_to_global_coordinate(2, k); //space_grid_->getGlobalStartZ() + k - space_grid_->getGhostMarginZ();
 
 		v_b_->block(i, j, k)[0] =     v_b_vec[k_global];					
 		v_b_->block(i, j, k)[1] = theta_b_vec[k_global];					
@@ -1095,12 +1117,12 @@ void RT_problem::read_atmosphere_1D(input_string filename){
 	// fill field 
 	space_grid_->parallel_for([&](int i, int j, int k) {
 
-		const int k_global = space_grid_->getGlobalStartZ() + k - space_grid_->getGhostMarginZ();
+		const int k_global = space_grid_->local_to_global_coordinate(2, k); //space_grid_->getGlobalStartZ() + k - space_grid_->getGhostMarginZ();
 
 		if (N_x_ > 1 and test_etero)
 		{
-			const int i_global = space_grid_->getGlobalStartX() + i - space_grid_->getGhostMarginX();
-			const int j_global = space_grid_->getGlobalStartY()  + j - space_grid_->getGhostMarginY();
+			const int i_global = space_grid_->local_to_global_coordinate(0, i); //space_grid_->getGlobalStartX() + i - space_grid_->getGhostMarginX();
+			const int j_global = space_grid_->local_to_global_coordinate(1, j);// space_grid_->getGlobalStartY()  + j - space_grid_->getGhostMarginY();
 
 			const double x = i_global / (N_x_ - 1.0);
 			const double y = j_global / (N_y_ - 1.0);
@@ -2002,7 +2024,7 @@ std::vector<double> RT_problem::extract_plane_k(const Field_ptr_t field, const i
 	      {
 	      	const int i_global = space_grid_->local_to_global_coordinate(0, i);
 	      	const int j_global = space_grid_->local_to_global_coordinate(1, j);
-			local_slice[j_global * N_y_ + i_global] = (*field)(i,j,owns_plane)[0]; //.ref(i, j, owns_plane);
+			local_slice[j_global * N_y_ + i_global] = field->ref(i,j,owns_plane); 
 	      }
 	   }
 	}
@@ -2103,10 +2125,10 @@ void RT_problem::print_surface_profile(const Field_ptr_t field, const int i_stok
 		
 	MPI_Barrier(MPI_COMM_WORLD);
 	// indeces
-	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins(); //g_dev.margin[0];
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins(); 
 
-	const int i_end = i_start + space_grid_->getLocalSizeX(); //g_dev.dim[0];
-	const int j_end = j_start + space_grid_->getLocalSizeY(); //g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX();
+	const int j_end = j_start + space_grid_->getLocalSizeY(); 
 				
 	if (space_grid_->local_to_global_coordinate(2, k_start) == 0)
 	{
@@ -2174,11 +2196,9 @@ void RT_problem::print_surface_QI_profile(const Field_ptr_t field, const int i_s
 	if (mpi_rank_ == 0) std::cout << "i,j =  " << i_space << ", " << j_space << std::endl;	
 
 	// indeces
-	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();//g_dev.margin[0]; 
-	// const int j_start = space_grid_->getGlobalStartY();
-	// const int k_start = space_grid_->getGlobalStartZ();
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
-	const int i_end = i_start + space_grid_->getLocalSizeX(); // g_dev.dim[0];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); 
 	const int j_end = j_start + space_grid_->getLocalSizeY(); 
 		
 	int i_global, j_global;
@@ -2249,11 +2269,9 @@ void RT_problem::print_surface_QI_point(const int i_space, const int j_space, co
 	if (mpi_rank_ == 0) std::cout << "mu =  " << mu_grid_[j_theta] << ", chi =  " << chi_grid_[k_chi] << ", nu =  " << nu_grid_[n_nu] << std::endl;		
 
 	// indeces
-	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();//g_dev.margin[0]; 
-	// const int j_start = space_grid_->getGlobalStartY();
-	// const int k_start = space_grid_->getGlobalStartZ();
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
-	const int i_end = i_start + space_grid_->getLocalSizeX(); // g_dev.dim[0];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); 
 	const int j_end = j_start + space_grid_->getLocalSizeY(); 
 		
 	int i_global, j_global;
@@ -2322,11 +2340,9 @@ void RT_problem::print_profile(const Field_ptr_t field, const int i_stoke,
 	}
 
 	// indeces
-	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();//g_dev.margin[0]; 
-	// const int j_start = space_grid_->getGlobalStartY();
-	// const int k_start = space_grid_->getGlobalStartZ();
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
-	const int i_end = i_start + space_grid_->getLocalSizeX(); // g_dev.dim[0];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); 
 	const int j_end = j_start + space_grid_->getLocalSizeY(); 
 	const int k_end = k_start + space_grid_->getLocalSizeZ();
 		
@@ -2375,8 +2391,6 @@ bool RT_problem::field_is_zero(const Field_ptr_t field)
 
 	// indeces
 	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins(); 
-	// const int j_start = space_grid_->getGlobalStartY(); 
-	// const int k_start = space_grid_->getGlobalStartZ(); 
 
 	const int i_end = i_start + space_grid_->getLocalSizeX();
 	const int j_end = j_start + space_grid_->getLocalSizeY();
