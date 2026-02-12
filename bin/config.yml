@@ -21,9 +21,9 @@ formal_solver: BESSER
 use_1_5D_approx: false
 
 # set_uniform_B: true
-# B_field: [12.0, 0.78, 0.78]
+B_field: [12.0, 0.78, 0.78]
 
-emissivity_model: CRD_limit
+emissivity_model: PRD
 
 # used only for FAL-C input
 N_theta: 8

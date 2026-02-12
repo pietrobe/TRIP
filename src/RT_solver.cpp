@@ -4282,7 +4282,7 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
     double emission_timer = MPI_Wtime() - start;
     double emission_timer_max;
     MPI_Reduce(&emission_timer, &emission_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    if (RT_problem->mpi_rank_ == 0) printf("Update preconditioner emission:\t\t%g seconds\n", emission_timer_max);          
+    if (RT_problem->mpi_rank_ == 0 and RT_problem->verbose_) printf("Update preconditioner emission:\t\t%g seconds\n", emission_timer_max);          
 
 
 /*

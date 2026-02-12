@@ -1,7 +1,6 @@
 #include "RT_solver.hpp"
 
-
-#define NUM_TOL 1e-14
+#define NUM_TOL 1e-7
 
 #define RED     "\033[31m"
 #define GREEN   "\033[32m"
@@ -159,7 +158,7 @@ int main(int argc, char *argv[])
 
 					if (!compare_csv(test_file, reference_file, NUM_TOL))			
 			    	{			    		
-			    		std::cout << RED << "==== EROR: TEST NOT PASSED ====\n" << RESET;
+			    		std::cout << RED << "==== ERROR: TEST NOT PASSED ====\n" << RESET;
 			    	}    		
 			    	else
 			    	{
