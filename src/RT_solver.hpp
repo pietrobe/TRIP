@@ -234,7 +234,7 @@ public:
     	pc_ksp_type_  = cfg.prec.pc_solver_type;	    	
 
     	// print some output 
-    	print_info();
+    	if (RT_problem_->verbose_) print_info();
   
     	// set linear system
 		PetscInt local_size = RT_problem_->local_size_;
@@ -253,7 +253,7 @@ public:
     	ierr = KSPGMRESSetRestart(ksp_solver_, cfg.solver.gmres_restart);CHKERRV(ierr);
 
     	// some warnings 
-    	if (mpi_rank_ == 0)
+    	if (mpi_rank_ == 0 and RT_problem_->verbose_)
     	{
     		if (not using_prec_ && std::strcmp(ksp_type_, KSPFGMRES) == 0) std::cout << "WARNING: using FGMRES with no preconditioner, switch to GMRES for better performance." << std::endl;    	
     		if (using_prec_     && std::strcmp(ksp_type_, KSPGMRES)  == 0) std::cout << "WARNING: using GMRES with matrix-free preconditioner can be unsafe, switch to FGMRES." << std::endl;    	
@@ -314,9 +314,13 @@ public:
     	}
 
     	// adding some options for verbosity
-    	ierr = PetscOptionsSetValue(NULL, "-ksp_monitor", "");CHKERRV(ierr);
-    	// ierr = PetscOptionsSetValue(NULL, "-ksp_monitor_true_residual", "");CHKERRV(ierr);    
-		ierr = PetscOptionsSetValue(NULL, "-ksp_view", "");CHKERRV(ierr);		
+    	if (RT_problem_->verbose_)    		
+    	{
+    		ierr = PetscOptionsSetValue(NULL, "-ksp_monitor", "");CHKERRV(ierr);
+    		// ierr = PetscOptionsSetValue(NULL, "-ksp_monitor_true_residual", "");CHKERRV(ierr);    
+			ierr = PetscOptionsSetValue(NULL, "-ksp_view", "");CHKERRV(ierr);		
+    	}
+    	
 		ierr = PetscOptionsSetValue(NULL, "-ksp_converged_reason", "");CHKERRV(ierr);		
 		
     	// extra options from command line   	

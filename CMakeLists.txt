@@ -23,6 +23,11 @@ endif()
 
 ### DEPENDENCIES
 find_package(MPI REQUIRED) 
+# for CTest enabling
+# enable_testing()
+
+### DEPENDENCIES
+find_package(MPI REQUIRED)
 find_package(HDF5 REQUIRED)
 find_package(HDF5 COMPONENTS C HL REQUIRED)
 

@@ -1,6 +1,6 @@
 #!/bin/bash -l
 
-#SBATCH --ntasks=6144
+#SBATCH --ntasks=512
 #SBATCH --cpus-per-task=1
 #SBATCH --time=01:00:00
 #SBATCH --account=ehpc238

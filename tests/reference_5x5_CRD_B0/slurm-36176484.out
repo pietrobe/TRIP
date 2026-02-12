@@ -1,0 +1,1162 @@
+remove impi/2021.12 (PATH, MANPATH, LD_LIBRARY_PATH)
+remove mkl/2024.1 (LD_LIBRARY_PATH)
+Set INTEL compilers as MPI wrappers backend
+load impi/2021.10.0 (PATH, MANPATH, LD_LIBRARY_PATH)
+load mkl/2023.2.0 (LD_LIBRARY_PATH)
+
+The following have been reloaded with a version change:
+  1) impi/2021.12 => impi/2021.10.0     3) mkl/2024.1 => mkl/2023.2.0
+  2) intel/2024.1 => intel/2023.2.0     4) oneapi/2024.1 => oneapi/2023.2.0
+
+unload bsc/1.0 (PATH, MANPATH)
+load bsc/1.0 (PATH, MANPATH)
+Set INTEL compilers as MPI wrappers backend
+remove impi/2021.10.0 (PATH, MANPATH, LD_LIBRARY_PATH)
+load impi/2021.12 (PATH, MANPATH, LD_LIBRARY_PATH)
+remove mkl/2023.2.0 (LD_LIBRARY_PATH)
+load mkl/2024.1 (LD_LIBRARY_PATH)
+
+The following have been reloaded with a version change:
+  1) impi/2021.10.0 => impi/2021.12     3) mkl/2023.2.0 => mkl/2024.1
+  2) intel/2023.2.0 => intel/2024.1     4) oneapi/2023.2.0 => oneapi/2024.1
+
+unload BOOST/1.85.0 (LD_LIBRARY_PATH, LIBRARY_PATH, PKG_CONFIG_PATH,
+C_INCLUDE_PATH, CPLUS_INCLUDE_PATH, BOOST_ROOT, BOOST_DIR) 
+load BOOST/1.85.0 (LD_LIBRARY_PATH, LIBRARY_PATH, PKG_CONFIG_PATH,
+C_INCLUDE_PATH, CPLUS_INCLUDE_PATH, BOOST_ROOT, BOOST_DIR) 
+unload PETSC/3.18.0 (PATH, LD_LIBRARY_PATH, LIBRARY_PATH, C_INCLUDE_PATH,
+CPLUS_INCLUDE_PATH) 
+load PETSC/3.18.0 (PATH, LD_LIBRARY_PATH, LIBRARY_PATH, C_INCLUDE_PATH,
+CPLUS_INCLUDE_PATH) 
+unload CMAKE/3.29.2 (PATH)
+load CMAKE/3.29.2 (PATH)
+unload YAML_CPP/0.7.0 (LD_LIBRARY_PATH, LIBRARY_PATH, PKG_CONFIG_PATH)
+load YAML_CPP/0.7.0 (LD_LIBRARY_PATH, LIBRARY_PATH, PKG_CONFIG_PATH)
+unload HDF5/1.14.1-2 (PATH, LD_LIBRARY_PATH, LIBRARY_PATH, C_INCLUDE_PATH,
+CPLUS_INCLUDE_PATH, HDF5_DIR, HDF5_ROOT,CFLAGS, CPPFLAGS, LDFLAGS) 
+load HDF5/1.14.1-2 (PATH, LD_LIBRARY_PATH, LIBRARY_PATH, C_INCLUDE_PATH,
+CPLUS_INCLUDE_PATH, HDF5_DIR, HDF5_ROOT,CFLAGS, CPPFLAGS, LDFLAGS) 
+
+===== MPI Memory Usage Summary  =====
+Min memory used by single processor: 0.0927867 GB
+Max memory used by single processor: 0.10897 GB
+Total memory used: 49.2228 GB
+===========================================
+Loading config file: config.yml
+Date and time: 2026-02-11 17:04:44
+
+Command line arguments: 
+/gpfs/home/usi/usi298301/git/TRIP/bin/./solar_3D 
+PetscInt size: 8 bytes; 64 bits.
+
+
+~~~~~~ MPI size = 512 ~~~~~~
+
+Emissivity Model long:  CRD_limit
+Emissivity Model short: CRD
+Reading frequencies in [s-1] from ../input/PORTA/frequency/96F/frequency.dat
+Using PORTA PMD input file ONLY:  "../input/PORTA/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd"
+N_theta = 8, N_chi = 16, from PORTA input.
+
+Creating PETSc vector...
+WARNING: hardcoding quantities for PORTA input read!
+Reading input time:		0.662828 (seconds)
+
+Precomputing quantities...done
+Fields data type: DOUBLE
+
+mpi_size_x = 2
+mpi_size_y = 4
+mpi_size_z = 64
+
+
+=========== 2-levels atom parameters ===========
+
+Mass = 40.078
+El = 0
+Eu = 23652.3
+2Jl = 0
+2Ju = 2
+gl = 0
+gu = 1
+Aul = 2.18e+08
+
+=========== Grids parameters ===========
+
+N_x = 5
+N_y = 5
+N_z = 133
+N_s = 3325
+N_theta = 8
+N_chi = 16
+N_dirs = 128
+N_nu = 96
+L = 476.191
+
+total size = 163430400
+block size = 49152
+
+theta grid = [ 2.76676 2.30499 1.90711 1.64028 1.50131 1.23448 0.8366 0.374835 ]
+mu grid    = [ -0.930568 -0.669991 -0.330009 -0.0694318 0.0694318 0.330009 0.669991 0.930568 ]
+chi grid   = [ 0.19635 0.589049 0.981748 1.37445 1.76715 2.15984 2.55254 2.94524 3.33794 3.73064 4.12334 4.51604 4.90874 5.30144 5.69414 6.08684 ] 
+Set up time:		0.992762 (seconds)
+Formal solver: BESSER
+Formal solver bebug mode enabled.
+
+Setting up emission module...
+Using CRD emission, components:
+epsilon_pCRD_GL_limit
+epsilon_csc
+
+[Memory from set_up_emission_module() = 0.000820702 GB]
+
+Total bytes:          0.000801466 GB
+Layers vector bytes:  2.72915e-05 GB
+Radiative beams map:  0 GB
+Convergence matrix:   0 GB
+SAM:                  4.17531e-05 GB
+SFM:                  0.000732422 GB
+
+
+Solar atmosphere model memory usage:
+Atmosphere:              1.60933e-06 GB
+Magnetic and Vel. field: 8.04663e-07 GB
+Freq:                    7.15256e-07 GB
+Kc:                      1.28746e-05 GB (continuum)
+epsilon_Ic:              1.28746e-05 GB (continuum)
+sigma_c:                 1.28746e-05 GB (continuum)
+Atmosphere dim:          18 x 12
+Magnetic and Vel. dim:   18 x 6
+Kc dim:                  18 x 96  (continuum)
+epsilon_Ic dim:          18 x 96  (continuum)
+sigma_c dim:             18 x 96  (continuum)
+Frequencies size:        96
+
+--------------------- done -------------------
+
+++++++ Assembling right hand side...+++++++++
+Start global formal solution...
+Comm. time (S):		0.133917 seconds
+Comm. time (I):		4.48838 seconds
+ODE step time:		0.074373 seconds
+Total time:		4.69074 seconds
+
+Copying field to Vec...done
++++++++++++++++++++++++++++++++++++++++++++++
+Using multiple steps for long rays.
+Only long rays are used.
+
+========= Serial formal solver parameters =========
+n_local_rays = 96 (block_size/mpi_size)
+tile_size    = 96 (n_local_rays/n_tiles)
+n_tiles      = 1
+===================================================
+
+KSP type = fgmres
+PC type  = gmres
+
+WARNING: using FGMRES with no preconditioner, switch to GMRES for better performance.
+Output path: "/gpfs/projects/ehpc238/output/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd.CRD_limit"
+YAML Configuration Summary:
+Input Directory:                            ../input/PORTA/
+Input File:                                 cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd
+Frequency File:                             frequency/96F/frequency.dat
+Output Directory:                           /gpfs/projects/ehpc238/output
+Output Enabled:                             Yes
+Output Overwrite Prevention:                No
+Emissivity Model:                           CRD_limit
+Use Magnetic Field:                         Yes
+Use Bulk Velocity:                          Yes
+Enable Continuum:                           Yes
+Use 1.5D Approximation:                     No
+Formal Solver:                              BESSER
+Angular Grid - N_theta:                     8
+Angular Grid - N_chi:                       16
+Horizontal Grid - N_x:                      10
+Horizontal Grid - N_y:                      10
+Horizontal Grid - L:                        400.000000
+Input CUL File:                             
+Input QEL File:                             
+Input LLP File:                             
+Input BACK File:                            
+Use Preconditioner:                         No
+Set Uniform Magnetic Field:                 No
+
+Solver Configuration:
+KSP Solver Type:                            KSPFGMRES
+KSP Relative Tolerance:                     0.000000
+KSP Maximum Iterations:                     1000
+GMRES Restart:                              30
+
+Preconditioner Configuration:
+PC Solver Type:                             KSPGMRES
+PC Relative Tolerance:                      0.000001
+PC Maximum Iterations:                      1000
+
+Output directory: "/gpfs/projects/ehpc238/output/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd.CRD_limit"
+Setup time: 11.21 seconds.
+
+Start linear solve...
+  0 KSP Residual norm 2.731864583199e-01 
+update_emission:		0.601231 seconds
+
+Start global formal solution...
+Comm. time (S):		0.492532 seconds
+Comm. time (I):		0.0438385 seconds
+ODE step time:		0.08428 seconds
+Total time:		0.602762 seconds
+
+Copying field to Vec...done
+  1 KSP Residual norm 9.627159604796e-03 
+update_emission:		0.602757 seconds
+
+Start global formal solution...
+Comm. time (S):		0.495616 seconds
+Comm. time (I):		0.0321377 seconds
+ODE step time:		0.0719041 seconds
+Total time:		0.593556 seconds
+
+Copying field to Vec...done
+  2 KSP Residual norm 3.246449475205e-03 
+update_emission:		0.605853 seconds
+
+Start global formal solution...
+Comm. time (S):		0.532259 seconds
+Comm. time (I):		0.0360873 seconds
+ODE step time:		0.0750833 seconds
+Total time:		0.634083 seconds
+
+Copying field to Vec...done
+  3 KSP Residual norm 1.522626771899e-03 
+update_emission:		0.610617 seconds
+
+Start global formal solution...
+Comm. time (S):		0.503429 seconds
+Comm. time (I):		0.0359168 seconds
+ODE step time:		0.0759948 seconds
+Total time:		0.605373 seconds
+
+Copying field to Vec...done
+  4 KSP Residual norm 8.711360775548e-04 
+update_emission:		0.613232 seconds
+
+Start global formal solution...
+Comm. time (S):		0.518293 seconds
+Comm. time (I):		0.0420437 seconds
+ODE step time:		0.0832951 seconds
+Total time:		0.626871 seconds
+
+Copying field to Vec...done
+  5 KSP Residual norm 5.486091981906e-04 
+update_emission:		0.618727 seconds
+
+Start global formal solution...
+Comm. time (S):		0.510856 seconds
+Comm. time (I):		0.0332954 seconds
+ODE step time:		0.0730049 seconds
+Total time:		0.610185 seconds
+
+Copying field to Vec...done
+  6 KSP Residual norm 3.830634747948e-04 
+update_emission:		0.612441 seconds
+
+Start global formal solution...
+Comm. time (S):		0.504736 seconds
+Comm. time (I):		0.0344092 seconds
+ODE step time:		0.0749936 seconds
+Total time:		0.605073 seconds
+
+Copying field to Vec...done
+  7 KSP Residual norm 2.755030417688e-04 
+update_emission:		0.618617 seconds
+
+Start global formal solution...
+Comm. time (S):		0.508524 seconds
+Comm. time (I):		0.0604591 seconds
+ODE step time:		0.0944406 seconds
+Total time:		0.635435 seconds
+
+Copying field to Vec...done
+  8 KSP Residual norm 2.083910359057e-04 
+update_emission:		0.621995 seconds
+
+Start global formal solution...
+Comm. time (S):		0.514469 seconds
+Comm. time (I):		0.0363688 seconds
+ODE step time:		0.0773632 seconds
+Total time:		0.617091 seconds
+
+Copying field to Vec...done
+  9 KSP Residual norm 1.634559953251e-04 
+update_emission:		0.6195 seconds
+
+Start global formal solution...
+Comm. time (S):		0.511208 seconds
+Comm. time (I):		0.0351617 seconds
+ODE step time:		0.0730529 seconds
+Total time:		0.611781 seconds
+
+Copying field to Vec...done
+ 10 KSP Residual norm 1.296390091676e-04 
+update_emission:		0.617522 seconds
+
+Start global formal solution...
+Comm. time (S):		0.508073 seconds
+Comm. time (I):		0.0443266 seconds
+ODE step time:		0.0851239 seconds
+Total time:		0.618505 seconds
+
+Copying field to Vec...done
+ 11 KSP Residual norm 1.056606880924e-04 
+update_emission:		0.61691 seconds
+
+Start global formal solution...
+Comm. time (S):		0.510081 seconds
+Comm. time (I):		0.0328763 seconds
+ODE step time:		0.0729438 seconds
+Total time:		0.60849 seconds
+
+Copying field to Vec...done
+ 12 KSP Residual norm 8.639190763471e-05 
+update_emission:		0.626271 seconds
+
+Start global formal solution...
+Comm. time (S):		0.553712 seconds
+Comm. time (I):		0.0369815 seconds
+ODE step time:		0.0757955 seconds
+Total time:		0.656477 seconds
+
+Copying field to Vec...done
+ 13 KSP Residual norm 7.320051444248e-05 
+update_emission:		0.61403 seconds
+
+Start global formal solution...
+Comm. time (S):		0.506231 seconds
+Comm. time (I):		0.0323175 seconds
+ODE step time:		0.0731006 seconds
+Total time:		0.604699 seconds
+
+Copying field to Vec...done
+ 14 KSP Residual norm 6.059044286193e-05 
+update_emission:		0.622458 seconds
+
+Start global formal solution...
+Comm. time (S):		0.51404 seconds
+Comm. time (I):		0.033616 seconds
+ODE step time:		0.0733079 seconds
+Total time:		0.612929 seconds
+
+Copying field to Vec...done
+ 15 KSP Residual norm 5.197763237111e-05 
+update_emission:		0.613297 seconds
+
+Start global formal solution...
+Comm. time (S):		0.50964 seconds
+Comm. time (I):		0.0382837 seconds
+ODE step time:		0.0753445 seconds
+Total time:		0.611748 seconds
+
+Copying field to Vec...done
+ 16 KSP Residual norm 4.431320398787e-05 
+update_emission:		0.621171 seconds
+
+Start global formal solution...
+Comm. time (S):		0.514749 seconds
+Comm. time (I):		0.0329845 seconds
+ODE step time:		0.0733385 seconds
+Total time:		0.612976 seconds
+
+Copying field to Vec...done
+ 17 KSP Residual norm 3.840492452369e-05 
+update_emission:		0.621068 seconds
+
+Start global formal solution...
+Comm. time (S):		0.512224 seconds
+Comm. time (I):		0.0321046 seconds
+ODE step time:		0.0723581 seconds
+Total time:		0.610183 seconds
+
+Copying field to Vec...done
+ 18 KSP Residual norm 3.333537056795e-05 
+update_emission:		0.619442 seconds
+
+Start global formal solution...
+Comm. time (S):		0.510488 seconds
+Comm. time (I):		0.0532662 seconds
+ODE step time:		0.0918295 seconds
+Total time:		0.628402 seconds
+
+Copying field to Vec...done
+ 19 KSP Residual norm 2.901808917071e-05 
+update_emission:		0.619546 seconds
+
+Start global formal solution...
+Comm. time (S):		0.510683 seconds
+Comm. time (I):		0.0427267 seconds
+ODE step time:		0.0762802 seconds
+Total time:		0.618715 seconds
+
+Copying field to Vec...done
+ 20 KSP Residual norm 2.552085062258e-05 
+update_emission:		0.617199 seconds
+
+Start global formal solution...
+Comm. time (S):		0.508268 seconds
+Comm. time (I):		0.0344759 seconds
+ODE step time:		0.0736631 seconds
+Total time:		0.608189 seconds
+
+Copying field to Vec...done
+ 21 KSP Residual norm 2.225791588641e-05 
+update_emission:		0.615136 seconds
+
+Start global formal solution...
+Comm. time (S):		0.507105 seconds
+Comm. time (I):		0.0363837 seconds
+ODE step time:		0.0753458 seconds
+Total time:		0.608345 seconds
+
+Copying field to Vec...done
+ 22 KSP Residual norm 1.966866317415e-05 
+update_emission:		0.617406 seconds
+
+Start global formal solution...
+Comm. time (S):		0.541985 seconds
+Comm. time (I):		0.0345172 seconds
+ODE step time:		0.0724922 seconds
+Total time:		0.640846 seconds
+
+Copying field to Vec...done
+ 23 KSP Residual norm 1.756511311985e-05 
+update_emission:		0.613609 seconds
+
+Start global formal solution...
+Comm. time (S):		0.505008 seconds
+Comm. time (I):		0.0366503 seconds
+ODE step time:		0.0751338 seconds
+Total time:		0.606982 seconds
+
+Copying field to Vec...done
+ 24 KSP Residual norm 1.553840794098e-05 
+update_emission:		0.621711 seconds
+
+Start global formal solution...
+Comm. time (S):		0.51488 seconds
+Comm. time (I):		0.0514297 seconds
+ODE step time:		0.0914244 seconds
+Total time:		0.630732 seconds
+
+Copying field to Vec...done
+ 25 KSP Residual norm 1.379002608139e-05 
+update_emission:		0.619831 seconds
+
+Start global formal solution...
+Comm. time (S):		0.509617 seconds
+Comm. time (I):		0.0332989 seconds
+ODE step time:		0.0726624 seconds
+Total time:		0.608628 seconds
+
+Copying field to Vec...done
+ 26 KSP Residual norm 1.221813090627e-05 
+update_emission:		0.61841 seconds
+
+Start global formal solution...
+Comm. time (S):		0.509294 seconds
+Comm. time (I):		0.0351661 seconds
+ODE step time:		0.0733777 seconds
+Total time:		0.610383 seconds
+
+Copying field to Vec...done
+ 27 KSP Residual norm 1.109104545156e-05 
+update_emission:		0.618484 seconds
+
+Start global formal solution...
+Comm. time (S):		0.512505 seconds
+Comm. time (I):		0.0358378 seconds
+ODE step time:		0.0753835 seconds
+Total time:		0.613364 seconds
+
+Copying field to Vec...done
+ 28 KSP Residual norm 9.851467909184e-06 
+update_emission:		0.61616 seconds
+
+Start global formal solution...
+Comm. time (S):		0.508156 seconds
+Comm. time (I):		0.0331961 seconds
+ODE step time:		0.0736105 seconds
+Total time:		0.607373 seconds
+
+Copying field to Vec...done
+ 29 KSP Residual norm 8.922787880880e-06 
+update_emission:		0.620347 seconds
+
+Start global formal solution...
+Comm. time (S):		0.512316 seconds
+Comm. time (I):		0.0324267 seconds
+ODE step time:		0.0728242 seconds
+Total time:		0.611097 seconds
+
+Copying field to Vec...done
+update_emission:		0.607741 seconds
+
+Start global formal solution...
+Comm. time (S):		0.538681 seconds
+Comm. time (I):		0.0340768 seconds
+ODE step time:		0.0745083 seconds
+Total time:		0.638709 seconds
+
+Copying field to Vec...done
+ 30 KSP Residual norm 8.635146625159e-05 
+update_emission:		0.619993 seconds
+
+Start global formal solution...
+Comm. time (S):		0.512026 seconds
+Comm. time (I):		0.0332793 seconds
+ODE step time:		0.0736687 seconds
+Total time:		0.611277 seconds
+
+Copying field to Vec...done
+ 31 KSP Residual norm 7.672008672219e-06 
+update_emission:		0.619132 seconds
+
+Start global formal solution...
+Comm. time (S):		0.509877 seconds
+Comm. time (I):		0.0319803 seconds
+ODE step time:		0.07214 seconds
+Total time:		0.607103 seconds
+
+Copying field to Vec...done
+ 32 KSP Residual norm 7.197013953740e-06 
+update_emission:		0.620528 seconds
+
+Start global formal solution...
+Comm. time (S):		0.515683 seconds
+Comm. time (I):		0.036522 seconds
+ODE step time:		0.0756148 seconds
+Total time:		0.618557 seconds
+
+Copying field to Vec...done
+ 33 KSP Residual norm 6.653913857812e-06 
+update_emission:		0.621586 seconds
+
+Start global formal solution...
+Comm. time (S):		0.513038 seconds
+Comm. time (I):		0.0344742 seconds
+ODE step time:		0.0747658 seconds
+Total time:		0.613185 seconds
+
+Copying field to Vec...done
+ 34 KSP Residual norm 6.339943113715e-06 
+update_emission:		0.620639 seconds
+
+Start global formal solution...
+Comm. time (S):		0.517603 seconds
+Comm. time (I):		0.0340814 seconds
+ODE step time:		0.0753243 seconds
+Total time:		0.616392 seconds
+
+Copying field to Vec...done
+ 35 KSP Residual norm 5.815143069668e-06 
+update_emission:		0.622218 seconds
+
+Start global formal solution...
+Comm. time (S):		0.512671 seconds
+Comm. time (I):		0.032276 seconds
+ODE step time:		0.0729314 seconds
+Total time:		0.610831 seconds
+
+Copying field to Vec...done
+ 36 KSP Residual norm 5.457331602973e-06 
+update_emission:		0.621907 seconds
+
+Start global formal solution...
+Comm. time (S):		0.513073 seconds
+Comm. time (I):		0.0322814 seconds
+ODE step time:		0.0724536 seconds
+Total time:		0.611499 seconds
+
+Copying field to Vec...done
+ 37 KSP Residual norm 5.004670491953e-06 
+update_emission:		0.621341 seconds
+
+Start global formal solution...
+Comm. time (S):		0.512718 seconds
+Comm. time (I):		0.0385281 seconds
+ODE step time:		0.0753822 seconds
+Total time:		0.61672 seconds
+
+Copying field to Vec...done
+ 38 KSP Residual norm 4.668996939757e-06 
+update_emission:		0.617294 seconds
+
+Start global formal solution...
+Comm. time (S):		0.507787 seconds
+Comm. time (I):		0.0414706 seconds
+ODE step time:		0.0811314 seconds
+Total time:		0.615501 seconds
+
+Copying field to Vec...done
+ 39 KSP Residual norm 4.277921761757e-06 
+update_emission:		0.618505 seconds
+
+Start global formal solution...
+Comm. time (S):		0.508499 seconds
+Comm. time (I):		0.0373858 seconds
+ODE step time:		0.072266 seconds
+Total time:		0.610796 seconds
+
+Copying field to Vec...done
+ 40 KSP Residual norm 3.911049783095e-06 
+update_emission:		0.61779 seconds
+
+Start global formal solution...
+Comm. time (S):		0.509746 seconds
+Comm. time (I):		0.0324531 seconds
+ODE step time:		0.0741616 seconds
+Total time:		0.609073 seconds
+
+Copying field to Vec...done
+ 41 KSP Residual norm 3.571135927427e-06 
+update_emission:		0.620148 seconds
+
+Start global formal solution...
+Comm. time (S):		0.512997 seconds
+Comm. time (I):		0.0364768 seconds
+ODE step time:		0.0755775 seconds
+Total time:		0.615185 seconds
+
+Copying field to Vec...done
+ 42 KSP Residual norm 3.221073680279e-06 
+update_emission:		0.619352 seconds
+
+Start global formal solution...
+Comm. time (S):		0.516345 seconds
+Comm. time (I):		0.0402765 seconds
+ODE step time:		0.0747518 seconds
+Total time:		0.621795 seconds
+
+Copying field to Vec...done
+ 43 KSP Residual norm 2.911979749765e-06 
+update_emission:		0.62148 seconds
+
+Start global formal solution...
+Comm. time (S):		0.51419 seconds
+Comm. time (I):		0.0318768 seconds
+ODE step time:		0.0726062 seconds
+Total time:		0.611982 seconds
+
+Copying field to Vec...done
+ 44 KSP Residual norm 2.594174017120e-06 
+update_emission:		0.621194 seconds
+
+Start global formal solution...
+Comm. time (S):		0.513205 seconds
+Comm. time (I):		0.0505352 seconds
+ODE step time:		0.0911321 seconds
+Total time:		0.629782 seconds
+
+Copying field to Vec...done
+ 45 KSP Residual norm 2.331640191676e-06 
+update_emission:		0.617602 seconds
+
+Start global formal solution...
+Comm. time (S):		0.51012 seconds
+Comm. time (I):		0.0338511 seconds
+ODE step time:		0.072518 seconds
+Total time:		0.609176 seconds
+
+Copying field to Vec...done
+ 46 KSP Residual norm 2.056597234299e-06 
+update_emission:		0.620715 seconds
+
+Start global formal solution...
+Comm. time (S):		0.511915 seconds
+Comm. time (I):		0.0424441 seconds
+ODE step time:		0.0817633 seconds
+Total time:		0.61971 seconds
+
+Copying field to Vec...done
+ 47 KSP Residual norm 1.813524030763e-06 
+update_emission:		0.620681 seconds
+
+Start global formal solution...
+Comm. time (S):		0.511195 seconds
+Comm. time (I):		0.0362152 seconds
+ODE step time:		0.0763159 seconds
+Total time:		0.6143 seconds
+
+Copying field to Vec...done
+ 48 KSP Residual norm 1.602021999158e-06 
+update_emission:		0.61432 seconds
+
+Start global formal solution...
+Comm. time (S):		0.509891 seconds
+Comm. time (I):		0.0640452 seconds
+ODE step time:		0.0965105 seconds
+Total time:		0.637764 seconds
+
+Copying field to Vec...done
+ 49 KSP Residual norm 1.393071174058e-06 
+update_emission:		0.615484 seconds
+
+Start global formal solution...
+Comm. time (S):		0.507088 seconds
+Comm. time (I):		0.0342326 seconds
+ODE step time:		0.0724609 seconds
+Total time:		0.60638 seconds
+
+Copying field to Vec...done
+ 50 KSP Residual norm 1.196327357104e-06 
+update_emission:		0.619315 seconds
+
+Start global formal solution...
+Comm. time (S):		0.51322 seconds
+Comm. time (I):		0.0333209 seconds
+ODE step time:		0.0721432 seconds
+Total time:		0.61023 seconds
+
+Copying field to Vec...done
+ 51 KSP Residual norm 1.009387241573e-06 
+update_emission:		0.61854 seconds
+
+Start global formal solution...
+Comm. time (S):		0.511238 seconds
+Comm. time (I):		0.0348162 seconds
+ODE step time:		0.0738115 seconds
+Total time:		0.610502 seconds
+
+Copying field to Vec...done
+ 52 KSP Residual norm 8.728210335272e-07 
+update_emission:		0.616411 seconds
+
+Start global formal solution...
+Comm. time (S):		0.50725 seconds
+Comm. time (I):		0.0331413 seconds
+ODE step time:		0.0724722 seconds
+Total time:		0.605541 seconds
+
+Copying field to Vec...done
+ 53 KSP Residual norm 7.482976304129e-07 
+update_emission:		0.626651 seconds
+
+Start global formal solution...
+Comm. time (S):		0.519277 seconds
+Comm. time (I):		0.0361595 seconds
+ODE step time:		0.0735559 seconds
+Total time:		0.621566 seconds
+
+Copying field to Vec...done
+ 54 KSP Residual norm 6.531808433865e-07 
+update_emission:		0.619332 seconds
+
+Start global formal solution...
+Comm. time (S):		0.511195 seconds
+Comm. time (I):		0.0316969 seconds
+ODE step time:		0.0719541 seconds
+Total time:		0.608659 seconds
+
+Copying field to Vec...done
+ 55 KSP Residual norm 5.864033553064e-07 
+update_emission:		0.61248 seconds
+
+Start global formal solution...
+Comm. time (S):		0.508797 seconds
+Comm. time (I):		0.0388131 seconds
+ODE step time:		0.0754351 seconds
+Total time:		0.614554 seconds
+
+Copying field to Vec...done
+ 56 KSP Residual norm 5.334326951489e-07 
+update_emission:		0.609172 seconds
+
+Start global formal solution...
+Comm. time (S):		0.504057 seconds
+Comm. time (I):		0.0430695 seconds
+ODE step time:		0.0767362 seconds
+Total time:		0.612886 seconds
+
+Copying field to Vec...done
+ 57 KSP Residual norm 4.979057193895e-07 
+update_emission:		0.615787 seconds
+
+Start global formal solution...
+Comm. time (S):		0.507211 seconds
+Comm. time (I):		0.0327951 seconds
+ODE step time:		0.072607 seconds
+Total time:		0.605527 seconds
+
+Copying field to Vec...done
+ 58 KSP Residual norm 4.688559184891e-07 
+update_emission:		0.618841 seconds
+
+Start global formal solution...
+Comm. time (S):		0.509524 seconds
+Comm. time (I):		0.0352231 seconds
+ODE step time:		0.0733408 seconds
+Total time:		0.609687 seconds
+
+Copying field to Vec...done
+ 59 KSP Residual norm 4.418131339153e-07 
+update_emission:		0.613967 seconds
+
+Start global formal solution...
+Comm. time (S):		0.506954 seconds
+Comm. time (I):		0.0373919 seconds
+ODE step time:		0.0756401 seconds
+Total time:		0.608952 seconds
+
+Copying field to Vec...done
+update_emission:		0.627225 seconds
+
+Start global formal solution...
+Comm. time (S):		0.554607 seconds
+Comm. time (I):		0.0358633 seconds
+ODE step time:		0.0763239 seconds
+Total time:		0.656263 seconds
+
+Copying field to Vec...done
+ 60 KSP Residual norm 1.258259543247e-05 
+update_emission:		0.618032 seconds
+
+Start global formal solution...
+Comm. time (S):		0.515118 seconds
+Comm. time (I):		0.0331408 seconds
+ODE step time:		0.0718058 seconds
+Total time:		0.613592 seconds
+
+Copying field to Vec...done
+ 61 KSP Residual norm 4.586435601178e-07 
+update_emission:		0.618074 seconds
+
+Start global formal solution...
+Comm. time (S):		0.513609 seconds
+Comm. time (I):		0.0367263 seconds
+ODE step time:		0.0725979 seconds
+Total time:		0.614887 seconds
+
+Copying field to Vec...done
+ 62 KSP Residual norm 3.927410848373e-07 
+update_emission:		0.621571 seconds
+
+Start global formal solution...
+Comm. time (S):		0.512224 seconds
+Comm. time (I):		0.0343239 seconds
+ODE step time:		0.0728051 seconds
+Total time:		0.612178 seconds
+
+Copying field to Vec...done
+ 63 KSP Residual norm 3.695211709088e-07 
+update_emission:		0.620688 seconds
+
+Start global formal solution...
+Comm. time (S):		0.512386 seconds
+Comm. time (I):		0.0311784 seconds
+ODE step time:		0.0719864 seconds
+Total time:		0.609516 seconds
+
+Copying field to Vec...done
+ 64 KSP Residual norm 3.436226709396e-07 
+update_emission:		0.621548 seconds
+
+Start global formal solution...
+Comm. time (S):		0.513658 seconds
+Comm. time (I):		0.0322467 seconds
+ODE step time:		0.0722379 seconds
+Total time:		0.612319 seconds
+
+Copying field to Vec...done
+ 65 KSP Residual norm 3.206539158817e-07 
+update_emission:		0.625771 seconds
+
+Start global formal solution...
+Comm. time (S):		0.518463 seconds
+Comm. time (I):		0.0340227 seconds
+ODE step time:		0.0729242 seconds
+Total time:		0.617198 seconds
+
+Copying field to Vec...done
+ 66 KSP Residual norm 2.966264889113e-07 
+update_emission:		0.620371 seconds
+
+Start global formal solution...
+Comm. time (S):		0.515785 seconds
+Comm. time (I):		0.041612 seconds
+ODE step time:		0.0764449 seconds
+Total time:		0.621028 seconds
+
+Copying field to Vec...done
+ 67 KSP Residual norm 2.663009481194e-07 
+update_emission:		0.618067 seconds
+
+Start global formal solution...
+Comm. time (S):		0.511536 seconds
+Comm. time (I):		0.0367583 seconds
+ODE step time:		0.0721003 seconds
+Total time:		0.612876 seconds
+
+Copying field to Vec...done
+ 68 KSP Residual norm 2.355133664320e-07 
+update_emission:		0.62174 seconds
+
+Start global formal solution...
+Comm. time (S):		0.514658 seconds
+Comm. time (I):		0.0435211 seconds
+ODE step time:		0.0821819 seconds
+Total time:		0.623823 seconds
+
+Copying field to Vec...done
+ 69 KSP Residual norm 2.016629743876e-07 
+update_emission:		0.611366 seconds
+
+Start global formal solution...
+Comm. time (S):		0.507087 seconds
+Comm. time (I):		0.031564 seconds
+ODE step time:		0.0722197 seconds
+Total time:		0.605242 seconds
+
+Copying field to Vec...done
+ 70 KSP Residual norm 1.768626422856e-07 
+update_emission:		0.610183 seconds
+
+Start global formal solution...
+Comm. time (S):		0.50519 seconds
+Comm. time (I):		0.0336261 seconds
+ODE step time:		0.0722837 seconds
+Total time:		0.603299 seconds
+
+Copying field to Vec...done
+ 71 KSP Residual norm 1.523148538895e-07 
+update_emission:		0.616666 seconds
+
+Start global formal solution...
+Comm. time (S):		0.514972 seconds
+Comm. time (I):		0.0359422 seconds
+ODE step time:		0.0723289 seconds
+Total time:		0.6172 seconds
+
+Copying field to Vec...done
+ 72 KSP Residual norm 1.315596750237e-07 
+update_emission:		0.610615 seconds
+
+Start global formal solution...
+Comm. time (S):		0.506213 seconds
+Comm. time (I):		0.0379487 seconds
+ODE step time:		0.076784 seconds
+Total time:		0.609851 seconds
+
+Copying field to Vec...done
+ 73 KSP Residual norm 1.168356711082e-07 
+update_emission:		0.620604 seconds
+
+Start global formal solution...
+Comm. time (S):		0.514135 seconds
+Comm. time (I):		0.0475854 seconds
+ODE step time:		0.081844 seconds
+Total time:		0.626071 seconds
+
+Copying field to Vec...done
+ 74 KSP Residual norm 1.036874304462e-07 
+update_emission:		0.619493 seconds
+
+Start global formal solution...
+Comm. time (S):		0.514847 seconds
+Comm. time (I):		0.0372048 seconds
+ODE step time:		0.0759776 seconds
+Total time:		0.619284 seconds
+
+Copying field to Vec...done
+ 75 KSP Residual norm 9.154980456895e-08 
+update_emission:		0.613228 seconds
+
+Start global formal solution...
+Comm. time (S):		0.507925 seconds
+Comm. time (I):		0.0322417 seconds
+ODE step time:		0.0730588 seconds
+Total time:		0.6059 seconds
+
+Copying field to Vec...done
+ 76 KSP Residual norm 8.326626273543e-08 
+update_emission:		0.619541 seconds
+
+Start global formal solution...
+Comm. time (S):		0.514704 seconds
+Comm. time (I):		0.035153 seconds
+ODE step time:		0.0748998 seconds
+Total time:		0.615819 seconds
+
+Copying field to Vec...done
+ 77 KSP Residual norm 7.592826346464e-08 
+update_emission:		0.62844 seconds
+
+Start global formal solution...
+Comm. time (S):		0.523825 seconds
+Comm. time (I):		0.033268 seconds
+ODE step time:		0.0745406 seconds
+Total time:		0.623844 seconds
+
+Copying field to Vec...done
+ 78 KSP Residual norm 6.908600931074e-08 
+update_emission:		0.620986 seconds
+
+Start global formal solution...
+Comm. time (S):		0.515271 seconds
+Comm. time (I):		0.034682 seconds
+ODE step time:		0.0735144 seconds
+Total time:		0.615355 seconds
+
+Copying field to Vec...done
+ 79 KSP Residual norm 6.326787589217e-08 
+update_emission:		0.618453 seconds
+
+Start global formal solution...
+Comm. time (S):		0.510873 seconds
+Comm. time (I):		0.0318631 seconds
+ODE step time:		0.0719543 seconds
+Total time:		0.608692 seconds
+
+Copying field to Vec...done
+ 80 KSP Residual norm 5.745120863400e-08 
+update_emission:		0.616603 seconds
+
+Start global formal solution...
+Comm. time (S):		0.507806 seconds
+Comm. time (I):		0.0357754 seconds
+ODE step time:		0.0758471 seconds
+Total time:		0.609423 seconds
+
+Copying field to Vec...done
+ 81 KSP Residual norm 5.336236829279e-08 
+update_emission:		0.623661 seconds
+
+Start global formal solution...
+Comm. time (S):		0.515322 seconds
+Comm. time (I):		0.0363664 seconds
+ODE step time:		0.0753743 seconds
+Total time:		0.617246 seconds
+
+Copying field to Vec...done
+ 82 KSP Residual norm 4.876554986328e-08 
+update_emission:		0.612997 seconds
+
+Start global formal solution...
+Comm. time (S):		0.504683 seconds
+Comm. time (I):		0.0369594 seconds
+ODE step time:		0.0762822 seconds
+Total time:		0.606019 seconds
+
+Copying field to Vec...done
+ 83 KSP Residual norm 4.514064749989e-08 
+update_emission:		0.622612 seconds
+
+Start global formal solution...
+Comm. time (S):		0.514001 seconds
+Comm. time (I):		0.0321002 seconds
+ODE step time:		0.0721149 seconds
+Total time:		0.611831 seconds
+
+Copying field to Vec...done
+ 84 KSP Residual norm 4.163704645085e-08 
+update_emission:		0.619995 seconds
+
+Start global formal solution...
+Comm. time (S):		0.510953 seconds
+Comm. time (I):		0.0323702 seconds
+ODE step time:		0.0730075 seconds
+Total time:		0.608611 seconds
+
+Copying field to Vec...done
+ 85 KSP Residual norm 3.772782431027e-08 
+update_emission:		0.614006 seconds
+
+Start global formal solution...
+Comm. time (S):		0.50542 seconds
+Comm. time (I):		0.0369218 seconds
+ODE step time:		0.0751014 seconds
+Total time:		0.607378 seconds
+
+Copying field to Vec...done
+ 86 KSP Residual norm 3.412292831086e-08 
+update_emission:		0.621525 seconds
+
+Start global formal solution...
+Comm. time (S):		0.51304 seconds
+Comm. time (I):		0.0365257 seconds
+ODE step time:		0.0722815 seconds
+Total time:		0.614507 seconds
+
+Copying field to Vec...done
+ 87 KSP Residual norm 3.062519574755e-08 
+update_emission:		0.622169 seconds
+
+Start global formal solution...
+Comm. time (S):		0.515808 seconds
+Comm. time (I):		0.0369151 seconds
+ODE step time:		0.0719026 seconds
+Total time:		0.618638 seconds
+
+Copying field to Vec...done
+ 88 KSP Residual norm 2.708109415387e-08 
+Linear solve converged due to CONVERGED_RTOL iterations 88
+KSP Object: 512 MPI processes
+  type: fgmres
+    restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
+    happy breakdown tolerance 1e-30
+  maximum iterations=1000, initial guess is zero
+  tolerances:  relative=1e-07, absolute=1e-50, divergence=10000.
+  right preconditioning
+  using UNPRECONDITIONED norm type for convergence test
+PC Object: 512 MPI processes
+  type: none
+  linear system matrix = precond matrix:
+  Mat Object: 512 MPI processes
+    type: shell
+    rows=163430400, cols=163430400
+Solve time (s) = 74.172
+
+Copying Vec to field...done
+
+===== MPI Memory Usage Summary  =====
+Min memory used by single processor: 0.295588 GB
+Max memory used by single processor: 0.733704 GB
+Total memory used: 194.078 GB
+===========================================
+Output written in /gpfs/projects/ehpc238/output/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd.CRD_limit/profiles_i_j.m
+
+Output written in /gpfs/projects/ehpc238/output/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd.CRD_limit/profiles_i_j.csv
+
+Rank 0 accumulating surface data from domain: i[0, 3)  j[0, 2)
+ global coords: i[0, 2]  j[0, 1]
+Rank 64 accumulating surface data from domain: i[0, 3)  j[0, 1)
+ global coords: i[0, 2]  j[2, 2]
+Rank 256 accumulating surface data from domain: i[0, 2)  j[0, 2)
+ global coords: i[3, 4]  j[0, 1]
+Rank 448 accumulating surface data from domain: i[0, 2)  j[0, 1)
+ global coords: i[3, 4]  j[4, 4]
+Rank 128 accumulating surface data from domain: i[0, 3)  j[0, 1)
+ global coords: i[0, 2]  j[3, 3]
+Rank 320 accumulating surface data from domain: i[0, 2)  j[0, 1)
+ global coords: i[3, 4]  j[2, 2]
+Rank 384 accumulating surface data from domain: i[0, 2)  j[0, 1)
+ global coords: i[3, 4]  j[3, 3]
+Rank 192 accumulating surface data from domain: i[0, 3)  j[0, 1)
+ global coords: i[0, 2]  j[4, 4]
+ Writing JKQ field to HDF5 file: /gpfs/projects/ehpc238/output/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd.CRD_limit/JKQ_field.h5
+ Writing JKQ field data to HDF5 file: /gpfs/projects/ehpc238/output/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd.CRD_limit/JKQ_field.h5
+Freeing RT_problem fields memory...
+Freeing RT_solver fields memory...
+WARNING: no arbitrary beams defined in config
+Total memory usage (vm_usage):               15.1758 GB
+Total memory usage (resident_set):           0.740938 GB
+
+================================================================================
+ EXECUTION TIME SUMMARY
+================================================================================
+ MPI processes:        512
+ Setup time:           11.21 s
+ Solve time:           74.18 s
+ Post processing time: 0.45 s
+--------------------------------------------------------------------------------
+ Total execution time: 85.84 s
+================================================================================
+
+TRIP ended successfully at: 2026-02-11 17:06:10

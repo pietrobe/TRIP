@@ -452,7 +452,7 @@ void RT_problem::read_3D(const char* filename){
 	skip_size = PMD_MAIN_HEADER2 - 196608 - 16;
 	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));
 
-    int module_head_size;
+   int module_head_size;
 
 	// Size of each grid node	
 	MPI_CHECK(MPI_File_read_all(fh, &module_head_size, 1, MPI_INT, MPI_STATUS_IGNORE));
@@ -460,38 +460,38 @@ void RT_problem::read_3D(const char* filename){
 	// Size of each grid node	
 	MPI_CHECK(MPI_File_read_all(fh, &node_size_, 1, MPI_INT, MPI_STATUS_IGNORE));
 
-    // Jump to data
-    header_size_ = PMD_MAIN_HEADER1 + PMD_MAIN_HEADER2 + 12 + module_head_size;
+   // Jump to data
+   header_size_ = PMD_MAIN_HEADER1 + PMD_MAIN_HEADER2 + 12 + module_head_size;
 
 	// some irrelevant data    
     MPI_CHECK(MPI_File_seek(fh, TWOLEVEL_HEADER1, MPI_SEEK_CUR));
 
 	// reading atomic data    
-    std::vector<double> atomic_buffer(3);
-    MPI_CHECK(MPI_File_read_all(fh, atomic_buffer.data(), 3, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    mass_ = atomic_buffer[0];
+   std::vector<double> atomic_buffer(3);
+   MPI_CHECK(MPI_File_read_all(fh, atomic_buffer.data(), 3, MPI_DOUBLE, MPI_STATUS_IGNORE));
+   mass_ = atomic_buffer[0];
 	Aul_  = atomic_buffer[1];
 	Eu_   = atomic_buffer[1];
 
-    // MPI_CHECK(MPI_File_read_all(fh, &mass_,  1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    // MPI_CHECK(MPI_File_read_all(fh, &Aul_,   1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    // MPI_CHECK(MPI_File_read_all(fh, &Eu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    MPI_CHECK(MPI_File_read_all(fh, &Jl2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
-    MPI_CHECK(MPI_File_read_all(fh, &Ju2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
-    // MPI_CHECK(MPI_File_read_all(fh, &gl_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    // MPI_CHECK(MPI_File_read_all(fh, &gu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    // MPI_CHECK(MPI_File_read_all(fh, &T_ref_, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	// MPI_CHECK(MPI_File_read_all(fh, &mass_,  1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	// MPI_CHECK(MPI_File_read_all(fh, &Aul_,   1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	// MPI_CHECK(MPI_File_read_all(fh, &Eu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &Jl2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &Ju2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
+	// MPI_CHECK(MPI_File_read_all(fh, &gl_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	// MPI_CHECK(MPI_File_read_all(fh, &gu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	// MPI_CHECK(MPI_File_read_all(fh, &T_ref_, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 
-    MPI_CHECK(MPI_File_read_all(fh, atomic_buffer.data(), 3, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    gl_    = atomic_buffer[0];
+	MPI_CHECK(MPI_File_read_all(fh, atomic_buffer.data(), 3, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	gl_    = atomic_buffer[0];
 	gu_    = atomic_buffer[1];
 	T_ref_ = atomic_buffer[1];
 
-    // // change Eu units to [cm-1]     
-    // Eu_ /= c_ * h_; 
-    
-    // hardcoded from FAL-C 
-    Eu_ = 23652.304;    
+	// // change Eu units to [cm-1]     
+	// Eu_ /= c_ * h_; 
+
+	// hardcoded from FAL-C 
+	Eu_ = 23652.304;    
     
   	// some irrelevant data double temp[ny][nx];    matrix of ground (iz=0) for Planckian boundary
 	skip_size = (N_x_ * N_y_) * sizeof(double);
@@ -537,7 +537,6 @@ void RT_problem::read_3D(const char* filename){
 
 	// fill field 
 	space_grid_->parallel_for([&](int i, int j, int k) {
-
 		// get global indeces form local ones
 		const int i_global  = space_grid_->local_to_global_coordinate(0,i); //space_grid_->getGlobalStartX() + i - space_grid_->getGhostMarginX();
 		const int j_global  = space_grid_->local_to_global_coordinate(1,j);//space_grid_->getGlobalStartY() + j - space_grid_->getGhostMarginY();
@@ -575,13 +574,10 @@ void RT_problem::read_3D(const char* filename){
 		if (use_magnetic_field_)
 		{								
 			if (use_uniform_magnetic_field_)
-			{
-				if (mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) {
-					std::cout << "WARNING: USING UNIFORM MAGNETIC FIELD: " << uniform_magnetic_field_value_ << " Gauss, theta: " << uniform_magnetic_field_theta_ << " rad, chi: " << uniform_magnetic_field_chi_ << " rad" << std::endl;
-				}
-				B_->block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(uniform_magnetic_field_value_); // converting to Larmor frequency					
-				B_->block(i, j, k)[1] = uniform_magnetic_field_theta_; 					
-				B_->block(i, j, k)[2] = uniform_magnetic_field_chi_;
+			{				
+				B_dev.block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(uniform_magnetic_field_value_); // converting to Larmor frequency					
+				B_dev.block(i, j, k)[1] = uniform_magnetic_field_theta_; 					
+				B_dev.block(i, j, k)[2] = uniform_magnetic_field_chi_;
 			} else {
 				B_->block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(B_spherical[0]); // converting to Larmor frequency					
 				B_->block(i, j, k)[1] = B_spherical[1]; 					
@@ -678,87 +674,87 @@ std::vector<Real> RT_problem::read_single_node(MPI_File fh, const int i, const i
 	// some temporary variables
 	Real entry, atomic_density, rho00l, Nl, Cul;
 
-    // Compute jump
-    const int jump = header_size_ + node_size_ * (N_x_ * (N_y_ * k + j) + i);
+	 // Compute jump
+	 const int jump = header_size_ + node_size_ * (N_x_ * (N_y_ * k + j) + i);
 
-    // Jump to data of interest
-    MPI_CHECK(MPI_File_seek(fh, jump, MPI_SEEK_SET));	
+	 // Jump to data of interest
+	 MPI_CHECK(MPI_File_seek(fh, jump, MPI_SEEK_SET));	
 
-    // 0 // epsilon
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); 
-    output.push_back(entry);		
-    
-    // 1 // get Cul from epsilon
-    Cul = Aul_ * entry / (1.0 - entry); 
-    output.push_back(Cul);
-    
-    // 2 // temperature    
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    output.push_back(entry);
+	 // 0 // epsilon
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); 
+	 output.push_back(entry);		
+	 
+	 // 1 // get Cul from epsilon
+	 Cul = Aul_ * entry / (1.0 - entry); 
+	 output.push_back(Cul);
+	 
+	 // 2 // temperature    
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	 output.push_back(entry);
 
-   	// atomic density	
-    MPI_CHECK(MPI_File_read(fh, &atomic_density, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	
+		// atomic density	
+	 MPI_CHECK(MPI_File_read(fh, &atomic_density, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	
 
-    // 3 // Bx	    
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	
-    output.push_back(entry);  
-    // 4 // By    
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    output.push_back(entry);		
-    // 5 // Bz    
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    output.push_back(entry);		
-    // 6 // vx	    
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	
-    output.push_back(entry);		
-    // 7 // vx	    
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    output.push_back(entry);		
-    // 8 // vz
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    output.push_back(entry);		
+	 // 3 // Bx	    
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	
+	 output.push_back(entry);  
+	 // 4 // By    
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	 output.push_back(entry);		
+	 // 5 // Bz    
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	 output.push_back(entry);		
+	 // 6 // vx	    
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	
+	 output.push_back(entry);		
+	 // 7 // vx	    
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	 output.push_back(entry);		
+	 // 8 // vz
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	 output.push_back(entry);		
 
-    // density matrix components of the lower level:
-    if (L_LIMIT != 1) std::cout << "WARNING: reading 3D input L_LIMIT is not unity!" << std::endl;
+	 // density matrix components of the lower level:
+	 if (L_LIMIT != 1) std::cout << "WARNING: reading 3D input L_LIMIT is not unity!" << std::endl;
 
-    for (int jj = 0; jj < L_LIMIT; jj++) 
-    {			        
-        MPI_CHECK(MPI_File_read(fh, &rho00l, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); // real component	
-        MPI_CHECK(MPI_File_read(fh, &entry , 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); // im components				
-    }    
-    
-    // recover populations 
-    // 9
-    Nl = atomic_density * sqrt(Jl2_ + 1) * rho00l;
-    output.push_back(Nl);	
-   	
-    // density matrix components of the upper level:
-    for (int jj = 0; jj < U_LIMIT; jj++) 
-    {        
-        MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); // real component	
-        MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	// im components							
-    }
-    
-    // components of the J^K_Q tensor:    
-    for (int jj = 0; jj < NJKQ; jj++) MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	
-    
+	 for (int jj = 0; jj < L_LIMIT; jj++) 
+	 {			        
+	     MPI_CHECK(MPI_File_read(fh, &rho00l, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); // real component	
+	     MPI_CHECK(MPI_File_read(fh, &entry , 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); // im components				
+	 }    
+	 
+	 // recover populations 
+	 // 9
+	 Nl = atomic_density * sqrt(Jl2_ + 1) * rho00l;
+	 output.push_back(Nl);	
+		
+	 // density matrix components of the upper level:
+	 for (int jj = 0; jj < U_LIMIT; jj++) 
+	 {        
+	     MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); // real component	
+	     MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	// im components							
+	 }
+	 
+	 // components of the J^K_Q tensor:    
+	 for (int jj = 0; jj < NJKQ; jj++) MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	
+	 
 
-    // rest of the MHD quantities 
-    // 10 // Voight parameter a    
+	 // rest of the MHD quantities 
+	 // 10 // Voight parameter a    
 	MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));							
-    output.push_back(entry);		
-    // 11 // delta2 (depolarizing collisional rate)    
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));							
-    entry *= Aul_; // delta2 = D2/Aul, PORTA uses delta2 here and conversion is needed
-    output.push_back(entry);		
-    // 12 // continuum opacity    
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));							
-    output.push_back(entry);		
-    // 13 // continuum emissivity
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));							
-    output.push_back(entry);	
+	 output.push_back(entry);		
+	 // 11 // delta2 (depolarizing collisional rate)    
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));							
+	 entry *= Aul_; // delta2 = D2/Aul, PORTA uses delta2 here and conversion is needed
+	 output.push_back(entry);		
+	 // 12 // continuum opacity    
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));							
+	 output.push_back(entry);		
+	 // 13 // continuum emissivity
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));							
+	 output.push_back(entry);	
 
-    return output;
+	 return output;
 }
 
 
@@ -2039,7 +2035,7 @@ std::vector<double> RT_problem::extract_plane_k(const Field_ptr_t field, const i
 
 void RT_problem::set_up(){
  
-   if (mpi_rank_ == 0) std::cout << "\nPrecomputing quantities...";				
+   if (mpi_rank_ == 0 and verbose_) std::cout << "\nPrecomputing quantities...";				
 
    // temporary constants
    Real tmp_const, tmp_const2, tmp_const3;
@@ -2117,7 +2113,7 @@ void RT_problem::set_up(){
 
 	// delete stuff that is not needed -----------------------------------> TODO?
 	
-	if (mpi_rank_ == 0) std::cout << "done" << std::endl;	
+	if (mpi_rank_ == 0 and verbose_) std::cout << "done" << std::endl;	
 }
 
 

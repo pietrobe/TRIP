@@ -59,7 +59,7 @@ bool intersComp(const t_xyzinters &i1, const t_xyzinters &i2) {
 // UNUSED with new grid manager (maybe)
 void MF_context::field_to_vec(const Field_ptr_t field, Vec &v, const int block_size)
 {
-	if (mpi_rank_ == 0) std::cout << "\nCopying field to Vec...";
+	if (mpi_rank_ == 0 and RT_problem_->verbose_) std::cout << "\nCopying field to Vec...";
 
 	PetscErrorCode ierr; 
 		
@@ -107,13 +107,13 @@ void MF_context::field_to_vec(const Field_ptr_t field, Vec &v, const int block_s
 	ierr = VecAssemblyBegin(v);CHKERRV(ierr); 
 	ierr = VecAssemblyEnd(v);CHKERRV(ierr); 
 
-    if (mpi_rank_ == 0) std::cout << "done" << std::endl;
+    if (mpi_rank_ == 0 and RT_problem_->verbose_) std::cout << "done" << std::endl;
 }
 
 // UNUSED with new grid manager (maybe)
 void MF_context::vec_to_field(Field_ptr_t field, const Vec &v, const int block_size)
 {
-	if (mpi_rank_ == 0) std::cout << "\nCopying Vec to field...";
+	if (mpi_rank_ == 0 and RT_problem_->verbose_) std::cout << "\nCopying Vec to field...";
 
 	PetscErrorCode ierr; 
 		
@@ -158,7 +158,7 @@ void MF_context::vec_to_field(Field_ptr_t field, const Vec &v, const int block_s
 		}
 	}
 
-    if (mpi_rank_ == 0) std::cout << "done" << std::endl;
+    if (mpi_rank_ == 0 and RT_problem_->verbose_) std::cout << "done" << std::endl;
 }
 
 
@@ -1541,7 +1541,9 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
 
 void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0)
 {
-	if (mpi_rank_ == 0) std::cout << "\nStart global formal solution..." << std::endl;
+    const bool verbose = RT_problem_->verbose_;
+
+	if (mpi_rank_ == 0 and verbose) std::cout << "\nStart global formal solution..." << std::endl;
 
     // timers
     const bool timing_debug = false;
@@ -1959,7 +1961,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     MPI_Reduce(&one_step_timer, &one_step_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     MPI_Reduce(&total_timer,    &total_timer_max,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     
-    if (mpi_rank_ == 0)
+    if (mpi_rank_ == 0 and verbose)
     {
         printf("Comm. time (S):\t\t%g seconds\n", comm_timer_max1);
         printf("Comm. time (I):\t\t%g seconds\n", comm_timer_max2);
@@ -2872,7 +2874,8 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
 	
 void MF_context::set_up_emission_module(){
 
-    if (mpi_rank_ == 0) std::cout << "\nSetting up emission module...";
+    if (mpi_rank_ == 0 and RT_problem_->verbose_) std::cout << "\nSetting up emission module...";
+    
     // set some aliases 
     using rii_eps_comp_3D                 = rii_include::emission_coefficient_computation_3D;
     using rii_formal_solver_factory       = rii_include::formal_solver_factory_from_3D_RT_problem;
@@ -3016,20 +3019,23 @@ void MF_context::set_up_emission_module(){
     }
 
     // print memory
-    unsigned long long b;
-    b = ecc_sh_ptr_->bytes();
+    if (mpi_rank_ == 0 and RT_problem_->verbose_)
+    {
+        unsigned long long b;
+        b = ecc_sh_ptr_->bytes();
 
-    if (mpi_rank_ == 0) std::cout << "\n[Memory from set_up_emission_module() = " << (double)b / (1000 * 1024 * 1024) << " GB]" << std::endl;
+        std::cout << "\n[Memory from set_up_emission_module() = " << (double)b / (1000 * 1024 * 1024) << " GB]" << std::endl;
 
-    auto fs_mem_stat = ecc_sh_ptr_->get_memory_usage_stat();
+        auto fs_mem_stat = ecc_sh_ptr_->get_memory_usage_stat();
 
-    if (mpi_rank_ == 0) std::cout << std::endl << fs_mem_stat.to_string() << std::endl;
+        std::cout << std::endl << fs_mem_stat.to_string() << std::endl;
 
-    if (mpi_rank_ == 0) std::cout << std::endl << fs_mem_stat.sam_memory_stat.to_string() << std::endl;
+        std::cout << std::endl << fs_mem_stat.sam_memory_stat.to_string() << std::endl;
 
-    //if (mpi_rank_ == 0) std::cout << std::endl << ecc_sh_ptr_->margins_to_string() << std::endl;
+        std::cout << "--------------------- done -------------------" << std::endl;
+    } 
 
-    if (mpi_rank_ == 0) std::cout << "--------------------- done -------------------" << std::endl;
+    //if (mpi_rank_ == 0) std::cout << std::endl << ecc_sh_ptr_->margins_to_string() << std::endl;    
 
     // std::cout << ecc_sh_ptr_->print_atmos_parameters(0,0,1);
     // std::cout << ecc_sh_ptr_->print_atmos_parameters(1,1,65);
@@ -4086,7 +4092,7 @@ void RT_solver::assemble_rhs(){
     // with test = true data structures are created but not filled
     const bool test = false;
 
-  	if (mpi_rank_ == 0)
+  	if (mpi_rank_ == 0 and RT_problem_->verbose_)
     {
         std::cout << "\n++++++ Assembling right hand side...+++++++++";
         if (test) std::cout << "\n+++++++++++ RHS TEST RHS TEST +++++++++++++";
@@ -4188,7 +4194,7 @@ void RT_solver::assemble_rhs(){
         eps_th_field.reset();        
     }
 
-	if (mpi_rank_ == 0) std::cout << "+++++++++++++++++++++++++++++++++++++++++++++\n"; 	
+	if (mpi_rank_ == 0 and RT_problem_->verbose_) std::cout << "+++++++++++++++++++++++++++++++++++++++++++++\n"; 	
 }
 
 
@@ -4213,7 +4219,7 @@ PetscErrorCode UserMult(Mat mat, Vec x, Vec y){
     double emission_timer = MPI_Wtime() - start;
     double emission_timer_max;
     MPI_Reduce(&emission_timer, &emission_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    if (RT_problem->mpi_rank_ == 0) printf("update_emission:\t\t%g seconds\n", emission_timer_max);                  
+    if (RT_problem->mpi_rank_ == 0 and RT_problem->verbose_) printf("update_emission:\t\t%g seconds\n", emission_timer_max);                  
   	    
   	// fill rhs_ from formal solve with zero bc  	
     mf_ctx_->formal_solve(RT_problem->I_field_, RT_problem->S_field_, 0.0);
@@ -4265,7 +4271,7 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
     double emission_timer = MPI_Wtime() - start;
     double emission_timer_max;
     MPI_Reduce(&emission_timer, &emission_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    if (RT_problem->mpi_rank_ == 0) printf("Update preconditioner emission:\t\t%g seconds\n", emission_timer_max);          
+    if (RT_problem->mpi_rank_ == 0 and RT_problem->verbose_) printf("Update preconditioner emission:\t\t%g seconds\n", emission_timer_max);          
 
 
 /*

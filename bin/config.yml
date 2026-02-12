@@ -18,13 +18,12 @@ output_directory: ../../output
 use_B: false
 enable_continuum: true
 formal_solver: BESSER
-enable_continuum: true
 use_1_5D_approx: false
 
-set_uniform_B: true
+# set_uniform_B: true
 B_field: [12.0, 0.78, 0.78]
 
-emissivity_model: CRD_limit
+emissivity_model: PRD
 
 # used only for FAL-C input
 N_theta: 8
@@ -32,10 +31,10 @@ N_chi: 16
 N_x: 5
 N_y: 5
 
-# input_cul:  "AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.cul"
-# input_qel:  "AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.qel"
-# input_llp:  "AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix_conv_KQ_MC.llp"
-# input_back: "AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.back"
+#input_cul:  "AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.cul"
+#input_qel:  "AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.qel"
+#input_llp:  "AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix_conv_KQ_MC.llp"
+#input_back: "AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.back"
 
 use_prec: true
 
