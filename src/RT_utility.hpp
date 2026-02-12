@@ -170,6 +170,9 @@ struct AppConfig
 	bool output						 = false;
 	bool output_overwrite_prevention = false;
 
+	// testing 
+	std::filesystem::path reference_sol_directory;
+
 	// emissivity
 	emissivity_model_t emissivity_model;
 
@@ -210,6 +213,9 @@ struct AppConfig
 
 	// Arbitrary beam directions
 	std::vector<BeamDirection> arbitrary_beams;
+
+	// print out
+	bool verbose = true;
 };
 
 AppConfig

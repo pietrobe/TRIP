@@ -5,10 +5,10 @@
 inline KSPType
 toKSPType(const std::string &name)
 {
-	if (name == "KSPGMRES") return KSPGMRES;
-	if (name == "KSPFGMRES") return KSPFGMRES; // PETSc literal
-	if (name == "KSPPGMRES") return KSPPGMRES;
-	if (name == "KSPBCGS") return KSPBCGS;
+	if (name == "KSPGMRES")   return KSPGMRES;
+	if (name == "KSPFGMRES")  return KSPFGMRES; // PETSc literal
+	if (name == "KSPPGMRES")  return KSPPGMRES;
+	if (name == "KSPBCGS")    return KSPBCGS;
 	if (name == "KSPPREONLY") return KSPPREONLY;
 
 	throw std::runtime_error("Unknown KSPType: " + name);
@@ -17,10 +17,10 @@ toKSPType(const std::string &name)
 inline std::string
 KSPTypeToString(KSPType type)
 {
-	if (type == KSPGMRES) return "KSPGMRES";
-	if (type == KSPFGMRES) return "KSPFGMRES";
-	if (type == KSPPGMRES) return "KSPPGMRES";
-	if (type == KSPBCGS) return "KSPBCGS";
+	if (type == KSPGMRES)   return "KSPGMRES";
+	if (type == KSPFGMRES)  return "KSPFGMRES";
+	if (type == KSPPGMRES)  return "KSPPGMRES";
+	if (type == KSPBCGS)    return "KSPBCGS";
 	if (type == KSPPREONLY) return "KSPPREONLY";
 
 	return "UNKNOWN";
@@ -99,6 +99,13 @@ loadConfig(const std::string &filename)
 	// Optional string (converted to filesystem::path)
 	if (config["output_directory"])
 		cfg.output_directory = std::filesystem::path(config["output_directory"].as<std::string>());
+
+	// Optional string for testing
+	if (config["reference_sol_directory"])
+		cfg.reference_sol_directory = std::filesystem::path(config["reference_sol_directory"].as<std::string>());
+
+	// printing flag
+	if (config["verbose"]) cfg.verbose = config["verbose"].as<bool>();
 
 	// Emissivity model (required)
 	cfg.emissivity_model = config["emissivity_model"].as<emissivity_model_t>();

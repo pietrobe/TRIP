@@ -99,7 +99,7 @@ class RT_problem
 		// set input file
 		cfg_ = cfg;
 
-		if (mpi_rank_ == 0)
+		if (mpi_rank_ == 0 and verbose_)
 		{
 			std::cout << "\n~~~~~~ MPI size = " << mpi_size_ << " ~~~~~~" << std::endl << std::endl;
 			std::cout << "Emissivity Model long:  " << emissivity_model_to_string_long(cfg_.emissivity_model)
@@ -108,12 +108,13 @@ class RT_problem
 		}
 
 		// set flags
-		use_PORTA_input_	= not(cfg_.input_directory.string().find("FAL-C") != std::string::npos);
+		use_PORTA_input_	  = not(cfg_.input_directory.string().find("FAL-C") != std::string::npos);
 		use_magnetic_field_ = cfg_.use_B;
-		emissivity_model_	= cfg_.emissivity_model;
-		enable_continuum_	= cfg_.enable_continuum;
-		use_1_5D_approx_	= cfg_.use_1_5D_approx;
+		emissivity_model_	  = cfg_.emissivity_model;
+		enable_continuum_	  = cfg_.enable_continuum;
+		use_1_5D_approx_	  = cfg_.use_1_5D_approx;
 		use_bulk_velocity_  = cfg_.use_Vb;
+		verbose_            = cfg_.verbose;
 
 		use_uniform_magnetic_field_ = cfg_.set_uniform_B;
 		if (use_uniform_magnetic_field_)
@@ -161,16 +162,16 @@ class RT_problem
 		}
 
 		// timing
-		if (mpi_rank_ == 0) printf("Reading input time:\t\t%g (seconds)\n", MPI_Wtime() - start);
+		if (mpi_rank_ == 0 and verbose_) printf("Reading input time:\t\t%g (seconds)\n", MPI_Wtime() - start);
 		start = MPI_Wtime();
 
 		// precompute
 		set_up();
 
 		// print info
-		print_info();
+		if (verbose_) print_info();
 
-		if (mpi_rank_ == 0) printf("Set up time:\t\t%g (seconds)\n", MPI_Wtime() - start);
+		if (mpi_rank_ == 0 and verbose_) printf("Set up time:\t\t%g (seconds)\n", MPI_Wtime() - start);
 	}
 
 	// DEPRECATED CONSTRUCTORS
@@ -561,6 +562,9 @@ class RT_problem
 	// input file
 	AppConfig cfg_;
 
+	// print
+	bool verbose_;
+
 	// emissivity model
 	emissivity_model_t emissivity_model_ = emissivity_model_t::NONE;
 
@@ -726,10 +730,11 @@ class RT_problem
 	}
 
    private:
-	const bool use_ghost_layers_            = false;
-	bool	   use_PORTA_input_	            = false;
-	bool	   use_magnetic_field_          = false;
-	bool       use_bulk_velocity_           = false;
+
+	const bool use_ghost_layers_   = false;
+	bool	     use_PORTA_input_	 = false;
+	bool	     use_magnetic_field_ = false;
+	bool       use_bulk_velocity_  = false;
 	
 	bool       use_uniform_magnetic_field_   = false;
 	double     uniform_magnetic_field_value_ = 0.0; // Gauss

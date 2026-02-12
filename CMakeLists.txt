@@ -5,8 +5,18 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${SOLAR_3D_ROOT_PATH}/cmake")
 
 project(par_moonolith_usage VERSION 1.0.0)
 
+# for CTest enabling
+# enable_testing()
+
+### DEPENDENCIES
+find_package(MPI REQUIRED)
 find_package(HDF5 REQUIRED)
-find_package(HDF5 COMPONENTS HL REQUIRED)
+find_package(HDF5 COMPONENTS C HL REQUIRED)
+
+if(NOT HDF5_INCLUDE_DIRS)
+    set(HDF5_INCLUDE_DIRS "${HDF5_ROOT}/include")
+    set(HDF5_LIBRARIES "${HDF5_ROOT}/lib/libhdf5.so;${HDF5_ROOT}/lib/libhdf5_hl.so")
+endif()
 
 include(CMakeFindDependencyMacro)
 find_package(PkgConfig REQUIRED)
@@ -53,7 +63,7 @@ list(APPEND SOURCES_FILES
     src/Faddeeva.cpp 
     src/Formal_solver.cpp 
     src/Legendre_rule.cpp 
-    src/main.cpp 
+#     src/main.cpp 
     src/Rotation_matrix.cpp
     src/RT_problem.cpp
     src/RT_problem_IO.cpp
@@ -162,7 +172,7 @@ set_property(TARGET rii PROPERTY IMPORTED_LOCATION "${RII_ROOT_PATH}/build/libri
 message( STATUS  "RII path: ${RII_ROOT_PATH}")
 
 # import all the dependencies and targets
-target_link_libraries(solar_3D PUBLIC  sgrid::sgrid rii ${Boost_LIBRARIES})
+target_link_libraries(solar_3D PUBLIC sgrid::sgrid rii ${Boost_LIBRARIES})
 
 target_link_libraries(solar_3D PUBLIC ${HDF5_LIBRARIES})
 target_link_libraries(solar_3D PUBLIC ${HDF5_HL_LIBRARIES})
@@ -228,3 +238,49 @@ if(TRUE)
         COMMENT "Clean top-level build and thdf subproject"
     )
 endif()
+
+
+### make test ###
+add_executable(solar_3D_tests ${CMAKE_SOURCE_DIR}/tests/test.cpp)
+
+target_include_directories(solar_3D_tests PUBLIC ${HDF5_INCLUDE_DIRS})
+
+# import all the dependencies and targets
+target_link_libraries(solar_3D_tests PUBLIC sgrid::sgrid rii ${Boost_LIBRARIES})
+
+target_link_libraries(solar_3D_tests PUBLIC ${HDF5_LIBRARIES})
+target_link_libraries(solar_3D_tests PUBLIC ${HDF5_HL_LIBRARIES})
+
+target_sources(solar_3D_tests PUBLIC ${SOURCES_FILES})
+target_include_directories(solar_3D_tests PUBLIC  
+    src
+    ${CMAKE_CURRENT_BINARY_DIR}  # Add binary dir for configure.h
+)
+
+target_include_directories(solar_3D_tests SYSTEM PUBLIC ${PETSC_INCLUDES})
+target_link_libraries(solar_3D_tests PUBLIC PkgConfig::PETSC)
+
+if(NOT yaml-cpp_FOUND)
+    target_link_libraries(solar_3D_tests PUBLIC yaml-cpp::yaml-cpp)
+else()
+    target_link_libraries(solar_3D_tests PUBLIC yaml-cpp)
+endif()
+
+target_compile_definitions(solar_3D_tests PUBLIC ${PETSC_DEFINITIONS})
+
+# Build thdf/libhdf_output.a using its Makefile
+# Ensure solar_3D depends on the static library
+add_dependencies(solar_3D_tests hdf_output_lib)
+
+# Include thdf headers
+target_include_directories(solar_3D_tests PUBLIC src/thdf/)
+
+# Link the static library
+target_link_libraries(solar_3D_tests PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a)
+    
+# # make does not build test 
+# set_target_properties(solar_3D_tests PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
+# # make test build test
+# add_custom_target(build_test DEPENDS solar_3D_tests)
+
