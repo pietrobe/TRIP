@@ -1,0 +1,4812 @@
+remove impi/2021.12 (PATH, MANPATH, LD_LIBRARY_PATH)
+remove mkl/2024.1 (LD_LIBRARY_PATH)
+Set INTEL compilers as MPI wrappers backend
+load impi/2021.10.0 (PATH, MANPATH, LD_LIBRARY_PATH)
+load mkl/2023.2.0 (LD_LIBRARY_PATH)
+
+The following have been reloaded with a version change:
+  1) impi/2021.12 => impi/2021.10.0     3) mkl/2024.1 => mkl/2023.2.0
+  2) intel/2024.1 => intel/2023.2.0     4) oneapi/2024.1 => oneapi/2023.2.0
+
+unload bsc/1.0 (PATH, MANPATH)
+load bsc/1.0 (PATH, MANPATH)
+Set INTEL compilers as MPI wrappers backend
+remove impi/2021.10.0 (PATH, MANPATH, LD_LIBRARY_PATH)
+load impi/2021.12 (PATH, MANPATH, LD_LIBRARY_PATH)
+remove mkl/2023.2.0 (LD_LIBRARY_PATH)
+load mkl/2024.1 (LD_LIBRARY_PATH)
+
+The following have been reloaded with a version change:
+  1) impi/2021.10.0 => impi/2021.12     3) mkl/2023.2.0 => mkl/2024.1
+  2) intel/2023.2.0 => intel/2024.1     4) oneapi/2023.2.0 => oneapi/2024.1
+
+unload BOOST/1.85.0 (LD_LIBRARY_PATH, LIBRARY_PATH, PKG_CONFIG_PATH,
+C_INCLUDE_PATH, CPLUS_INCLUDE_PATH, BOOST_ROOT, BOOST_DIR) 
+load BOOST/1.85.0 (LD_LIBRARY_PATH, LIBRARY_PATH, PKG_CONFIG_PATH,
+C_INCLUDE_PATH, CPLUS_INCLUDE_PATH, BOOST_ROOT, BOOST_DIR) 
+unload PETSC/3.18.0 (PATH, LD_LIBRARY_PATH, LIBRARY_PATH, C_INCLUDE_PATH,
+CPLUS_INCLUDE_PATH) 
+load PETSC/3.18.0 (PATH, LD_LIBRARY_PATH, LIBRARY_PATH, C_INCLUDE_PATH,
+CPLUS_INCLUDE_PATH) 
+unload CMAKE/3.29.2 (PATH)
+load CMAKE/3.29.2 (PATH)
+unload YAML_CPP/0.7.0 (LD_LIBRARY_PATH, LIBRARY_PATH, PKG_CONFIG_PATH)
+load YAML_CPP/0.7.0 (LD_LIBRARY_PATH, LIBRARY_PATH, PKG_CONFIG_PATH)
+unload HDF5/1.14.1-2 (PATH, LD_LIBRARY_PATH, LIBRARY_PATH, C_INCLUDE_PATH,
+CPLUS_INCLUDE_PATH, HDF5_DIR, HDF5_ROOT,CFLAGS, CPPFLAGS, LDFLAGS) 
+load HDF5/1.14.1-2 (PATH, LD_LIBRARY_PATH, LIBRARY_PATH, C_INCLUDE_PATH,
+CPLUS_INCLUDE_PATH, HDF5_DIR, HDF5_ROOT,CFLAGS, CPPFLAGS, LDFLAGS) 
+
+===== MPI Memory Usage Summary  =====
+Min memory used by single processor: 0.0926433 GB
+Max memory used by single processor: 0.108929 GB
+Total memory used: 49.1679 GB
+===========================================
+Loading config file: config.yml
+Date and time: 2026-02-12 11:27:36
+
+Command line arguments: 
+/gpfs/home/usi/usi298301/git/TRIP/bin/./solar_3D 
+PetscInt size: 8 bytes; 64 bits.
+
+Reading frequencies in [s-1] from ../input/PORTA/frequency/96F/frequency.dat
+Using PORTA PMD input file ONLY:  "../input/PORTA/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd"
+N_theta = 8, N_chi = 16, from PORTA input.
+
+Creating PETSc vector...
+WARNING: hardcoding quantities for PORTA input read!
+Reading input time:		0.345363 (seconds)
+
+Precomputing quantities...done
+Fields data type: DOUBLE
+
+mpi_size_x = 2
+mpi_size_y = 4
+mpi_size_z = 64
+
+
+=========== 2-levels atom parameters ===========
+
+Mass = 40.078
+El = 0
+Eu = 23652.3
+2Jl = 0
+2Ju = 2
+gl = 0
+gu = 1
+Aul = 2.18e+08
+
+=========== Grids parameters ===========
+
+N_x = 5
+N_y = 5
+N_z = 133
+N_s = 3325
+N_theta = 8
+N_chi = 16
+N_dirs = 128
+N_nu = 96
+L = 476.191
+
+total size = 163430400
+block size = 49152
+
+theta grid = [ 2.76676 2.30499 1.90711 1.64028 1.50131 1.23448 0.8366 0.374835 ]
+mu grid    = [ -0.930568 -0.669991 -0.330009 -0.0694318 0.0694318 0.330009 0.669991 0.930568 ]
+chi grid   = [ 0.19635 0.589049 0.981748 1.37445 1.76715 2.15984 2.55254 2.94524 3.33794 3.73064 4.12334 4.51604 4.90874 5.30144 5.69414 6.08684 ] 
+Set up time:		0.997771 (seconds)
+Formal solver: BESSER
+Formal solver bebug mode enabled.
+
+Setting up emission module...
+Using PRD emission, components:
+epsilon_R_II_CONTRIB_FAST
+epsilon_R_III_GL
+epsilon_csc
+
+[Memory from set_up_emission_module() = 0.000820702 GB]
+
+Total bytes:          0.000801466 GB
+Layers vector bytes:  2.72915e-05 GB
+Radiative beams map:  0 GB
+Convergence matrix:   0 GB
+SAM:                  4.17531e-05 GB
+SFM:                  0.000732422 GB
+
+
+Solar atmosphere model memory usage:
+Atmosphere:              1.60933e-06 GB
+Magnetic and Vel. field: 8.04663e-07 GB
+Freq:                    7.15256e-07 GB
+Kc:                      1.28746e-05 GB (continuum)
+epsilon_Ic:              1.28746e-05 GB (continuum)
+sigma_c:                 1.28746e-05 GB (continuum)
+Atmosphere dim:          18 x 12
+Magnetic and Vel. dim:   18 x 6
+Kc dim:                  18 x 96  (continuum)
+epsilon_Ic dim:          18 x 96  (continuum)
+sigma_c dim:             18 x 96  (continuum)
+Frequencies size:        96
+
+--------------------- done -------------------
+
+++++++ Assembling right hand side...+++++++++
+Start global formal solution...
+Comm. time (S):		0.129434 seconds
+Comm. time (I):		4.49046 seconds
+ODE step time:		0.0702301 seconds
+Total time:		4.68769 seconds
+
+Copying field to Vec...done
++++++++++++++++++++++++++++++++++++++++++++++
+Using multiple steps for long rays.
+Only long rays are used.
+
+========= Serial formal solver parameters =========
+n_local_rays = 96 (block_size/mpi_size)
+tile_size    = 96 (n_local_rays/n_tiles)
+n_tiles      = 1
+===================================================
+
+KSP type = fgmres
+PC type  = gmres
+
+Output path: "/gpfs/projects/ehpc238/output/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd.PRD"
+YAML Configuration Summary:
+Input Directory:                            ../input/PORTA/
+Input File:                                 cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd
+Frequency File:                             frequency/96F/frequency.dat
+Output Directory:                           /gpfs/projects/ehpc238/output
+Output Enabled:                             Yes
+Output Overwrite Prevention:                No
+Emissivity Model:                           PRD
+Use Magnetic Field:                         Yes
+Use Bulk Velocity:                          Yes
+Enable Continuum:                           Yes
+Use 1.5D Approximation:                     No
+Formal Solver:                              BESSER
+Angular Grid - N_theta:                     8
+Angular Grid - N_chi:                       16
+Horizontal Grid - N_x:                      10
+Horizontal Grid - N_y:                      10
+Horizontal Grid - L:                        400.000000
+Input CUL File:                             
+Input QEL File:                             
+Input LLP File:                             
+Input BACK File:                            
+Use Preconditioner:                         Yes
+Set Uniform Magnetic Field:                 No
+
+Solver Configuration:
+KSP Solver Type:                            KSPFGMRES
+KSP Relative Tolerance:                     0.000000
+KSP Maximum Iterations:                     1000
+GMRES Restart:                              30
+
+Preconditioner Configuration:
+PC Solver Type:                             KSPGMRES
+PC Relative Tolerance:                      0.000001
+PC Maximum Iterations:                      1000
+
+Output directory: "/gpfs/projects/ehpc238/output/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd.PRD"
+Setup time: 10.91 seconds.
+
+Start linear solve...
+  0 KSP Residual norm 2.731864583199e-01 
+Update preconditioner emission:		0.328357 seconds
+
+Start global formal solution...
+Comm. time (S):		0.297345 seconds
+Comm. time (I):		0.0342027 seconds
+ODE step time:		0.0754355 seconds
+Total time:		0.397931 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332624 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286311 seconds
+Comm. time (I):		0.0387199 seconds
+ODE step time:		0.0798934 seconds
+Total time:		0.392169 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.32873 seconds
+
+Start global formal solution...
+Comm. time (S):		0.298816 seconds
+Comm. time (I):		0.0309132 seconds
+ODE step time:		0.0714831 seconds
+Total time:		0.39618 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333076 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290731 seconds
+Comm. time (I):		0.0368197 seconds
+ODE step time:		0.0769474 seconds
+Total time:		0.393594 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335665 seconds
+
+Start global formal solution...
+Comm. time (S):		0.303623 seconds
+Comm. time (I):		0.0354401 seconds
+ODE step time:		0.0742968 seconds
+Total time:		0.4069 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335346 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291291 seconds
+Comm. time (I):		0.0360447 seconds
+ODE step time:		0.0747026 seconds
+Total time:		0.392356 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334727 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289469 seconds
+Comm. time (I):		0.0318124 seconds
+ODE step time:		0.0726575 seconds
+Total time:		0.38762 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.342153 seconds
+
+Start global formal solution...
+Comm. time (S):		0.309402 seconds
+Comm. time (I):		0.0321399 seconds
+ODE step time:		0.0726771 seconds
+Total time:		0.409185 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333402 seconds
+
+Start global formal solution...
+Comm. time (S):		0.287437 seconds
+Comm. time (I):		0.0388243 seconds
+ODE step time:		0.0768121 seconds
+Total time:		0.391849 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334999 seconds
+
+Start global formal solution...
+Comm. time (S):		0.295955 seconds
+Comm. time (I):		0.0323362 seconds
+ODE step time:		0.0753758 seconds
+Total time:		0.395733 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335386 seconds
+
+Start global formal solution...
+Comm. time (S):		0.295893 seconds
+Comm. time (I):		0.0393416 seconds
+ODE step time:		0.076299 seconds
+Total time:		0.401359 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333686 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286654 seconds
+Comm. time (I):		0.0374083 seconds
+ODE step time:		0.0747017 seconds
+Total time:		0.3906 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333509 seconds
+
+Start global formal solution...
+Comm. time (S):		0.311429 seconds
+Comm. time (I):		0.0362275 seconds
+ODE step time:		0.0765162 seconds
+Total time:		0.414394 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33328 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285856 seconds
+Comm. time (I):		0.0330839 seconds
+ODE step time:		0.0732051 seconds
+Total time:		0.385191 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335503 seconds
+
+Start global formal solution...
+Comm. time (S):		0.303925 seconds
+Comm. time (I):		0.0310482 seconds
+ODE step time:		0.0738 seconds
+Total time:		0.402437 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335795 seconds
+
+Start global formal solution...
+Comm. time (S):		0.293093 seconds
+Comm. time (I):		0.0336341 seconds
+ODE step time:		0.0737427 seconds
+Total time:		0.393051 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335943 seconds
+
+Start global formal solution...
+Comm. time (S):		0.30039 seconds
+Comm. time (I):		0.0307292 seconds
+ODE step time:		0.0723616 seconds
+Total time:		0.397994 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334815 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292232 seconds
+Comm. time (I):		0.0317714 seconds
+ODE step time:		0.0725631 seconds
+Total time:		0.392025 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333434 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292359 seconds
+Comm. time (I):		0.0303449 seconds
+ODE step time:		0.0719437 seconds
+Total time:		0.390613 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336315 seconds
+
+Start global formal solution...
+Comm. time (S):		0.296435 seconds
+Comm. time (I):		0.0310554 seconds
+ODE step time:		0.0740429 seconds
+Total time:		0.395695 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332775 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289929 seconds
+Comm. time (I):		0.0342336 seconds
+ODE step time:		0.0718708 seconds
+Total time:		0.390813 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.328925 seconds
+
+Start global formal solution...
+Comm. time (S):		0.283781 seconds
+Comm. time (I):		0.0396147 seconds
+ODE step time:		0.0775776 seconds
+Total time:		0.390327 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.328477 seconds
+
+Start global formal solution...
+Comm. time (S):		0.3133 seconds
+Comm. time (I):		0.045533 seconds
+ODE step time:		0.0802865 seconds
+Total time:		0.427194 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335734 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291167 seconds
+Comm. time (I):		0.0558252 seconds
+ODE step time:		0.0971609 seconds
+Total time:		0.413851 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336776 seconds
+
+Start global formal solution...
+Comm. time (S):		0.29438 seconds
+Comm. time (I):		0.0364252 seconds
+ODE step time:		0.0730022 seconds
+Total time:		0.397233 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333689 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285582 seconds
+Comm. time (I):		0.0362957 seconds
+ODE step time:		0.07674 seconds
+Total time:		0.388369 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338604 seconds
+
+Start global formal solution...
+Comm. time (S):		0.297444 seconds
+Comm. time (I):		0.0332669 seconds
+ODE step time:		0.0754208 seconds
+Total time:		0.398136 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333 seconds
+
+Start global formal solution...
+Comm. time (S):		0.29015 seconds
+Comm. time (I):		0.0384027 seconds
+ODE step time:		0.0731755 seconds
+Total time:		0.395448 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334992 seconds
+
+Start global formal solution...
+Comm. time (S):		0.287285 seconds
+Comm. time (I):		0.0361769 seconds
+ODE step time:		0.0753417 seconds
+Total time:		0.390162 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337588 seconds
+
+Start global formal solution...
+Comm. time (S):		0.305868 seconds
+Comm. time (I):		0.032788 seconds
+ODE step time:		0.0727242 seconds
+Total time:		0.40672 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331472 seconds
+
+Start global formal solution...
+Comm. time (S):		0.330532 seconds
+Comm. time (I):		0.0339374 seconds
+ODE step time:		0.0727472 seconds
+Total time:		0.431584 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331075 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284099 seconds
+Comm. time (I):		0.0343351 seconds
+ODE step time:		0.0739308 seconds
+Total time:		0.384878 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335163 seconds
+
+Start global formal solution...
+Comm. time (S):		0.303432 seconds
+Comm. time (I):		0.0342823 seconds
+ODE step time:		0.0761532 seconds
+Total time:		0.403286 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334663 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290206 seconds
+Comm. time (I):		0.0485433 seconds
+ODE step time:		0.0825391 seconds
+Total time:		0.405693 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335359 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289971 seconds
+Comm. time (I):		0.0355051 seconds
+ODE step time:		0.0730314 seconds
+Total time:		0.390736 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.341525 seconds
+
+Start global formal solution...
+Comm. time (S):		0.298725 seconds
+Comm. time (I):		0.0400845 seconds
+ODE step time:		0.0772014 seconds
+Total time:		0.405346 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334083 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286126 seconds
+Comm. time (I):		0.0365443 seconds
+ODE step time:		0.0755844 seconds
+Total time:		0.388495 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338481 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306323 seconds
+Comm. time (I):		0.0317159 seconds
+ODE step time:		0.0729705 seconds
+Total time:		0.406781 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334064 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290184 seconds
+Comm. time (I):		0.0360693 seconds
+ODE step time:		0.0748352 seconds
+Total time:		0.392247 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335637 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292499 seconds
+Comm. time (I):		0.0326961 seconds
+ODE step time:		0.0726578 seconds
+Total time:		0.391808 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333135 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289243 seconds
+Comm. time (I):		0.0330268 seconds
+ODE step time:		0.0742876 seconds
+Total time:		0.388358 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335493 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291725 seconds
+Comm. time (I):		0.037165 seconds
+ODE step time:		0.076721 seconds
+Total time:		0.397158 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333206 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289732 seconds
+Comm. time (I):		0.0402974 seconds
+ODE step time:		0.0801187 seconds
+Total time:		0.397614 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335375 seconds
+
+Start global formal solution...
+Comm. time (S):		0.293407 seconds
+Comm. time (I):		0.0416245 seconds
+ODE step time:		0.0773991 seconds
+Total time:		0.401922 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334263 seconds
+
+Start global formal solution...
+Comm. time (S):		0.287414 seconds
+Comm. time (I):		0.0315958 seconds
+ODE step time:		0.0725629 seconds
+Total time:		0.385497 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338311 seconds
+
+Start global formal solution...
+Comm. time (S):		0.298595 seconds
+Comm. time (I):		0.0336343 seconds
+ODE step time:		0.0726456 seconds
+Total time:		0.399146 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333404 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285305 seconds
+Comm. time (I):		0.033078 seconds
+ODE step time:		0.0724734 seconds
+Total time:		0.384306 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.340884 seconds
+
+Start global formal solution...
+Comm. time (S):		0.299229 seconds
+Comm. time (I):		0.033762 seconds
+ODE step time:		0.0728255 seconds
+Total time:		0.399985 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333735 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285405 seconds
+Comm. time (I):		0.0362013 seconds
+ODE step time:		0.0760302 seconds
+Total time:		0.38812 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336441 seconds
+
+Start global formal solution...
+Comm. time (S):		0.299552 seconds
+Comm. time (I):		0.0357367 seconds
+ODE step time:		0.0767022 seconds
+Total time:		0.40154 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332947 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288353 seconds
+Comm. time (I):		0.0367886 seconds
+ODE step time:		0.0741798 seconds
+Total time:		0.390986 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335375 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288148 seconds
+Comm. time (I):		0.0386729 seconds
+ODE step time:		0.0747775 seconds
+Total time:		0.392493 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334121 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289219 seconds
+Comm. time (I):		0.0360639 seconds
+ODE step time:		0.0769591 seconds
+Total time:		0.392781 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336834 seconds
+
+Start global formal solution...
+Comm. time (S):		0.302826 seconds
+Comm. time (I):		0.0425549 seconds
+ODE step time:		0.0852467 seconds
+Total time:		0.412436 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333146 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290339 seconds
+Comm. time (I):		0.033972 seconds
+ODE step time:		0.0743327 seconds
+Total time:		0.390881 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33278 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288815 seconds
+Comm. time (I):		0.0353984 seconds
+ODE step time:		0.0761972 seconds
+Total time:		0.391484 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334291 seconds
+
+Start global formal solution...
+Comm. time (S):		0.297084 seconds
+Comm. time (I):		0.0316771 seconds
+ODE step time:		0.0731289 seconds
+Total time:		0.39519 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334432 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288946 seconds
+Comm. time (I):		0.0380233 seconds
+ODE step time:		0.0743308 seconds
+Total time:		0.392828 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333993 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286526 seconds
+Comm. time (I):		0.0353597 seconds
+ODE step time:		0.0744412 seconds
+Total time:		0.388635 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338165 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291515 seconds
+Comm. time (I):		0.0350122 seconds
+ODE step time:		0.0743944 seconds
+Total time:		0.393273 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337518 seconds
+
+Start global formal solution...
+Comm. time (S):		0.304573 seconds
+Comm. time (I):		0.0403397 seconds
+ODE step time:		0.076635 seconds
+Total time:		0.410785 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333417 seconds
+
+Start global formal solution...
+Comm. time (S):		0.330991 seconds
+Comm. time (I):		0.0364466 seconds
+ODE step time:		0.0728834 seconds
+Total time:		0.434281 seconds
+
+Copying field to Vec...done
+Linear solve did not converge due to DIVERGED_BREAKDOWN iterations 60
+update_emission:		235.554 seconds
+
+Start global formal solution...
+Comm. time (S):		181.223 seconds
+Comm. time (I):		0.0419221 seconds
+ODE step time:		0.0835324 seconds
+Total time:		181.332 seconds
+
+Copying field to Vec...done
+  1 KSP Residual norm 1.299999959749e-03 
+Update preconditioner emission:		0.334367 seconds
+
+Start global formal solution...
+Comm. time (S):		0.296336 seconds
+Comm. time (I):		0.0386719 seconds
+ODE step time:		0.0746508 seconds
+Total time:		0.401623 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331041 seconds
+
+Start global formal solution...
+Comm. time (S):		0.287749 seconds
+Comm. time (I):		0.0327562 seconds
+ODE step time:		0.0721434 seconds
+Total time:		0.387194 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336464 seconds
+
+Start global formal solution...
+Comm. time (S):		0.298158 seconds
+Comm. time (I):		0.0313675 seconds
+ODE step time:		0.0747444 seconds
+Total time:		0.398668 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337724 seconds
+
+Start global formal solution...
+Comm. time (S):		0.296189 seconds
+Comm. time (I):		0.0422589 seconds
+ODE step time:		0.0776515 seconds
+Total time:		0.405064 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331119 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284308 seconds
+Comm. time (I):		0.0321344 seconds
+ODE step time:		0.0724623 seconds
+Total time:		0.381956 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.342332 seconds
+
+Start global formal solution...
+Comm. time (S):		0.30588 seconds
+Comm. time (I):		0.0315165 seconds
+ODE step time:		0.0732565 seconds
+Total time:		0.404614 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332648 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284792 seconds
+Comm. time (I):		0.0354856 seconds
+ODE step time:		0.0755563 seconds
+Total time:		0.386855 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337328 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290561 seconds
+Comm. time (I):		0.0348016 seconds
+ODE step time:		0.0737606 seconds
+Total time:		0.391235 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.342999 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306414 seconds
+Comm. time (I):		0.0449479 seconds
+ODE step time:		0.0843105 seconds
+Total time:		0.417863 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333956 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288646 seconds
+Comm. time (I):		0.0431101 seconds
+ODE step time:		0.0803876 seconds
+Total time:		0.396406 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333311 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289575 seconds
+Comm. time (I):		0.0358879 seconds
+ODE step time:		0.073231 seconds
+Total time:		0.391814 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334431 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288267 seconds
+Comm. time (I):		0.0345506 seconds
+ODE step time:		0.0735464 seconds
+Total time:		0.387904 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337526 seconds
+
+Start global formal solution...
+Comm. time (S):		0.298444 seconds
+Comm. time (I):		0.0339462 seconds
+ODE step time:		0.0755578 seconds
+Total time:		0.398676 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336371 seconds
+
+Start global formal solution...
+Comm. time (S):		0.293936 seconds
+Comm. time (I):		0.0318824 seconds
+ODE step time:		0.0745763 seconds
+Total time:		0.392683 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.339175 seconds
+
+Start global formal solution...
+Comm. time (S):		0.304742 seconds
+Comm. time (I):		0.0317749 seconds
+ODE step time:		0.0730145 seconds
+Total time:		0.403795 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333953 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289533 seconds
+Comm. time (I):		0.0392924 seconds
+ODE step time:		0.0761767 seconds
+Total time:		0.395497 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333532 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290182 seconds
+Comm. time (I):		0.0380734 seconds
+ODE step time:		0.07347 seconds
+Total time:		0.393634 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334574 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286726 seconds
+Comm. time (I):		0.0367864 seconds
+ODE step time:		0.0756932 seconds
+Total time:		0.38905 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338169 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306019 seconds
+Comm. time (I):		0.0329781 seconds
+ODE step time:		0.0747606 seconds
+Total time:		0.405121 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332324 seconds
+
+Start global formal solution...
+Comm. time (S):		0.28431 seconds
+Comm. time (I):		0.0358972 seconds
+ODE step time:		0.0750005 seconds
+Total time:		0.386209 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332949 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288427 seconds
+Comm. time (I):		0.0356302 seconds
+ODE step time:		0.0746558 seconds
+Total time:		0.391525 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.340359 seconds
+
+Start global formal solution...
+Comm. time (S):		0.307562 seconds
+Comm. time (I):		0.0332757 seconds
+ODE step time:		0.0748154 seconds
+Total time:		0.406647 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33374 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288459 seconds
+Comm. time (I):		0.0626362 seconds
+ODE step time:		0.0982074 seconds
+Total time:		0.417388 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334589 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290502 seconds
+Comm. time (I):		0.0383788 seconds
+ODE step time:		0.0730457 seconds
+Total time:		0.396593 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331024 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285024 seconds
+Comm. time (I):		0.0345245 seconds
+ODE step time:		0.0738764 seconds
+Total time:		0.385779 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.340601 seconds
+
+Start global formal solution...
+Comm. time (S):		0.301209 seconds
+Comm. time (I):		0.0346705 seconds
+ODE step time:		0.0729813 seconds
+Total time:		0.40273 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331259 seconds
+
+Start global formal solution...
+Comm. time (S):		0.282392 seconds
+Comm. time (I):		0.0321043 seconds
+ODE step time:		0.0720887 seconds
+Total time:		0.380726 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.340609 seconds
+
+Start global formal solution...
+Comm. time (S):		0.30765 seconds
+Comm. time (I):		0.0323851 seconds
+ODE step time:		0.0738902 seconds
+Total time:		0.406758 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333384 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288692 seconds
+Comm. time (I):		0.0344158 seconds
+ODE step time:		0.0744851 seconds
+Total time:		0.390277 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338581 seconds
+
+Start global formal solution...
+Comm. time (S):		0.305643 seconds
+Comm. time (I):		0.0350905 seconds
+ODE step time:		0.0743421 seconds
+Total time:		0.406013 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.32362 seconds
+
+Start global formal solution...
+Comm. time (S):		0.320345 seconds
+Comm. time (I):		0.046916 seconds
+ODE step time:		0.0827688 seconds
+Total time:		0.433957 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337246 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289707 seconds
+Comm. time (I):		0.0368447 seconds
+ODE step time:		0.0761816 seconds
+Total time:		0.392283 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334261 seconds
+
+Start global formal solution...
+Comm. time (S):		0.294721 seconds
+Comm. time (I):		0.0350689 seconds
+ODE step time:		0.0725492 seconds
+Total time:		0.396427 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333022 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286857 seconds
+Comm. time (I):		0.0442344 seconds
+ODE step time:		0.0773539 seconds
+Total time:		0.39591 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335361 seconds
+
+Start global formal solution...
+Comm. time (S):		0.296294 seconds
+Comm. time (I):		0.0301318 seconds
+ODE step time:		0.0719212 seconds
+Total time:		0.393665 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333052 seconds
+
+Start global formal solution...
+Comm. time (S):		0.298256 seconds
+Comm. time (I):		0.0357751 seconds
+ODE step time:		0.0759754 seconds
+Total time:		0.400242 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335673 seconds
+
+Start global formal solution...
+Comm. time (S):		0.295333 seconds
+Comm. time (I):		0.0482519 seconds
+ODE step time:		0.0822505 seconds
+Total time:		0.409987 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334586 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286429 seconds
+Comm. time (I):		0.0394261 seconds
+ODE step time:		0.0801134 seconds
+Total time:		0.391988 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.3429 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306389 seconds
+Comm. time (I):		0.0345093 seconds
+ODE step time:		0.0753682 seconds
+Total time:		0.407988 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333087 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285665 seconds
+Comm. time (I):		0.037484 seconds
+ODE step time:		0.0768285 seconds
+Total time:		0.38851 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.340121 seconds
+
+Start global formal solution...
+Comm. time (S):		0.308338 seconds
+Comm. time (I):		0.0318134 seconds
+ODE step time:		0.0719911 seconds
+Total time:		0.40649 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33467 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290314 seconds
+Comm. time (I):		0.0327877 seconds
+ODE step time:		0.0729479 seconds
+Total time:		0.390841 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33706 seconds
+
+Start global formal solution...
+Comm. time (S):		0.298644 seconds
+Comm. time (I):		0.0363806 seconds
+ODE step time:		0.0723667 seconds
+Total time:		0.402242 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334944 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288172 seconds
+Comm. time (I):		0.0328374 seconds
+ODE step time:		0.0723314 seconds
+Total time:		0.385465 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338392 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292657 seconds
+Comm. time (I):		0.0346748 seconds
+ODE step time:		0.0743774 seconds
+Total time:		0.393845 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336444 seconds
+
+Start global formal solution...
+Comm. time (S):		0.295257 seconds
+Comm. time (I):		0.036005 seconds
+ODE step time:		0.0725709 seconds
+Total time:		0.39792 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334972 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286963 seconds
+Comm. time (I):		0.0433239 seconds
+ODE step time:		0.0830471 seconds
+Total time:		0.396284 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336979 seconds
+
+Start global formal solution...
+Comm. time (S):		0.293861 seconds
+Comm. time (I):		0.0353622 seconds
+ODE step time:		0.0760632 seconds
+Total time:		0.396316 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336013 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291957 seconds
+Comm. time (I):		0.0356901 seconds
+ODE step time:		0.0715916 seconds
+Total time:		0.393228 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332721 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284627 seconds
+Comm. time (I):		0.0324553 seconds
+ODE step time:		0.0731736 seconds
+Total time:		0.383921 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.344185 seconds
+
+Start global formal solution...
+Comm. time (S):		0.307557 seconds
+Comm. time (I):		0.0350502 seconds
+ODE step time:		0.0770713 seconds
+Total time:		0.409727 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338637 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291001 seconds
+Comm. time (I):		0.0342778 seconds
+ODE step time:		0.0740981 seconds
+Total time:		0.391 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338351 seconds
+
+Start global formal solution...
+Comm. time (S):		0.30545 seconds
+Comm. time (I):		0.0306304 seconds
+ODE step time:		0.072836 seconds
+Total time:		0.403265 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333778 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289069 seconds
+Comm. time (I):		0.0343808 seconds
+ODE step time:		0.0741247 seconds
+Total time:		0.390277 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336279 seconds
+
+Start global formal solution...
+Comm. time (S):		0.298617 seconds
+Comm. time (I):		0.0313979 seconds
+ODE step time:		0.0714091 seconds
+Total time:		0.397423 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332814 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291412 seconds
+Comm. time (I):		0.0344051 seconds
+ODE step time:		0.0722911 seconds
+Total time:		0.391996 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332849 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284834 seconds
+Comm. time (I):		0.03657 seconds
+ODE step time:		0.0753384 seconds
+Total time:		0.387711 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337033 seconds
+
+Start global formal solution...
+Comm. time (S):		0.296565 seconds
+Comm. time (I):		0.0360686 seconds
+ODE step time:		0.0739342 seconds
+Total time:		0.399505 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336954 seconds
+
+Start global formal solution...
+Comm. time (S):		0.28856 seconds
+Comm. time (I):		0.0362427 seconds
+ODE step time:		0.0750181 seconds
+Total time:		0.391162 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.3416 seconds
+
+Start global formal solution...
+Comm. time (S):		0.308021 seconds
+Comm. time (I):		0.0325022 seconds
+ODE step time:		0.0731694 seconds
+Total time:		0.407145 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332919 seconds
+
+Start global formal solution...
+Comm. time (S):		0.28805 seconds
+Comm. time (I):		0.0401143 seconds
+ODE step time:		0.0771497 seconds
+Total time:		0.394858 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.325212 seconds
+
+Start global formal solution...
+Comm. time (S):		0.321921 seconds
+Comm. time (I):		0.0344012 seconds
+ODE step time:		0.0752662 seconds
+Total time:		0.423573 seconds
+
+Copying field to Vec...done
+Linear solve did not converge due to DIVERGED_BREAKDOWN iterations 60
+update_emission:		235.221 seconds
+
+Start global formal solution...
+Comm. time (S):		180.91 seconds
+Comm. time (I):		0.0423827 seconds
+ODE step time:		0.0841927 seconds
+Total time:		181.019 seconds
+
+Copying field to Vec...done
+  2 KSP Residual norm 2.476305537346e-04 
+Update preconditioner emission:		0.32947 seconds
+
+Start global formal solution...
+Comm. time (S):		0.324671 seconds
+Comm. time (I):		0.0310923 seconds
+ODE step time:		0.0719304 seconds
+Total time:		0.422903 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334225 seconds
+
+Start global formal solution...
+Comm. time (S):		0.300307 seconds
+Comm. time (I):		0.0309584 seconds
+ODE step time:		0.0728084 seconds
+Total time:		0.398295 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333198 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289429 seconds
+Comm. time (I):		0.0306452 seconds
+ODE step time:		0.0724532 seconds
+Total time:		0.387422 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338959 seconds
+
+Start global formal solution...
+Comm. time (S):		0.29642 seconds
+Comm. time (I):		0.0301404 seconds
+ODE step time:		0.0718255 seconds
+Total time:		0.39359 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336574 seconds
+
+Start global formal solution...
+Comm. time (S):		0.296154 seconds
+Comm. time (I):		0.0374096 seconds
+ODE step time:		0.072534 seconds
+Total time:		0.399488 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332077 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284167 seconds
+Comm. time (I):		0.0317796 seconds
+ODE step time:		0.071968 seconds
+Total time:		0.381775 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.344906 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306986 seconds
+Comm. time (I):		0.031428 seconds
+ODE step time:		0.0721962 seconds
+Total time:		0.405332 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333262 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285359 seconds
+Comm. time (I):		0.0350301 seconds
+ODE step time:		0.0747622 seconds
+Total time:		0.386253 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338393 seconds
+
+Start global formal solution...
+Comm. time (S):		0.29304 seconds
+Comm. time (I):		0.0339642 seconds
+ODE step time:		0.0733044 seconds
+Total time:		0.393089 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334105 seconds
+
+Start global formal solution...
+Comm. time (S):		0.300588 seconds
+Comm. time (I):		0.0331712 seconds
+ODE step time:		0.0733912 seconds
+Total time:		0.398976 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335922 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290777 seconds
+Comm. time (I):		0.0352356 seconds
+ODE step time:		0.0744814 seconds
+Total time:		0.391832 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337953 seconds
+
+Start global formal solution...
+Comm. time (S):		0.304369 seconds
+Comm. time (I):		0.0313105 seconds
+ODE step time:		0.0717076 seconds
+Total time:		0.40263 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335269 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291661 seconds
+Comm. time (I):		0.0331423 seconds
+ODE step time:		0.07284 seconds
+Total time:		0.391286 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.339251 seconds
+
+Start global formal solution...
+Comm. time (S):		0.301564 seconds
+Comm. time (I):		0.0314956 seconds
+ODE step time:		0.0742654 seconds
+Total time:		0.400675 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33507 seconds
+
+Start global formal solution...
+Comm. time (S):		0.293398 seconds
+Comm. time (I):		0.0295821 seconds
+ODE step time:		0.0716844 seconds
+Total time:		0.390035 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33689 seconds
+
+Start global formal solution...
+Comm. time (S):		0.29336 seconds
+Comm. time (I):		0.0381839 seconds
+ODE step time:		0.0743042 seconds
+Total time:		0.397242 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331391 seconds
+
+Start global formal solution...
+Comm. time (S):		0.28342 seconds
+Comm. time (I):		0.0317193 seconds
+ODE step time:		0.0720525 seconds
+Total time:		0.381093 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.343714 seconds
+
+Start global formal solution...
+Comm. time (S):		0.311113 seconds
+Comm. time (I):		0.0308054 seconds
+ODE step time:		0.073411 seconds
+Total time:		0.409052 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334765 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286497 seconds
+Comm. time (I):		0.0447729 seconds
+ODE step time:		0.0829113 seconds
+Total time:		0.396636 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.339736 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292056 seconds
+Comm. time (I):		0.048099 seconds
+ODE step time:		0.0869892 seconds
+Total time:		0.405785 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336099 seconds
+
+Start global formal solution...
+Comm. time (S):		0.298106 seconds
+Comm. time (I):		0.0338725 seconds
+ODE step time:		0.0742652 seconds
+Total time:		0.398703 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333967 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285515 seconds
+Comm. time (I):		0.0309997 seconds
+ODE step time:		0.0718183 seconds
+Total time:		0.382578 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.344433 seconds
+
+Start global formal solution...
+Comm. time (S):		0.304492 seconds
+Comm. time (I):		0.0319227 seconds
+ODE step time:		0.0728585 seconds
+Total time:		0.403943 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336045 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291057 seconds
+Comm. time (I):		0.0372485 seconds
+ODE step time:		0.0786357 seconds
+Total time:		0.394558 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336607 seconds
+
+Start global formal solution...
+Comm. time (S):		0.295807 seconds
+Comm. time (I):		0.030849 seconds
+ODE step time:		0.0741749 seconds
+Total time:		0.393987 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335074 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289882 seconds
+Comm. time (I):		0.0362494 seconds
+ODE step time:		0.072879 seconds
+Total time:		0.392157 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334227 seconds
+
+Start global formal solution...
+Comm. time (S):		0.28559 seconds
+Comm. time (I):		0.0352959 seconds
+ODE step time:		0.0751347 seconds
+Total time:		0.387027 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338818 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292134 seconds
+Comm. time (I):		0.0314845 seconds
+ODE step time:		0.0720153 seconds
+Total time:		0.38997 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337476 seconds
+
+Start global formal solution...
+Comm. time (S):		0.297223 seconds
+Comm. time (I):		0.0350601 seconds
+ODE step time:		0.0735079 seconds
+Total time:		0.399379 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334441 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285626 seconds
+Comm. time (I):		0.033737 seconds
+ODE step time:		0.0739705 seconds
+Total time:		0.386313 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.325275 seconds
+
+Start global formal solution...
+Comm. time (S):		0.31754 seconds
+Comm. time (I):		0.034631 seconds
+ODE step time:		0.0748951 seconds
+Total time:		0.418836 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.343558 seconds
+
+Start global formal solution...
+Comm. time (S):		0.296565 seconds
+Comm. time (I):		0.0321735 seconds
+ODE step time:		0.0737919 seconds
+Total time:		0.395642 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33553 seconds
+
+Start global formal solution...
+Comm. time (S):		0.303396 seconds
+Comm. time (I):		0.032578 seconds
+ODE step time:		0.0755925 seconds
+Total time:		0.402478 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.330369 seconds
+
+Start global formal solution...
+Comm. time (S):		0.287501 seconds
+Comm. time (I):		0.0477059 seconds
+ODE step time:		0.0830921 seconds
+Total time:		0.401618 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335428 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288437 seconds
+Comm. time (I):		0.0389846 seconds
+ODE step time:		0.0746215 seconds
+Total time:		0.392918 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334515 seconds
+
+Start global formal solution...
+Comm. time (S):		0.296977 seconds
+Comm. time (I):		0.0316854 seconds
+ODE step time:		0.0724832 seconds
+Total time:		0.396364 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331829 seconds
+
+Start global formal solution...
+Comm. time (S):		0.295069 seconds
+Comm. time (I):		0.0304521 seconds
+ODE step time:		0.0727853 seconds
+Total time:		0.393003 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334428 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291011 seconds
+Comm. time (I):		0.0371524 seconds
+ODE step time:		0.0735546 seconds
+Total time:		0.394581 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331817 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284854 seconds
+Comm. time (I):		0.0311277 seconds
+ODE step time:		0.0724787 seconds
+Total time:		0.381896 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337936 seconds
+
+Start global formal solution...
+Comm. time (S):		0.295645 seconds
+Comm. time (I):		0.0353785 seconds
+ODE step time:		0.0720289 seconds
+Total time:		0.398479 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335865 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292835 seconds
+Comm. time (I):		0.0358676 seconds
+ODE step time:		0.0736382 seconds
+Total time:		0.394556 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332764 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285073 seconds
+Comm. time (I):		0.0347556 seconds
+ODE step time:		0.0746282 seconds
+Total time:		0.38658 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336856 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292804 seconds
+Comm. time (I):		0.0334078 seconds
+ODE step time:		0.0738382 seconds
+Total time:		0.393437 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338831 seconds
+
+Start global formal solution...
+Comm. time (S):		0.295251 seconds
+Comm. time (I):		0.0358062 seconds
+ODE step time:		0.0738464 seconds
+Total time:		0.397195 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331921 seconds
+
+Start global formal solution...
+Comm. time (S):		0.283221 seconds
+Comm. time (I):		0.0311104 seconds
+ODE step time:		0.0715721 seconds
+Total time:		0.380032 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.344028 seconds
+
+Start global formal solution...
+Comm. time (S):		0.307217 seconds
+Comm. time (I):		0.0309102 seconds
+ODE step time:		0.0732896 seconds
+Total time:		0.405139 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333758 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289699 seconds
+Comm. time (I):		0.030587 seconds
+ODE step time:		0.0720126 seconds
+Total time:		0.387468 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.341522 seconds
+
+Start global formal solution...
+Comm. time (S):		0.307366 seconds
+Comm. time (I):		0.0314119 seconds
+ODE step time:		0.0728311 seconds
+Total time:		0.405355 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334447 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285822 seconds
+Comm. time (I):		0.0353669 seconds
+ODE step time:		0.0746694 seconds
+Total time:		0.387213 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338787 seconds
+
+Start global formal solution...
+Comm. time (S):		0.304627 seconds
+Comm. time (I):		0.0300925 seconds
+ODE step time:		0.0718608 seconds
+Total time:		0.401677 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336508 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288641 seconds
+Comm. time (I):		0.0367447 seconds
+ODE step time:		0.0764439 seconds
+Total time:		0.391747 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336017 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288883 seconds
+Comm. time (I):		0.0331966 seconds
+ODE step time:		0.0727532 seconds
+Total time:		0.387761 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334323 seconds
+
+Start global formal solution...
+Comm. time (S):		0.287074 seconds
+Comm. time (I):		0.0391831 seconds
+ODE step time:		0.0770319 seconds
+Total time:		0.391417 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33346 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288784 seconds
+Comm. time (I):		0.0320843 seconds
+ODE step time:		0.0737674 seconds
+Total time:		0.388185 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.339468 seconds
+
+Start global formal solution...
+Comm. time (S):		0.304859 seconds
+Comm. time (I):		0.0337949 seconds
+ODE step time:		0.0742243 seconds
+Total time:		0.404706 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334017 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289237 seconds
+Comm. time (I):		0.0351785 seconds
+ODE step time:		0.0726476 seconds
+Total time:		0.390908 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33464 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288956 seconds
+Comm. time (I):		0.0366959 seconds
+ODE step time:		0.0745087 seconds
+Total time:		0.391115 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333585 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284764 seconds
+Comm. time (I):		0.0339991 seconds
+ODE step time:		0.074522 seconds
+Total time:		0.385612 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.340421 seconds
+
+Start global formal solution...
+Comm. time (S):		0.307711 seconds
+Comm. time (I):		0.0311275 seconds
+ODE step time:		0.0727835 seconds
+Total time:		0.405917 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332244 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286679 seconds
+Comm. time (I):		0.0387457 seconds
+ODE step time:		0.0746779 seconds
+Total time:		0.390605 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333784 seconds
+
+Start global formal solution...
+Comm. time (S):		0.28515 seconds
+Comm. time (I):		0.0357232 seconds
+ODE step time:		0.0751905 seconds
+Total time:		0.38761 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.329686 seconds
+
+Start global formal solution...
+Comm. time (S):		0.324906 seconds
+Comm. time (I):		0.0380296 seconds
+ODE step time:		0.0782844 seconds
+Total time:		0.429691 seconds
+
+Copying field to Vec...done
+Linear solve did not converge due to DIVERGED_BREAKDOWN iterations 60
+update_emission:		234.86 seconds
+
+Start global formal solution...
+Comm. time (S):		180.775 seconds
+Comm. time (I):		0.0416667 seconds
+ODE step time:		0.0842165 seconds
+Total time:		180.886 seconds
+
+Copying field to Vec...done
+  3 KSP Residual norm 8.276017968783e-05 
+Update preconditioner emission:		0.334992 seconds
+
+Start global formal solution...
+Comm. time (S):		0.29999 seconds
+Comm. time (I):		0.0342615 seconds
+ODE step time:		0.0755998 seconds
+Total time:		0.401641 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334635 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292298 seconds
+Comm. time (I):		0.0356543 seconds
+ODE step time:		0.0731159 seconds
+Total time:		0.394019 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331148 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284653 seconds
+Comm. time (I):		0.0369492 seconds
+ODE step time:		0.0771964 seconds
+Total time:		0.387888 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336733 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289526 seconds
+Comm. time (I):		0.0332751 seconds
+ODE step time:		0.0724214 seconds
+Total time:		0.389241 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333451 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289512 seconds
+Comm. time (I):		0.0381707 seconds
+ODE step time:		0.0751356 seconds
+Total time:		0.39393 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333949 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289628 seconds
+Comm. time (I):		0.0336063 seconds
+ODE step time:		0.0720389 seconds
+Total time:		0.390346 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334034 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290018 seconds
+Comm. time (I):		0.0339099 seconds
+ODE step time:		0.0718791 seconds
+Total time:		0.390327 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333117 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288764 seconds
+Comm. time (I):		0.0401176 seconds
+ODE step time:		0.0726824 seconds
+Total time:		0.394222 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33539 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292453 seconds
+Comm. time (I):		0.0334108 seconds
+ODE step time:		0.0718129 seconds
+Total time:		0.392804 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334012 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290393 seconds
+Comm. time (I):		0.0354342 seconds
+ODE step time:		0.0736231 seconds
+Total time:		0.391273 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332964 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288521 seconds
+Comm. time (I):		0.0321852 seconds
+ODE step time:		0.0738931 seconds
+Total time:		0.388202 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336859 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292898 seconds
+Comm. time (I):		0.0376578 seconds
+ODE step time:		0.0736715 seconds
+Total time:		0.39647 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33452 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285578 seconds
+Comm. time (I):		0.0357914 seconds
+ODE step time:		0.0757988 seconds
+Total time:		0.38809 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.345468 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306267 seconds
+Comm. time (I):		0.0317124 seconds
+ODE step time:		0.0734389 seconds
+Total time:		0.404965 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331279 seconds
+
+Start global formal solution...
+Comm. time (S):		0.282806 seconds
+Comm. time (I):		0.0341464 seconds
+ODE step time:		0.0736894 seconds
+Total time:		0.382717 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.34102 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306009 seconds
+Comm. time (I):		0.0310058 seconds
+ODE step time:		0.0740298 seconds
+Total time:		0.40485 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333558 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285216 seconds
+Comm. time (I):		0.0350983 seconds
+ODE step time:		0.0753867 seconds
+Total time:		0.38636 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335955 seconds
+
+Start global formal solution...
+Comm. time (S):		0.302168 seconds
+Comm. time (I):		0.0298135 seconds
+ODE step time:		0.0728274 seconds
+Total time:		0.399002 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332271 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292406 seconds
+Comm. time (I):		0.0300937 seconds
+ODE step time:		0.0724335 seconds
+Total time:		0.389578 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334126 seconds
+
+Start global formal solution...
+Comm. time (S):		0.293828 seconds
+Comm. time (I):		0.0313098 seconds
+ODE step time:		0.0747645 seconds
+Total time:		0.392685 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336224 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291164 seconds
+Comm. time (I):		0.0330096 seconds
+ODE step time:		0.0722129 seconds
+Total time:		0.39076 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332858 seconds
+
+Start global formal solution...
+Comm. time (S):		0.283693 seconds
+Comm. time (I):		0.0374167 seconds
+ODE step time:		0.0775327 seconds
+Total time:		0.386303 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.343378 seconds
+
+Start global formal solution...
+Comm. time (S):		0.302888 seconds
+Comm. time (I):		0.032038 seconds
+ODE step time:		0.0744866 seconds
+Total time:		0.402563 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332163 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285583 seconds
+Comm. time (I):		0.0391202 seconds
+ODE step time:		0.0777837 seconds
+Total time:		0.391 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33212 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288664 seconds
+Comm. time (I):		0.0346949 seconds
+ODE step time:		0.0730927 seconds
+Total time:		0.390687 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335045 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289723 seconds
+Comm. time (I):		0.0339862 seconds
+ODE step time:		0.0715445 seconds
+Total time:		0.390494 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334334 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285789 seconds
+Comm. time (I):		0.0347583 seconds
+ODE step time:		0.0748959 seconds
+Total time:		0.386127 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.340266 seconds
+
+Start global formal solution...
+Comm. time (S):		0.307571 seconds
+Comm. time (I):		0.0317954 seconds
+ODE step time:		0.0751547 seconds
+Total time:		0.406592 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333484 seconds
+
+Start global formal solution...
+Comm. time (S):		0.287603 seconds
+Comm. time (I):		0.0618331 seconds
+ODE step time:		0.0979355 seconds
+Total time:		0.414419 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.339456 seconds
+
+Start global formal solution...
+Comm. time (S):		0.301779 seconds
+Comm. time (I):		0.0324206 seconds
+ODE step time:		0.07321 seconds
+Total time:		0.401268 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.32347 seconds
+
+Start global formal solution...
+Comm. time (S):		0.323704 seconds
+Comm. time (I):		0.0435274 seconds
+ODE step time:		0.0855349 seconds
+Total time:		0.433911 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332903 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292875 seconds
+Comm. time (I):		0.0302661 seconds
+ODE step time:		0.0726628 seconds
+Total time:		0.389878 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337358 seconds
+
+Start global formal solution...
+Comm. time (S):		0.294067 seconds
+Comm. time (I):		0.0365858 seconds
+ODE step time:		0.0731043 seconds
+Total time:		0.396614 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331309 seconds
+
+Start global formal solution...
+Comm. time (S):		0.283525 seconds
+Comm. time (I):		0.0336583 seconds
+ODE step time:		0.0727932 seconds
+Total time:		0.38309 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.341974 seconds
+
+Start global formal solution...
+Comm. time (S):		0.302181 seconds
+Comm. time (I):		0.0318113 seconds
+ODE step time:		0.0738511 seconds
+Total time:		0.401043 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331923 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284526 seconds
+Comm. time (I):		0.0357348 seconds
+ODE step time:		0.0752082 seconds
+Total time:		0.386058 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334622 seconds
+
+Start global formal solution...
+Comm. time (S):		0.287014 seconds
+Comm. time (I):		0.0364073 seconds
+ODE step time:		0.0741481 seconds
+Total time:		0.388591 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335153 seconds
+
+Start global formal solution...
+Comm. time (S):		0.301209 seconds
+Comm. time (I):		0.0309939 seconds
+ODE step time:		0.0728883 seconds
+Total time:		0.398925 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333099 seconds
+
+Start global formal solution...
+Comm. time (S):		0.28839 seconds
+Comm. time (I):		0.0306097 seconds
+ODE step time:		0.0719089 seconds
+Total time:		0.385759 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.343791 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306399 seconds
+Comm. time (I):		0.0311248 seconds
+ODE step time:		0.073445 seconds
+Total time:		0.404164 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332512 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284528 seconds
+Comm. time (I):		0.0358471 seconds
+ODE step time:		0.075098 seconds
+Total time:		0.386326 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337802 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291432 seconds
+Comm. time (I):		0.0353911 seconds
+ODE step time:		0.076997 seconds
+Total time:		0.394321 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332886 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292138 seconds
+Comm. time (I):		0.0336202 seconds
+ODE step time:		0.0745302 seconds
+Total time:		0.392513 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338748 seconds
+
+Start global formal solution...
+Comm. time (S):		0.301134 seconds
+Comm. time (I):		0.0334989 seconds
+ODE step time:		0.0747708 seconds
+Total time:		0.401782 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331039 seconds
+
+Start global formal solution...
+Comm. time (S):		0.282586 seconds
+Comm. time (I):		0.0312069 seconds
+ODE step time:		0.0718734 seconds
+Total time:		0.379259 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337713 seconds
+
+Start global formal solution...
+Comm. time (S):		0.297931 seconds
+Comm. time (I):		0.0321594 seconds
+ODE step time:		0.072349 seconds
+Total time:		0.397138 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332679 seconds
+
+Start global formal solution...
+Comm. time (S):		0.299351 seconds
+Comm. time (I):		0.0334052 seconds
+ODE step time:		0.074717 seconds
+Total time:		0.398206 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.3329 seconds
+
+Start global formal solution...
+Comm. time (S):		0.29072 seconds
+Comm. time (I):		0.0329823 seconds
+ODE step time:		0.0752011 seconds
+Total time:		0.389965 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33908 seconds
+
+Start global formal solution...
+Comm. time (S):		0.295947 seconds
+Comm. time (I):		0.0388465 seconds
+ODE step time:		0.0740328 seconds
+Total time:		0.400756 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332489 seconds
+
+Start global formal solution...
+Comm. time (S):		0.28401 seconds
+Comm. time (I):		0.0329182 seconds
+ODE step time:		0.0738264 seconds
+Total time:		0.383991 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338778 seconds
+
+Start global formal solution...
+Comm. time (S):		0.300923 seconds
+Comm. time (I):		0.031352 seconds
+ODE step time:		0.072711 seconds
+Total time:		0.399721 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334799 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290632 seconds
+Comm. time (I):		0.0370488 seconds
+ODE step time:		0.07545 seconds
+Total time:		0.394428 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.330835 seconds
+
+Start global formal solution...
+Comm. time (S):		0.281984 seconds
+Comm. time (I):		0.0334115 seconds
+ODE step time:		0.0737363 seconds
+Total time:		0.382243 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.341712 seconds
+
+Start global formal solution...
+Comm. time (S):		0.307088 seconds
+Comm. time (I):		0.0351578 seconds
+ODE step time:		0.0748768 seconds
+Total time:		0.408642 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331244 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285544 seconds
+Comm. time (I):		0.0316999 seconds
+ODE step time:		0.0733112 seconds
+Total time:		0.384565 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332207 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291422 seconds
+Comm. time (I):		0.0334948 seconds
+ODE step time:		0.0766454 seconds
+Total time:		0.391536 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333095 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288723 seconds
+Comm. time (I):		0.0339953 seconds
+ODE step time:		0.0721426 seconds
+Total time:		0.389993 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335358 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289674 seconds
+Comm. time (I):		0.0359622 seconds
+ODE step time:		0.0746677 seconds
+Total time:		0.392149 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331373 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286153 seconds
+Comm. time (I):		0.0357621 seconds
+ODE step time:		0.0742208 seconds
+Total time:		0.388935 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337335 seconds
+
+Start global formal solution...
+Comm. time (S):		0.296745 seconds
+Comm. time (I):		0.0310053 seconds
+ODE step time:		0.0726316 seconds
+Total time:		0.39547 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334337 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290656 seconds
+Comm. time (I):		0.0406327 seconds
+ODE step time:		0.0745544 seconds
+Total time:		0.396392 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.323945 seconds
+
+Start global formal solution...
+Comm. time (S):		0.325705 seconds
+Comm. time (I):		0.0333008 seconds
+ODE step time:		0.0761946 seconds
+Total time:		0.426569 seconds
+
+Copying field to Vec...done
+Linear solve did not converge due to DIVERGED_BREAKDOWN iterations 60
+update_emission:		234.815 seconds
+
+Start global formal solution...
+Comm. time (S):		181.078 seconds
+Comm. time (I):		0.0412145 seconds
+ODE step time:		0.0844329 seconds
+Total time:		181.188 seconds
+
+Copying field to Vec...done
+  4 KSP Residual norm 6.832014893343e-06 
+Update preconditioner emission:		0.33863 seconds
+
+Start global formal solution...
+Comm. time (S):		0.302654 seconds
+Comm. time (I):		0.0389755 seconds
+ODE step time:		0.0809475 seconds
+Total time:		0.409917 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333882 seconds
+
+Start global formal solution...
+Comm. time (S):		0.300289 seconds
+Comm. time (I):		0.0351039 seconds
+ODE step time:		0.0732491 seconds
+Total time:		0.403085 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331828 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288734 seconds
+Comm. time (I):		0.0329429 seconds
+ODE step time:		0.0745105 seconds
+Total time:		0.38865 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338577 seconds
+
+Start global formal solution...
+Comm. time (S):		0.299694 seconds
+Comm. time (I):		0.0301278 seconds
+ODE step time:		0.0719136 seconds
+Total time:		0.396918 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333805 seconds
+
+Start global formal solution...
+Comm. time (S):		0.298592 seconds
+Comm. time (I):		0.0343537 seconds
+ODE step time:		0.0738697 seconds
+Total time:		0.399766 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335898 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290824 seconds
+Comm. time (I):		0.0358436 seconds
+ODE step time:		0.0751343 seconds
+Total time:		0.393282 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.339195 seconds
+
+Start global formal solution...
+Comm. time (S):		0.294074 seconds
+Comm. time (I):		0.0339017 seconds
+ODE step time:		0.0742009 seconds
+Total time:		0.394187 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.339789 seconds
+
+Start global formal solution...
+Comm. time (S):		0.3036 seconds
+Comm. time (I):		0.0369771 seconds
+ODE step time:		0.0755523 seconds
+Total time:		0.407981 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333202 seconds
+
+Start global formal solution...
+Comm. time (S):		0.287322 seconds
+Comm. time (I):		0.0433653 seconds
+ODE step time:		0.0832509 seconds
+Total time:		0.396559 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.341902 seconds
+
+Start global formal solution...
+Comm. time (S):		0.304723 seconds
+Comm. time (I):		0.0393819 seconds
+ODE step time:		0.0821991 seconds
+Total time:		0.411172 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334426 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286434 seconds
+Comm. time (I):		0.0418475 seconds
+ODE step time:		0.0787608 seconds
+Total time:		0.39382 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.340941 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306841 seconds
+Comm. time (I):		0.0313109 seconds
+ODE step time:		0.0741192 seconds
+Total time:		0.405664 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332508 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284803 seconds
+Comm. time (I):		0.0365974 seconds
+ODE step time:		0.0753715 seconds
+Total time:		0.386461 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335259 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290842 seconds
+Comm. time (I):		0.034213 seconds
+ODE step time:		0.0725191 seconds
+Total time:		0.392063 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333601 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288114 seconds
+Comm. time (I):		0.0380945 seconds
+ODE step time:		0.0741547 seconds
+Total time:		0.391572 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331049 seconds
+
+Start global formal solution...
+Comm. time (S):		0.282465 seconds
+Comm. time (I):		0.0329268 seconds
+ODE step time:		0.0726792 seconds
+Total time:		0.381087 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336466 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288933 seconds
+Comm. time (I):		0.0337384 seconds
+ODE step time:		0.0735658 seconds
+Total time:		0.387968 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.340929 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306266 seconds
+Comm. time (I):		0.0318773 seconds
+ODE step time:		0.0743737 seconds
+Total time:		0.405112 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334064 seconds
+
+Start global formal solution...
+Comm. time (S):		0.28904 seconds
+Comm. time (I):		0.034318 seconds
+ODE step time:		0.0731479 seconds
+Total time:		0.390365 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332672 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289829 seconds
+Comm. time (I):		0.0333085 seconds
+ODE step time:		0.0749158 seconds
+Total time:		0.390307 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333511 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291293 seconds
+Comm. time (I):		0.0340468 seconds
+ODE step time:		0.0741746 seconds
+Total time:		0.392355 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333557 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289476 seconds
+Comm. time (I):		0.0332051 seconds
+ODE step time:		0.0752196 seconds
+Total time:		0.38958 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334169 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290526 seconds
+Comm. time (I):		0.0348188 seconds
+ODE step time:		0.0752225 seconds
+Total time:		0.391305 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333992 seconds
+
+Start global formal solution...
+Comm. time (S):		0.298306 seconds
+Comm. time (I):		0.0334009 seconds
+ODE step time:		0.0775173 seconds
+Total time:		0.398757 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332646 seconds
+
+Start global formal solution...
+Comm. time (S):		0.28849 seconds
+Comm. time (I):		0.0317577 seconds
+ODE step time:		0.0745454 seconds
+Total time:		0.387892 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.341131 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306201 seconds
+Comm. time (I):		0.0300743 seconds
+ODE step time:		0.0716117 seconds
+Total time:		0.403577 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334844 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289821 seconds
+Comm. time (I):		0.0377404 seconds
+ODE step time:		0.074685 seconds
+Total time:		0.393775 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332563 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286797 seconds
+Comm. time (I):		0.0351504 seconds
+ODE step time:		0.0745006 seconds
+Total time:		0.388147 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336345 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290037 seconds
+Comm. time (I):		0.0311425 seconds
+ODE step time:		0.0734925 seconds
+Total time:		0.389406 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334345 seconds
+
+Start global formal solution...
+Comm. time (S):		0.299804 seconds
+Comm. time (I):		0.0332942 seconds
+ODE step time:		0.0750429 seconds
+Total time:		0.400422 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.323061 seconds
+
+Start global formal solution...
+Comm. time (S):		0.324018 seconds
+Comm. time (I):		0.0335751 seconds
+ODE step time:		0.0722566 seconds
+Total time:		0.424808 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333033 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292772 seconds
+Comm. time (I):		0.0304894 seconds
+ODE step time:		0.0724737 seconds
+Total time:		0.390691 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333996 seconds
+
+Start global formal solution...
+Comm. time (S):		0.295698 seconds
+Comm. time (I):		0.0307519 seconds
+ODE step time:		0.0718753 seconds
+Total time:		0.393533 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333637 seconds
+
+Start global formal solution...
+Comm. time (S):		0.299117 seconds
+Comm. time (I):		0.0319415 seconds
+ODE step time:		0.0742553 seconds
+Total time:		0.397626 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.340047 seconds
+
+Start global formal solution...
+Comm. time (S):		0.305875 seconds
+Comm. time (I):		0.0379762 seconds
+ODE step time:		0.0821279 seconds
+Total time:		0.412111 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335852 seconds
+
+Start global formal solution...
+Comm. time (S):		0.2943 seconds
+Comm. time (I):		0.0385796 seconds
+ODE step time:		0.0726263 seconds
+Total time:		0.399174 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331693 seconds
+
+Start global formal solution...
+Comm. time (S):		0.283667 seconds
+Comm. time (I):		0.0345178 seconds
+ODE step time:		0.0754451 seconds
+Total time:		0.384723 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33819 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290523 seconds
+Comm. time (I):		0.0554987 seconds
+ODE step time:		0.0944889 seconds
+Total time:		0.411197 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338299 seconds
+
+Start global formal solution...
+Comm. time (S):		0.29297 seconds
+Comm. time (I):		0.0465402 seconds
+ODE step time:		0.0870473 seconds
+Total time:		0.406291 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336843 seconds
+
+Start global formal solution...
+Comm. time (S):		0.297305 seconds
+Comm. time (I):		0.0554092 seconds
+ODE step time:		0.0922165 seconds
+Total time:		0.419574 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331916 seconds
+
+Start global formal solution...
+Comm. time (S):		0.283808 seconds
+Comm. time (I):		0.0353517 seconds
+ODE step time:		0.0761773 seconds
+Total time:		0.385614 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337783 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289158 seconds
+Comm. time (I):		0.0373329 seconds
+ODE step time:		0.0785302 seconds
+Total time:		0.392372 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.341552 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306927 seconds
+Comm. time (I):		0.031132 seconds
+ODE step time:		0.0739062 seconds
+Total time:		0.404816 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334712 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290376 seconds
+Comm. time (I):		0.0345558 seconds
+ODE step time:		0.0728331 seconds
+Total time:		0.39155 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332404 seconds
+
+Start global formal solution...
+Comm. time (S):		0.287551 seconds
+Comm. time (I):		0.0362609 seconds
+ODE step time:		0.074211 seconds
+Total time:		0.389565 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338523 seconds
+
+Start global formal solution...
+Comm. time (S):		0.303247 seconds
+Comm. time (I):		0.0314873 seconds
+ODE step time:		0.0747078 seconds
+Total time:		0.401714 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335317 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290733 seconds
+Comm. time (I):		0.0389892 seconds
+ODE step time:		0.0744126 seconds
+Total time:		0.395616 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331012 seconds
+
+Start global formal solution...
+Comm. time (S):		0.282177 seconds
+Comm. time (I):		0.0350716 seconds
+ODE step time:		0.0750025 seconds
+Total time:		0.384093 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.343113 seconds
+
+Start global formal solution...
+Comm. time (S):		0.302729 seconds
+Comm. time (I):		0.0333527 seconds
+ODE step time:		0.0743894 seconds
+Total time:		0.403004 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334065 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285765 seconds
+Comm. time (I):		0.0319729 seconds
+ODE step time:		0.0717436 seconds
+Total time:		0.383735 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.34238 seconds
+
+Start global formal solution...
+Comm. time (S):		0.310057 seconds
+Comm. time (I):		0.0352358 seconds
+ODE step time:		0.0790048 seconds
+Total time:		0.411636 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333087 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288178 seconds
+Comm. time (I):		0.0336052 seconds
+ODE step time:		0.0718607 seconds
+Total time:		0.38787 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331756 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289004 seconds
+Comm. time (I):		0.0309638 seconds
+ODE step time:		0.0729863 seconds
+Total time:		0.387104 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336434 seconds
+
+Start global formal solution...
+Comm. time (S):		0.300299 seconds
+Comm. time (I):		0.0302763 seconds
+ODE step time:		0.0716837 seconds
+Total time:		0.397644 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334995 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290414 seconds
+Comm. time (I):		0.0362815 seconds
+ODE step time:		0.072717 seconds
+Total time:		0.391698 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333303 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284312 seconds
+Comm. time (I):		0.0388269 seconds
+ODE step time:		0.0815908 seconds
+Total time:		0.389911 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.341693 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306654 seconds
+Comm. time (I):		0.0318366 seconds
+ODE step time:		0.0746978 seconds
+Total time:		0.405131 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335055 seconds
+
+Start global formal solution...
+Comm. time (S):		0.29025 seconds
+Comm. time (I):		0.0401276 seconds
+ODE step time:		0.0823747 seconds
+Total time:		0.397035 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338891 seconds
+
+Start global formal solution...
+Comm. time (S):		0.303064 seconds
+Comm. time (I):		0.0333754 seconds
+ODE step time:		0.0726713 seconds
+Total time:		0.403588 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333839 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290524 seconds
+Comm. time (I):		0.0333134 seconds
+ODE step time:		0.0759275 seconds
+Total time:		0.391444 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337867 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292325 seconds
+Comm. time (I):		0.0339713 seconds
+ODE step time:		0.0745659 seconds
+Total time:		0.394759 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.323912 seconds
+
+Start global formal solution...
+Comm. time (S):		0.330116 seconds
+Comm. time (I):		0.0296757 seconds
+ODE step time:		0.0723302 seconds
+Total time:		0.426969 seconds
+
+Copying field to Vec...done
+Linear solve did not converge due to DIVERGED_BREAKDOWN iterations 60
+update_emission:		234.442 seconds
+
+Start global formal solution...
+Comm. time (S):		180.101 seconds
+Comm. time (I):		0.0415716 seconds
+ODE step time:		0.0841283 seconds
+Total time:		180.209 seconds
+
+Copying field to Vec...done
+  5 KSP Residual norm 1.216019366576e-06 
+Update preconditioner emission:		0.334124 seconds
+
+Start global formal solution...
+Comm. time (S):		0.297615 seconds
+Comm. time (I):		0.035716 seconds
+ODE step time:		0.0734279 seconds
+Total time:		0.400343 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.346755 seconds
+
+Start global formal solution...
+Comm. time (S):		0.301163 seconds
+Comm. time (I):		0.043205 seconds
+ODE step time:		0.0815456 seconds
+Total time:		0.410171 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335754 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289975 seconds
+Comm. time (I):		0.033961 seconds
+ODE step time:		0.0737369 seconds
+Total time:		0.390388 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.339714 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306208 seconds
+Comm. time (I):		0.0366366 seconds
+ODE step time:		0.0725027 seconds
+Total time:		0.409081 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333034 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288911 seconds
+Comm. time (I):		0.0334068 seconds
+ODE step time:		0.0736186 seconds
+Total time:		0.389141 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338979 seconds
+
+Start global formal solution...
+Comm. time (S):		0.303389 seconds
+Comm. time (I):		0.0325895 seconds
+ODE step time:		0.0749627 seconds
+Total time:		0.402828 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335179 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291093 seconds
+Comm. time (I):		0.0388469 seconds
+ODE step time:		0.074939 seconds
+Total time:		0.395288 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331747 seconds
+
+Start global formal solution...
+Comm. time (S):		0.283606 seconds
+Comm. time (I):		0.0356198 seconds
+ODE step time:		0.0754737 seconds
+Total time:		0.385467 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.343185 seconds
+
+Start global formal solution...
+Comm. time (S):		0.303958 seconds
+Comm. time (I):		0.030453 seconds
+ODE step time:		0.0735142 seconds
+Total time:		0.402013 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334818 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289606 seconds
+Comm. time (I):		0.0368691 seconds
+ODE step time:		0.0750117 seconds
+Total time:		0.392768 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331795 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284208 seconds
+Comm. time (I):		0.0346881 seconds
+ODE step time:		0.0751519 seconds
+Total time:		0.38497 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33511 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286392 seconds
+Comm. time (I):		0.0311171 seconds
+ODE step time:		0.0718654 seconds
+Total time:		0.38361 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.341854 seconds
+
+Start global formal solution...
+Comm. time (S):		0.302669 seconds
+Comm. time (I):		0.0314879 seconds
+ODE step time:		0.072457 seconds
+Total time:		0.400951 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33322 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288876 seconds
+Comm. time (I):		0.0318849 seconds
+ODE step time:		0.0730524 seconds
+Total time:		0.387857 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.343592 seconds
+
+Start global formal solution...
+Comm. time (S):		0.304721 seconds
+Comm. time (I):		0.0329969 seconds
+ODE step time:		0.0737414 seconds
+Total time:		0.404542 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332432 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284031 seconds
+Comm. time (I):		0.0334851 seconds
+ODE step time:		0.0730324 seconds
+Total time:		0.383591 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337902 seconds
+
+Start global formal solution...
+Comm. time (S):		0.28929 seconds
+Comm. time (I):		0.0342795 seconds
+ODE step time:		0.0748857 seconds
+Total time:		0.390222 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.342931 seconds
+
+Start global formal solution...
+Comm. time (S):		0.30294 seconds
+Comm. time (I):		0.0300904 seconds
+ODE step time:		0.0736083 seconds
+Total time:		0.400572 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333695 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288867 seconds
+Comm. time (I):		0.0328815 seconds
+ODE step time:		0.0730613 seconds
+Total time:		0.389406 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.342966 seconds
+
+Start global formal solution...
+Comm. time (S):		0.310436 seconds
+Comm. time (I):		0.0309948 seconds
+ODE step time:		0.0728534 seconds
+Total time:		0.408401 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333662 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288817 seconds
+Comm. time (I):		0.0380154 seconds
+ODE step time:		0.0780353 seconds
+Total time:		0.393443 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.341532 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306427 seconds
+Comm. time (I):		0.0307367 seconds
+ODE step time:		0.072895 seconds
+Total time:		0.404498 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331559 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285621 seconds
+Comm. time (I):		0.0338492 seconds
+ODE step time:		0.0744725 seconds
+Total time:		0.38584 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.341247 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306919 seconds
+Comm. time (I):		0.0366366 seconds
+ODE step time:		0.0754326 seconds
+Total time:		0.40933 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334606 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289899 seconds
+Comm. time (I):		0.0332066 seconds
+ODE step time:		0.0729239 seconds
+Total time:		0.389649 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333866 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285196 seconds
+Comm. time (I):		0.0367014 seconds
+ODE step time:		0.0753867 seconds
+Total time:		0.387917 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332797 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285072 seconds
+Comm. time (I):		0.0378381 seconds
+ODE step time:		0.0773667 seconds
+Total time:		0.388946 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334257 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286649 seconds
+Comm. time (I):		0.0367493 seconds
+ODE step time:		0.0759041 seconds
+Total time:		0.388565 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.339074 seconds
+
+Start global formal solution...
+Comm. time (S):		0.30461 seconds
+Comm. time (I):		0.034023 seconds
+ODE step time:		0.0760479 seconds
+Total time:		0.404161 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335261 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290526 seconds
+Comm. time (I):		0.0302076 seconds
+ODE step time:		0.0719062 seconds
+Total time:		0.388063 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.327853 seconds
+
+Start global formal solution...
+Comm. time (S):		0.329792 seconds
+Comm. time (I):		0.0365891 seconds
+ODE step time:		0.0785621 seconds
+Total time:		0.433769 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33489 seconds
+
+Start global formal solution...
+Comm. time (S):		0.299817 seconds
+Comm. time (I):		0.0311992 seconds
+ODE step time:		0.0723968 seconds
+Total time:		0.398485 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335297 seconds
+
+Start global formal solution...
+Comm. time (S):		0.300035 seconds
+Comm. time (I):		0.0302496 seconds
+ODE step time:		0.0728453 seconds
+Total time:		0.397454 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333866 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289232 seconds
+Comm. time (I):		0.0313427 seconds
+ODE step time:		0.0728634 seconds
+Total time:		0.387302 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.34338 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306884 seconds
+Comm. time (I):		0.0327401 seconds
+ODE step time:		0.0750052 seconds
+Total time:		0.406519 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333005 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288235 seconds
+Comm. time (I):		0.0313788 seconds
+ODE step time:		0.0720982 seconds
+Total time:		0.386208 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.343754 seconds
+
+Start global formal solution...
+Comm. time (S):		0.309282 seconds
+Comm. time (I):		0.0627627 seconds
+ODE step time:		0.0987716 seconds
+Total time:		0.438686 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335217 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291175 seconds
+Comm. time (I):		0.0357951 seconds
+ODE step time:		0.0727262 seconds
+Total time:		0.392543 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.330372 seconds
+
+Start global formal solution...
+Comm. time (S):		0.282291 seconds
+Comm. time (I):		0.0323522 seconds
+ODE step time:		0.0722555 seconds
+Total time:		0.379754 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.342389 seconds
+
+Start global formal solution...
+Comm. time (S):		0.309039 seconds
+Comm. time (I):		0.0391804 seconds
+ODE step time:		0.08031 seconds
+Total time:		0.415778 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332263 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289371 seconds
+Comm. time (I):		0.0297557 seconds
+ODE step time:		0.0733673 seconds
+Total time:		0.386836 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.340507 seconds
+
+Start global formal solution...
+Comm. time (S):		0.305458 seconds
+Comm. time (I):		0.0378447 seconds
+ODE step time:		0.0733522 seconds
+Total time:		0.407166 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333588 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292374 seconds
+Comm. time (I):		0.0386659 seconds
+ODE step time:		0.0766353 seconds
+Total time:		0.399081 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333982 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289224 seconds
+Comm. time (I):		0.0329974 seconds
+ODE step time:		0.0748234 seconds
+Total time:		0.389361 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338956 seconds
+
+Start global formal solution...
+Comm. time (S):		0.299057 seconds
+Comm. time (I):		0.0345833 seconds
+ODE step time:		0.0760113 seconds
+Total time:		0.401455 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335643 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291391 seconds
+Comm. time (I):		0.0418979 seconds
+ODE step time:		0.0766583 seconds
+Total time:		0.398423 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331037 seconds
+
+Start global formal solution...
+Comm. time (S):		0.282752 seconds
+Comm. time (I):		0.0348605 seconds
+ODE step time:		0.0740555 seconds
+Total time:		0.383899 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.343207 seconds
+
+Start global formal solution...
+Comm. time (S):		0.308411 seconds
+Comm. time (I):		0.0363374 seconds
+ODE step time:		0.0766119 seconds
+Total time:		0.411601 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333808 seconds
+
+Start global formal solution...
+Comm. time (S):		0.287619 seconds
+Comm. time (I):		0.0408294 seconds
+ODE step time:		0.0809782 seconds
+Total time:		0.395867 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.339617 seconds
+
+Start global formal solution...
+Comm. time (S):		0.295611 seconds
+Comm. time (I):		0.0356337 seconds
+ODE step time:		0.0735403 seconds
+Total time:		0.396969 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332102 seconds
+
+Start global formal solution...
+Comm. time (S):		0.283343 seconds
+Comm. time (I):		0.0337588 seconds
+ODE step time:		0.073901 seconds
+Total time:		0.382938 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.343829 seconds
+
+Start global formal solution...
+Comm. time (S):		0.304113 seconds
+Comm. time (I):		0.0323221 seconds
+ODE step time:		0.0745587 seconds
+Total time:		0.403551 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33252 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286715 seconds
+Comm. time (I):		0.035201 seconds
+ODE step time:		0.0744831 seconds
+Total time:		0.388071 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.342753 seconds
+
+Start global formal solution...
+Comm. time (S):		0.298865 seconds
+Comm. time (I):		0.0358943 seconds
+ODE step time:		0.0733193 seconds
+Total time:		0.401059 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331763 seconds
+
+Start global formal solution...
+Comm. time (S):		0.283078 seconds
+Comm. time (I):		0.0328442 seconds
+ODE step time:		0.0730976 seconds
+Total time:		0.382045 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.344643 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306495 seconds
+Comm. time (I):		0.0370327 seconds
+ODE step time:		0.0778388 seconds
+Total time:		0.410672 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334135 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285441 seconds
+Comm. time (I):		0.0332388 seconds
+ODE step time:		0.0735056 seconds
+Total time:		0.384505 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338833 seconds
+
+Start global formal solution...
+Comm. time (S):		0.293814 seconds
+Comm. time (I):		0.0403424 seconds
+ODE step time:		0.0738932 seconds
+Total time:		0.399025 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331306 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290398 seconds
+Comm. time (I):		0.0341442 seconds
+ODE step time:		0.0762023 seconds
+Total time:		0.392723 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331499 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284958 seconds
+Comm. time (I):		0.0434976 seconds
+ODE step time:		0.0818492 seconds
+Total time:		0.395083 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334787 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289488 seconds
+Comm. time (I):		0.0364148 seconds
+ODE step time:		0.0722072 seconds
+Total time:		0.392322 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.322045 seconds
+
+Start global formal solution...
+Comm. time (S):		0.316569 seconds
+Comm. time (I):		0.0352829 seconds
+ODE step time:		0.0755623 seconds
+Total time:		0.418482 seconds
+
+Copying field to Vec...done
+Linear solve did not converge due to DIVERGED_BREAKDOWN iterations 60
+update_emission:		234.225 seconds
+
+Start global formal solution...
+Comm. time (S):		179.982 seconds
+Comm. time (I):		0.0409382 seconds
+ODE step time:		0.0850644 seconds
+Total time:		180.092 seconds
+
+Copying field to Vec...done
+  6 KSP Residual norm 3.406735522587e-07 
+Update preconditioner emission:		0.331098 seconds
+
+Start global formal solution...
+Comm. time (S):		0.299341 seconds
+Comm. time (I):		0.0315437 seconds
+ODE step time:		0.0717286 seconds
+Total time:		0.397288 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334756 seconds
+
+Start global formal solution...
+Comm. time (S):		0.29168 seconds
+Comm. time (I):		0.0365533 seconds
+ODE step time:		0.0718894 seconds
+Total time:		0.393922 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331999 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284608 seconds
+Comm. time (I):		0.042913 seconds
+ODE step time:		0.0828283 seconds
+Total time:		0.393089 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.340982 seconds
+
+Start global formal solution...
+Comm. time (S):		0.304943 seconds
+Comm. time (I):		0.0308394 seconds
+ODE step time:		0.0722619 seconds
+Total time:		0.402802 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334809 seconds
+
+Start global formal solution...
+Comm. time (S):		0.28829 seconds
+Comm. time (I):		0.0361589 seconds
+ODE step time:		0.0731737 seconds
+Total time:		0.391305 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33207 seconds
+
+Start global formal solution...
+Comm. time (S):		0.283867 seconds
+Comm. time (I):		0.0377424 seconds
+ODE step time:		0.0756305 seconds
+Total time:		0.387433 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331542 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289999 seconds
+Comm. time (I):		0.0305786 seconds
+ODE step time:		0.0727429 seconds
+Total time:		0.388017 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336898 seconds
+
+Start global formal solution...
+Comm. time (S):		0.301296 seconds
+Comm. time (I):		0.0312331 seconds
+ODE step time:		0.0722484 seconds
+Total time:		0.399681 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336831 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292471 seconds
+Comm. time (I):		0.0368091 seconds
+ODE step time:		0.0743748 seconds
+Total time:		0.395358 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331903 seconds
+
+Start global formal solution...
+Comm. time (S):		0.283524 seconds
+Comm. time (I):		0.036254 seconds
+ODE step time:		0.0767925 seconds
+Total time:		0.38568 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.340099 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306438 seconds
+Comm. time (I):		0.0300655 seconds
+ODE step time:		0.0718577 seconds
+Total time:		0.403454 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333529 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289012 seconds
+Comm. time (I):		0.0314182 seconds
+ODE step time:		0.073457 seconds
+Total time:		0.387553 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.343925 seconds
+
+Start global formal solution...
+Comm. time (S):		0.310778 seconds
+Comm. time (I):		0.0304259 seconds
+ODE step time:		0.0719283 seconds
+Total time:		0.408434 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331701 seconds
+
+Start global formal solution...
+Comm. time (S):		0.287285 seconds
+Comm. time (I):		0.0363143 seconds
+ODE step time:		0.0718914 seconds
+Total time:		0.389975 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331068 seconds
+
+Start global formal solution...
+Comm. time (S):		0.282441 seconds
+Comm. time (I):		0.0328775 seconds
+ODE step time:		0.0735754 seconds
+Total time:		0.38186 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.34328 seconds
+
+Start global formal solution...
+Comm. time (S):		0.30479 seconds
+Comm. time (I):		0.0318867 seconds
+ODE step time:		0.0719289 seconds
+Total time:		0.403854 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333457 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284861 seconds
+Comm. time (I):		0.035321 seconds
+ODE step time:		0.0760404 seconds
+Total time:		0.38648 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338199 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290497 seconds
+Comm. time (I):		0.0342593 seconds
+ODE step time:		0.0747675 seconds
+Total time:		0.39069 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.341271 seconds
+
+Start global formal solution...
+Comm. time (S):		0.305618 seconds
+Comm. time (I):		0.0308024 seconds
+ODE step time:		0.0722323 seconds
+Total time:		0.403905 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332275 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286371 seconds
+Comm. time (I):		0.0365616 seconds
+ODE step time:		0.0752975 seconds
+Total time:		0.389866 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.340681 seconds
+
+Start global formal solution...
+Comm. time (S):		0.308375 seconds
+Comm. time (I):		0.0329493 seconds
+ODE step time:		0.0758186 seconds
+Total time:		0.407588 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333841 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289141 seconds
+Comm. time (I):		0.0395742 seconds
+ODE step time:		0.0798884 seconds
+Total time:		0.39593 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.340709 seconds
+
+Start global formal solution...
+Comm. time (S):		0.307256 seconds
+Comm. time (I):		0.0311614 seconds
+ODE step time:		0.0739999 seconds
+Total time:		0.405766 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332309 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284546 seconds
+Comm. time (I):		0.0373315 seconds
+ODE step time:		0.0748308 seconds
+Total time:		0.38703 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334746 seconds
+
+Start global formal solution...
+Comm. time (S):		0.29074 seconds
+Comm. time (I):		0.0344466 seconds
+ODE step time:		0.0750118 seconds
+Total time:		0.392404 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332839 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288277 seconds
+Comm. time (I):		0.0365273 seconds
+ODE step time:		0.075105 seconds
+Total time:		0.391096 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33296 seconds
+
+Start global formal solution...
+Comm. time (S):		0.2842 seconds
+Comm. time (I):		0.0304458 seconds
+ODE step time:		0.071649 seconds
+Total time:		0.381268 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337449 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288782 seconds
+Comm. time (I):		0.0345043 seconds
+ODE step time:		0.0748242 seconds
+Total time:		0.390015 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332687 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286628 seconds
+Comm. time (I):		0.0331688 seconds
+ODE step time:		0.0728737 seconds
+Total time:		0.386284 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338809 seconds
+
+Start global formal solution...
+Comm. time (S):		0.305305 seconds
+Comm. time (I):		0.0304946 seconds
+ODE step time:		0.0735394 seconds
+Total time:		0.402496 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.324946 seconds
+
+Start global formal solution...
+Comm. time (S):		0.321886 seconds
+Comm. time (I):		0.0405074 seconds
+ODE step time:		0.0757189 seconds
+Total time:		0.429632 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331228 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285881 seconds
+Comm. time (I):		0.0338235 seconds
+ODE step time:		0.0719023 seconds
+Total time:		0.385618 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.330948 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286996 seconds
+Comm. time (I):		0.0338087 seconds
+ODE step time:		0.0748405 seconds
+Total time:		0.388809 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337965 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292356 seconds
+Comm. time (I):		0.0343285 seconds
+ODE step time:		0.0745547 seconds
+Total time:		0.393409 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.341376 seconds
+
+Start global formal solution...
+Comm. time (S):		0.309444 seconds
+Comm. time (I):		0.0316394 seconds
+ODE step time:		0.0746515 seconds
+Total time:		0.407428 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333897 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290242 seconds
+Comm. time (I):		0.0378198 seconds
+ODE step time:		0.0726764 seconds
+Total time:		0.393745 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331408 seconds
+
+Start global formal solution...
+Comm. time (S):		0.283225 seconds
+Comm. time (I):		0.0360079 seconds
+ODE step time:		0.0759993 seconds
+Total time:		0.385131 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333087 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289724 seconds
+Comm. time (I):		0.0348754 seconds
+ODE step time:		0.0750214 seconds
+Total time:		0.391903 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337427 seconds
+
+Start global formal solution...
+Comm. time (S):		0.301902 seconds
+Comm. time (I):		0.0358182 seconds
+ODE step time:		0.0753404 seconds
+Total time:		0.403444 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335861 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292898 seconds
+Comm. time (I):		0.0387941 seconds
+ODE step time:		0.0755936 seconds
+Total time:		0.397627 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332601 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284541 seconds
+Comm. time (I):		0.0320059 seconds
+ODE step time:		0.0727014 seconds
+Total time:		0.382417 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.343188 seconds
+
+Start global formal solution...
+Comm. time (S):		0.310874 seconds
+Comm. time (I):		0.0308871 seconds
+ODE step time:		0.0720549 seconds
+Total time:		0.408565 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332729 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286295 seconds
+Comm. time (I):		0.0408149 seconds
+ODE step time:		0.0823411 seconds
+Total time:		0.393822 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.339395 seconds
+
+Start global formal solution...
+Comm. time (S):		0.297474 seconds
+Comm. time (I):		0.035364 seconds
+ODE step time:		0.0752364 seconds
+Total time:		0.399886 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337908 seconds
+
+Start global formal solution...
+Comm. time (S):		0.296038 seconds
+Comm. time (I):		0.0380349 seconds
+ODE step time:		0.071912 seconds
+Total time:		0.40022 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331055 seconds
+
+Start global formal solution...
+Comm. time (S):		0.282832 seconds
+Comm. time (I):		0.0351233 seconds
+ODE step time:		0.0727038 seconds
+Total time:		0.384468 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.370611 seconds
+
+Start global formal solution...
+Comm. time (S):		0.33044 seconds
+Comm. time (I):		0.0302352 seconds
+ODE step time:		0.0734074 seconds
+Total time:		0.427944 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334144 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289724 seconds
+Comm. time (I):		0.0460102 seconds
+ODE step time:		0.08276 seconds
+Total time:		0.401394 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337653 seconds
+
+Start global formal solution...
+Comm. time (S):		0.295556 seconds
+Comm. time (I):		0.0351623 seconds
+ODE step time:		0.0751891 seconds
+Total time:		0.399285 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331945 seconds
+
+Start global formal solution...
+Comm. time (S):		0.28778 seconds
+Comm. time (I):		0.0349116 seconds
+ODE step time:		0.0742398 seconds
+Total time:		0.389491 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.341624 seconds
+
+Start global formal solution...
+Comm. time (S):		0.30695 seconds
+Comm. time (I):		0.0329988 seconds
+ODE step time:		0.073075 seconds
+Total time:		0.407403 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.331948 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286322 seconds
+Comm. time (I):		0.0406752 seconds
+ODE step time:		0.0802322 seconds
+Total time:		0.393632 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335209 seconds
+
+Start global formal solution...
+Comm. time (S):		0.294702 seconds
+Comm. time (I):		0.0314621 seconds
+ODE step time:		0.0723526 seconds
+Total time:		0.394167 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33511 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290188 seconds
+Comm. time (I):		0.0378297 seconds
+ODE step time:		0.0751716 seconds
+Total time:		0.394618 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335498 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290599 seconds
+Comm. time (I):		0.0327323 seconds
+ODE step time:		0.0737123 seconds
+Total time:		0.390417 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334617 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289197 seconds
+Comm. time (I):		0.0369795 seconds
+ODE step time:		0.0727361 seconds
+Total time:		0.391161 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333322 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284826 seconds
+Comm. time (I):		0.0346091 seconds
+ODE step time:		0.0758462 seconds
+Total time:		0.385987 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.340431 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306231 seconds
+Comm. time (I):		0.0304481 seconds
+ODE step time:		0.0724704 seconds
+Total time:		0.403882 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332918 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291187 seconds
+Comm. time (I):		0.031241 seconds
+ODE step time:		0.0718312 seconds
+Total time:		0.389197 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.339082 seconds
+
+Start global formal solution...
+Comm. time (S):		0.301078 seconds
+Comm. time (I):		0.0330839 seconds
+ODE step time:		0.0735452 seconds
+Total time:		0.400953 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33456 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285817 seconds
+Comm. time (I):		0.0375129 seconds
+ODE step time:		0.0779884 seconds
+Total time:		0.389386 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.327871 seconds
+
+Start global formal solution...
+Comm. time (S):		0.332339 seconds
+Comm. time (I):		0.0340781 seconds
+ODE step time:		0.0762356 seconds
+Total time:		0.433737 seconds
+
+Copying field to Vec...done
+Linear solve did not converge due to DIVERGED_BREAKDOWN iterations 60
+update_emission:		234.321 seconds
+
+Start global formal solution...
+Comm. time (S):		180.077 seconds
+Comm. time (I):		0.0397189 seconds
+ODE step time:		0.0848179 seconds
+Total time:		180.187 seconds
+
+Copying field to Vec...done
+  7 KSP Residual norm 7.874154893358e-08 
+Update preconditioner emission:		0.328748 seconds
+
+Start global formal solution...
+Comm. time (S):		0.294313 seconds
+Comm. time (I):		0.0321902 seconds
+ODE step time:		0.0756872 seconds
+Total time:		0.393529 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.341054 seconds
+
+Start global formal solution...
+Comm. time (S):		0.304906 seconds
+Comm. time (I):		0.0310294 seconds
+ODE step time:		0.0728626 seconds
+Total time:		0.403749 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332349 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288544 seconds
+Comm. time (I):		0.0350358 seconds
+ODE step time:		0.0727982 seconds
+Total time:		0.389907 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33359 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285965 seconds
+Comm. time (I):		0.0353095 seconds
+ODE step time:		0.074816 seconds
+Total time:		0.387505 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335057 seconds
+
+Start global formal solution...
+Comm. time (S):		0.29069 seconds
+Comm. time (I):		0.0343508 seconds
+ODE step time:		0.0735061 seconds
+Total time:		0.391873 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337623 seconds
+
+Start global formal solution...
+Comm. time (S):		0.298524 seconds
+Comm. time (I):		0.0357819 seconds
+ODE step time:		0.0738275 seconds
+Total time:		0.401348 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332524 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285428 seconds
+Comm. time (I):		0.0341137 seconds
+ODE step time:		0.0734334 seconds
+Total time:		0.385813 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335588 seconds
+
+Start global formal solution...
+Comm. time (S):		0.294231 seconds
+Comm. time (I):		0.0295635 seconds
+ODE step time:		0.071968 seconds
+Total time:		0.391115 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333436 seconds
+
+Start global formal solution...
+Comm. time (S):		0.295351 seconds
+Comm. time (I):		0.0318698 seconds
+ODE step time:		0.0732011 seconds
+Total time:		0.393987 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337291 seconds
+
+Start global formal solution...
+Comm. time (S):		0.302456 seconds
+Comm. time (I):		0.0458861 seconds
+ODE step time:		0.0858521 seconds
+Total time:		0.414858 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333116 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288411 seconds
+Comm. time (I):		0.0346198 seconds
+ODE step time:		0.0732689 seconds
+Total time:		0.389838 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334281 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286906 seconds
+Comm. time (I):		0.0359935 seconds
+ODE step time:		0.0757983 seconds
+Total time:		0.388811 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337469 seconds
+
+Start global formal solution...
+Comm. time (S):		0.297307 seconds
+Comm. time (I):		0.0295266 seconds
+ODE step time:		0.0717735 seconds
+Total time:		0.394069 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334566 seconds
+
+Start global formal solution...
+Comm. time (S):		0.293049 seconds
+Comm. time (I):		0.0349635 seconds
+ODE step time:		0.0763762 seconds
+Total time:		0.395433 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335898 seconds
+
+Start global formal solution...
+Comm. time (S):		0.294125 seconds
+Comm. time (I):		0.0392922 seconds
+ODE step time:		0.0772667 seconds
+Total time:		0.400382 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332579 seconds
+
+Start global formal solution...
+Comm. time (S):		0.28419 seconds
+Comm. time (I):		0.0380361 seconds
+ODE step time:		0.0789785 seconds
+Total time:		0.38844 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.340613 seconds
+
+Start global formal solution...
+Comm. time (S):		0.29917 seconds
+Comm. time (I):		0.0337791 seconds
+ODE step time:		0.0760101 seconds
+Total time:		0.4003 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333189 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291571 seconds
+Comm. time (I):		0.0334862 seconds
+ODE step time:		0.0736391 seconds
+Total time:		0.392441 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334705 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290363 seconds
+Comm. time (I):		0.0350499 seconds
+ODE step time:		0.0729723 seconds
+Total time:		0.392103 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336566 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292942 seconds
+Comm. time (I):		0.0337332 seconds
+ODE step time:		0.0755417 seconds
+Total time:		0.395381 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.340982 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306329 seconds
+Comm. time (I):		0.0316917 seconds
+ODE step time:		0.0727317 seconds
+Total time:		0.405044 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332697 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284053 seconds
+Comm. time (I):		0.0355984 seconds
+ODE step time:		0.0756646 seconds
+Total time:		0.385189 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337567 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292974 seconds
+Comm. time (I):		0.0355213 seconds
+ODE step time:		0.073913 seconds
+Total time:		0.392673 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332892 seconds
+
+Start global formal solution...
+Comm. time (S):		0.288121 seconds
+Comm. time (I):		0.0339965 seconds
+ODE step time:		0.0743644 seconds
+Total time:		0.388709 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.341251 seconds
+
+Start global formal solution...
+Comm. time (S):		0.307942 seconds
+Comm. time (I):		0.0320598 seconds
+ODE step time:		0.0740375 seconds
+Total time:		0.407256 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334455 seconds
+
+Start global formal solution...
+Comm. time (S):		0.287784 seconds
+Comm. time (I):		0.0360152 seconds
+ODE step time:		0.0756577 seconds
+Total time:		0.390673 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336696 seconds
+
+Start global formal solution...
+Comm. time (S):		0.29088 seconds
+Comm. time (I):		0.0365147 seconds
+ODE step time:		0.0743285 seconds
+Total time:		0.393431 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334321 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285547 seconds
+Comm. time (I):		0.0324802 seconds
+ODE step time:		0.072613 seconds
+Total time:		0.384172 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.341808 seconds
+
+Start global formal solution...
+Comm. time (S):		0.305283 seconds
+Comm. time (I):		0.0337377 seconds
+ODE step time:		0.0765885 seconds
+Total time:		0.406487 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334095 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290832 seconds
+Comm. time (I):		0.0300348 seconds
+ODE step time:		0.0715687 seconds
+Total time:		0.388041 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.327711 seconds
+
+Start global formal solution...
+Comm. time (S):		0.332378 seconds
+Comm. time (I):		0.031211 seconds
+ODE step time:		0.0733211 seconds
+Total time:		0.430389 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333887 seconds
+
+Start global formal solution...
+Comm. time (S):		0.296167 seconds
+Comm. time (I):		0.037707 seconds
+ODE step time:		0.0789035 seconds
+Total time:		0.401711 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338708 seconds
+
+Start global formal solution...
+Comm. time (S):		0.29185 seconds
+Comm. time (I):		0.034271 seconds
+ODE step time:		0.073635 seconds
+Total time:		0.391481 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.340117 seconds
+
+Start global formal solution...
+Comm. time (S):		0.300805 seconds
+Comm. time (I):		0.0322756 seconds
+ODE step time:		0.0730803 seconds
+Total time:		0.400158 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336213 seconds
+
+Start global formal solution...
+Comm. time (S):		0.292023 seconds
+Comm. time (I):		0.0323795 seconds
+ODE step time:		0.0718335 seconds
+Total time:		0.391078 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332662 seconds
+
+Start global formal solution...
+Comm. time (S):		0.289061 seconds
+Comm. time (I):		0.0337562 seconds
+ODE step time:		0.0742083 seconds
+Total time:		0.390043 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335233 seconds
+
+Start global formal solution...
+Comm. time (S):		0.297057 seconds
+Comm. time (I):		0.0316002 seconds
+ODE step time:		0.0726437 seconds
+Total time:		0.395896 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335386 seconds
+
+Start global formal solution...
+Comm. time (S):		0.297114 seconds
+Comm. time (I):		0.0313832 seconds
+ODE step time:		0.0739356 seconds
+Total time:		0.395819 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337756 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290156 seconds
+Comm. time (I):		0.0322838 seconds
+ODE step time:		0.0725231 seconds
+Total time:		0.388611 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338451 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291582 seconds
+Comm. time (I):		0.0306647 seconds
+ODE step time:		0.0719773 seconds
+Total time:		0.389285 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33539 seconds
+
+Start global formal solution...
+Comm. time (S):		0.302061 seconds
+Comm. time (I):		0.0303378 seconds
+ODE step time:		0.0716382 seconds
+Total time:		0.399562 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335718 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291597 seconds
+Comm. time (I):		0.0382409 seconds
+ODE step time:		0.0750775 seconds
+Total time:		0.395678 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332147 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284961 seconds
+Comm. time (I):		0.0405887 seconds
+ODE step time:		0.0809883 seconds
+Total time:		0.392103 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33925 seconds
+
+Start global formal solution...
+Comm. time (S):		0.295905 seconds
+Comm. time (I):		0.0306878 seconds
+ODE step time:		0.0720499 seconds
+Total time:		0.393224 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333707 seconds
+
+Start global formal solution...
+Comm. time (S):		0.293662 seconds
+Comm. time (I):		0.0340402 seconds
+ODE step time:		0.0741511 seconds
+Total time:		0.394847 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.34129 seconds
+
+Start global formal solution...
+Comm. time (S):		0.30369 seconds
+Comm. time (I):		0.0567901 seconds
+ODE step time:		0.0979966 seconds
+Total time:		0.427046 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.335352 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290747 seconds
+Comm. time (I):		0.0395495 seconds
+ODE step time:		0.0751306 seconds
+Total time:		0.396946 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.333082 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284539 seconds
+Comm. time (I):		0.0381716 seconds
+ODE step time:		0.0771765 seconds
+Total time:		0.388042 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.344945 seconds
+
+Start global formal solution...
+Comm. time (S):		0.308174 seconds
+Comm. time (I):		0.0310463 seconds
+ODE step time:		0.0740062 seconds
+Total time:		0.406372 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336008 seconds
+
+Start global formal solution...
+Comm. time (S):		0.291171 seconds
+Comm. time (I):		0.0361191 seconds
+ODE step time:		0.0752839 seconds
+Total time:		0.394049 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.340545 seconds
+
+Start global formal solution...
+Comm. time (S):		0.306495 seconds
+Comm. time (I):		0.0310784 seconds
+ODE step time:		0.0716242 seconds
+Total time:		0.404321 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334892 seconds
+
+Start global formal solution...
+Comm. time (S):		0.287186 seconds
+Comm. time (I):		0.0346287 seconds
+ODE step time:		0.0746415 seconds
+Total time:		0.38861 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.337755 seconds
+
+Start global formal solution...
+Comm. time (S):		0.30313 seconds
+Comm. time (I):		0.0319344 seconds
+ODE step time:		0.0716169 seconds
+Total time:		0.402021 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.336127 seconds
+
+Start global formal solution...
+Comm. time (S):		0.290249 seconds
+Comm. time (I):		0.0377736 seconds
+ODE step time:		0.0774091 seconds
+Total time:		0.394476 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.338547 seconds
+
+Start global formal solution...
+Comm. time (S):		0.298804 seconds
+Comm. time (I):		0.0333347 seconds
+ODE step time:		0.0735878 seconds
+Total time:		0.399385 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334038 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285098 seconds
+Comm. time (I):		0.0344859 seconds
+ODE step time:		0.075219 seconds
+Total time:		0.386228 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.342921 seconds
+
+Start global formal solution...
+Comm. time (S):		0.309397 seconds
+Comm. time (I):		0.0348318 seconds
+ODE step time:		0.07236 seconds
+Total time:		0.410786 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.332969 seconds
+
+Start global formal solution...
+Comm. time (S):		0.284197 seconds
+Comm. time (I):		0.034512 seconds
+ODE step time:		0.0734873 seconds
+Total time:		0.384543 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.33511 seconds
+
+Start global formal solution...
+Comm. time (S):		0.286752 seconds
+Comm. time (I):		0.0380603 seconds
+ODE step time:		0.0756179 seconds
+Total time:		0.390526 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.340837 seconds
+
+Start global formal solution...
+Comm. time (S):		0.308042 seconds
+Comm. time (I):		0.0378788 seconds
+ODE step time:		0.0758493 seconds
+Total time:		0.411733 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.334788 seconds
+
+Start global formal solution...
+Comm. time (S):		0.285982 seconds
+Comm. time (I):		0.0327594 seconds
+ODE step time:		0.0733797 seconds
+Total time:		0.384662 seconds
+
+Copying field to Vec...done
+Update preconditioner emission:		0.328554 seconds
+
+Start global formal solution...
+Comm. time (S):		0.321074 seconds
+Comm. time (I):		0.035238 seconds
+ODE step time:		0.0748874 seconds
+Total time:		0.422539 seconds
+
+Copying field to Vec...done
+Linear solve did not converge due to DIVERGED_BREAKDOWN iterations 60
+update_emission:		234.035 seconds
+
+Start global formal solution...
+Comm. time (S):		179.697 seconds
+Comm. time (I):		0.0431542 seconds
+ODE step time:		0.0855413 seconds
+Total time:		179.809 seconds
+
+Copying field to Vec...done
+  8 KSP Residual norm 1.702770995409e-08 
+Linear solve converged due to CONVERGED_RTOL iterations 8
+KSP Object: 512 MPI processes
+  type: fgmres
+    restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
+    happy breakdown tolerance 1e-30
+  maximum iterations=1000, initial guess is zero
+  tolerances:  relative=1e-07, absolute=1e-50, divergence=10000.
+  right preconditioning
+  using UNPRECONDITIONED norm type for convergence test
+PC Object: 512 MPI processes
+  type: shell
+    no name
+  linear system matrix = precond matrix:
+  Mat Object: 512 MPI processes
+    type: shell
+    rows=163430400, cols=163430400
+Solve time (s) = 2145.62
+
+Copying Vec to field...done
+
+===== MPI Memory Usage Summary  =====
+Min memory used by single processor: 0.380576 GB
+Max memory used by single processor: 0.794358 GB
+Total memory used: 236.157 GB
+===========================================
+Output written in /gpfs/projects/ehpc238/output/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd.PRD/profiles_i_j.m
+
+Output written in /gpfs/projects/ehpc238/output/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd.PRD/profiles_i_j.csv
+
+Rank 0 accumulating surface data from domain: i[0, 3)  j[0, 2)
+ global coords: i[0, 2]  j[0, 1]
+Rank 64 accumulating surface data from domain: i[0, 3)  j[0, 1)
+ global coords: i[0, 2]  j[2, 2]
+Rank 128 accumulating surface data from domain: i[0, 3)  j[0, 1)
+ global coords: i[0, 2]  j[3, 3]
+Rank 192 accumulating surface data from domain: i[0, 3)  j[0, 1)
+ global coords: i[0, 2]  j[4, 4]
+Rank 256 accumulating surface data from domain: i[0, 2)  j[0, 2)
+ global coords: i[3, 4]  j[0, 1]
+Rank 448 accumulating surface data from domain: i[0, 2)  j[0, 1)
+ global coords: i[3, 4]  j[4, 4]
+Rank 320 accumulating surface data from domain: i[0, 2)  j[0, 1)
+ global coords: i[3, 4]  j[2, 2]
+Rank 384 accumulating surface data from domain: i[0, 2)  j[0, 1)
+ global coords: i[3, 4]  j[3, 3]
+ Writing JKQ field to HDF5 file: /gpfs/projects/ehpc238/output/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd.PRD/JKQ_field.h5
+ Writing JKQ field data to HDF5 file: /gpfs/projects/ehpc238/output/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd.PRD/JKQ_field.h5
+Freeing RT_problem fields memory...
+Freeing RT_solver fields memory...
+WARNING: no arbitrary beams defined in config
+Total memory usage (vm_usage):               15.292 GB
+Total memory usage (resident_set):           0.79798 GB
+
+================================================================================
+ EXECUTION TIME SUMMARY
+================================================================================
+ MPI processes:        512
+ Setup time:           10.91 s
+ Solve time:           2145.63 s
+ Post processing time: 1.35 s
+--------------------------------------------------------------------------------
+ Total execution time: 2157.89 s
+================================================================================
+
+TRIP ended successfully at: 2026-02-12 12:03:34
