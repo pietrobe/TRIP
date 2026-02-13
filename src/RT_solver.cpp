@@ -1238,24 +1238,19 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
     if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);    
     Real start_comm  = MPI_Wtime();                                 
     ///////////// data movement ////////////////////
-    
     // write eta and rhos to the serial grid
-    ReMap3D tmp_remap(RT_problem_->space_grid_, space_grid_serial_,
-        block_size_Omega, local_block_size_); // TODO we could just use Omega_remap
-
-    tmp_remap.from_space_to_block_distributed(
+    Omega_remap.from_space_to_block_distributed(
         RT_problem_->eta_field_Omega_, eta_field_serial_Omega_
     );
 
-    tmp_remap.from_space_to_block_distributed(
+    Omega_remap.from_space_to_block_distributed(
         RT_problem_->rho_field_Omega_, rho_field_serial_Omega_
     );
 
-    // write S to the serial grid
-    S_remap_Omega_.from_space_to_block_distributed(
+    // write S to the serial grid 
+    Omega_remap.from_space_to_block_distributed(
         RT_problem_->S_field_Omega_, S_field_serial_Omega_
-    );                               
-
+    );                              
     comm_timer += MPI_Wtime() - start_comm;          
 
     ////////////////////////////////////////////////
@@ -1513,9 +1508,8 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
     if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
     start_comm = MPI_Wtime();    
     
-    I_remap_Omega_.from_block_to_space_distributed(
+    Omega_remap.from_block_to_space_distributed(
         I_field_serial_Omega_, RT_problem_->I_field_Omega_); 
-
     comm_timer += MPI_Wtime() - start_comm;      
 
     // print timers    
@@ -1629,10 +1623,9 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
         if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
         Real start_comm = MPI_Wtime();                                    
         
-        // write S to the serial grid and I to get initial condition 
-        S_remap_.from_space_to_block_distributed(S_field, S_field_serial_, tile_number);                        
-        // I_remap_.from_space_to_block_distributed(*I_field, *I_field_serial_, tile_number); // TODO: this is a bit redundant, only one xy plane is needed                
-                                
+        // write S to the serial grid and I to get initial condition              
+        Pol_remap.from_space_to_block_distributed(S_field, S_field_serial_, tile_number);                        
+        // Pol_remap.from_space_to_block_distributed(*I_field, *I_field_serial_, tile_number); // TODO: this is a bit redundant, only one xy plane is needed                                     
         comm_timer1 += MPI_Wtime() - start_comm;      
 
         if (not idle_proc)
@@ -1942,9 +1935,8 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
         }      
           
         if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
-        start_comm = MPI_Wtime();    
-        I_remap_.from_block_to_space_distributed(I_field_serial_, I_field, tile_number); // TOFIX
-
+        start_comm = MPI_Wtime();
+        Pol_remap.from_block_to_space_distributed(I_field_serial_, I_field, tile_number);
         comm_timer2 += MPI_Wtime() - start_comm; 
     }                
     
@@ -2604,16 +2596,13 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
     
     const bool idle_proc = (block_start > RT_problem_->block_size_unpolarized_ - 1);
 
-    // TEST
     if (idle_proc) std::cout << "IDLE proc with mpi_rank_ = " << mpi_rank_ << std::endl;
                      
     // communication                        
     Real start_comm = MPI_Wtime();                                    
-    
     // write S to the serial grid and I to get initial condition              
-    S_unpol_remap_.from_space_to_block_distributed(S_field, S_unpol_field_serial_);                        
-    // I_unpol_remap_.from_space_to_block_distributed(I_field, I_unpol_field_serial_); // TODO: this is redundant, only one xy plane is needed
-            
+    Unpol_remap.from_space_to_block_distributed(S_field, S_unpol_field_serial_);                        
+    // Unpol_remap.from_space_to_block_distributed(I_field, I_unpol_field_serial_); 
     comm_timer += MPI_Wtime() - start_comm;      
 
     if (not idle_proc)
@@ -2845,8 +2834,7 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
     start_comm = MPI_Wtime();    
     
     std::cout << "from_block_to_space_distributed I_unpol_field_serial\n" << std::flush;
-    I_unpol_remap_.from_block_to_space_distributed(I_unpol_field_serial_, I_field); 
-
+    Unpol_remap.from_block_to_space_distributed(I_unpol_field_serial_, I_field);
     comm_timer += MPI_Wtime() - start_comm;              
     
     // print timers
@@ -3818,20 +3806,12 @@ void MF_context::init_serial_fields(const int n_tiles){
         "rho_serial", space_grid_serial_, n_local_rays_, false
     );
 
-    // init remaps //TODO we could use just one remap
-    I_remap_.init(
+    // init remaps 
+    Pol_remap.init(
         RT_problem_->space_grid_, space_grid_serial_, block_size, tile_size_
     );
-    S_remap_.init(
-        RT_problem_->space_grid_, space_grid_serial_, block_size, tile_size_
-    );
-            
-    ReMap3D tmp_remap(
-        RT_problem_->space_grid_, space_grid_serial_, block_size, tile_size_
-    );
-
-    tmp_remap.from_space_to_block_distributed(RT_problem_->eta_field_, eta_field_serial_); 
-    tmp_remap.from_space_to_block_distributed(RT_problem_->rho_field_, rho_field_serial_); 
+    Pol_remap.from_space_to_block_distributed(RT_problem_->eta_field_, eta_field_serial_); 
+    Pol_remap.from_space_to_block_distributed(RT_problem_->rho_field_, rho_field_serial_); 
 
     if (not RT_problem_->use_1_5D_approx_)
     {        
@@ -3863,13 +3843,10 @@ void MF_context::init_unpol_fields(){
         "S_unpol_serial", space_grid_serial_, n_local_rays_unpol_, false
     );        
 
-    // init remaps // TODO we could use just one remap
-    I_unpol_remap_.init(
+    // init remaps
+    Unpol_remap.init(
         RT_problem_->space_grid_, space_grid_serial_, RT_problem_->block_size_unpolarized_, n_local_rays_unpol_
-    );
-    S_unpol_remap_.init(
-        RT_problem_->space_grid_, space_grid_serial_, RT_problem_->block_size_unpolarized_, n_local_rays_unpol_
-    );        
+    );  
 
     // vectors for unpolarized data    
     ierr = VecCreate(PETSC_COMM_WORLD, &x_unpol_);CHKERRV(ierr);  
@@ -4020,13 +3997,10 @@ void MF_context::init_serial_fields_Omega(){
         "rho_serial", space_grid_serial_, local_block_size_, false
     );   
 
-    // init remaps // TODO use just one remao
-    I_remap_Omega_.init(
+    // init remaps 
+    Omega_remap.init(
         RT_problem_->space_grid_, space_grid_serial_, block_size_Omega, local_block_size_
-    ); 
-    S_remap_Omega_.init(
-        RT_problem_->space_grid_, space_grid_serial_, block_size_Omega, local_block_size_
-    );      
+    );         
 
     // apply BC on I_Field
     const auto I_Omega_dev = RT_problem_->I_field_Omega_;      
@@ -4048,9 +4022,9 @@ void MF_context::init_serial_fields_Omega(){
     });     
 
     // init BC in serial grid
-    I_remap_Omega_.from_space_to_block_distributed(
+    Omega_remap.from_space_to_block_distributed(
         RT_problem_->I_field_Omega_, I_field_serial_Omega_
-    );                                    
+    );                              
 } 
 
 

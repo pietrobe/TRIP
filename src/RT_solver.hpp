@@ -66,8 +66,7 @@ struct MF_context {
 	// serial objects for formal solution
 	Grid_ptr_t  space_grid_serial_;	
 
-	ReMap3D I_remap_; // TODO we could use just one map
-	ReMap3D S_remap_;
+	ReMap3D Pol_remap;
 	
 	Field_ptr_t I_field_serial_;
 	Field_ptr_t S_field_serial_;
@@ -86,12 +85,10 @@ struct MF_context {
 	// auxiliary J_KQ vecotors
 	Vec x_J_KQ_, y_J_KQ_;
 
-	ReMap3D I_unpol_remap_; // TODO we could use just one map
-	ReMap3D S_unpol_remap_;
+	ReMap3D Unpol_remap;
 
 	// data structures a single direction Omega (if needed)
-	ReMap3D I_remap_Omega_; // TODO we could use just one map
-	ReMap3D S_remap_Omega_;
+	ReMap3D Omega_remap;
 	
 	Field_ptr_t I_field_serial_Omega_;
 	Field_ptr_t S_field_serial_Omega_;
