@@ -41,10 +41,10 @@ public:
         const bool allocate_PETSc_vec)
         : name(fieldName), 
           grid(grid_), 
+          is_Vec_allocated(allocate_PETSc_vec),
           Nphysical(Nphysical_), 
           Nparam(Nparam_size_.size()), 
-          Nparam_size(Nparam_size_),
-          is_Vec_allocated(allocate_PETSc_vec)
+          Nparam_size(Nparam_size_)
     {
         block_size = Nphysical_;
         for (auto s: Nparam_size_) block_size *= s;
@@ -84,9 +84,9 @@ public:
         const Int Nphysical_,
         const bool allocate_PETSc_vec)
         : name(fieldName), grid(grid_), 
-          Nphysical(Nphysical_), 
+          is_Vec_allocated(allocate_PETSc_vec),
           block_size(Nphysical_),
-          is_Vec_allocated(allocate_PETSc_vec)
+          Nphysical(Nphysical_)
     {
         allocate(allocate_PETSc_vec);
     }
@@ -137,7 +137,7 @@ public:
     Int getNPhysical() const;
     Int getNparam() const;
     std::vector<Int> getNParamSizes() const;
-    Int getParamSize(int p) const;
+    Int getParamSize(size_t p) const;
     
     /** @brief returns pointer to block (i,j,k) */
     Real* block(Int i,Int j,Int k);

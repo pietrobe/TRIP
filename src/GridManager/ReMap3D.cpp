@@ -288,10 +288,8 @@ void ReMap3D::pack_space_distr_field(Field_ptr field, PetscInt num_tiles)
 
 void ReMap3D::unpack_space_distr_field(Field_ptr space_field, PetscInt num_tiles)
 {
-    // auto grid = space_field->getGrid();
     const PetscInt block_size = space_field->getBlockSize();
     const PetscInt block_part = block_size / num_tiles_per_block;
-    const PetscInt xm = space_grid->getLocalSizeX();
     const PetscInt ym = space_grid->getLocalSizeY();
     const PetscInt zm = space_grid->getLocalSizeZ();
     const PetscInt rank_offset = local_nodes * tile_size;

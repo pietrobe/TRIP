@@ -5,6 +5,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${SOLAR_3D_ROOT_PATH}/cmake")
 
 project(par_moonolith_usage VERSION 1.0.0)
 
+# for CTest enabling
+# enable_testing()
+
 ### DEBUG OPTION
 option(DEBUG "Build with debugging symbols and flags" OFF)
 if(DEBUG)
@@ -22,11 +25,6 @@ else()
 endif()
 
 ### DEPENDENCIES
-find_package(MPI REQUIRED) 
-# for CTest enabling
-# enable_testing()
-
-### DEPENDENCIES
 find_package(MPI REQUIRED)
 find_package(HDF5 REQUIRED)
 find_package(HDF5 COMPONENTS C HL REQUIRED)
@@ -38,7 +36,6 @@ endif()
 
 include(CMakeFindDependencyMacro)
 find_package(PkgConfig REQUIRED)
-
 find_package(yaml-cpp QUIET)
 
 if(NOT yaml-cpp_FOUND)
@@ -67,10 +64,7 @@ else()
     message(STATUS "Found yaml-cpp on system: ${yaml-cpp_VERSION}")
 endif()
 
-#target_link_libraries(YOUR_LIBRARY PUBLIC yaml-cpp::yaml-cpp) # The library or executable that require yaml-cpp library
-
 find_package(Boost 1.61 COMPONENTS program_options regex serialization filesystem  atomic  REQUIRED)
-
 include_directories(${Boost_INCLUDE_DIRS})
 set(Boost_LIBRARY_DIRS "${BOOST_ROOT}/lib")
 
@@ -157,12 +151,9 @@ endif()
 
 ### PETSC DEPENDENCY
 message(STATUS "Search Petsc")
-
 set(PETSC_TEST_RUNS TRUE)
 set(ENV{PKG_CONFIG_PATH} $ENV{PETSC_DIR}/lib/pkgconfig)
-
 pkg_check_modules(PETSC REQUIRED IMPORTED_TARGET PETSc)
-
 message(STATUS "Check Petsc done")
 
 # Configure header file
@@ -178,28 +169,28 @@ configure_file(
 
 # we use one of our examples here
 add_executable(${EXECUTABLE_NAME} ${CMAKE_SOURCE_DIR}/src/main.cpp)
-
 target_include_directories(${EXECUTABLE_NAME} PUBLIC ${HDF5_INCLUDE_DIRS})
-
 
 add_library(rii SHARED IMPORTED)
 set_property(TARGET rii PROPERTY IMPORTED_LOCATION "${RII_ROOT_PATH}/build/librii.so")
 message( STATUS  "RII path: ${RII_ROOT_PATH}")
 
-# import all the dependencies and targets # removed sgrid::sgrid
+# import all the dependencies and targets
+add_subdirectory(src/GridManager)
+target_link_libraries(${EXECUTABLE_NAME} PUBLIC GridManager)
 target_link_libraries(${EXECUTABLE_NAME} PUBLIC rii)
 target_link_libraries(${EXECUTABLE_NAME} PUBLIC ${Boost_LIBRARIES})
-target_link_libraries(${EXECUTABLE_NAME} PUBLIC MPI::MPI_CXX) # Added Melanie
+target_link_libraries(${EXECUTABLE_NAME} PUBLIC MPI::MPI_CXX)
 target_link_libraries(${EXECUTABLE_NAME} PUBLIC ${HDF5_LIBRARIES})
 target_link_libraries(${EXECUTABLE_NAME} PUBLIC ${HDF5_HL_LIBRARIES})
-
-
 target_sources(${EXECUTABLE_NAME} PUBLIC ${SOURCES_FILES})
 target_include_directories(${EXECUTABLE_NAME} PUBLIC  
     src
     ${CMAKE_CURRENT_BINARY_DIR}  # Add binary dir for configure.h
 )
-
+target_include_directories(${EXECUTABLE_NAME} SYSTEM PUBLIC ${PETSC_INCLUDES})
+target_link_libraries(${EXECUTABLE_NAME} PUBLIC PkgConfig::PETSC)
+target_compile_definitions(${EXECUTABLE_NAME} PUBLIC ${PETSC_DEFINITIONS})
 
 if(NOT yaml-cpp_FOUND)
     target_link_libraries(${EXECUTABLE_NAME} PUBLIC yaml-cpp::yaml-cpp)
@@ -207,9 +198,7 @@ else()
     target_link_libraries(${EXECUTABLE_NAME} PUBLIC yaml-cpp)
 endif()
 
-target_include_directories(${EXECUTABLE_NAME} SYSTEM PUBLIC ${PETSC_INCLUDES})
-target_link_libraries(${EXECUTABLE_NAME} PUBLIC PkgConfig::PETSC)
-target_compile_definitions(${EXECUTABLE_NAME} PUBLIC ${PETSC_DEFINITIONS})
+
 
 # Build thdf/libhdf_output.a using its Makefile
 if(TRUE)
@@ -256,7 +245,38 @@ if(TRUE)
     )
 endif()
 
-# Add Grid Manager
-add_subdirectory(src/GridManager)
-target_link_libraries(${EXECUTABLE_NAME} PUBLIC GridManager)
+
+###### make test ######
+add_executable(solar_3D_tests ${CMAKE_SOURCE_DIR}/tests/test.cpp)
+
+
+# import all the dependencies and targets
+target_link_libraries(solar_3D_tests PUBLIC rii ${Boost_LIBRARIES} MPI::MPI_CXX)
+target_link_libraries(solar_3D_tests PUBLIC ${HDF5_LIBRARIES})
+target_link_libraries(solar_3D_tests PUBLIC ${HDF5_HL_LIBRARIES})
+target_sources(solar_3D_tests PUBLIC ${SOURCES_FILES})
+target_include_directories(solar_3D_tests PUBLIC  
+    src
+    ${CMAKE_CURRENT_BINARY_DIR}  # Add binary dir for configure.h
+)
+target_include_directories(solar_3D_tests PUBLIC ${HDF5_INCLUDE_DIRS})
+target_include_directories(solar_3D_tests SYSTEM PUBLIC ${PETSC_INCLUDES})
+target_link_libraries(solar_3D_tests PUBLIC PkgConfig::PETSC)
+if(NOT yaml-cpp_FOUND)
+    target_link_libraries(solar_3D_tests PUBLIC yaml-cpp::yaml-cpp)
+else()
+    target_link_libraries(solar_3D_tests PUBLIC yaml-cpp)
+endif()
+target_compile_definitions(solar_3D_tests PUBLIC ${PETSC_DEFINITIONS})
+target_link_libraries(solar_3D_tests PUBLIC GridManager)
+# Build thdf/libhdf_output.a using its Makefile
+# Ensure solar_3D depends on the static library
+add_dependencies(solar_3D_tests hdf_output_lib)
+
+# Include thdf headers
+target_include_directories(solar_3D_tests PUBLIC src/thdf/)
+
+# Link the static library
+target_link_libraries(solar_3D_tests PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a)
+
 

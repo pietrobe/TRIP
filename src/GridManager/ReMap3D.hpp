@@ -48,11 +48,11 @@ public:
         int block_size_,
         int tile_size_,
         int num_tiles_per_block_ = -1) 
-        : space_grid(space_grid_),
+        : comm(space_grid_->getComm()),
+          space_grid(space_grid_),
           block_grid(block_grid_),
-          comm(space_grid_->getComm()),
-          block_size(block_size_),
-          tile_size(tile_size_)
+          tile_size(tile_size_),
+          block_size(block_size_)
     {
         init(block_size_, tile_size_, num_tiles_per_block_);
     }

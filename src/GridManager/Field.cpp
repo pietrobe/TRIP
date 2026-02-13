@@ -44,8 +44,8 @@ std::string Field::getName() const { return name; }
 Int Field::getNPhysical() const { return Nphysical; } 
 Int Field::getNparam() const { return Nparam; }
 std::vector<Int> Field::getNParamSizes() const { return Nparam_size; }
-Int Field::getParamSize(int p) const { 
-    if (Nparam_size.size() == 0 || Nparam_size.size() < p)
+Int Field::getParamSize(size_t p) const { 
+    if (Nparam_size.empty() || Nparam_size.size() <= p)
         throw std::runtime_error("In Field::getParamSize, p is out of Nparam size.");
     return Nparam_size[p];
 }
@@ -87,7 +87,7 @@ std::vector<Int> Field::block_to_local(Int b) const
 
 Int Field::local_to_block(const std::vector<Int>& idx) const 
 {
-    if (idx.size() != ((Nparam == 0) ? 1 : Nparam)) {
+    if (idx.size() != ((Nparam == 0) ? 1 : static_cast<std::size_t>(Nparam))) {
         throw std::runtime_error("Number of indices does not match layout of Field.");
     }
     if (Nparam == 0 && (idx[0] < 0 || idx[0] >= Nphysical)) throw std::out_of_range("Index out of bounds in local_to_block.");

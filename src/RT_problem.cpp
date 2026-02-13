@@ -575,9 +575,9 @@ void RT_problem::read_3D(const char* filename){
 		{								
 			if (use_uniform_magnetic_field_)
 			{				
-				B_dev.block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(uniform_magnetic_field_value_); // converting to Larmor frequency					
-				B_dev.block(i, j, k)[1] = uniform_magnetic_field_theta_; 					
-				B_dev.block(i, j, k)[2] = uniform_magnetic_field_chi_;
+				B_->block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(uniform_magnetic_field_value_); // converting to Larmor frequency					
+				B_->block(i, j, k)[1] = uniform_magnetic_field_theta_; 					
+				B_->block(i, j, k)[2] = uniform_magnetic_field_chi_;
 			} else {
 				B_->block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(B_spherical[0]); // converting to Larmor frequency					
 				B_->block(i, j, k)[1] = B_spherical[1]; 					
