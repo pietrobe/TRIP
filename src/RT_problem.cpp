@@ -1346,11 +1346,6 @@ void RT_problem::allocate_fields(){
 	rho_field_ = std::make_shared<Field>(
 		"rho", space_grid_, N_pol_, std::vector<PetscInt>{N_theta_,N_chi_, N_nu_}, false);
 
-	// I_field_->set_to_zero(); //DEBUG
-	// S_field_->set_to_zero(); //DEBUG
-	// eta_field_->set_to_zero(); //DEBUG
-	// rho_field_->set_to_zero(); //DEBUG
-
 	local_size_ = block_size_ * space_grid_->getLocalSizeX() * space_grid_->getLocalSizeY() * space_grid_->getLocalSizeZ();
 	PetscErrorCode ierr = VecCreate(PETSC_COMM_WORLD, &I_vec_);CHKERRV(ierr);	
 	ierr = VecSetSizes(I_vec_, local_size_, tot_size_);CHKERRV(ierr);			

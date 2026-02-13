@@ -314,13 +314,11 @@ public:
     	}
 
     	// adding some options for verbosity
-    	if (RT_problem_->verbose_)    		
-    	{
-    		ierr = PetscOptionsSetValue(NULL, "-ksp_monitor", "");CHKERRV(ierr);
-    		// ierr = PetscOptionsSetValue(NULL, "-ksp_monitor_true_residual", "");CHKERRV(ierr);    
+		if (RT_problem_->verbose_)  {
+			ierr = PetscOptionsSetValue(NULL, "-ksp_monitor", "");CHKERRV(ierr);
+			// ierr = PetscOptionsSetValue(NULL, "-ksp_monitor_true_residual", "");CHKERRV(ierr);    
 			ierr = PetscOptionsSetValue(NULL, "-ksp_view", "");CHKERRV(ierr);		
-    	}
-    	
+		}
 		ierr = PetscOptionsSetValue(NULL, "-ksp_converged_reason", "");CHKERRV(ierr);		
 		
     	// extra options from command line   	

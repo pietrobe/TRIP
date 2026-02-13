@@ -1181,7 +1181,7 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
     
     const auto N_nu = RT_problem_->N_nu_;
 
-    const auto block_size = 4 * N_nu;
+    const auto block_size_Omega = 4 * N_nu;
     
     const auto depth_grid = RT_problem_->depth_grid_;   
     const auto L          = RT_problem_->L_;            
@@ -1240,26 +1240,21 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
     ///////////// data movement ////////////////////
     
     // write eta and rhos to the serial grid
-    // sgrid::ReMap<Field_t> tmp_remap;
-    ReMap3D tmp_remap(RT_problem_->space_grid_, space_grid_serial_, RT_problem_->block_size_, tile_size_);
+    ReMap3D tmp_remap(RT_problem_->space_grid_, space_grid_serial_,
+        block_size_Omega, local_block_size_); // TODO we could just use Omega_remap
 
-    // tmp_remap.init(*(RT_problem_->eta_field_Omega_), *eta_field_serial_Omega_);
-    // tmp_remap.from_pgrid_to_pblock(*(RT_problem_->eta_field_Omega_), *eta_field_serial_Omega_, 0); 
     tmp_remap.from_space_to_block_distributed(
         RT_problem_->eta_field_Omega_, eta_field_serial_Omega_
     );
 
-    // tmp_remap.init(*(RT_problem_->rho_field_Omega_), *rho_field_serial_Omega_);
-    // tmp_remap.from_pgrid_to_pblock(*(RT_problem_->rho_field_Omega_), *rho_field_serial_Omega_, 0); 
     tmp_remap.from_space_to_block_distributed(
         RT_problem_->rho_field_Omega_, rho_field_serial_Omega_
     );
 
     // write S to the serial grid
-    tmp_remap.from_space_to_block_distributed(
+    S_remap_Omega_.from_space_to_block_distributed(
         RT_problem_->S_field_Omega_, S_field_serial_Omega_
-    );
-    // S_remap_Omega_.from_pgrid_to_pblock(*RT_problem_->S_field_Omega_, *S_field_serial_Omega_, 0);                                    
+    );                               
 
     comm_timer += MPI_Wtime() - start_comm;          
 
@@ -3870,10 +3865,10 @@ void MF_context::init_unpol_fields(){
 
     // init remaps // TODO we could use just one remap
     I_unpol_remap_.init(
-        RT_problem_->space_grid_, space_grid_serial_, RT_problem_->block_size_, tile_size_
+        RT_problem_->space_grid_, space_grid_serial_, RT_problem_->block_size_unpolarized_, n_local_rays_unpol_
     );
     S_unpol_remap_.init(
-        RT_problem_->space_grid_, space_grid_serial_, RT_problem_->block_size_, tile_size_
+        RT_problem_->space_grid_, space_grid_serial_, RT_problem_->block_size_unpolarized_, n_local_rays_unpol_
     );        
 
     // vectors for unpolarized data    
@@ -3979,10 +3974,10 @@ void MF_context::init_serial_fields_Omega(){
     
     auto N_z  = RT_problem_->N_z_;
     auto N_nu = RT_problem_->N_nu_;
-    auto block_size = 4 * N_nu;
+    auto block_size_Omega = 4 * N_nu;
 
     // set the number of local rays and tiles   
-    local_block_size_ = block_size/mpi_size_;        
+    local_block_size_ = block_size_Omega/mpi_size_;        
 
     if (local_block_size_ < 4)
     {
@@ -3998,17 +3993,17 @@ void MF_context::init_serial_fields_Omega(){
     } 
     else
     {
-        if (local_block_size_ * mpi_size_ != block_size and this->mpi_rank_ == 0) { 
+        if (local_block_size_ * mpi_size_ != block_size_Omega and this->mpi_rank_ == 0) { 
             std::cout << "ERROR: file: " << __FILE__ << " line: " << __LINE__ << std::endl;
-            std::cout << "ERROR: in init_serial_fields(): block_size/mpi_size_ not integer" << std::endl;
-            std::cout << "ERROR: block_size = " << block_size << std::endl;
+            std::cout << "ERROR: in init_serial_fields(): block_size_Omega/mpi_size_ not integer" << std::endl;
+            std::cout << "ERROR: block_size_Omega = " << block_size_Omega << std::endl;
             std::cout << "ERROR: mpi_size = " << mpi_size_ << std::endl;
             std::cout << "ERROR: n_local_rays_ = " << n_local_rays_ << std::endl;
-            std::cout << "ERROR: block_size % mpi_size_ = " << (block_size % mpi_size_) << std::endl;
+            std::cout << "ERROR: block_size_Omega % mpi_size_ = " << (block_size_Omega % mpi_size_) << std::endl;
         }    
     }
     
-    if (local_block_size_ % 4 != 0) std::cout << "ERROR: in init_serial_fields(): local_block_size_ should be divisible by 4" << std::endl;        
+    if (local_block_size_ % 4 != 0) std::cout << "ERROR: in init_serial_fields_Omega(): local_block_size_ should be divisible by 4" << std::endl;        
         
     // create serial fields 
     I_field_serial_Omega_   = std::make_shared<Field>(
@@ -4027,10 +4022,10 @@ void MF_context::init_serial_fields_Omega(){
 
     // init remaps // TODO use just one remao
     I_remap_Omega_.init(
-        RT_problem_->space_grid_, space_grid_serial_, block_size, local_block_size_
+        RT_problem_->space_grid_, space_grid_serial_, block_size_Omega, local_block_size_
     ); 
     S_remap_Omega_.init(
-        RT_problem_->space_grid_, space_grid_serial_, block_size, local_block_size_
+        RT_problem_->space_grid_, space_grid_serial_, block_size_Omega, local_block_size_
     );      
 
     // apply BC on I_Field
@@ -4045,7 +4040,7 @@ void MF_context::init_serial_fields_Omega(){
         {       
             const Real W_T_deep = W_T_dev->ref(i,j,k);            
             
-            for (int b = 0; b < block_size; b = b + 4) 
+            for (int b = 0; b < block_size_Omega; b = b + 4) 
             {
                 I_Omega_dev->block(i,j,k)[b] = W_T_deep;                                
             }                       
