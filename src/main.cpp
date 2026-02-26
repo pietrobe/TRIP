@@ -163,15 +163,18 @@ main(int argc, char *argv[])
 		// print some memory info
 		print_PETSc_mem();
 
+		double time_output_csv;
+		double time_output_hdf5;
 		if (cfg.output)
 		{
 			// write output Surface profiles for all surface points
 			const int N_x = rt_problem_ptr->N_x_;
 			const int N_y = rt_problem_ptr->N_y_;
 
-			// Old scool output ....
+			// Old school output ....
 			// Where the output is written in separate files for each emergent spatial point
 			////////////////////////////////////////////////////////////////////////////////////////////////
+			time_output_csv = MPI_Wtime();
 			for (int i = 0; i < N_x; ++i)
 			{
 				for (int j = 0; j < N_y; ++j)
@@ -193,13 +196,16 @@ main(int argc, char *argv[])
 					}
 				}
 			}
+			time_output_csv = MPI_Wtime() - time_output_csv;
 
 			// New HDF5 output .... TESTING PASSED
 			////////////////////////////////////////////////////////////////////////////////////////////////
+			time_output_hdf5 = MPI_Wtime();
 			write_emergent_field_hdf5(*rt_problem_ptr,											  //
 									  (output_path / "emergent_field_angular_grid.h5").string()); //
 
 			rt_problem_ptr->write_JKQ_field_hdf5((output_path / "JKQ_field.h5").string()); //
+			time_output_hdf5 = MPI_Wtime() - time_output_hdf5;
 
 			////////////////////////////////////////////////////////////////////////////////////////////////
 			// compute arbitrary beams
@@ -268,7 +274,9 @@ main(int argc, char *argv[])
 														main_start_time,		   //
 														main_setup_time,		   //
 														main_solve_end_time,	   //
-														main_end_time);			   //
+														main_end_time,
+														time_output_csv,
+														time_output_hdf5);			   //
 
 				std::cout << ss_mem.str();
 

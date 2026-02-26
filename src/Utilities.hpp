@@ -88,7 +88,7 @@ print_PETSc_mem(const std::string &tag = "", std::ostream &os = std::cout)
 }
 
 inline std::string
-format_execution_time_summary(int mpi_size, double start_time, double setup_time, double solve_end_time, double end_time)
+format_execution_time_summary(int mpi_size, double start_time, double setup_time, double solve_end_time, double end_time, double csv_out_time, double hdf5_out_time)
 {
 	std::stringstream ss;
 	ss << std::fixed << std::setprecision(2);
@@ -100,6 +100,8 @@ format_execution_time_summary(int mpi_size, double start_time, double setup_time
 	ss << " Setup time:           " << (setup_time - start_time) << " s" << std::endl;
 	ss << " Solve time:           " << (solve_end_time - setup_time) << " s" << std::endl;
 	ss << " Post processing time: " << (end_time - solve_end_time) << " s" << std::endl;
+	ss << " 	Output CSV: 	  " << csv_out_time << " s" << std::endl;
+	ss << " 	Output HDF5: 	  " << hdf5_out_time << " s" << std::endl;
 	ss << std::string(80, '-') << std::endl;
 	ss << " Total execution time: " << (end_time - start_time) << " s" << std::endl;
 	ss << std::string(80, '=') << std::endl;

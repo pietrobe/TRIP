@@ -57,6 +57,8 @@ echo "Starting TRIP ...... "
 echo ""
 
 export OMPI_MCA_mpi_cuda_support=1
+export SLURM_CPU_BIND=none
+export OMPI_MCA_io=romio321
 
 # Define arguments as a bash array
 ARGS=(
