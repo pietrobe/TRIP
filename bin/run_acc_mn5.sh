@@ -69,6 +69,8 @@ echo "Executing command:"
 echo " srun --cpu-bind=socket  mpirun --bind-to none  ${SCRIPT_DIR}/mnacc_wrapper.sh ${APP_PATH}/solar_3D ${ARGS[@]}"
 echo ""
 
+export SLURM_CPU_BIND=none
+
 mpirun --bind-to none  \
       ${SCRIPT_DIR}/mnacc_wrapper.sh \
       ${APP_PATH}/solar_3D "${ARGS[@]}"

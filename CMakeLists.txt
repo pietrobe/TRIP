@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.5...3.19)
 set(SOLAR_3D_ROOT_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${SOLAR_3D_ROOT_PATH}/cmake")
 
-project(par_moonolith_usage VERSION 1.0.0)
+project(par_moonolith_usage VERSION 1.0.0 LANGUAGES C CXX)
 
 # for CTest enabling
 # enable_testing()
@@ -19,13 +19,30 @@ if(DEBUG)
     set(EXECUTABLE_NAME "solar_3D_debug")
 else()
     message(STATUS "Configuring Release build")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option")
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -std=c++17 -Wno-deprecated-declarations ")
     #set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Ofast -fno-signed-zeros -fno-trapping-math -fassociative-math -march=native -mtune=native -mprefer-vector-width=512 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option -pedantic ")
     set(EXECUTABLE_NAME "solar_3D")
 endif()
 
 ### DEPENDENCIES
-find_package(MPI REQUIRED)
+# Skip MPI compiler test which doesn't work with NVHPC compilers  
+# The test fails but we can link the library directly
+set(MPI_SKIP_COMPILER_TEST TRUE)
+
+# Find only C component - will create CXX target from it
+find_package(MPI REQUIRED COMPONENTS C)
+
+# Create MPI::MPI_CXX that links with NVIDIA C++ compiler
+if(NOT TARGET MPI::MPI_CXX AND TARGET MPI::MPI_C)
+    message(STATUS "Creating MPI::MPI_CXX from MPI::MPI_C for NVHPC compiler")
+    add_library(MPI::MPI_CXX INTERFACE IMPORTED)
+    set_target_properties(MPI::MPI_CXX PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "$<TARGET_PROPERTY:MPI::MPI_C,INTERFACE_INCLUDE_DIRECTORIES>"
+        INTERFACE_LINK_LIBRARIES "$<TARGET_PROPERTY:MPI::MPI_C,INTERFACE_LINK_LIBRARIES>"
+    )
+endif()
+
 find_package(HDF5 REQUIRED)
 find_package(HDF5 COMPONENTS C HL REQUIRED)
 
