@@ -83,7 +83,11 @@ srun ./solar_3D
 ```
 
 ### Test
-The file `run_test.sh` contains testing routines.
+Compile with 
+```bash
+make build_test
+```
+and execute `run_test.sh` which contains some testing routines.
 
 
 ### Contributors
