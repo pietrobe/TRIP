@@ -1713,32 +1713,32 @@ void RT_problem::set_eta_and_rhos(){
         Real theta_v_b = v_b[1];
         Real chi_v_b   = v_b[2];
 
-        Real nu_L    = B[0];
-        Real theta_B = B[1];
-        Real chi_B   = B[2];
+		Real nu_L    = B[0];
+		Real theta_B = B[1];
+		Real chi_B   = B[2];
 
         Real Doppler_width = Doppler_width_->ref(i,j,k); 
     	Real k_L           = k_L_->ref(i,j,k);
 		Real a             = a_->ref(i,j,k);
 
 		// init rotation matrix
-        Rotation_matrix R(0.0, -theta_B, -chi_B);
-        
-        // indeces
-        std::vector<int> local_idx;
-        int j_theta, k_chi, n_nu;
-         
-        for (int b = 0; b < block_size_; b = b + 4) 
-        {        	        	
-        	block_rho[b + 1] = 0;
+		Rotation_matrix R(0.0, -theta_B, -chi_B);
+		  
+		// indeces
+		std::vector<int> local_idx;
+		int j_theta, k_chi, n_nu;
+      
+      for (int b = 0; b < block_size_; b = b + 4) 
+      {        	        	
+	     	block_rho[b + 1] = 0;
 
 			local_idx = /*eta_field_->*/block_to_local(b);
 
-        	j_theta = local_idx[0];
-        	k_chi   = local_idx[1];
-        	n_nu    = local_idx[2];
+	     	j_theta = local_idx[0];
+	     	k_chi   = local_idx[1];
+	     	n_nu    = local_idx[2];
 
-        	const Real theta = theta_grid_[j_theta];
+	     	const Real theta = theta_grid_[j_theta];
 			const Real chi   = chi_grid_[k_chi];	
 
 			const Real coeff  =  k_L / (std::sqrt(PI) * Doppler_width);
@@ -1755,7 +1755,7 @@ void RT_problem::set_eta_and_rhos(){
 			for (int K = 0; K < 3; ++K)
 			{
 				const double coeff_K = coeff * std::sqrt(3.0 * (2.0 * double(K) + 1.0));
-	
+
 				for (int Mu2 = - Ju2_; Mu2 < Ju2_ + 1; Mu2 += 2)
 				{
 					for (int Ml2 = - Jl2_; Ml2 < Jl2_ + 1; Ml2 += 2)
@@ -1764,12 +1764,12 @@ void RT_problem::set_eta_and_rhos(){
 						{
 							const int q2 = Ml2 - Mu2;
 
-				      		const double W3J1 = W3JS(Ju2_, Jl2_, 2,-Mu2, Ml2, -q2);  
-				      		const double W3J2 = W3JS(2, 2, 2 * K, q2, -q2, 0); 
+				      	const double W3J1 = W3JS(Ju2_, Jl2_, 2,-Mu2, Ml2, -q2);  
+				      	const double W3J2 = W3JS(2, 2, 2 * K, q2, -q2, 0); 
 
 							const double fact = coeff_K * std::pow(-1.0, double(q2) / 2.0 + 1.0) * std::pow(W3J1, 2) * W3J2;								   
 							
-		      				const double um = coeff2 * (gu_ * (double(Mu2) / 2.0) - gl_ * (double(Ml2) / 2.0)) + u_red;
+		      			const double um = coeff2 * (gu_ * (double(Mu2) / 2.0) - gl_ * (double(Ml2) / 2.0)) + u_red;
 					
 							for (int Q = -K; Q < K + 1; ++Q)
 							{			
@@ -1777,7 +1777,7 @@ void RT_problem::set_eta_and_rhos(){
 				        		const auto D_KQQ                   = std::conj(R(K, 0, Q));
 
 				        		const auto fact_re = fact * std::real(faddeva) * D_KQQ;
-				        		const auto fact_im = fact * std::imag(faddeva) * D_KQQ;		
+				        		const auto fact_im = fact * std::imag(faddeva) * D_KQQ;						        		
 				        		
 								// etas							
 								block_eta[b    ] += std::real(fact_re * get_TKQi(0, K, Q, j_theta, k_chi)); 
@@ -1794,9 +1794,9 @@ void RT_problem::set_eta_and_rhos(){
 						}
 					}		
 				}
-        	}
+	     	}
 
-        	if (enable_continuum_) block_eta[b] += k_c[n_nu];       
+	     	if (enable_continuum_) block_eta[b] += k_c[n_nu];       
 
         	// if (i == 0 and j == 0 and g_dev.space_grid_->getLocalSizeX();(2, k) == 0 and b >= block_size_ - 4 * N_nu_) 
         	// {
@@ -1806,24 +1806,24 @@ void RT_problem::set_eta_and_rhos(){
 			// std::cout << "block_eta[b + 1] = " <<   block_eta[b + 1]   << std::endl; 
 			// std::cout << "block_eta[b + 2] = " <<   block_eta[b + 2]   << std::endl; 
 			// std::cout << "block_eta[b + 3] = " <<   block_eta[b + 3]   << std::endl; 
-        	// std::cout << "block_rho[b + 1] = " <<   block_rho[b + 1]   << std::endl; 
-        	// std::cout << "block_rho[b + 2] = " <<   block_rho[b + 2]   << std::endl; 
-        	// std::cout << "block_rho[b + 3] = " <<   block_rho[b + 3]   << std::endl; 
+	     	// std::cout << "block_rho[b + 1] = " <<   block_rho[b + 1]   << std::endl; 
+	     	// std::cout << "block_rho[b + 2] = " <<   block_rho[b + 2]   << std::endl; 
+	     	// std::cout << "block_rho[b + 3] = " <<   block_rho[b + 3]   << std::endl; 
 
-        	// sanity checks
-        	if (block_eta[b] == 0) std::cerr << "\nWARNING: zero eta_I!"     << std::endl; 
-        	if (block_eta[b] < 0)  std::cerr << "\nWARNING: negative eta_I!" << std::endl; 		
-        	if (block_rho[b] < 0)  std::cerr << "\nWARNING: negative rho_I!" << std::endl; 	      
+	     	// sanity checks
+	     	if (block_eta[b] == 0) std::cerr << "\nWARNING: zero eta_I!"     << std::endl; 
+	     	if (block_eta[b] < 0)  std::cerr << "\nWARNING: negative eta_I!" << std::endl; 		
+	     	if (block_rho[b] < 0)  std::cerr << "\nWARNING: negative rho_I!" << std::endl; 	      
 
-        	if (isnan(block_eta[b    ])) std::cerr << "\nWARNING: eta_I = NaN!" << std::endl; 
-        	if (isnan(block_eta[b + 1])) std::cerr << "\nWARNING: eta_Q = NaN!" << std::endl; 
-        	if (isnan(block_eta[b + 2])) std::cerr << "\nWARNING: eta_U = NaN!" << std::endl; 
-        	if (isnan(block_eta[b + 3])) std::cerr << "\nWARNING: eta_V = NaN!" << std::endl;         	
-        	if (isnan(block_rho[b + 1])) std::cerr << "\nWARNING: rho_Q = NaN!" << std::endl; 
-        	if (isnan(block_rho[b + 2])) std::cerr << "\nWARNING: rho_U = NaN!" << std::endl; 
-        	if (isnan(block_rho[b + 3])) std::cerr << "\nWARNING: rho_V = NaN!" << std::endl;         	      	        	
-        } 	
-    });	
+	     	if (isnan(block_eta[b    ])) std::cerr << "\nWARNING: eta_I = NaN!" << std::endl; 
+	     	if (isnan(block_eta[b + 1])) std::cerr << "\nWARNING: eta_Q = NaN!" << std::endl; 
+	     	if (isnan(block_eta[b + 2])) std::cerr << "\nWARNING: eta_U = NaN!" << std::endl; 
+	     	if (isnan(block_eta[b + 3])) std::cerr << "\nWARNING: eta_V = NaN!" << std::endl;         	
+	     	if (isnan(block_rho[b + 1])) std::cerr << "\nWARNING: rho_Q = NaN!" << std::endl; 
+	     	if (isnan(block_rho[b + 2])) std::cerr << "\nWARNING: rho_U = NaN!" << std::endl; 
+	     	if (isnan(block_rho[b + 3])) std::cerr << "\nWARNING: rho_V = NaN!" << std::endl;         	      	        	
+	   } 	
+ 	});	
 
 	// debug			
 	// const Real dichroism_module = std::sqrt(etas_and_rhos[1] * etas_and_rhos[1] + etas_and_rhos[2] * etas_and_rhos[2] + etas_and_rhos[3] * etas_and_rhos[3]);	
@@ -2412,7 +2412,7 @@ bool RT_problem::field_is_zero(const Field_ptr_t field)
 void RT_problem::set_3D_decomposition(const int N_x, const int N_y, const int N_z)
 {
 
-	if (mpi_size_ > N_x * N_y * N_z) 
+	if (use_1_5D_approx_ and mpi_size_ > N_x * N_y * N_z) 
 	{
    	std::cerr << "Error in 1.5D: mpi_size larger then N_x * N_y!" << std::endl;
    	MPI_Abort(MPI_COMM_WORLD, 1);
@@ -2423,12 +2423,12 @@ void RT_problem::set_3D_decomposition(const int N_x, const int N_y, const int N_
    int best_py = 1;
    int best_pz = mpi_size_;
 
-   for (int px = 1; px <= mpi_size_; ++px) 
+   for (int px = 1; px <= std::min(N_x, mpi_size_); ++px) 
    {
 		if (mpi_size_ % px != 0) continue;
 		int rest = mpi_size_ / px;
 
-		for (int py = 1; py <= rest; ++py) 
+		for (int py = 1; py <= std::min(N_y, rest); ++py) 
 		{
 
 			if (rest % py != 0) continue;
@@ -2437,14 +2437,18 @@ void RT_problem::set_3D_decomposition(const int N_x, const int N_y, const int N_
 			// Respect grid limits
 			if (px > N_x || py > N_y || pz > N_z) continue;
 
-			// Compute local subdomain sizes
-			double lx = double(N_x) / px;
-			double ly = double(N_y) / py;
-			double lz = double(N_z) / pz;
+			// Compute local subdomain sizes (floor/ceil)
+			int lx_min = N_x / px;
+			int lx_max = (N_x + px - 1) / px;   // equivalent to ceil(N_x/px)
 
-			// Balance metric = variance of (lx, ly, lz)
-			double mean = (lx + ly + lz) / 3.0;
-			double score = (lx-mean)*(lx-mean) + (ly-mean)*(ly-mean) + (lz-mean)*(lz-mean);
+			int ly_min = N_y / py;
+			int ly_max = (N_y + py - 1) / py;
+
+			int lz_min = N_z / pz;
+			int lz_max = (N_z + pz - 1) / pz;
+
+			// Balance metric = ratio of largest to smallest subdomain volume
+			double score = (double(lx_max) * ly_max * lz_max) / (double(lx_min) * ly_min * lz_min);
 
 			if (score < best_score) {
 			    best_score = score;
@@ -2458,6 +2462,8 @@ void RT_problem::set_3D_decomposition(const int N_x, const int N_y, const int N_
    mpi_size_x_ = best_px;
    mpi_size_y_ = best_py;
    mpi_size_z_ = best_pz;
+
+   if (mpi_rank_ == 0) std::cout << "Load balancing factor Vmax/Vmin (1.0 = optimal): " << best_score << std::endl;   
 }
 
 
