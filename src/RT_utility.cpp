@@ -134,6 +134,23 @@ loadConfig(const std::string &filename)
 		}
 	}
 
+	if (config["set_uniform_Vb"]) cfg.set_uniform_Vb = config["set_uniform_Vb"].as<bool>();
+	if (config["Vb_field"])
+	{
+		auto Vb_field_node = config["Vb_field"];
+		if (Vb_field_node.IsSequence() && Vb_field_node.size() == 3)
+		{
+			for (size_t i = 0; i < 3; ++i)
+			{
+				cfg.Vb_field[i] = Vb_field_node[i].as<double>();
+			}
+		}
+		else
+		{
+			throw std::runtime_error("Vb_field must be a sequence of three numbers.");
+		}
+	}
+
 	// Integers
 	if (config["N_theta"]) cfg.N_theta = config["N_theta"].as<int>();
 	if (config["N_chi"]) cfg.N_chi = config["N_chi"].as<int>();
@@ -234,6 +251,14 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 		print("* Uniform Magnetic Field Value (Gauss)", std::to_string(cfg.B_field[0]));
 		print("* Uniform Magnetic Field Theta (rad)", std::to_string(cfg.B_field[1]));
 		print("* Uniform Magnetic Field Chi (rad)", std::to_string(cfg.B_field[2]));
+	}
+
+	print("Set Uniform Bulk Velocity", (cfg.set_uniform_Vb ? "Yes" : "No"));
+	if (cfg.set_uniform_Vb)
+	{
+		print("* Uniform Bulk Velocity Vx (cm/s)", std::to_string(cfg.Vb_field[0]));
+		print("* Uniform Bulk Velocity Vy (cm/s)", std::to_string(cfg.Vb_field[1]));
+		print("* Uniform Bulk Velocity Vz (cm/s)", std::to_string(cfg.Vb_field[2]));
 	}
 
 	os << std::endl << "Solver Configuration:" << std::endl;

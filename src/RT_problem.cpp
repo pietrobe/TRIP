@@ -1058,10 +1058,19 @@ void RT_problem::read_bulk_velocity_1D(input_string filename){
 			theta_b_vec.push_back(entry);
 			lineStream >> entry;
 			chi_b_vec.push_back(entry);					
-		}	
-
+		}
+		
 		first_line = false;
-	} 
+	}
+
+	if (not(this->use_bulk_velocity_))
+	{
+		if (mpi_rank_ == 0) std::cout << "WARNING: bulk velocity field read but not used!" << std::endl;
+		std::vector<Real> zero_vec(N_z_, 0.0);
+		v_b_vec		= zero_vec;
+		theta_b_vec = zero_vec;
+		chi_b_vec	= zero_vec;
+	}
 
 	// safety check
 	if (v_b_vec.size()     != N_z_) std::cout << "WARNING: size mismatch in read_bulk_velocity_1D()" << std::endl;

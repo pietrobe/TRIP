@@ -182,6 +182,10 @@ struct AppConfig
 	bool				  set_uniform_B = false;
 	std::array<double, 3> B_field		= {0.0, 0.0, 0.0};
 
+	// Set constant bulk velocity
+	bool				  set_uniform_Vb = false;
+	std::array<double, 3> Vb_field		= {0.0, 0.0, 0.0};
+
 	// numerical inputs
 	bool		use_1_5D_approx = false;
 	std::string formal_solver	= "BESSER";
