@@ -95,6 +95,7 @@ list(APPEND SOURCES_FILES
     src/Rotation_matrix.cpp
     src/RT_problem.cpp
     src/RT_problem_IO.cpp
+    src/RT_problem_IO_3Dfield.cpp
     src/RT_problem_txt_IO.cpp
     src/RT_solver.cpp
     src/Utilities.cpp

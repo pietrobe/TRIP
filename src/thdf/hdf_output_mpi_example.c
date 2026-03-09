@@ -2,6 +2,7 @@
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "hdf_output_example_3D.h"
 #include "thdf.h"
 
 /////////////////////////////////////////////////////////////
@@ -496,7 +497,7 @@ main_JKQ_domain_dec(int argc, char **argv) {
     // write JKQ KQ matrix
     THDF_KQ_table_t KQ_table;
     KQ_table.KQ_size                 = 9;
-    KQ_table.KQ_table               = KQ_values;
+    KQ_table.KQ_table                = KQ_values;
     KQ_table.KQ_compressed_size_real = N_JKQ_real;
     KQ_table.KQ_compressed_size_imag = N_JKQ_imag;
     KQ_table.KQ_compressed_real      = KQ_values_commpressed_real;
@@ -987,5 +988,6 @@ main(int argc, char **argv) {
   // return main_default(argc, argv);              // Simple MPI example
   // return main_domain_dec(argc, argv);  // Domain decomposition for regular fields
   // return main_example_ar_domain_dec(argc, argv);  // Domain decomposition for ARD fields
-  return main_JKQ_domain_dec(argc, argv);  // Domain decomposition for JKQ fields
+  // return main_JKQ_domain_dec(argc, argv);  // Domain decomposition for JKQ fields
+  return main_3d_example_v2(argc, argv);
 }

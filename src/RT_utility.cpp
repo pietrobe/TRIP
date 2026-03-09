@@ -5,10 +5,10 @@
 inline KSPType
 toKSPType(const std::string &name)
 {
-	if (name == "KSPGMRES")   return KSPGMRES;
-	if (name == "KSPFGMRES")  return KSPFGMRES; // PETSc literal
-	if (name == "KSPPGMRES")  return KSPPGMRES;
-	if (name == "KSPBCGS")    return KSPBCGS;
+	if (name == "KSPGMRES") return KSPGMRES;
+	if (name == "KSPFGMRES") return KSPFGMRES; // PETSc literal
+	if (name == "KSPPGMRES") return KSPPGMRES;
+	if (name == "KSPBCGS") return KSPBCGS;
 	if (name == "KSPPREONLY") return KSPPREONLY;
 
 	throw std::runtime_error("Unknown KSPType: " + name);
@@ -17,10 +17,10 @@ toKSPType(const std::string &name)
 inline std::string
 KSPTypeToString(KSPType type)
 {
-	if (type == KSPGMRES)   return "KSPGMRES";
-	if (type == KSPFGMRES)  return "KSPFGMRES";
-	if (type == KSPPGMRES)  return "KSPPGMRES";
-	if (type == KSPBCGS)    return "KSPBCGS";
+	if (type == KSPGMRES) return "KSPGMRES";
+	if (type == KSPFGMRES) return "KSPFGMRES";
+	if (type == KSPPGMRES) return "KSPPGMRES";
+	if (type == KSPBCGS) return "KSPBCGS";
 	if (type == KSPPREONLY) return "KSPPREONLY";
 
 	return "UNKNOWN";
@@ -212,6 +212,13 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 	auto	  print		  = [&](const std::string &label, const std::string &value)
 	{ os << std::left << std::setw(label_width) << (label + ":") << value << std::endl; };
 
+	auto to_sci = [](double v, int prec = 2)
+	{
+		std::ostringstream oss;
+		oss << std::scientific << std::setprecision(prec) << v;
+		return oss.str();
+	};
+
 	os << "YAML Configuration Summary:" << std::endl;
 	print("Input Directory", cfg.input_directory.string());
 	print("Input File", cfg.input_file.string());
@@ -245,13 +252,13 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 
 	os << std::endl << "Solver Configuration:" << std::endl;
 	print("KSP Solver Type", KSPTypeToString(cfg.solver.ksp_solver_type));
-	print("KSP Relative Tolerance", std::to_string(cfg.solver.ksp_rtol));
+	print("KSP Relative Tolerance", to_sci(cfg.solver.ksp_rtol));
 	print("KSP Maximum Iterations", std::to_string(cfg.solver.ksp_max_it));
 	print("GMRES Restart", std::to_string(cfg.solver.gmres_restart));
 
 	os << std::endl << "Preconditioner Configuration:" << std::endl;
 	print("PC Solver Type", KSPTypeToString(cfg.prec.pc_solver_type));
-	print("PC Relative Tolerance", std::to_string(cfg.prec.pc_rtol));
+	print("PC Relative Tolerance", to_sci(cfg.prec.pc_rtol));
 	print("PC Maximum Iterations", std::to_string(cfg.prec.pc_max_it));
 
 	os << std::endl;

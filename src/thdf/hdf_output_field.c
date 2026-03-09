@@ -56,10 +56,10 @@ THDF_open_file(const char *filename) {  //
   }
 
   // Create the file (truncate if exists)
-  file_id = H5Fcreate(filename,           //
-                      H5F_ACC_TRUNC,      //
-                      H5P_DEFAULT,        //
-                      plist_id);          //
+  file_id = H5Fcreate(filename,       //
+                      H5F_ACC_TRUNC,  //
+                      H5P_DEFAULT,    //
+                      plist_id);      //
   if (file_id < 0) {
     fprintf(stderr, "Error creating file '%s'\n", filename);
     H5Pclose(plist_id);
@@ -113,6 +113,11 @@ THDF_get_hdf_float_datatype(void) {
       return -1;
       break;
   }
+}
+
+hid_t
+THDF_get_hdf_float32_datatype(void) {
+  return H5T_NATIVE_FLOAT;
 }
 
 THDF_n_float_type_t
@@ -186,6 +191,7 @@ THDF_create_field_handler_mpi(hid_t file,           //
   // Check if output_field group already exists, if so, open it
   H5E_BEGIN_TRY { output_dset->group_id = H5Gopen2(file, "/emergent_field", H5P_DEFAULT); }
   H5E_END_TRY;
+
   // If group doesn't exist, create it (collective operation)
   if (output_dset->group_id < 0) {
     output_dset->group_id = H5Gcreate2(file, "/emergent_field", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
@@ -543,6 +549,27 @@ THDF_write_frequencies_grid_to_hdf5(hid_t                          file,        
   H5LTmake_dataset_double(freq_group, "frequencies", 1, (hsize_t[]){frequencies_grid->N_frequencies},
                           frequencies_grid->frequencies);
   H5Gclose(freq_group);
+  return 0;
+}
+
+///////////////////////////////////////////////////////////////
+/// THDF_read_frequencies_grid_from_hdf5
+/////////////////////////////////////////////////////////////
+int
+THDF_write_geometry_3D_to_hdf5(hid_t file, const THDF_geometry_3D_t *geometry) {
+  hid_t geom_group = H5Gcreate2(file, "/geometry_3D", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (geom_group < 0) {
+    fprintf(stderr, "Error creating geometry_3D group\n");
+    return -1;
+  }
+
+  H5LTmake_dataset_int(geom_group, "N_x", 1, (hsize_t[]){1}, &geometry->N_x);
+  H5LTmake_dataset_int(geom_group, "N_y", 1, (hsize_t[]){1}, &geometry->N_y);
+  H5LTmake_dataset_int(geom_group, "N_z", 1, (hsize_t[]){1}, &geometry->N_z);
+  H5LTmake_dataset_double(geom_group, "heights", 1, (hsize_t[]){(hsize_t)(geometry->N_z)}, geometry->heights);
+  H5LTmake_dataset_double(geom_group, "delta", 1, (hsize_t[]){1}, &geometry->delta);
+
+  H5Gclose(geom_group);
   return 0;
 }
 
