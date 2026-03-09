@@ -25,24 +25,6 @@ The scattering module can be changed via the `emissivity_model` field, between t
 | **ZERO**       | continuum                                                          |
 
 
-### Run
-```bash
-srun ./solar_3D
-```
-
-### Cite 
-```
-@article{benedusi2023scalable,
-  title={Scalable matrix-free solver for 3D transfer of polarized radiation in stellar atmospheres},
-  author={Benedusi, Pietro and Riva, Simone and Zulian, Patrick and {\v{S}}t{\v{e}}p{\'a}n, Ji{\v{r}}{\'\i} and Belluzzi, Luca and Krause, Rolf},
-  journal={Journal of Computational Physics},
-  volume={479},
-  pages={112013},
-  year={2023},
-  publisher={Elsevier}
-}
-```
-
 ### Compile
 ```bash
 cd bin
@@ -95,9 +77,36 @@ add the others flags as needed, and then build the RII library:
 make -j12
 ```
 
+### Run
+```bash
+srun ./solar_3D
+```
+
+### Test
+Compile with 
+```bash
+make build_test
+```
+and execute `run_test.sh` which contains some testing routines.
+
 
 ### Contributors
 
 **TRIP** is developed by [Pietro Benedusi](https://pietrobe.github.io/), Simone Riva, and [Melanie Tonarelli](https://github.com/melanie-t27) in Luca Belluzzi's group at [IRSOL](https://www.irsol.usi.ch/).
+
+
+### Cite 
+```
+@article{benedusi2023scalable,
+  title={Scalable matrix-free solver for 3D transfer of polarized radiation in stellar atmospheres},
+  author={Benedusi, Pietro and Riva, Simone and Zulian, Patrick and {\v{S}}t{\v{e}}p{\'a}n, Ji{\v{r}}{\'\i} and Belluzzi, Luca and Krause, Rolf},
+  journal={Journal of Computational Physics},
+  volume={479},
+  pages={112013},
+  year={2023},
+  publisher={Elsevier}
+}
+```
+
 
 

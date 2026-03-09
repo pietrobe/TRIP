@@ -466,7 +466,7 @@ void RT_problem::read_3D(const char* filename){
 	skip_size = PMD_MAIN_HEADER2 - 196608 - 16;
 	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));
 
-    int module_head_size;
+   int module_head_size;
 
 	// Size of each grid node	
 	MPI_CHECK(MPI_File_read_all(fh, &module_head_size, 1, MPI_INT, MPI_STATUS_IGNORE));
@@ -474,38 +474,38 @@ void RT_problem::read_3D(const char* filename){
 	// Size of each grid node	
 	MPI_CHECK(MPI_File_read_all(fh, &node_size_, 1, MPI_INT, MPI_STATUS_IGNORE));
 
-    // Jump to data
-    header_size_ = PMD_MAIN_HEADER1 + PMD_MAIN_HEADER2 + 12 + module_head_size;
+   // Jump to data
+   header_size_ = PMD_MAIN_HEADER1 + PMD_MAIN_HEADER2 + 12 + module_head_size;
 
 	// some irrelevant data    
     MPI_CHECK(MPI_File_seek(fh, TWOLEVEL_HEADER1, MPI_SEEK_CUR));
 
 	// reading atomic data    
-    std::vector<double> atomic_buffer(3);
-    MPI_CHECK(MPI_File_read_all(fh, atomic_buffer.data(), 3, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    mass_ = atomic_buffer[0];
+   std::vector<double> atomic_buffer(3);
+   MPI_CHECK(MPI_File_read_all(fh, atomic_buffer.data(), 3, MPI_DOUBLE, MPI_STATUS_IGNORE));
+   mass_ = atomic_buffer[0];
 	Aul_  = atomic_buffer[1];
 	Eu_   = atomic_buffer[1];
 
-    // MPI_CHECK(MPI_File_read_all(fh, &mass_,  1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    // MPI_CHECK(MPI_File_read_all(fh, &Aul_,   1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    // MPI_CHECK(MPI_File_read_all(fh, &Eu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    MPI_CHECK(MPI_File_read_all(fh, &Jl2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
-    MPI_CHECK(MPI_File_read_all(fh, &Ju2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
-    // MPI_CHECK(MPI_File_read_all(fh, &gl_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    // MPI_CHECK(MPI_File_read_all(fh, &gu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    // MPI_CHECK(MPI_File_read_all(fh, &T_ref_, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	// MPI_CHECK(MPI_File_read_all(fh, &mass_,  1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	// MPI_CHECK(MPI_File_read_all(fh, &Aul_,   1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	// MPI_CHECK(MPI_File_read_all(fh, &Eu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &Jl2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &Ju2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
+	// MPI_CHECK(MPI_File_read_all(fh, &gl_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	// MPI_CHECK(MPI_File_read_all(fh, &gu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	// MPI_CHECK(MPI_File_read_all(fh, &T_ref_, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 
-    MPI_CHECK(MPI_File_read_all(fh, atomic_buffer.data(), 3, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    gl_    = atomic_buffer[0];
+	MPI_CHECK(MPI_File_read_all(fh, atomic_buffer.data(), 3, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	gl_    = atomic_buffer[0];
 	gu_    = atomic_buffer[1];
 	T_ref_ = atomic_buffer[1];
 
-    // // change Eu units to [cm-1]     
-    // Eu_ /= c_ * h_; 
-    
-    // hardcoded from FAL-C 
-    Eu_ = 23652.304;    
+	// // change Eu units to [cm-1]     
+	// Eu_ /= c_ * h_; 
+
+	// hardcoded from FAL-C 
+	Eu_ = 23652.304;    
     
   	// some irrelevant data double temp[ny][nx];    matrix of ground (iz=0) for Planckian boundary
 	skip_size = (N_x_ * N_y_) * sizeof(double);
@@ -563,9 +563,16 @@ void RT_problem::read_3D(const char* filename){
 	// hardcoded xi
 	std::array<double, 134> xi_vec = { 2.0, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 1.9886373912499999e+00, 1.9773626719999999e+00, 1.9419696239999999e+00, 1.8600738539999999e+00, 1.7778424079999999e+00, 1.6824751599999999e+00, 1.5795074739999999e+00, 1.4744281220000000e+00, 1.3537171600000000e+00, 1.2327272599999999e+00, 1.1129887319999998e+00, 9.9467995799999975e-01, 8.7645056999999993e-01, 7.8089990399999998e-01, 6.8735903999999992e-01, 6.0959461199999998e-01, 5.6051231999999995e-01, 5.1142826399999997e-01, 4.9363330559999996e-01, 4.8427622399999998e-01, 4.7908703999999996e-01, 4.8846167039999999e-01, 4.9785317760000003e-01, 5.1861966000000015e-01, 5.4516093000000010e-01, 5.8094278171428582e-01, 6.2224760000000012e-01, 6.7522791428571438e-01, 7.3142138000000012e-01, 8.0070458000000022e-01, 8.7089629200000007e-01, 9.5220700000000047e-01, 1.0332738400000001e+00, 1.1213362909090909e+00, 1.2152569890909093e+00, 1.3094004363636367e+00, 1.4048512000000004e+00, 1.5007467520000004e+00, 1.5978336000000002e+00, 1.6978324000000005e+00, 1.7978304000000003e+00, 1.8947160320000005e+00, 1.9907144960000005e+00, 2.0867125760000005e+00, 2.1827118080000001e+00, 2.2787102720000001e+00, 2.3705575253333340e+00, 2.4612234666666670e+00, 2.5518886826666671e+00, 2.6425844611764711e+00, 2.7343480658823536e+00, 2.8261127717647065e+00, 2.9178771105882353e+00, 3.0096418164705878e+00, 3.0936051408695651e+00, 3.1753403478260873e+00, 3.2570791513043482e+00, 3.3388189356521742e+00, 3.4205534886956523e+00, 3.5020644897959188e+00, 3.5755338775510208e+00, 3.6489997387755104e+00, 3.7224691265306125e+00, 3.7959382204081633e+00, 3.8687040000000006e+00, 3.9367072639999998e+00, 4.0047040000000003e+00, 4.0727037280000005e+00, 4.1407040000000004e+00, 4.2084453608247427e+00, 4.2744210474226803e+00, 4.3404041237113411e+00, 4.4063803381443298e+00, 4.4723597195876286e+00, 4.5390595657142860e+00, 4.6076277028571422e+00, 4.6761985828571433e+00, 4.7447738514285716e+00, 4.8133414400000003e+00, 4.8820457066666672e+00, 4.9553796266666668e+00, 5.0287088533333337e+00, 5.1020427733333342e+00, 5.1753755200000002e+00, 5.2502169904761908e+00, 5.3264074666666668e+00, 5.4025979428571436e+00, 5.4787847619047625e+00, 5.5549752380952384e+00, 5.6335312941176472e+00, 5.7182371764705886e+00, 5.8029430588235300e+00, 5.8876489411764705e+00, 5.9725229090909098e+00, 6.0634269090909090e+00, 6.1543359999999998e+00, 6.2481976369230772e+00, 6.3497304123076930e+00, 6.4512745600000008e+00, 6.5531384216216226e+00, 6.6666519351351363e+00, 6.7818653538461549e+00, 6.9049422769230784e+00, 7.0308618105263161e+00, 7.1716484000000005e+00, 7.3142758956521750e+00, 7.4573813333333341e+00, 7.6035485714285720e+00, 7.7321138285714301e+00, 7.8826903272727300e+00, 8.3409513513513822e+00, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01};
 
-	// fill field 
-	sgrid::parallel_for("READ-ATM1D", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) {
+	if (mpi_rank_ == 0 and use_magnetic_field_ and use_uniform_magnetic_field_) 
+	{
+		std::cout << "WARNING: using uniform magnetic field: " << uniform_magnetic_field_value_ << " Gauss, theta: " 
+		                                                       << uniform_magnetic_field_theta_ << " rad, chi: " 
+		                                                       << uniform_magnetic_field_chi_   << " rad" << std::endl;
+	}
 
+	// fill field 
+	sgrid::parallel_for("READ-ATM1D", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) 
+	{
 		// get global indeces form local ones
 		const int i_global  = g_dev.start[0] + i - g_dev.margin[0];
 		const int j_global  = g_dev.start[1] + j - g_dev.margin[1];
@@ -607,12 +614,7 @@ void RT_problem::read_3D(const char* filename){
 			// B_dev.block(i, j, k)[2] = B_spherical[2]; 
 
 			if (use_uniform_magnetic_field_)
-			{
-
-				if (mpi_rank_ == 0 and i == 0 and j == 0 and k == 0) {
-					std::cout << "WARNING: USING HARD UNIFORM MAGNETIC FIELD: " << uniform_magnetic_field_value_ << " Gauss, theta: " << uniform_magnetic_field_theta_ << " rad, chi: " << uniform_magnetic_field_chi_ << " rad" << std::endl;
-				}
-
+			{				
 				B_dev.block(i, j, k)[0] = GAUSS_TO_LARMOR_FREQUENCY(uniform_magnetic_field_value_); // converting to Larmor frequency					
 				B_dev.block(i, j, k)[1] = uniform_magnetic_field_theta_; 					
 				B_dev.block(i, j, k)[2] = uniform_magnetic_field_chi_;
@@ -712,87 +714,87 @@ std::vector<Real> RT_problem::read_single_node(MPI_File fh, const int i, const i
 	// some temporary variables
 	Real entry, atomic_density, rho00l, Nl, Cul;
 
-    // Compute jump
-    const int jump = header_size_ + node_size_ * (N_x_ * (N_y_ * k + j) + i);
+	 // Compute jump
+	 const int jump = header_size_ + node_size_ * (N_x_ * (N_y_ * k + j) + i);
 
-    // Jump to data of interest
-    MPI_CHECK(MPI_File_seek(fh, jump, MPI_SEEK_SET));	
+	 // Jump to data of interest
+	 MPI_CHECK(MPI_File_seek(fh, jump, MPI_SEEK_SET));	
 
-    // 0 // epsilon
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); 
-    output.push_back(entry);		
-    
-    // 1 // get Cul from epsilon
-    Cul = Aul_ * entry / (1.0 - entry); 
-    output.push_back(Cul);
-    
-    // 2 // temperature    
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    output.push_back(entry);
+	 // 0 // epsilon
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); 
+	 output.push_back(entry);		
+	 
+	 // 1 // get Cul from epsilon
+	 Cul = Aul_ * entry / (1.0 - entry); 
+	 output.push_back(Cul);
+	 
+	 // 2 // temperature    
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	 output.push_back(entry);
 
-   	// atomic density	
-    MPI_CHECK(MPI_File_read(fh, &atomic_density, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	
+		// atomic density	
+	 MPI_CHECK(MPI_File_read(fh, &atomic_density, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	
 
-    // 3 // Bx	    
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	
-    output.push_back(entry);  
-    // 4 // By    
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    output.push_back(entry);		
-    // 5 // Bz    
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    output.push_back(entry);		
-    // 6 // vx	    
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	
-    output.push_back(entry);		
-    // 7 // vx	    
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    output.push_back(entry);		
-    // 8 // vz
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-    output.push_back(entry);		
+	 // 3 // Bx	    
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	
+	 output.push_back(entry);  
+	 // 4 // By    
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	 output.push_back(entry);		
+	 // 5 // Bz    
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	 output.push_back(entry);		
+	 // 6 // vx	    
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	
+	 output.push_back(entry);		
+	 // 7 // vx	    
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	 output.push_back(entry);		
+	 // 8 // vz
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
+	 output.push_back(entry);		
 
-    // density matrix components of the lower level:
-    if (L_LIMIT != 1) std::cout << "WARNING: reading 3D input L_LIMIT is not unity!" << std::endl;
+	 // density matrix components of the lower level:
+	 if (L_LIMIT != 1) std::cout << "WARNING: reading 3D input L_LIMIT is not unity!" << std::endl;
 
-    for (int jj = 0; jj < L_LIMIT; jj++) 
-    {			        
-        MPI_CHECK(MPI_File_read(fh, &rho00l, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); // real component	
-        MPI_CHECK(MPI_File_read(fh, &entry , 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); // im components				
-    }    
-    
-    // recover populations 
-    // 9
-    Nl = atomic_density * sqrt(Jl2_ + 1) * rho00l;
-    output.push_back(Nl);	
-   	
-    // density matrix components of the upper level:
-    for (int jj = 0; jj < U_LIMIT; jj++) 
-    {        
-        MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); // real component	
-        MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	// im components							
-    }
-    
-    // components of the J^K_Q tensor:    
-    for (int jj = 0; jj < NJKQ; jj++) MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	
-    
+	 for (int jj = 0; jj < L_LIMIT; jj++) 
+	 {			        
+	     MPI_CHECK(MPI_File_read(fh, &rho00l, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); // real component	
+	     MPI_CHECK(MPI_File_read(fh, &entry , 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); // im components				
+	 }    
+	 
+	 // recover populations 
+	 // 9
+	 Nl = atomic_density * sqrt(Jl2_ + 1) * rho00l;
+	 output.push_back(Nl);	
+		
+	 // density matrix components of the upper level:
+	 for (int jj = 0; jj < U_LIMIT; jj++) 
+	 {        
+	     MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); // real component	
+	     MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	// im components							
+	 }
+	 
+	 // components of the J^K_Q tensor:    
+	 for (int jj = 0; jj < NJKQ; jj++) MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));	
+	 
 
-    // rest of the MHD quantities 
-    // 10 // Voight parameter a    
+	 // rest of the MHD quantities 
+	 // 10 // Voight parameter a    
 	MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));							
-    output.push_back(entry);		
-    // 11 // delta2 (depolarizing collisional rate)    
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));							
-    entry *= Aul_; // delta2 = D2/Aul, PORTA uses delta2 here and conversion is needed
-    output.push_back(entry);		
-    // 12 // continuum opacity    
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));							
-    output.push_back(entry);		
-    // 13 // continuum emissivity
-    MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));							
-    output.push_back(entry);	
+	 output.push_back(entry);		
+	 // 11 // delta2 (depolarizing collisional rate)    
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));							
+	 entry *= Aul_; // delta2 = D2/Aul, PORTA uses delta2 here and conversion is needed
+	 output.push_back(entry);		
+	 // 12 // continuum opacity    
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));							
+	 output.push_back(entry);		
+	 // 13 // continuum emissivity
+	 MPI_CHECK(MPI_File_read(fh, &entry, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));							
+	 output.push_back(entry);	
 
-    return output;
+	 return output;
 }
 
 
@@ -1425,7 +1427,7 @@ void RT_problem::allocate_fields(){
 
 	///////////////////////
 
-	if (mpi_rank_ == 0) std::cout << "\nCreating PETSc vector..." << std::endl;		
+	if (mpi_rank_ == 0 and verbose_) std::cout << "\nCreating PETSc vector..." << std::endl;		
 
 	PetscErrorCode ierr; 
 
@@ -1827,46 +1829,46 @@ void RT_problem::set_eta_and_rhos(){
 	
 	auto Doppler_width_dev = Doppler_width_->view_device();
 
-    sgrid::parallel_for("INIT ETA-RHO", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) 
-    {         
-        auto *block_eta = eta_dev.block(i, j, k);
-        auto *block_rho = rho_dev.block(i, j, k);
-        
-        auto *u   =   u_dev.block(i, j, k);		
+   sgrid::parallel_for("INIT ETA-RHO", space_grid_->md_range(), SGRID_LAMBDA(int i, int j, int k) 
+   {         
+		auto *block_eta = eta_dev.block(i, j, k);
+		auto *block_rho = rho_dev.block(i, j, k);
+
+		auto *u   =   u_dev.block(i, j, k);		
 		auto *k_c = k_c_dev.block(i, j, k);		
 		auto *B   =   B_dev.block(i, j, k);       
-        auto *v_b = v_b_dev.block(i, j, k);                        
-                        
-        // assign some variables for readability
-        Real theta_v_b = v_b[1];
-        Real chi_v_b   = v_b[2];
+		auto *v_b = v_b_dev.block(i, j, k);                        
+		               
+		// assign some variables for readability
+		Real theta_v_b = v_b[1];
+		Real chi_v_b   = v_b[2];
 
-        Real nu_L    = B[0];
-        Real theta_B = B[1];
-        Real chi_B   = B[2];
+		Real nu_L    = B[0];
+		Real theta_B = B[1];
+		Real chi_B   = B[2];
 
-        Real Doppler_width = Doppler_width_dev.ref(i,j,k);
-    	Real k_L           = k_L_dev.ref(i,j,k);
+		Real Doppler_width = Doppler_width_dev.ref(i,j,k);
+		Real k_L           = k_L_dev.ref(i,j,k);
 		Real a             = a_dev.ref(i,j,k);
 
 		// init rotation matrix
-        Rotation_matrix R(0.0, -theta_B, -chi_B);
-        
-        // indeces
-        std::vector<int> local_idx;
-        int j_theta, k_chi, n_nu;
-         
-        for (int b = 0; b < block_size_; b = b + 4) 
-        {        	        	
-        	block_rho[b + 1] = 0;
+		Rotation_matrix R(0.0, -theta_B, -chi_B);
+		  
+		// indeces
+		std::vector<int> local_idx;
+		int j_theta, k_chi, n_nu;
+      
+      for (int b = 0; b < block_size_; b = b + 4) 
+      {        	        	
+	     	block_rho[b + 1] = 0;
 
 			local_idx = block_to_local(b);
 
-        	j_theta = local_idx[0];
-        	k_chi   = local_idx[1];
-        	n_nu    = local_idx[2];
+	     	j_theta = local_idx[0];
+	     	k_chi   = local_idx[1];
+	     	n_nu    = local_idx[2];
 
-        	const Real theta = theta_grid_[j_theta];
+	     	const Real theta = theta_grid_[j_theta];
 			const Real chi   = chi_grid_[k_chi];	
 
 			const Real coeff  =  k_L / (std::sqrt(PI) * Doppler_width);
@@ -1883,7 +1885,7 @@ void RT_problem::set_eta_and_rhos(){
 			for (int K = 0; K < 3; ++K)
 			{
 				const double coeff_K = coeff * std::sqrt(3.0 * (2.0 * double(K) + 1.0));
-	
+
 				for (int Mu2 = - Ju2_; Mu2 < Ju2_ + 1; Mu2 += 2)
 				{
 					for (int Ml2 = - Jl2_; Ml2 < Jl2_ + 1; Ml2 += 2)
@@ -1892,12 +1894,12 @@ void RT_problem::set_eta_and_rhos(){
 						{
 							const int q2 = Ml2 - Mu2;
 
-				      		const double W3J1 = W3JS(Ju2_, Jl2_, 2,-Mu2, Ml2, -q2);  
-				      		const double W3J2 = W3JS(2, 2, 2 * K, q2, -q2, 0); 
+				      	const double W3J1 = W3JS(Ju2_, Jl2_, 2,-Mu2, Ml2, -q2);  
+				      	const double W3J2 = W3JS(2, 2, 2 * K, q2, -q2, 0); 
 
 							const double fact = coeff_K * std::pow(-1.0, double(q2) / 2.0 + 1.0) * std::pow(W3J1, 2) * W3J2;								   
 							
-		      				const double um = coeff2 * (gu_ * (double(Mu2) / 2.0) - gl_ * (double(Ml2) / 2.0)) + u_red;
+		      			const double um = coeff2 * (gu_ * (double(Mu2) / 2.0) - gl_ * (double(Ml2) / 2.0)) + u_red;
 					
 							for (int Q = -K; Q < K + 1; ++Q)
 							{			
@@ -1905,7 +1907,7 @@ void RT_problem::set_eta_and_rhos(){
 				        		const auto D_KQQ                   = std::conj(R(K, 0, Q));
 
 				        		const auto fact_re = fact * std::real(faddeva) * D_KQQ;
-				        		const auto fact_im = fact * std::imag(faddeva) * D_KQQ;		
+				        		const auto fact_im = fact * std::imag(faddeva) * D_KQQ;						        		
 				        		
 								// etas							
 								block_eta[b    ] += std::real(fact_re * get_TKQi(0, K, Q, j_theta, k_chi)); 
@@ -1922,36 +1924,36 @@ void RT_problem::set_eta_and_rhos(){
 						}
 					}		
 				}
-        	}
+	     	}
 
-        	if (enable_continuum_) block_eta[b] += k_c[n_nu];       
+	     	if (enable_continuum_) block_eta[b] += k_c[n_nu];       
 
-        	// if (i == 0 and j == 0 and g_dev.global_coord(2, k) == 0 and b >= block_size_ - 4 * N_nu_) 
-        	// {
-        	// 	// std::cout << "k = "     <<   k      << std::endl; 
-        	// 	std::cout <<   block_eta[b]       << std::endl; 
-        	// }	
+	     	// if (i == 0 and j == 0 and g_dev.global_coord(2, k) == 0 and b >= block_size_ - 4 * N_nu_) 
+	     	// {
+	     	// 	// std::cout << "k = "     <<   k      << std::endl; 
+	     	// 	std::cout <<   block_eta[b]       << std::endl; 
+	     	// }	
 			// std::cout << "block_eta[b + 1] = " <<   block_eta[b + 1]   << std::endl; 
 			// std::cout << "block_eta[b + 2] = " <<   block_eta[b + 2]   << std::endl; 
 			// std::cout << "block_eta[b + 3] = " <<   block_eta[b + 3]   << std::endl; 
-        	// std::cout << "block_rho[b + 1] = " <<   block_rho[b + 1]   << std::endl; 
-        	// std::cout << "block_rho[b + 2] = " <<   block_rho[b + 2]   << std::endl; 
-        	// std::cout << "block_rho[b + 3] = " <<   block_rho[b + 3]   << std::endl; 
+	     	// std::cout << "block_rho[b + 1] = " <<   block_rho[b + 1]   << std::endl; 
+	     	// std::cout << "block_rho[b + 2] = " <<   block_rho[b + 2]   << std::endl; 
+	     	// std::cout << "block_rho[b + 3] = " <<   block_rho[b + 3]   << std::endl; 
 
-        	// sanity checks
-        	if (block_eta[b] == 0) std::cerr << "\nWARNING: zero eta_I!"     << std::endl; 
-        	if (block_eta[b] < 0)  std::cerr << "\nWARNING: negative eta_I!" << std::endl; 		
-        	if (block_rho[b] < 0)  std::cerr << "\nWARNING: negative rho_I!" << std::endl; 	      
+	     	// sanity checks
+	     	if (block_eta[b] == 0) std::cerr << "\nWARNING: zero eta_I!"     << std::endl; 
+	     	if (block_eta[b] < 0)  std::cerr << "\nWARNING: negative eta_I!" << std::endl; 		
+	     	if (block_rho[b] < 0)  std::cerr << "\nWARNING: negative rho_I!" << std::endl; 	      
 
-        	if (isnan(block_eta[b    ])) std::cerr << "\nWARNING: eta_I = NaN!" << std::endl; 
-        	if (isnan(block_eta[b + 1])) std::cerr << "\nWARNING: eta_Q = NaN!" << std::endl; 
-        	if (isnan(block_eta[b + 2])) std::cerr << "\nWARNING: eta_U = NaN!" << std::endl; 
-        	if (isnan(block_eta[b + 3])) std::cerr << "\nWARNING: eta_V = NaN!" << std::endl;         	
-        	if (isnan(block_rho[b + 1])) std::cerr << "\nWARNING: rho_Q = NaN!" << std::endl; 
-        	if (isnan(block_rho[b + 2])) std::cerr << "\nWARNING: rho_U = NaN!" << std::endl; 
-        	if (isnan(block_rho[b + 3])) std::cerr << "\nWARNING: rho_V = NaN!" << std::endl;         	      	        	
-        } 	
-    });	
+	     	if (isnan(block_eta[b    ])) std::cerr << "\nWARNING: eta_I = NaN!" << std::endl; 
+	     	if (isnan(block_eta[b + 1])) std::cerr << "\nWARNING: eta_Q = NaN!" << std::endl; 
+	     	if (isnan(block_eta[b + 2])) std::cerr << "\nWARNING: eta_U = NaN!" << std::endl; 
+	     	if (isnan(block_eta[b + 3])) std::cerr << "\nWARNING: eta_V = NaN!" << std::endl;         	
+	     	if (isnan(block_rho[b + 1])) std::cerr << "\nWARNING: rho_Q = NaN!" << std::endl; 
+	     	if (isnan(block_rho[b + 2])) std::cerr << "\nWARNING: rho_U = NaN!" << std::endl; 
+	     	if (isnan(block_rho[b + 3])) std::cerr << "\nWARNING: rho_V = NaN!" << std::endl;         	      	        	
+	   } 	
+ 	});	
 
 	// debug			
 	// const Real dichroism_module = std::sqrt(etas_and_rhos[1] * etas_and_rhos[1] + etas_and_rhos[2] * etas_and_rhos[2] + etas_and_rhos[3] * etas_and_rhos[3]);	
@@ -2175,7 +2177,7 @@ std::vector<double> RT_problem::extract_plane_k(const Field_ptr_t field, const i
 
 void RT_problem::set_up(){
  
-   if (mpi_rank_ == 0) std::cout << "\nPrecomputing quantities...";				
+   if (mpi_rank_ == 0 and verbose_) std::cout << "\nPrecomputing quantities...";				
 
    // temporary constants
    Real tmp_const, tmp_const2, tmp_const3;
@@ -2272,7 +2274,7 @@ void RT_problem::set_up(){
 
 	// delete stuff that is not needed -----------------------------------> TODO?
 	
-	if (mpi_rank_ == 0) std::cout << "done" << std::endl;	
+	if (mpi_rank_ == 0 and verbose_) std::cout << "done" << std::endl;	
 }
 
 
@@ -2602,7 +2604,7 @@ bool RT_problem::field_is_zero(const Field_ptr_t field)
 void RT_problem::set_3D_decomposition(const int N_x, const int N_y, const int N_z)
 {
 
-	if (mpi_size_ > N_x * N_y * N_z) 
+	if (use_1_5D_approx_ and mpi_size_ > N_x * N_y * N_z) 
 	{
    	std::cerr << "Error in 1.5D: mpi_size larger then N_x * N_y!" << std::endl;
    	MPI_Abort(MPI_COMM_WORLD, 1);
@@ -2613,12 +2615,12 @@ void RT_problem::set_3D_decomposition(const int N_x, const int N_y, const int N_
    int best_py = 1;
    int best_pz = mpi_size_;
 
-   for (int px = 1; px <= mpi_size_; ++px) 
+   for (int px = 1; px <= std::min(N_x, mpi_size_); ++px) 
    {
 		if (mpi_size_ % px != 0) continue;
 		int rest = mpi_size_ / px;
 
-		for (int py = 1; py <= rest; ++py) 
+		for (int py = 1; py <= std::min(N_y, rest); ++py) 
 		{
 
 			if (rest % py != 0) continue;
@@ -2627,14 +2629,18 @@ void RT_problem::set_3D_decomposition(const int N_x, const int N_y, const int N_
 			// Respect grid limits
 			if (px > N_x || py > N_y || pz > N_z) continue;
 
-			// Compute local subdomain sizes
-			double lx = double(N_x) / px;
-			double ly = double(N_y) / py;
-			double lz = double(N_z) / pz;
+			// Compute local subdomain sizes (floor/ceil)
+			int lx_min = N_x / px;
+			int lx_max = (N_x + px - 1) / px;   // equivalent to ceil(N_x/px)
 
-			// Balance metric = variance of (lx, ly, lz)
-			double mean = (lx + ly + lz) / 3.0;
-			double score = (lx-mean)*(lx-mean) + (ly-mean)*(ly-mean) + (lz-mean)*(lz-mean);
+			int ly_min = N_y / py;
+			int ly_max = (N_y + py - 1) / py;
+
+			int lz_min = N_z / pz;
+			int lz_max = (N_z + pz - 1) / pz;
+
+			// Balance metric = ratio of largest to smallest subdomain volume
+			double score = (double(lx_max) * ly_max * lz_max) / (double(lx_min) * ly_min * lz_min);
 
 			if (score < best_score) {
 			    best_score = score;
@@ -2648,6 +2654,8 @@ void RT_problem::set_3D_decomposition(const int N_x, const int N_y, const int N_
    mpi_size_x_ = best_px;
    mpi_size_y_ = best_py;
    mpi_size_z_ = best_pz;
+
+   if (mpi_rank_ == 0) std::cout << "Load balancing factor Vmax/Vmin (1.0 = optimal): " << best_score << std::endl;   
 }
 
 

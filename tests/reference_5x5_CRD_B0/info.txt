@@ -1,0 +1,58 @@
+Date and time: 2026-02-11 17:04:44
+
+Command line arguments: 
+/gpfs/home/usi/usi298301/git/TRIP/bin/./solar_3D 
+PetscInt size: 8 bytes; 64 bits.
+
+YAML Configuration Summary:
+Input Directory:                            ../input/PORTA/
+Input File:                                 cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd
+Frequency File:                             frequency/96F/frequency.dat
+Output Directory:                           /gpfs/projects/ehpc238/output
+Output Enabled:                             Yes
+Output Overwrite Prevention:                No
+Emissivity Model:                           CRD_limit
+Use Magnetic Field:                         Yes
+Use Bulk Velocity:                          Yes
+Enable Continuum:                           Yes
+Use 1.5D Approximation:                     No
+Formal Solver:                              BESSER
+Angular Grid - N_theta:                     8
+Angular Grid - N_chi:                       16
+Horizontal Grid - N_x:                      10
+Horizontal Grid - N_y:                      10
+Horizontal Grid - L:                        400.000000
+Input CUL File:                             
+Input QEL File:                             
+Input LLP File:                             
+Input BACK File:                            
+Use Preconditioner:                         No
+Set Uniform Magnetic Field:                 No
+
+Solver Configuration:
+KSP Solver Type:                            KSPFGMRES
+KSP Relative Tolerance:                     0.000000
+KSP Maximum Iterations:                     1000
+GMRES Restart:                              30
+
+Preconditioner Configuration:
+PC Solver Type:                             KSPGMRES
+PC Relative Tolerance:                      0.000001
+PC Maximum Iterations:                      1000
+
+Output directory: "/gpfs/projects/ehpc238/output/cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd.CRD_limit"
+Setup time: 11.21 seconds.
+Total memory usage (vm_usage):               15.1758 GB
+Total memory usage (resident_set):           0.740938 GB
+
+================================================================================
+ EXECUTION TIME SUMMARY
+================================================================================
+ MPI processes:        512
+ Setup time:           11.21 s
+ Solve time:           74.18 s
+ Post processing time: 0.45 s
+--------------------------------------------------------------------------------
+ Total execution time: 85.84 s
+================================================================================
+
