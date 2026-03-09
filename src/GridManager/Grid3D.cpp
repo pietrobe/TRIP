@@ -4,6 +4,7 @@
 #include <array>
 #include <string>
 #include <stdexcept>
+#include <fstream>
 #include <vector>
 #include <iostream>
 #include "Grid3D.hpp"
@@ -62,6 +63,64 @@ std::array<Int,3> Grid3D::getDecomposition() const { return {Px, Py, Pz}; }
 
 Int Grid3D::local_to_global_coordinate(const int d, const Int local_coord) const { 
     return global_ghosted_start[d] + local_coord;
+}
+
+DecompInfo Grid3D::getLocalDecompInfo() const {
+    DecompInfo info{};
+    info.rank = rank;
+    info.nx = local_sizes[0];
+    info.ny = local_sizes[1];
+    info.nz = local_sizes[2];
+    info.gx = global_start[0];
+    info.gy = global_start[1];
+    info.gz = global_start[2];
+    info.owned = getLocalNumNodes();
+    return info;
+}
+
+static void print_imbalance(const std::vector<DecompInfo>& all) {
+    double minv = 1e300;
+    double maxv = -1e300;
+    double sum  = 0.0;
+    for (const auto& r : all) {
+        double v = static_cast<double>(r.owned);
+        minv = std::min(minv, v);
+        maxv = std::max(maxv, v);
+        sum += v;
+    }
+    double avg = sum / all.size();
+    std::cout << "\n======== Load balance ========\n";
+    std::cout << "Load min owned = " << minv << "\n";
+    std::cout << "Load max owned = " << maxv << "\n";
+    std::cout << "Load avg owned = " << avg  << "\n";
+    std::cout << "Load max/avg   = " << maxv / avg << "\n";
+    std::cout << "Load max/min   = " << maxv / minv << "\n";
+    std::cout << "================================\n" << std::endl;
+}
+
+void Grid3D::dumpDecompositionCSV(const std::string& filename) const {
+    DecompInfo local = getLocalDecompInfo();
+    std::vector<DecompInfo> all;
+    if (rank == 0) all.resize(mpi_size);
+    MPI_Gather(&local, sizeof(DecompInfo), MPI_BYTE,
+               all.data(), sizeof(DecompInfo), MPI_BYTE,
+               0, comm);
+    if (rank == 0) {
+        print_imbalance(all);
+        std::ofstream out(filename);
+        out << "rank,nx,ny,nz,gx,gy,gz,owned\n";
+        for (const auto& r : all) {
+            out << r.rank << ","
+                << r.nx << ","
+                << r.ny << ","
+                << r.nz << ","
+                << r.gx << ","
+                << r.gy << ","
+                << r.gz << ","
+                << r.owned << "\n";
+        }
+        std::cout << "Wrote: " << filename << std::endl;
+    }
 }
 
 void Grid3D::create(

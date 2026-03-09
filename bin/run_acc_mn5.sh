@@ -4,7 +4,7 @@
 #SBATCH --ntasks=512
 
 ## to be defined !!!!!!!!! 
-#SBATCH --time=00:59:59
+#SBATCH --time=01:59:59
 
 #SBATCH --cpus-per-task=1
 #SBATCH --account=ehpc238

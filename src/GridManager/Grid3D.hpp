@@ -12,6 +12,13 @@
 
 using Int = PetscInt;
 
+struct DecompInfo {
+    PetscInt rank;
+    PetscInt nx, ny, nz;
+    PetscInt gx, gy, gz;
+    PetscInt owned;
+};
+
 /** @brief wrapper around PETSc DMDA describing a 3D spatial grid. */
 class Grid3D {
 
@@ -78,6 +85,10 @@ public:
     std::array<Int,3> getGhostMargins() const;
 
     std::array<Int,3> getDecomposition() const;
+
+    DecompInfo getLocalDecompInfo() const;
+
+    void dumpDecompositionCSV(const std::string& filename) const;
 
     /** @brief method that given a dimension and the local coordinate of a cell, returns the global coordinate of the 
      * cell in that direction.

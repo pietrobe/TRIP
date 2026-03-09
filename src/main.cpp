@@ -86,6 +86,7 @@ main(int argc, char *argv[])
 
 		// create problem object
 		auto rt_problem_ptr = std::make_shared<RT_problem>(cfg);
+		rt_problem_ptr->space_grid_->dumpDecompositionCSV("decomposition.csv");
 
 		// create solver object
 		RT_solver rt_solver(rt_problem_ptr);
@@ -164,7 +165,8 @@ main(int argc, char *argv[])
 		print_PETSc_mem();
 
 		double time_output_csv;
-		double time_output_hdf5;
+		double time_output_hdf5_emergent;
+		double time_output_hdf5_JKQ;
 		if (cfg.output)
 		{
 			// write output Surface profiles for all surface points
@@ -200,12 +202,13 @@ main(int argc, char *argv[])
 
 			// New HDF5 output .... TESTING PASSED
 			////////////////////////////////////////////////////////////////////////////////////////////////
-			time_output_hdf5 = MPI_Wtime();
+			time_output_hdf5_emergent = MPI_Wtime();
 			write_emergent_field_hdf5(*rt_problem_ptr,											  //
 									  (output_path / "emergent_field_angular_grid.h5").string()); //
-
+			time_output_hdf5_emergent = MPI_Wtime() - time_output_hdf5_emergent;
+			time_output_hdf5_JKQ = MPI_Wtime();
 			rt_problem_ptr->write_JKQ_field_hdf5((output_path / "JKQ_field.h5").string()); //
-			time_output_hdf5 = MPI_Wtime() - time_output_hdf5;
+			time_output_hdf5_JKQ = MPI_Wtime() - time_output_hdf5_JKQ;
 
 			////////////////////////////////////////////////////////////////////////////////////////////////
 			// compute arbitrary beams
@@ -276,7 +279,8 @@ main(int argc, char *argv[])
 														main_solve_end_time,	   //
 														main_end_time,
 														time_output_csv,
-														time_output_hdf5);			   //
+														time_output_hdf5_emergent,
+														time_output_hdf5_JKQ);			   //
 
 				std::cout << ss_mem.str();
 

@@ -394,7 +394,7 @@ acc_devices_print_info(const int mpi_rank, const int mpi_size, std::ostream &os)
 {
 #if ACC_SOLAR_3D == _ON_
 
-	for (int i = 0; i < LIMIT_OUT_DEVICE_MEMORY_USAGE; i++)
+	for (int i = 0; i < 2 /* LIMIT_OUT_DEVICE_MEMORY_USAGE */; i++)
 	{
 		MPI_Barrier(MPI_COMM_WORLD);
 		if (mpi_rank == i && RII_epsilon_contrib::RII_contrib_MPI_Is_Device_Handler())

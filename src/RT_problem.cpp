@@ -134,22 +134,16 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	tot_size_   = (PetscInt) N_s_ * block_size_;	
 	
 	// create space grid
-	// mpi_size_x_ = PETSC_DECIDE;
-	// mpi_size_y_ = PETSC_DECIDE;
-	// if (use_1_5D_approx_) {			
-	// 	mpi_size_z_ = 1;
-	// } else {
-	// 	mpi_size_z_ = PETSC_DECIDE;
-	// }
+	set_grid_partition();
 	space_grid_ = std::make_shared<Grid3D>(
 		MPI_COMM_WORLD, 
 		N_x_, N_y_, N_z_, 
-		std::array<PetscInt, 3>{PETSC_DECIDE, PETSC_DECIDE, (use_1_5D_approx_ ? 1 : PETSC_DECIDE)}
+		std::array<PetscInt, 3>{mpi_size_x_, mpi_size_y_, mpi_size_z_}
 	);	
-	auto decomp = space_grid_->getDecomposition();
-    mpi_size_x_ = decomp[0];
-    mpi_size_y_ = decomp[1];
-    mpi_size_z_ = decomp[2];
+	// auto decomp = space_grid_->getDecomposition();
+    // mpi_size_x_ = decomp[0];
+    // mpi_size_y_ = decomp[1];
+    // mpi_size_z_ = decomp[2];
 		
 	// init fields
 	allocate_fields();				
@@ -507,19 +501,12 @@ void RT_problem::read_3D(const char* filename){
 	tot_size_   = (PetscInt) N_s_ * block_size_;	
 	
 	// create space grid
+	set_grid_partition();
 	space_grid_ = std::make_shared<Grid3D>(
 		MPI_COMM_WORLD, 
 		N_x_, N_y_, N_z_, 
-		std::array<PetscInt, 3>{
-			PETSC_DECIDE, 
-			PETSC_DECIDE, 
-			(use_1_5D_approx_ ? 1 : PETSC_DECIDE)
-		}
+		std::array<PetscInt, 3>{{mpi_size_x_, mpi_size_y_, mpi_size_z_}}
 	);	
-	auto decomp = space_grid_->getDecomposition();
-    mpi_size_x_ = decomp[0];
-    mpi_size_y_ = decomp[1];
-    mpi_size_z_ = decomp[2];
 	
 	// init fields
 	allocate_fields();				
@@ -2476,8 +2463,7 @@ void RT_problem::set_grid_partition()
 	}
 	else // full 3D
 	{		
-		//TODO
-		// set_3D_decomposition(N_x_, N_y_, N_z_);		
+		set_3D_decomposition(N_x_, N_y_, N_z_);		
 	}
 }
 
