@@ -8,6 +8,10 @@
 
 #include "hdf_output_field.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
 
   // The data must be stored in a ROW MAJOR 5D contiguous array:
@@ -173,5 +177,9 @@ write_3d_field_block_mpi(const char     *filename,            //
                          int             stride_azimuth,      //
                          int             stride_frequencies,  //
                          int             stride_stokes);                  //
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif  // __THDF_OUTPUT_3D_FIELD_H__

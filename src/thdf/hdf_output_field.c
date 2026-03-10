@@ -456,9 +456,14 @@ THDF_write_angular_grid_to_hdf5(hid_t                      file,  //
     return -1;
   }
 
-  H5LTmake_dataset_int(angular_group, "N_directions", 1, (hsize_t[]){1}, &angular_grid->N_directions);
-  H5LTmake_dataset_int(angular_group, "N_inclination_angles", 1, (hsize_t[]){1}, &angular_grid->N_inclination_angles);
-  H5LTmake_dataset_int(angular_group, "N_azimuthal_angles", 1, (hsize_t[]){1}, &angular_grid->N_azimuthal_angles);
+  H5LTmake_dataset_int(angular_group, "N_directions", 1, (hsize_t[]){1},  //
+                       &angular_grid->N_directions);
+
+  H5LTmake_dataset_int(angular_group, "N_inclination_angles", 1, (hsize_t[]){1},  //
+                       &angular_grid->N_inclination_angles);
+
+  H5LTmake_dataset_int(angular_group, "N_azimuthal_angles", 1, (hsize_t[]){1},  //
+                       &angular_grid->N_azimuthal_angles);
 
   H5LTmake_dataset_double(angular_group, "inclination_angles", 1, (hsize_t[]){angular_grid->N_inclination_angles},
                           angular_grid->inclination_angles);
@@ -466,10 +471,10 @@ THDF_write_angular_grid_to_hdf5(hid_t                      file,  //
   H5LTmake_dataset_double(angular_group, "azimuthal_angles", 1, (hsize_t[]){angular_grid->N_azimuthal_angles},
                           angular_grid->azimuthal_angles);
 
-  H5LTmake_dataset_int(angular_group, "inclinations_indices", 1, (hsize_t[]){angular_grid->N_inclination_angles},
+  H5LTmake_dataset_int(angular_group, "inclinations_indices", 1, (hsize_t[]){angular_grid->N_directions},
                        angular_grid->inclinations_indices);
 
-  H5LTmake_dataset_int(angular_group, "azimuthal_indices", 1, (hsize_t[]){angular_grid->N_azimuthal_angles},
+  H5LTmake_dataset_int(angular_group, "azimuthal_indices", 1, (hsize_t[]){angular_grid->N_directions},
                        angular_grid->azimuthal_indices);
   H5Gclose(angular_group);
   return 0;

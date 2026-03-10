@@ -508,10 +508,10 @@ main_3d_example_v2(int argc, char **argv) {
   }
 
   double *theta                = (double *)malloc(N_incl * sizeof(double));
-  int    *inclinations_indices = (int *)malloc(N_incl * sizeof(int));
+  int    *inclinations_indices = (int *)malloc(N_incl * N_azimuth * sizeof(int));
 
   double *chi               = (double *)malloc(N_azimuth * sizeof(double));
-  int    *azimuthal_indices = (int *)malloc(N_azimuth * sizeof(int));
+  int    *azimuthal_indices = (int *)malloc(N_incl * N_azimuth * sizeof(int));
 
   double *heights = (double *)malloc(N_z * sizeof(double));
   for (int k = 0; k < N_z; k++) {
@@ -526,6 +526,13 @@ main_3d_example_v2(int argc, char **argv) {
   for (int j = 0; j < N_azimuth; j++) {
     chi[j]               = j * (3.141592653589793 * 2.0 / N_azimuth);  // example values from 0 to 360 degrees in radians
     azimuthal_indices[j] = j;
+  }
+
+  for (int i = 0; i < N_incl; i++) {
+    for (int j = 0; j < N_azimuth; j++) {
+      inclinations_indices[i * N_azimuth + j] = i;
+      azimuthal_indices[i * N_azimuth + j]    = j;
+    }
   }
 
   char filename[PATH_MAX];
