@@ -6,7 +6,7 @@ frequency_file:  frequency/96F/frequency.dat
 
 output: true
 output_overwrite_prevention: true
-output_directory: /capstor/scratch/cscs/sriva/PORTA/output/JKQ_1_B0/
+output_directory: /capstor/scratch/cscs/sriva/PORTA/output/merge_test/
 
 use_B: true
 use_Vb: false
@@ -14,9 +14,9 @@ use_continuum: false
 formal_solver: BESSER
 
 set_uniform_B: true
-B_field: [0.0, 0.78, 0.78]
+B_field: [5.0, 0.78, 0.78]
 
-emissivity_model: CRD_limit  
+emissivity_model: PRD  
 
 # used only for FAL-C input
 N_theta: 8

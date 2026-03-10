@@ -2,10 +2,12 @@
 #include "thdf.h"
 
 int
-write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file, const int step_z_ = 1);
+write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file, const int step_z_ = 1,
+						  bool normalized_output = false);
 
 int
-write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file, const int step_z_)
+write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file, const int step_z_,
+						  bool normalized_output)
 {
 	const int step_z = 1; // TODO ...
 
@@ -16,6 +18,10 @@ write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 	const int size_i = rt_problem.space_grid_->getLocalSizeX();
 	const int size_j = rt_problem.space_grid_->getLocalSizeY();
 	const int size_k = rt_problem.space_grid_->getLocalSizeZ();
+
+	const int N_x = rt_problem.N_x_;
+	const int N_y = rt_problem.N_y_;
+	const int N_z = rt_problem.N_z_;
 
 	const int N_stokes		= 4;
 	const int N_frequencies = rt_problem.N_nu_;
@@ -34,12 +40,69 @@ write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 
 	MPI_Allreduce(&size_k, &max_size_k, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
 
+	if (mpi_rank == 0)
+	{
+		hid_t					 file_id	   = THDF_open_file(output_file.c_str());
+		THDF_3D_field_handler_t *field_handler = THDF_create_3D_field_handler_mpi(file_id,							 //
+																				  normalized_output,				 //
+																				  N_x, N_y, N_z,					 //
+																				  N_incl, N_azimuth, N_frequencies); //
+
+		std::vector<double>		frequencies(rt_problem.nu_grid_.begin(), rt_problem.nu_grid_.end());
+		THDF_frequencies_grid_t frequencies_grid;
+		frequencies_grid.N_frequencies = N_frequencies;
+		frequencies_grid.frequencies   = frequencies.data();
+
+		THDF_write_frequencies_grid_to_hdf5(file_id, &frequencies_grid);
+
+		THDF_angular_grid_t angular_grid;
+		angular_grid.N_azimuthal_angles	  = N_azimuth;
+		angular_grid.N_inclination_angles = N_incl;
+		angular_grid.N_directions		  = N_incl * N_azimuth;
+
+		std::vector<double> theta_grid_rad(rt_problem.theta_grid_.begin(), rt_problem.theta_grid_.end());
+		std::vector<double> chi_grid_rad(rt_problem.chi_grid_.begin(), rt_problem.chi_grid_.end());
+
+		std::vector<int> inclinations_indices(angular_grid.N_directions);
+		std::vector<int> azimuthal_indices(angular_grid.N_directions);
+
+		for (int i = 0; i < N_incl; i++)
+		{
+			for (int j = 0; j < N_azimuth; j++)
+			{
+				inclinations_indices[i * N_azimuth + j] = i;
+				azimuthal_indices[i * N_azimuth + j]	= j;
+			}
+		}
+
+		angular_grid.inclination_angles	  = theta_grid_rad.data();
+		angular_grid.azimuthal_angles	  = chi_grid_rad.data();
+		angular_grid.inclinations_indices = inclinations_indices.data();
+		angular_grid.azimuthal_indices	  = azimuthal_indices.data();
+		THDF_write_angular_grid_to_hdf5(file_id, &angular_grid);
+
+		THDF_geometry_3D_t geometry_3D;
+
+		std::vector<double> heights(rt_problem.depth_grid_.begin(), rt_problem.depth_grid_.end());
+
+		geometry_3D.N_x		= N_x;
+		geometry_3D.N_y		= N_y;
+		geometry_3D.N_z		= N_z;
+		geometry_3D.heights = heights.data();
+		geometry_3D.delta	= rt_problem.L_;
+
+		THDF_write_geometry_3D_to_hdf5(file_id, &geometry_3D);
+
+		THDF_close_3D_field_handler_mpi(field_handler);
+		H5Fclose(file_id);
+	}
+
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	for (int local_k = 0; local_k < max_size_k; local_k += step_z)
 	{
 		const bool is_writer	= local_k < size_k ? true : false;
-		const int  size_slice_k = step_z;
+		const int  size_slice_k = local_k + step_z <= size_k ? step_z : size_k - local_k;
 
 		MPI_Comm write_communicator;
 		MPI_Comm_split(MPI_COMM_WORLD, is_writer ? 1 : MPI_UNDEFINED, mpi_rank, &write_communicator);
