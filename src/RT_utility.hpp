@@ -169,8 +169,9 @@ struct AppConfig
 	// Output settings
 	bool output						 = false;
 	bool output_overwrite_prevention = false;
+	bool write_whole_3D_field_hdf5	 = true; // testing
 
-	// testing 
+	// testing
 	std::filesystem::path reference_sol_directory;
 
 	// emissivity
@@ -178,7 +179,7 @@ struct AppConfig
 
 	// Physical switches
 	bool use_B			  = true;
-	bool use_Vb 		  = true;
+	bool use_Vb			  = true;
 	bool enable_continuum = true;
 
 	// Set constant magnetic field
@@ -234,5 +235,9 @@ acc_devices_print_info(const int mpi_rank, const int mpi_size, std::ostream &os)
 
 int
 write_emergent_field_hdf5(RT_problem &rt_problem_ptr, const std::string &output_file);
+
+int
+write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file, //
+						  const int step_z_ = 1, bool normalized_output = false); //
 
 #endif

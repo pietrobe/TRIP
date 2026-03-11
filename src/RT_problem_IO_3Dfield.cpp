@@ -2,12 +2,8 @@
 #include "thdf.h"
 
 int
-write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file, const int step_z_ = 1,
-						  bool normalized_output = false);
-
-int
-write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file, const int step_z_,
-						  bool normalized_output)
+write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file, //
+						  const int step_z_, bool normalized_output)
 {
 	const int step_z = 1; // TODO ...
 
@@ -18,6 +14,10 @@ write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 	const int size_i = rt_problem.space_grid_->getLocalSizeX();
 	const int size_j = rt_problem.space_grid_->getLocalSizeY();
 	const int size_k = rt_problem.space_grid_->getLocalSizeZ();
+
+	const int local_start_x = rt_problem.space_grid_->local_to_global_coordinate(0, i_start);
+	const int local_start_y = rt_problem.space_grid_->local_to_global_coordinate(1, j_start);
+	const int local_start_z = rt_problem.space_grid_->local_to_global_coordinate(2, k_start);
 
 	const int N_x = rt_problem.N_x_;
 	const int N_y = rt_problem.N_y_;
@@ -95,20 +95,62 @@ write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 
 		THDF_close_3D_field_handler_mpi(field_handler);
 		H5Fclose(file_id);
-	}
+	} // End of writing shared parameters from MPI rank 0,
 
 	MPI_Barrier(MPI_COMM_WORLD);
+	// Write field data in parallel.
+
+	std::vector<THDF_float32_t> slice_data_I_buffer(size_i * size_j * step_z * N_incl * N_azimuth * N_frequencies);
+	std::vector<THDF_float32_t> slice_data_Q_buffer(size_i * size_j * step_z * N_incl * N_azimuth * N_frequencies);
+	std::vector<THDF_float32_t> slice_data_U_buffer(size_i * size_j * step_z * N_incl * N_azimuth * N_frequencies);
+	std::vector<THDF_float32_t> slice_data_V_buffer(size_i * size_j * step_z * N_incl * N_azimuth * N_frequencies);
 
 	for (int local_k = 0; local_k < max_size_k; local_k += step_z)
 	{
 		const bool is_writer	= local_k < size_k ? true : false;
 		const int  size_slice_k = local_k + step_z <= size_k ? step_z : size_k - local_k;
+		const int  id_z			= local_start_z + local_k;
 
 		MPI_Comm write_communicator;
 		MPI_Comm_split(MPI_COMM_WORLD, is_writer ? 1 : MPI_UNDEFINED, mpi_rank, &write_communicator);
 
 		if (is_writer)
 		{
+			Real *stokes_IQUI = rt_problem.I_field_->block(0, 0, local_k);
+
+			write_3d_field_block_mpi(output_file.c_str(),		 //
+									 write_communicator,		 //
+									 normalized_output,			 // If true the output will be normalized.
+									 N_x,						 // Global sizes of the field in x y z directions
+									 N_y,						 // and in inclination, azimuth, frequencies
+									 N_z,						 //
+									 N_incl,					 //
+									 N_azimuth,					 //
+									 N_frequencies,				 //
+									 N_stokes,					 // ... and number of Stokes parameters (4)
+									 size_i,					 // Size of the slice
+									 size_j,					 // in x y z directions
+									 size_slice_k,				 // size of the current slice in z direction
+									 local_start_x,				 // Global start coordinates of the slice
+									 local_start_y,				 // in x y z directions
+									 id_z,						 // Global start coordinate of the slice in z direction
+									 stokes_IQUI,				 // Pointer to the slice data in memory
+									 slice_data_I_buffer.data(), //
+									 slice_data_Q_buffer.data(), //
+									 slice_data_U_buffer.data(), //
+									 slice_data_V_buffer.data(), //
+									 nullptr,					 // Pointers to normalization multipliers
+									 nullptr,					 // (set to nullptr if not needed)
+									 nullptr,					 //
+									 nullptr,					 //
+									 stride_x,					 // Strides in memory for each dimension
+									 stride_y,					 // (x, y, z, incl, azimuth, frequencies, stokes)
+									 stride_z,					 //
+									 stride_incl,				 //
+									 stride_azimuth,			 //
+									 stride_frequencies,		 //
+									 stride_stokes);			 //
+
 			MPI_Barrier(write_communicator); // Ensure all writers have finished before we free the communicator
 			MPI_Comm_free(&write_communicator);
 		}

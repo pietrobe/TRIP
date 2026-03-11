@@ -96,6 +96,9 @@ loadConfig(const std::string &filename)
 	if (config["output_overwrite_prevention"])
 		cfg.output_overwrite_prevention = config["output_overwrite_prevention"].as<bool>();
 
+	if (config["write_whole_3D_field_hdf5"])
+		cfg.write_whole_3D_field_hdf5 = config["write_whole_3D_field_hdf5"].as<bool>();
+
 	// Optional string (converted to filesystem::path)
 	if (config["output_directory"])
 		cfg.output_directory = std::filesystem::path(config["output_directory"].as<std::string>());

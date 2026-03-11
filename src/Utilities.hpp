@@ -87,25 +87,44 @@ print_PETSc_mem(const std::string &tag = "", std::ostream &os = std::cout)
 	}
 }
 
-inline std::string
-format_execution_time_summary(int mpi_size, double start_time, double setup_time, double solve_end_time, double end_time, double csv_out_time, double hdf5_out_time_emergent, double hdf5_out_time_JKQ)
+struct ExecutionClocks
 {
+	double start_time					= 0.0;
+	double setup_time					= 0.0;
+	double solve_end_time				= 0.0;
+	double end_time						= 0.0;
+	double arbitrary_beam_time			= 0.0;
+	double csv_out_time					= 0.0;
+	double hdf5_out_time_emergent		= 0.0;
+	double hdf5_out_time_JKQ			= 0.0;
+	double hdf5_out_time_whole_3D_field = 0.0;
+};
+
+inline std::string
+format_execution_time_summary(const int mpi_size, const ExecutionClocks &clocks)
+{
+	const double total_time_hdf5 =
+		clocks.hdf5_out_time_emergent + clocks.hdf5_out_time_JKQ + clocks.hdf5_out_time_whole_3D_field;
+
 	std::stringstream ss;
 	ss << std::fixed << std::setprecision(2);
 	ss << std::endl;
 	ss << std::string(80, '=') << std::endl;
 	ss << " EXECUTION TIME SUMMARY" << std::endl;
 	ss << std::string(80, '=') << std::endl;
-	ss << " MPI processes:        " << mpi_size << std::endl;
-	ss << " Setup time:           " << (setup_time - start_time) << " s" << std::endl;
-	ss << " Solve time:           " << (solve_end_time - setup_time) << " s" << std::endl;
-	ss << " Post processing time: " << (end_time - solve_end_time) << " s" << std::endl;
-	ss << " 	Output CSV: 	  " << csv_out_time << " s" << std::endl;
-	ss << " 	Output HDF5: 	  " << std::endl;
-	ss << "		  Emergent field: " << hdf5_out_time_emergent << " s" << std::endl;
-	ss << "		  JKQ: 			  " << hdf5_out_time_JKQ << " s" << std::endl;
+	ss << " MPI processes:         " << mpi_size << std::endl;
+	ss << " Setup time:            " << (clocks.setup_time - clocks.start_time) << " s" << std::endl;
+	ss << " Solve time:            " << (clocks.solve_end_time - clocks.setup_time) << " s" << std::endl;
+	ss << " Arbitrary beam time:   " << clocks.arbitrary_beam_time << " s" << std::endl;
+	ss << " Post processing time:  " << (clocks.end_time - clocks.solve_end_time) << " s" << std::endl;
+	ss << "     Output CSV:        " << clocks.csv_out_time << " s" << std::endl;
+	ss << "     Output HDF5:       " << std::endl;
+	ss << "	      Emergent field:  " << clocks.hdf5_out_time_emergent << " s" << std::endl;
+	ss << "	      JKQ:             " << clocks.hdf5_out_time_JKQ << " s" << std::endl;
+	ss << "	      Whole 3D field:  " << clocks.hdf5_out_time_whole_3D_field << " s" << std::endl;
+	ss << "	      Total HDF5 time: " << total_time_hdf5 << " s" << std::endl;
 	ss << std::string(80, '-') << std::endl;
-	ss << " Total execution time: " << (end_time - start_time) << " s" << std::endl;
+	ss << " Total execution time:  " << (clocks.end_time - clocks.start_time) << " s" << std::endl;
 	ss << std::string(80, '=') << std::endl;
 	ss << std::endl;
 	return ss.str();
