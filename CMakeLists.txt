@@ -278,9 +278,9 @@ target_include_directories(solar_3D_tests PUBLIC src/thdf/)
 # Link the static library
 target_link_libraries(solar_3D_tests PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a)
     
-# # make does not build test 
-# set_target_properties(solar_3D_tests PROPERTIES EXCLUDE_FROM_ALL TRUE)
+# make does not build test 
+set_target_properties(solar_3D_tests PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
-# # make test build test
-# add_custom_target(build_test DEPENDS solar_3D_tests)
+# make test build test
+add_custom_target(build_test DEPENDS solar_3D_tests)
 

@@ -1555,7 +1555,7 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
 }
       
 
-void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0)
+void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0, const bool apply_BC)
 {
     const bool verbose = RT_problem_->verbose_;
 
@@ -1637,7 +1637,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     double one_step_timer = 0;    
 
     // impose boundary conditions 
-    apply_bc_serial(I_field_serial_, I0);  
+    if (apply_BC) apply_bc_serial(I_field_serial_, I0);  
     // apply_bc(I_field, I0);  
 
     for (int tile_number = 0; tile_number < n_tiles_; ++tile_number)  
@@ -2201,7 +2201,7 @@ void MF_context::formal_solve_1_5D(Field_ptr_t I_field, const Field_ptr_t S_fiel
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 
-void MF_context::formal_solve(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0)
+void MF_context::formal_solve(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0, const bool apply_BC)
 {
     if (RT_problem_->use_1_5D_approx_)
     {
@@ -2209,7 +2209,7 @@ void MF_context::formal_solve(Field_ptr_t I_field, const Field_ptr_t S_field, co
     }
     else
     {
-        formal_solve_global(I_field, S_field, I0);
+        formal_solve_global(I_field, S_field, I0, apply_BC);
     }
 }   
 
@@ -2955,7 +2955,7 @@ void MF_context::set_up_emission_module(){
     case emissivity_model_t::CRD_limit:
         
         components.push_back(emission_coefficient_components::epsilon_pCRD_GL_limit);             
-        components.push_back(emission_coefficient_components::epsilon_csc);      
+        components.push_back(emission_coefficient_components::epsilon_csc);  
 
         if (mpi_rank_ == 0) std::cout << "\nUsing CRD emission, components:"<< std::endl;
 
@@ -3030,14 +3030,14 @@ void MF_context::set_up_emission_module(){
     // ecc_sh_ptr_->set_threads_number(2);
 
     // in case needed, set up the emission module for J_KQ input
-    if (use_J_KQ_)
+    if (use_J_KQ_prec_ or solve_with_J_KQ_)     
     {
-        if (mpi_rank_ == 0) std::cout << "Setting up emissiviity module for CRD using J_KQ tensors" << std::endl;
+        if (mpi_rank_ == 0) std::cout << "Setting up emissivity module for CRD (no csc) using J_KQ tensors" << std::endl;
 
-        std::list<emission_coefficient_components> components_csc_only{emission_coefficient_components::epsilon_csc};       
+        // std::list<emission_coefficient_components> components_csc_only{emission_coefficient_components::epsilon_csc};       
 
-        // function for emissivity csc only 
-        epsilon_fun_csc_ = ecc_sh_ptr_->make_computation_function(components_csc_only);
+        // // function for emissivity csc only 
+        // epsilon_fun_csc_ = ecc_sh_ptr_->make_computation_function(components_csc_only);
         
         // function to get emissivity from JKQ, CRD by default 
         epsilon_fun_J_KQ_ = ecc_sh_ptr_->make_computation_function_eps_from_JKQ();
@@ -3071,8 +3071,8 @@ void MF_context::set_up_emission_module(){
 
 
 // emissivity from scattering (line + continuum)
-void MF_context::update_emission(const Vec &I_vec, const bool approx){ 	
-
+void MF_context::update_emission(const Vec &I_vec, const bool approx)
+{
 	PetscErrorCode ierr; 
 	       
     const auto g_dev   = RT_problem_->space_grid_->view_device();  
@@ -3237,17 +3237,16 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
               clock.print_clock_h("Execution time of Epsilon emissivity");
         }
 #endif
-        /*
-        // TODO add eps_csc?        
-        if (RT_problem_->mpi_rank_ == 0 and i_vec == istart_local)
-        {
-            std::cout << "INPUT" << std::endl;
-            print_vec(std::cout, input);
+        
+        // // TODO add eps_csc?        
+        // if (RT_problem_->mpi_rank_ == 100 and i_vec == iend_local - 1)
+        // {
+        //     // std::cout << "INPUT" << std::endl;
+        //     // print_vec(std::cout, input);
 
-            std::cout << "OUTPUT" << std::endl;
-            print_vec(std::cout, output);
-        } 
-        */
+        //     std::cout << "OUTPUT STANDARD" << std::endl;
+        //     print_vec(std::cout, output);
+        // } 
 
         // update S_field_ from output scaling by eta_I
         double eta_I_inv; 
@@ -3261,6 +3260,20 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
             S_dev.block(i,j,k)[b + 2] = eta_I_inv * output[b + 2];
             S_dev.block(i,j,k)[b + 3] = eta_I_inv * output[b + 3];                                                       
         }        
+
+        // if (mpi_rank_ == 0 and i_vec == istart_local)        
+        // { 
+        //     // std::cout << "eta inv" << std::endl;
+        //     // std::cout <<  1.0 / (eta_dev.block(i,j,k)[0]) << std::endl;
+        //     // std::cout <<  1.0 / (eta_dev.block(i,j,k)[1]) << std::endl;
+        //     // std::cout <<  1.0 / (eta_dev.block(i,j,k)[2]) << std::endl;
+        //     // std::cout <<  1.0 / (eta_dev.block(i,j,k)[3]) << std::endl;
+        //     std::cout << "S STANDARD" << std::endl;
+        //     std::cout << S_dev.block(i,j,k)[0] << std::endl;
+        //     std::cout << S_dev.block(i,j,k)[1] << std::endl;
+        //     std::cout << S_dev.block(i,j,k)[2] << std::endl;
+        //     std::cout << S_dev.block(i,j,k)[3] << std::endl;
+        // }
 
         // update counters
         counter_i++;
@@ -3283,7 +3296,7 @@ void MF_context::update_emission(const Vec &I_vec, const bool approx){
 
 
 // emissivity from scattering (line + continuum)
-void MF_context::update_emission_J_KQ(const Vec &J_KQ_vec){  
+void MF_context::update_emission_J_KQ(const Vec &J_KQ_vec){      
 
     PetscErrorCode ierr; 
            
@@ -3329,7 +3342,7 @@ void MF_context::update_emission_J_KQ(const Vec &J_KQ_vec){
         // set indeces
         std::iota(ix, ix + J_KQ_size_, PetscInt(i_vec) * PetscInt(J_KQ_size_));
 
-        // get I field 
+        // get J_KQ field 
         ierr = VecGetValues(J_KQ_vec, J_KQ_size_, ix, &input[0]);CHKERRV(ierr);   
 
         // compute grid indeces from Vec index i_vec
@@ -3347,16 +3360,6 @@ void MF_context::update_emission_J_KQ(const Vec &J_KQ_vec){
 
         rii_include::make_indices_convertion_function<double>(out_epsilon, offset_fun_)(output.data());                    
 
-        if (RT_problem_->mpi_rank_ == 0 and i_vec == istart_local)
-        {
-            std::cout << "(i,j,k) = (" << i << ", " << j << ", " << k << ")" << std::endl;        
-            std::cout << "depth = " << RT_problem_->depth_grid_[k] << std::endl;
-            std::cout << "INPUT JKQ" << std::endl;
-            print_vec(std::cout, input);
-            std::cout << "OUTPUT JKQ" << std::endl;
-            print_vec(std::cout, output);
-        }
-
         // update S_field_ from output scaling by eta_I
         double eta_I_inv; 
 
@@ -3368,19 +3371,6 @@ void MF_context::update_emission_J_KQ(const Vec &J_KQ_vec){
             S_dev.block(i,j,k)[b + 1] = eta_I_inv * output[b + 1]; // TODO: remove these fot the unopolarized version
             S_dev.block(i,j,k)[b + 2] = eta_I_inv * output[b + 2];
             S_dev.block(i,j,k)[b + 3] = eta_I_inv * output[b + 3];                                                       
-        }
-
-        if (mpi_rank_ == 0 and i_vec == istart_local)        
-        {   std::cout << "eta inv" << std::endl;
-            std::cout <<  1.0 / (eta_dev.block(i,j,k)[0]) << std::endl;
-            std::cout <<  1.0 / (eta_dev.block(i,j,k)[1]) << std::endl;
-            std::cout <<  1.0 / (eta_dev.block(i,j,k)[2]) << std::endl;
-            std::cout <<  1.0 / (eta_dev.block(i,j,k)[3]) << std::endl;
-            std::cout << "S" << std::endl;
-            std::cout << S_dev.block(i,j,k)[0] << std::endl;
-            std::cout << S_dev.block(i,j,k)[1] << std::endl;
-            std::cout << S_dev.block(i,j,k)[2] << std::endl;
-            std::cout << S_dev.block(i,j,k)[3] << std::endl;
         }
     
         // update counters
@@ -3424,17 +3414,18 @@ void MF_context::I_vec_to_J_KQ_vec(const Vec &I_vec, Vec &J_KQ_vec){
     std::vector<double> input(block_size);        
     std::vector<double> J_KQ_ijk_vec(J_KQ_size_);        
 
-    //PetscInt ix[block_size];
+    // PetscInt ix[block_size];
     PetscInt *ix;
     ierr = PetscMalloc1(block_size, &ix);CHKERRV(ierr); 
 
     PetscInt istart, iend; 
     ierr = VecGetOwnershipRange(I_vec, &istart, &iend);CHKERRV(ierr);   
 
+    // local space indeces
     const int istart_local = istart / block_size;
     const int iend_local   = iend   / block_size;
 
-    // same for the J_KQ indices
+    // PetscInt ix_J_KQ[J_KQ_size_];
     PetscInt *ix_J_KQ;
     ierr = PetscMalloc1(J_KQ_size_, &ix_J_KQ);CHKERRV(ierr); 
 
@@ -3447,10 +3438,10 @@ void MF_context::I_vec_to_J_KQ_vec(const Vec &I_vec, Vec &J_KQ_vec){
     
     for (int i_vec = istart_local; i_vec < iend_local; ++i_vec)
     {
-        // set indeces
-        std::iota(ix, ix + block_size, PetscInt(i_vec) * PetscInt(block_size));
+        // set global indeces
+        std::iota(ix, ix + block_size,           PetscInt(i_vec) * PetscInt(block_size));
         std::iota(ix_J_KQ, ix_J_KQ + J_KQ_size_, PetscInt(i_vec) * PetscInt(J_KQ_size_));
-
+       
         // get I field 
         ierr = VecGetValues(I_vec, block_size, ix, &input[0]);CHKERRV(ierr);   
 
@@ -3470,10 +3461,25 @@ void MF_context::I_vec_to_J_KQ_vec(const Vec &I_vec, Vec &J_KQ_vec){
         const auto J_KQ_ijk = compute_JKQ_values_(i,j,k);
 
         // transform the J_KQ object to a standard vector 
-        J_KQ_ijk->fill_array(J_KQ_ijk_vec.data());       
-        
+        J_KQ_ijk->fill_array(J_KQ_ijk_vec.data());     
+
         // set J_KQ_vec        
         ierr = VecSetValues(J_KQ_vec, J_KQ_size_, ix_J_KQ, J_KQ_ijk_vec.data(), INSERT_VALUES);CHKERRV(ierr); 
+
+        // update counters
+        counter_i++;
+
+        if (counter_i == i_end - g_dev.margin[0])
+        {
+            counter_i = 0;
+            counter_j++;
+        }
+
+        if (counter_j == j_end - g_dev.margin[1])
+        {
+            counter_j = 0;
+            counter_k++;
+        }
     }  
 
     ierr = VecAssemblyBegin(J_KQ_vec);CHKERRV(ierr); 
@@ -3514,9 +3520,9 @@ void MF_context::I_field_to_J_KQ_vec(const Field_ptr_t field, Vec &J_KQ_vec){
     std::vector<double> I_ijk_vec(block_size);
     std::vector<double> J_KQ_ijk_vec(J_KQ_size_);
 
-    PetscInt istart, starting_index;
+    PetscInt i_J_KQ_start, starting_index;
     
-    ierr = VecGetOwnershipRange(J_KQ_vec, &istart, NULL);CHKERRV(ierr);    
+    ierr = VecGetOwnershipRange(J_KQ_vec, &i_J_KQ_start, NULL);CHKERRV(ierr);    
 
     int counter = 0;
 
@@ -3531,7 +3537,7 @@ void MF_context::I_field_to_J_KQ_vec(const Field_ptr_t field, Vec &J_KQ_vec){
                     I_ijk_vec[b] = f_dev.block(i, j, k)[b];                                        
                 }   
 
-                // set input field
+                // set input field 
                 ecc_sh_ptr_->update_incoming_field(i, j, k, offset_fun_, I_ijk_vec.data());
 
                 // get the J_KQ object
@@ -3540,13 +3546,13 @@ void MF_context::I_field_to_J_KQ_vec(const Field_ptr_t field, Vec &J_KQ_vec){
                 // transform the J_KQ object to a standard vector J_KQ_ijk_vec                
                 J_KQ_ijk->fill_array(J_KQ_ijk_vec.data());   
 
-                // set indeces
-                starting_index = istart + counter * J_KQ_size_;
+                // set indeces STRANGE?
+                starting_index = i_J_KQ_start + counter * J_KQ_size_;
                 std::iota(ix_J_KQ, ix_J_KQ + J_KQ_size_, starting_index);                
 
-                // now J_KQ_ijk_vec is filled and shoule be inserted in the PETSC Vec
-                ierr = VecSetValues(x_J_KQ_, J_KQ_size_, ix_J_KQ, J_KQ_ijk_vec.data(), INSERT_VALUES);CHKERRV(ierr); 
-
+                // now J_KQ_ijk_vec is filled and should be inserted in the PETSC Vec
+                ierr = VecSetValues(J_KQ_vec, J_KQ_size_, ix_J_KQ, J_KQ_ijk_vec.data(), INSERT_VALUES);CHKERRV(ierr); 
+                
                 counter++;
             }
         }
@@ -3611,6 +3617,7 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
     PetscInt istart, iend; 
     ierr = VecGetOwnershipRange(I_vec, &istart, &iend);CHKERRV(ierr);   
     
+    // global space indeces
     const int istart_local = istart / block_size;
     const int iend_local   = iend   / block_size;
 
@@ -4224,7 +4231,7 @@ PetscErrorCode UserMult(Mat mat, Vec x, Vec y){
     Real start = MPI_Wtime();       
     
     // compute new emission in S_field_ 
-    mf_ctx_->update_emission(x);  
+    mf_ctx_->update_emission(x); 
 
     // timer
     double emission_timer = MPI_Wtime() - start;
@@ -4234,15 +4241,50 @@ PetscErrorCode UserMult(Mat mat, Vec x, Vec y){
   	    
   	// fill rhs_ from formal solve with zero bc  	
     mf_ctx_->formal_solve(RT_problem->I_field_, RT_problem->S_field_, 0.0);
-      
+  
     // copy intensity into petscvec format
 	mf_ctx_->field_to_vec(RT_problem->I_field_, y);
 
 	// update I_out = I_in - I_fs (y = x - y)
-	ierr = VecAYPX(y, -1.0, x);CHKERRQ(ierr);
+	ierr = VecAYPX(y, -1.0, x);CHKERRQ(ierr);    
 
   	return ierr;
 }
+
+
+PetscErrorCode UserMult_JKQ(Mat mat, Vec x, Vec y){
+    
+    PetscErrorCode ierr; 
+
+    void *ptr;
+    MatShellGetContext(mat,&ptr);
+    MF_context *mf_ctx_ = (MF_context *)ptr;
+
+    auto RT_problem = mf_ctx_->RT_problem_;    
+
+    Real start = MPI_Wtime();       
+    
+    // compute new emission in S_field_ 
+    mf_ctx_->update_emission_J_KQ(x); 
+
+    // timer
+    double emission_timer = MPI_Wtime() - start;
+    double emission_timer_max;
+    MPI_Reduce(&emission_timer, &emission_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    if (RT_problem->mpi_rank_ == 0 and RT_problem->verbose_) printf("update_emission:\t\t%g seconds\n", emission_timer_max);                  
+        
+    // fill rhs_ from formal solve with zero bc     
+    mf_ctx_->formal_solve(RT_problem->I_field_, RT_problem->S_field_, 0.0);
+  
+    // copy intensity into petscvec format (as JKQ)
+    mf_ctx_->I_field_to_J_KQ_vec(RT_problem->I_field_, y);        
+
+    // update I_out = I_in - I_fs (y = x - y)
+    ierr = VecAYPX(y, -1.0, x);CHKERRQ(ierr);    
+
+    return ierr;
+}
+
 
 
 // matrix-free matrix vector multiplication y = (Id - LJ)x
@@ -4259,7 +4301,7 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
     Real start = MPI_Wtime();       
     
     // TODO: create update_emission_unpol not needing in/out conversions 
-    if (mf_ctx_->use_J_KQ_)
+    if (mf_ctx_->use_J_KQ_prec_)
     {
         // compute new emission in S_field_ 
         mf_ctx_->update_emission_J_KQ(x);          
@@ -4274,7 +4316,7 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
         RT_problem->polarized_to_unpolarized_field(RT_problem->S_field_, RT_problem->S_unpol_field_);  
     }
     else
-    {
+    {        
         // compute new emission in S_field_ 
         mf_ctx_->update_emission(x, true);  
     }
@@ -4283,51 +4325,8 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
     double emission_timer_max;
     MPI_Reduce(&emission_timer, &emission_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     if (RT_problem->mpi_rank_ == 0 and RT_problem->verbose_) printf("Update preconditioner emission:\t\t%g seconds\n", emission_timer_max);          
-
-
-/*
-///////////////// TEST
-    if (RT_problem->mpi_rank_ == 0) 
-    {
-        const auto space_grid = RT_problem->space_grid_;   
-
-        // block size
-        const int block_size = RT_problem->block_size_;
-
-        auto g_dev = space_grid->view_device();
-        auto S_dev = RT_problem->S_field_->view_device(); 
-
-        // indeces
-        const int i_start = g_dev.margin[0]; 
-        const int j_start = g_dev.margin[1];
-        const int k_start = g_dev.margin[2];
-
-        const int i_end = i_start + g_dev.dim[0];
-        const int j_end = j_start + g_dev.dim[1];
-        const int k_end = k_start + g_dev.dim[2]; 
-
-        std::cout << "S = " << std::endl;
-        std::cout << S_dev.block(i_start, j_start, k_start)[0] << std::endl; 
-        std::cout << S_dev.block(i_start, j_start, k_start)[1] << std::endl; 
-        std::cout << S_dev.block(i_start, j_start, k_start)[2] << std::endl; 
-        std::cout << S_dev.block(i_start, j_start, k_start)[3] << std::endl; 
-
-        // for (int k = k_start; k < k_end; ++k)                   
-        // {                                                           
-        //     for (int j = j_start; j < j_end; ++j)
-        //     {
-        //         for (int i = i_start; i < i_end; ++i)               
-        //         {
-        //               S_dev.block(i, j, k)[b];                                        
-        //         }
-        //     }
-        // }
-    }
-    */
-
-    /////////////////
     
-    if (mf_ctx_->use_J_KQ_)
+    if (mf_ctx_->use_J_KQ_prec_)
     {
         // fill rhs_ from formal solve with zero bc     
         mf_ctx_->formal_solve(RT_problem->I_field_, RT_problem->S_field_, 0.0);
@@ -4387,10 +4386,10 @@ PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y){
     auto RT_problem = mf_ctx->RT_problem_;
 
 	// apply	
-    if (mf_ctx->use_J_KQ_)
-    {        
+    if (mf_ctx->use_J_KQ_prec_)
+    {                
         // Restrict full radiation field to J_KQ
-        mf_ctx->I_vec_to_J_KQ_vec(x, mf_ctx->x_J_KQ_);
+        mf_ctx->I_vec_to_J_KQ_vec(x, mf_ctx->x_J_KQ_);        
         
         // J_KQ solve
         ierr = KSPSolve(mf_ctx->pc_solver_, mf_ctx->x_J_KQ_, mf_ctx->y_J_KQ_);CHKERRQ(ierr);
@@ -4401,11 +4400,13 @@ PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y){
         mf_ctx->update_emission_J_KQ(mf_ctx->y_J_KQ_);
 
         // (ii) perform a formal solution        
-        mf_ctx->formal_solve(RT_problem->I_field_, RT_problem->S_field_, 0.0); // BC?
+        mf_ctx->formal_solve(RT_problem->I_field_, RT_problem->S_field_, 0.0); // BC is in the rhs
 
         // map back to y
-        mf_ctx->field_to_vec(RT_problem->I_field_, y);  
+        mf_ctx->field_to_vec(RT_problem->I_field_, y);      
 
+        // final addition for consistency        
+        ierr = VecAYPX(y, 1.0, x);CHKERRQ(ierr);    
     }
     else if (mf_ctx->unpolarized_prec_)
     {           

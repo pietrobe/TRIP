@@ -7,6 +7,7 @@
 
 extern PetscErrorCode UserMult(Mat mat,Vec x,Vec y);
 extern PetscErrorCode UserMult_approx(Mat mat,Vec x,Vec y);
+extern PetscErrorCode UserMult_JKQ(Mat mat,Vec x,Vec y);
 extern PetscErrorCode MF_pc_Destroy(PC pc);
 extern PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y);
 
@@ -53,13 +54,16 @@ struct MF_context {
 	const bool use_single_long_step_ = false; 
 	const bool use_always_long_ray_  = true;
 
-	// reduced models flags for preconditioner
-	const bool unpolarized_prec_ = false;
-	const bool use_J_KQ_         = false; 
-	const int J_KQ_size_         = 18;
+	// use JKQ vector as unknown
+	bool solve_with_J_KQ_;
 	int tot_J_KQ_size_; // e.g. N_s * J_KQ_size_
 	int local_J_KQ_size_; 
+	const int J_KQ_size_ = 18;
 
+	// reduced models flags for preconditioner
+	const bool unpolarized_prec_ = false;
+	bool use_J_KQ_prec_; 
+	
 	// formal solution in arbitrary direction
 	bool formal_solution_Omega_ = false;
 	
@@ -143,11 +147,11 @@ struct MF_context {
 	void get_2D_weigths(const double x, const double y, double *w);
 
 	// formal solver	
-	void formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
+	void formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0, const bool apply_bc = false);		
 	void formal_solve_ray(const Real mu, const Real chi);		
 	void formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
 	void formal_solve_1_5D(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);	
-	void formal_solve(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);	
+	void formal_solve(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0, const bool apply_bc = false);		
 
 	void apply_bc(       Field_ptr_t I_field, const Real I0, const bool polarized = true);	
 	void apply_bc_serial(Field_ptr_t I_field, const Real I0, const bool polarized = true);	
@@ -187,13 +191,36 @@ public:
     	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size_);  
 
     	RT_problem_ = RT_problem;  
-    	using_prec_ = RT_problem_->cfg_.use_prec;    	    	
+    	auto cfg    = RT_problem_->cfg_;
 
-    	mf_ctx_.RT_problem_    = RT_problem;  
-    	mf_ctx_.mpi_rank_      = mpi_rank_;
-    	mf_ctx_.mpi_size_      = mpi_size_;   
+    	// load input options 
+    	using_prec_  = cfg.use_prec;    	    	
+    	ksp_type_    = cfg.solver.ksp_solver_type;
+    	pc_ksp_type_ = cfg.prec.pc_solver_type;	    	
 
-    	mf_ctx_.formal_solver_ = Formal_solver(RT_problem_->cfg_.formal_solver);        	
+    	mf_ctx_.RT_problem_ = RT_problem;  
+    	mf_ctx_.mpi_rank_   = mpi_rank_;
+    	mf_ctx_.mpi_size_   = mpi_size_;   
+
+    	mf_ctx_.formal_solver_ = Formal_solver(cfg.formal_solver);     
+
+    	mf_ctx_.solve_with_J_KQ_ = cfg.solver.ksp_use_J_KQ;
+    	mf_ctx_.use_J_KQ_prec_   = cfg.prec.pc_use_J_KQ;
+
+    	// safety check when J_KQ solution is enabled
+    	const std::string emissivity_model = emissivity_model_to_string_long(cfg.emissivity_model);
+
+		if (mf_ctx_.solve_with_J_KQ_ and emissivity_model.find("PRD") != std::string::npos)
+		{
+		    if (mpi_rank_ == 0)
+		    {
+		        std::cout << "WARNING: J_KQ solver cannot be used with PRD "
+		                  << "(emissivity_model = " << emissivity_model << "). "
+		                  << "Swithicing to solve_with_J_KQ_ = false.\n";
+		    }
+		    
+		    mf_ctx_.solve_with_J_KQ_ = false;
+		}   	
     	
     	// init serial grids for formal solution (not needed for 1.5D)
     	if (RT_problem_->use_1_5D_approx_)
@@ -207,9 +234,9 @@ public:
     	}
     	
     	// init unpolarized formal solver and data structures
-    	if (mf_ctx_.use_J_KQ_)
+    	if (mf_ctx_.use_J_KQ_prec_ or mf_ctx_.solve_with_J_KQ_)    	
     	{    		
-    		mf_ctx_.init_J_KQ_vectors();
+    		mf_ctx_.init_J_KQ_vectors();    		
     	}
     	else if (mf_ctx_.unpolarized_prec_) 
     	{
@@ -218,21 +245,16 @@ public:
     		mf_ctx_.formal_solver_unpol_ = Formal_solver("SC_parabolic");	    		
     	}
     	    	
-    	mf_ctx_.set_up_emission_module();  	  
+    	mf_ctx_.set_up_emission_module();  	      	
         	
     	// assemble rhs
     	assemble_rhs();
     	// save_vec(rhs_, "../output/rhs.m" ,"rhs_3d");  
-
+    	
     	// //test
     	// mf_ctx_.field_to_vec(RT_problem_->eta_field_, RT_problem_->I_vec_);     
     	// save_vec(RT_problem_->I_vec_, "../output/eta_t.m" ,"etat");     
-
-    	// load input options 
-    	auto cfg = RT_problem_->cfg_;
-    	ksp_type_     = cfg.solver.ksp_solver_type;
-    	pc_ksp_type_  = cfg.prec.pc_solver_type;	    	
-
+    	
     	// print some output 
     	if (RT_problem_->verbose_) print_info();
   
@@ -241,8 +263,17 @@ public:
 		ierr = VecGetLocalSize(rhs_, &local_size);CHKERRV(ierr); 		
 
 		// init user defined Mat mult
-		ierr = MatCreateShell(PETSC_COMM_WORLD,local_size,local_size,RT_problem_->tot_size_,RT_problem_->tot_size_,(void*)&mf_ctx_,&MF_operator_);CHKERRV(ierr); 
-		ierr = MatShellSetOperation(MF_operator_,MATOP_MULT,(void(*)(void))UserMult);CHKERRV(ierr);
+		if (mf_ctx_.solve_with_J_KQ_)
+		{
+			ierr = MatCreateShell(PETSC_COMM_WORLD,mf_ctx_.local_J_KQ_size_,mf_ctx_.local_J_KQ_size_,mf_ctx_.tot_J_KQ_size_,mf_ctx_.tot_J_KQ_size_,
+													   (void*)&mf_ctx_,&MF_operator_);CHKERRV(ierr); 	
+			ierr = MatShellSetOperation(MF_operator_,MATOP_MULT,(void(*)(void))UserMult_JKQ);CHKERRV(ierr);
+		}
+		else // standard solve with [I Q U V] unknown
+		{			
+			ierr = MatCreateShell(PETSC_COMM_WORLD,local_size,local_size,RT_problem_->tot_size_,RT_problem_->tot_size_,(void*)&mf_ctx_,&MF_operator_);CHKERRV(ierr); 
+			ierr = MatShellSetOperation(MF_operator_,MATOP_MULT,(void(*)(void))UserMult);CHKERRV(ierr);
+		}
 
     	// set Krylov solver
     	ierr = KSPCreate(PETSC_COMM_WORLD,&ksp_solver_);CHKERRV(ierr);
@@ -265,7 +296,7 @@ public:
     	// set MF_operator_approx_		
     	if (using_prec_)
     	{    	    		
-    		if (mf_ctx_.use_J_KQ_)
+    		if (mf_ctx_.use_J_KQ_prec_)        		
     		{    			
     			ierr = MatCreateShell(PETSC_COMM_WORLD,mf_ctx_.local_J_KQ_size_,mf_ctx_.local_J_KQ_size_,
     												   mf_ctx_.tot_J_KQ_size_,mf_ctx_.tot_J_KQ_size_,
@@ -325,6 +356,7 @@ public:
 		
     	// extra options from command line   	
     	ierr = KSPSetFromOptions(ksp_solver_);CHKERRV(ierr);
+    	// ierr = KSPSetFromOptions(mf_ctx_.pc_solver_);CHKERRV(ierr);    
     	// ierr = PCSetFromOptions(pc_);CHKERRV(ierr);	     
 
 		// test
@@ -337,18 +369,50 @@ public:
 	// solve linear system
 	inline void solve()
 	{	
-		PetscErrorCode ierr;
-
 		Real start = MPI_Wtime();	
-				
-		if (mpi_rank_ == 0) std::cout << "\nStart linear solve..." << std::endl;			
-		ierr = KSPSolve(ksp_solver_, rhs_, RT_problem_->I_vec_);CHKERRV(ierr);
+		
+		if (mpi_rank_ == 0) std::cout << "\nStart linear solve..." << std::endl;		
+
+		if (mf_ctx_.solve_with_J_KQ_)
+		{
+			solve_with_J_KQ();
+		}	
+		else
+		{			
+			PetscErrorCode ierr;
+			ierr = KSPSolve(ksp_solver_, rhs_, RT_problem_->I_vec_);CHKERRV(ierr);
+		}
 
 		MPI_Barrier(MPI_COMM_WORLD); Real end = MPI_Wtime();
 		if (mpi_rank_ == 0) std::cout << "Solve time (s) = " << end - start << std::endl;	
 
 		// update I_field for later use
 		mf_ctx_.vec_to_field(RT_problem_->I_field_, RT_problem_->I_vec_);		
+	}
+
+	// To be properly tested // TODO
+	inline void solve_with_J_KQ()
+	{				
+		if (mpi_rank_ == 0) std::cout << "\nStart J_KQ solution: WARNING at the moment this has no eps_csc." << std::endl;			
+
+		PetscErrorCode ierr;
+		
+		// map rhs to JKQ
+		mf_ctx_.I_vec_to_J_KQ_vec(rhs_, mf_ctx_.y_J_KQ_);     
+
+		// solve in JKQ
+		ierr = KSPSolve(ksp_solver_, mf_ctx_.y_J_KQ_, mf_ctx_.x_J_KQ_);CHKERRV(ierr); // TOOD
+
+		// (i) compute emissivity
+        mf_ctx_.update_emission_J_KQ(mf_ctx_.x_J_KQ_);
+        
+        // (ii) perform a formal solution        
+        mf_ctx_.formal_solve(RT_problem_->I_field_, RT_problem_->S_field_, 0.0); 
+
+        // map back to y adding rhs for consistency
+        mf_ctx_.field_to_vec(RT_problem_->I_field_, RT_problem_->I_vec_);   
+
+        VecAXPY(RT_problem_->I_vec_, 1.0, rhs_);        
 	}
 
 	inline void solve_checkpoint(const std::string output_path, const int checkpoint_interval)

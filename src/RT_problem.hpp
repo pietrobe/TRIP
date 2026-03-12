@@ -362,13 +362,13 @@ class RT_problem
 		allocate_atmosphere();
 
 		// read atm data (needs grid object)
-		read_atmosphere_1D(input_path + "/atmosphere.dat"); // NOTE: solar surface for space index k = 0
-		read_bulk_velocity_1D(input_path + "/bulk_velocity.dat");
+		read_atmosphere_1D(    input_path + "/atmosphere.dat"); // NOTE: solar surface for space index k = 0
+		read_bulk_velocity_1D( input_path + "/bulk_velocity.dat");
 		read_magnetic_field_1D(input_path + "/magnetic_field.dat");
 
 		read_continumm_1D(input_path + "/continuum/continuum_scat_opac.dat",
-						  input_path + "/continuum/continuum_tot_opac.dat",
-						  input_path + "/continuum/continuum_therm_emiss.dat");
+						      input_path + "/continuum/continuum_tot_opac.dat",
+						      input_path + "/continuum/continuum_therm_emiss.dat");
 	}
 
 	// convert block index to to local ones = [j_theta, k_chi, n_nu, i_stokes]
@@ -510,8 +510,8 @@ class RT_problem
 
 	int
 	get_KQ_values(std::vector<int> &KQ_values,					//
-				  std::vector<int> &KQ_values_real_compressed,	//
-				  std::vector<int> &KQ_values_imag_compressed); //
+				     std::vector<int> &KQ_values_real_compressed,	//
+				     std::vector<int> &KQ_values_imag_compressed); //
 
 	int
 	write_JKQ_field_hdf5(const std::string &output_file); //
@@ -526,9 +526,9 @@ class RT_problem
 
 	int
 	accumulate_surface_profiles_Omega_domain_data(std::vector<double> &surface_data_I,	//
-												  std::vector<double> &surface_data_Q,	//
-												  std::vector<double> &surface_data_U,	//
-												  std::vector<double> &surface_data_V); //
+												             std::vector<double> &surface_data_Q,	//
+												             std::vector<double> &surface_data_U,	//
+												             std::vector<double> &surface_data_V); //
 
 	int																				//
 	write_beams_frequency_grids_Omega_hdf5(const std::vector<BeamDirection> &beams, //
@@ -743,9 +743,9 @@ class RT_problem
 
 
 	// physical constants
-	const double c_	  = 2.99792458e+10;
+	const double c_	= 2.99792458e+10;
 	const double k_B_ = 1.38065e-16;
-	const double h_	  = 6.62607e-27;
+	const double h_	= 6.62607e-27;
 
 	// 2-level atom constants
 	double mass_;
@@ -755,8 +755,8 @@ class RT_problem
 	double gu_;
 	double Aul_;   // Einstein coefficients for spontaneous emission
 	double T_ref_; // Reference temperature
-	int	   Jl2_;
-	int	   Ju2_;
+	int	 Jl2_;
+	int	 Ju2_;
 
 	// reference frame
 	const double gamma_ = 0.5 * M_PI;

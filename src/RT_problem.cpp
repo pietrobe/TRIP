@@ -1077,7 +1077,7 @@ void RT_problem::read_bulk_velocity_1D(input_string filename){
 		
 		const int k_global = g_dev.start[2] + k - g_dev.margin[2];
 
-		v_b_dev.block(i, j, k)[0] =     v_b_vec[k_global];					
+		v_b_dev.block(i, j, k)[0] =     v_b_vec[k_global];
 		v_b_dev.block(i, j, k)[1] = theta_b_vec[k_global];					
 		v_b_dev.block(i, j, k)[2] =   chi_b_vec[k_global];															
     });
