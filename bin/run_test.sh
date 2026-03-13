@@ -14,5 +14,5 @@ srun ./solar_3D_tests --yaml_config ../tests/config_test_5x5_CRD_B0.yml
 echo -e "\n\033[1;34m========== Running Test 2 (CRD with uniform B) ==========\033[0m"
 srun ./solar_3D_tests --yaml_config ../tests/config_test_5x5_CRD_B.yml
 
-echo -e "\n\033[1;34m========== Running Test 3 (PRD with uniform B) ==========\033[0m"
-srun ./solar_3D_tests --yaml_config ../tests/config_test_5x5_PRD_B.yml
+echo -e "\n\033[1;34m========== Running Test 3 (PRD with B = 0) ==========\033[0m"
+srun ./solar_3D_tests --yaml_config ../tests/config_test_5x5_PRD_B0.yml

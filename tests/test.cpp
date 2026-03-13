@@ -1,6 +1,6 @@
 #include "RT_solver.hpp"
 
-#define NUM_TOL 1e-2
+#define NUM_TOL 1e-7
 
 #define RED     "\033[31m"
 #define GREEN   "\033[32m"
