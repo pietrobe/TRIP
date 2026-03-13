@@ -99,6 +99,8 @@ loadConfig(const std::string &filename)
 	if (config["write_whole_3D_field_hdf5"])
 		cfg.write_whole_3D_field_hdf5 = config["write_whole_3D_field_hdf5"].as<bool>();
 
+	if (config["write_text_output"]) cfg.write_text_output = config["write_text_output"].as<bool>();
+
 	// Optional string (converted to filesystem::path)
 	if (config["output_directory"])
 		cfg.output_directory = std::filesystem::path(config["output_directory"].as<std::string>());
@@ -195,10 +197,10 @@ loadConfig(const std::string &filename)
 		auto s = config["solver"];
 
 		if (s["ksp_solver_type"]) cfg.solver.ksp_solver_type = toKSPType(s["ksp_solver_type"].as<std::string>());
-		if (s["ksp_rtol"])        cfg.solver.ksp_rtol        = s["ksp_rtol"].as<double>();
-		if (s["ksp_max_it"])      cfg.solver.ksp_max_it      = s["ksp_max_it"].as<int>();
-		if (s["gmres_restart"])   cfg.solver.gmres_restart   = s["gmres_restart"].as<int>();
-		if (s["ksp_use_J_KQ"])    cfg.solver.ksp_use_J_KQ    = s["ksp_use_J_KQ"].as<bool>();
+		if (s["ksp_rtol"]) cfg.solver.ksp_rtol = s["ksp_rtol"].as<double>();
+		if (s["ksp_max_it"]) cfg.solver.ksp_max_it = s["ksp_max_it"].as<int>();
+		if (s["gmres_restart"]) cfg.solver.gmres_restart = s["gmres_restart"].as<int>();
+		if (s["ksp_use_J_KQ"]) cfg.solver.ksp_use_J_KQ = s["ksp_use_J_KQ"].as<bool>();
 	}
 
 	// Preconditioner section
@@ -207,9 +209,9 @@ loadConfig(const std::string &filename)
 		auto p = config["prec"];
 
 		if (p["pc_solver_type"]) cfg.prec.pc_solver_type = toKSPType(p["pc_solver_type"].as<std::string>());
-		if (p["pc_rtol"])        cfg.prec.pc_rtol        = p["pc_rtol"].as<double>();
-		if (p["pc_max_it"])      cfg.prec.pc_max_it      = p["pc_max_it"].as<int>();
-		if (p["pc_use_J_KQ"])    cfg.prec.pc_use_J_KQ  = p["pc_use_J_KQ"].as<bool>();
+		if (p["pc_rtol"]) cfg.prec.pc_rtol = p["pc_rtol"].as<double>();
+		if (p["pc_max_it"]) cfg.prec.pc_max_it = p["pc_max_it"].as<int>();
+		if (p["pc_use_J_KQ"]) cfg.prec.pc_use_J_KQ = p["pc_use_J_KQ"].as<bool>();
 	}
 
 	// Arbitrary beams section

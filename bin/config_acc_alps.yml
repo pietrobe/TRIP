@@ -8,12 +8,25 @@ frequency_file: frequency/96F/frequency.dat
 
 output: true
 output_overwrite_prevention: true
+
+## Lustre filesystem at CSCS:
+## Before running solar_3d, prepere the output directory with:
+
+## > mkdir -p $SCARTCH/output/
+## > lfs setstripe -c -1 -S 4M $SCARTCH/output/ 
+
+## This will ensure that the output files are distributed across all the OSTs, 
+## and not just one, which would cause a bottleneck.
 write_whole_3D_field_hdf5: true
 
-output_directory: /capstor/scratch/cscs/sriva/PORTA/output/test_refactor_sf/main_B_v2/
+write_text_output: false
+
+output_directory: /capstor/scratch/cscs/sriva/PORTA/output/test_refactor_sf/main_B_v3/
 
 use_B: true
 use_Vb: true
+
+pc_use_J_KQ: true
 
 use_continuum: false
 formal_solver: BESSER
@@ -38,7 +51,7 @@ solver:
 prec:
   pc_solver_type: KSPGMRES
   pc_rtol: 1e-6
-  pc_max_it: 25
+  pc_max_it: 30
 
 default_chi: &default_chi 0.0
 

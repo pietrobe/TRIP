@@ -19,11 +19,12 @@ compute_arbitrary_beam(RT_solver				   &rt_solver,		//
 
 // Compute a single arbitrary beam
 void
-compute_arbitrary_beam_hdf(RT_solver						&rt_solver,		 //
-						   std::shared_ptr<RT_problem>		&rt_problem_ptr, //
-						   const std::vector<BeamDirection> &beams,			 //
-						   const int						 beam_index,	 //
-						   const std::string				&output_file);					 //
+compute_arbitrary_beam_hdf(RT_solver						&rt_solver,			//
+						   bool								 write_text_output, //
+						   std::shared_ptr<RT_problem>		&rt_problem_ptr,	//
+						   const std::vector<BeamDirection> &beams,				//
+						   const int						 beam_index,		//
+						   const std::string				&output_file);						//
 
 // Format arbitrary beams info as a string for printing//
 std::string
@@ -39,6 +40,7 @@ process_arbitrary_beams(const std::vector<BeamDirection> &beams,				  //
 
 int
 process_arbitrary_beams_hdf(const std::vector<BeamDirection> &beams,				  //
+							bool							  write_text_output,	  //
 							RT_solver						 &rt_solver,			  //
 							std::shared_ptr<RT_problem>		 &rt_problem_ptr,		  //
 							const std::string				 &output_file,			  //

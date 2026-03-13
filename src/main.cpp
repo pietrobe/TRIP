@@ -182,24 +182,27 @@ main(int argc, char *argv[])
 			// Where the output is written in separate files for each emergent spatial point
 			////////////////////////////////////////////////////////////////////////////////////////////////
 			clocks.csv_out_time = MPI_Wtime();
-			for (int i = 0; i < N_x; ++i)
+			if (cfg.write_text_output)
 			{
-				for (int j = 0; j < N_y; ++j)
+				for (int i = 0; i < N_x; ++i)
 				{
-					// const std::string output_file_Omega_mu	   = output_file + "_mu" + mu_str + "_chi" + chi_str;
-
-					rt_problem_ptr->write_surface_point_profiles(output_file, i, j);
-
-					// TESTING purpose: write the CSV files too
-					rt_problem_ptr->write_surface_point_profiles_csv(output_file, i, j);
-
-					if (rt_problem_ptr->mpi_rank_ == 0 and i == 0 and j == 0)
+					for (int j = 0; j < N_y; ++j)
 					{
-						const std::string output_file_frequencies  = (output_path / "frequencies_grid_Hz").string();
-						const std::string output_file_angular_grid = (output_path / "angular_grid").string();
+						// const std::string output_file_Omega_mu	   = output_file + "_mu" + mu_str + "_chi" + chi_str;
 
-						rt_problem_ptr->write_angular_grid_csv(output_file_angular_grid, i, j);
-						rt_problem_ptr->write_frequencies_grid_csv(output_file_frequencies, i, j);
+						rt_problem_ptr->write_surface_point_profiles(output_file, i, j);
+
+						// TESTING purpose: write the CSV files too
+						rt_problem_ptr->write_surface_point_profiles_csv(output_file, i, j);
+
+						if (rt_problem_ptr->mpi_rank_ == 0 and i == 0 and j == 0)
+						{
+							const std::string output_file_frequencies  = (output_path / "frequencies_grid_Hz").string();
+							const std::string output_file_angular_grid = (output_path / "angular_grid").string();
+
+							rt_problem_ptr->write_angular_grid_csv(output_file_angular_grid, i, j);
+							rt_problem_ptr->write_frequencies_grid_csv(output_file_frequencies, i, j);
+						}
 					}
 				}
 			}
@@ -237,6 +240,7 @@ main(int argc, char *argv[])
 			clocks.arbitrary_beam_time = MPI_Wtime();
 
 			process_arbitrary_beams_hdf(cfg.arbitrary_beams,										 //
+										cfg.write_text_output,										 //
 										rt_solver,													 //
 										rt_problem_ptr,												 //
 										(output_path / "emergent_field_abitrary_Omega.h5").string(), //

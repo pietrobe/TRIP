@@ -148,7 +148,7 @@ struct SolverConfig
 	KSPType ksp_solver_type = "KSPFGMRES";
 	double	ksp_rtol		= 1e-5;
 	int		ksp_max_it		= 1000;
-	bool    ksp_use_J_KQ    = false;
+	bool	ksp_use_J_KQ	= false;
 	int		gmres_restart	= 30;
 };
 
@@ -157,7 +157,7 @@ struct PrecConfig
 	KSPType pc_solver_type = "KSPGMRES";
 	double	pc_rtol		   = 1e-5;
 	int		pc_max_it	   = 1000;
-	bool    pc_use_J_KQ    = false;
+	bool	pc_use_J_KQ	   = false;
 };
 
 struct AppConfig
@@ -171,7 +171,8 @@ struct AppConfig
 	// Output settings
 	bool output						 = false;
 	bool output_overwrite_prevention = false;
-	bool write_whole_3D_field_hdf5	 = true; // testing
+	bool write_whole_3D_field_hdf5	 = true;  // testing
+	bool write_text_output			 = false; // testing
 
 	// testing
 	std::filesystem::path reference_sol_directory;
@@ -190,7 +191,7 @@ struct AppConfig
 
 	// Set constant bulk velocity
 	bool				  set_uniform_Vb = false;
-	std::array<double, 3> Vb_field		= {0.0, 0.0, 0.0};
+	std::array<double, 3> Vb_field		 = {0.0, 0.0, 0.0};
 
 	// numerical inputs
 	bool		use_1_5D_approx = false;
