@@ -1555,7 +1555,7 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
 }
       
 
-void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0, const bool apply_BC)
+void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0)
 {
     const bool verbose = RT_problem_->verbose_;
 
@@ -1637,7 +1637,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     double one_step_timer = 0;    
 
     // impose boundary conditions 
-    if (apply_BC) apply_bc_serial(I_field_serial_, I0);  
+    apply_bc_serial(I_field_serial_, I0);  
     // apply_bc(I_field, I0);  
 
     for (int tile_number = 0; tile_number < n_tiles_; ++tile_number)  
@@ -2201,7 +2201,7 @@ void MF_context::formal_solve_1_5D(Field_ptr_t I_field, const Field_ptr_t S_fiel
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 
-void MF_context::formal_solve(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0, const bool apply_BC)
+void MF_context::formal_solve(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0)
 {
     if (RT_problem_->use_1_5D_approx_)
     {
@@ -2209,7 +2209,7 @@ void MF_context::formal_solve(Field_ptr_t I_field, const Field_ptr_t S_field, co
     }
     else
     {
-        formal_solve_global(I_field, S_field, I0, apply_BC);
+        formal_solve_global(I_field, S_field, I0);
     }
 }   
 

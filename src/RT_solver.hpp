@@ -147,11 +147,11 @@ struct MF_context {
 	void get_2D_weigths(const double x, const double y, double *w);
 
 	// formal solver	
-	void formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0, const bool apply_bc = false);		
+	void formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
 	void formal_solve_ray(const Real mu, const Real chi);		
 	void formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
 	void formal_solve_1_5D(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);	
-	void formal_solve(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0, const bool apply_bc = false);		
+	void formal_solve(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
 
 	void apply_bc(       Field_ptr_t I_field, const Real I0, const bool polarized = true);	
 	void apply_bc_serial(Field_ptr_t I_field, const Real I0, const bool polarized = true);	
