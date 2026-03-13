@@ -7,5 +7,6 @@
 #SBATCH --job-name="TRIP_PRD_3D"
 #SBATCH --qos=gp_ehpc
 #SBATCH --exclusive
+#SBATCH --qos=gp_debug
 
 srun ./solar_3D

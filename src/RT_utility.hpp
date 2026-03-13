@@ -148,6 +148,7 @@ struct SolverConfig
 	KSPType ksp_solver_type = "KSPFGMRES";
 	double	ksp_rtol		= 1e-5;
 	int		ksp_max_it		= 1000;
+	bool    ksp_use_J_KQ    = false;
 	int		gmres_restart	= 30;
 };
 
@@ -156,6 +157,7 @@ struct PrecConfig
 	KSPType pc_solver_type = "KSPGMRES";
 	double	pc_rtol		   = 1e-5;
 	int		pc_max_it	   = 1000;
+	bool    pc_use_J_KQ    = false;
 };
 
 struct AppConfig
