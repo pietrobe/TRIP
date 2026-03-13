@@ -64,13 +64,13 @@ echo ""
 
 # Define arguments as a bash array
 ARGS=(
-    "--yaml_config" "$HOME/git/TRIP/bin/test_crd.yml"
+    "--yaml_config" "$HOME/git/TRIP/bin/config_acc_alps.yml"
     "-ksp_monitor"
     "-ksp_view"
 )
 
 echo "Running  with MPS wrapper:"
-echo ""
+echo "":q:
 echo ""
 echo "Starting TRIP ...... "
 echo ""

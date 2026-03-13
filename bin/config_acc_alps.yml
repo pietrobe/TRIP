@@ -8,6 +8,8 @@ frequency_file: frequency/96F/frequency.dat
 
 output: true
 output_overwrite_prevention: true
+write_whole_3D_field_hdf5: true
+
 output_directory: /capstor/scratch/cscs/sriva/PORTA/output/test_refactor_sf/main_B_v2/
 
 use_B: true
@@ -36,7 +38,7 @@ solver:
 prec:
   pc_solver_type: KSPGMRES
   pc_rtol: 1e-6
-  pc_max_it: 30
+  pc_max_it: 25
 
 default_chi: &default_chi 0.0
 
