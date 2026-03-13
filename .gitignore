@@ -6,6 +6,7 @@
 # my stuff
 bin/main
 bin/.*
+test_output/.*
 
 # Node artifact files
 node_modules/

@@ -1668,7 +1668,8 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     						theta = theta_grid[j_theta];
     						mu    = mu_grid[j_theta];						
 
-    						k_aux = (mu > 0.0) ? k_end - 1 - k + g_dev->getGhostMarginZ()/*.margin[2]*/: k; 
+                            /*.margin[2] => getGhostMarginZ() */
+    						k_aux = (mu > 0.0) ? k_end - 1 - k + g_dev->getGhostMarginZ() : k; 
 
     						// depth index
     						k_global = g_dev->local_to_global_coordinate(2, k_aux);	                             
@@ -3424,13 +3425,13 @@ void MF_context::I_vec_to_J_KQ_vec(const Vec &I_vec, Vec &J_KQ_vec){
         // update counters
         counter_i++;
 
-        if (counter_i == i_end - g_dev.margin[0])
+        if (counter_i == i_end - g_dev->getGhostMarginX()) // TOFIX
         {
             counter_i = 0;
             counter_j++;
         }
 
-        if (counter_j == j_end - g_dev.margin[1])
+        if (counter_j == j_end - g_dev->getGhostMarginY()) // TOFIX
         {
             counter_j = 0;
             counter_k++;

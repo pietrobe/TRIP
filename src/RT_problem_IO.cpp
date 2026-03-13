@@ -58,7 +58,7 @@ write_emergent_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 std::tuple<int, int>
 RT_problem::make_write_surface_MPI_Comm(const MPI_Comm MPI_Comm_MAIN, MPI_Comm &write_comm)
 {
-	const int color = (space_grid_->local_to_global_coordinate(2, space_grid_->getGhostMarginZ() /*g_dev.margin[2]*/) == 0) ? 1 : 0;
+	const int color = (space_grid_->local_to_global_coordinate(2, space_grid_->getGhostMarginZ()) == 0) ? 1 : 0;
 
 	const int mpi_status =						//
 		MPI_Comm_split(MPI_Comm_MAIN,			//
