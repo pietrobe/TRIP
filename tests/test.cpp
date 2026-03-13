@@ -17,6 +17,10 @@
 #define GREEN   "\033[32m"
 #define RESET   "\033[0m"
 
+struct CSVMaxDiff {
+    double max_abs[4];
+    double max_rel[4];
+};
 
 // Trim leading and trailing whitespace
 std::string trim(const std::string& str)
@@ -40,13 +44,21 @@ std::vector<std::string> split_csv_line(const std::string& line)
 }
 
 // Compare two CSV files
-std::string compare_csv_report(const std::string& file1, const std::string& file2, bool &is_equal)
+CSVMaxDiff compare_csv_report(const std::string& file1, const std::string& file2, bool &is_equal, bool verbose)
 {
     std::ifstream f1(file1), f2(file2);
-    if (!f1.is_open()) { is_equal = false; return "Cannot open " + file1; }
-    if (!f2.is_open()) { is_equal = false; return "Cannot open " + file2; }
+    if (!f1.is_open()) { 
+        is_equal = false; 
+        std::cout << "Cannot open " << file1 << "\n"; 
+        return CSVMaxDiff{}; 
+    }
+    if (!f2.is_open()) { 
+        is_equal = false; 
+        std::cout << "Cannot open " << file2<< "\n";
+        return CSVMaxDiff{}; 
+    }
 
-    const char* labels[4] = {"I","Q","U","V"};
+    const char* labels[4] = {"I","Q/I[%]","U/I[%]","V/I[%]"};
     const double absTol[4] = {ABS_TOL, ABS_TOL, ABS_TOL, ABS_TOL};
     const double relTol[4] = {REL_TOL, REL_TOL*100, REL_TOL*100, REL_TOL*100};
 
@@ -59,9 +71,11 @@ std::string compare_csv_report(const std::string& file1, const std::string& file
     const double small_value_eps = 1e-8; 
 
     std::ostringstream report;
-    report << "Comparing files:\n"
-           << "  File1: " << file1 << "\n"
-           << "  File2: " << file2 << "\n\n";
+    if (verbose) {
+        report << "Comparing files:\n"
+            << "  File1: " << file1 << "\n"
+            << "  File2: " << file2 << "\n\n";
+    }
 
     while (std::getline(f1, line1) && std::getline(f2, line2))
     {
@@ -74,8 +88,10 @@ std::string compare_csv_report(const std::string& file1, const std::string& file
         auto cells2 = split_csv_line(line2);
 
         if (cells1.size() != cells2.size()) {
-            report << "Row " << row << ": Column count mismatch (" 
-                   << cells1.size() << " vs " << cells2.size() << ")\n\n";
+            if (verbose) {
+                report << "Row " << row << ": Column count mismatch (" 
+                    << cells1.size() << " vs " << cells2.size() << ")\n\n";
+            }
             anyMismatch = true;
             continue;
         }
@@ -100,39 +116,57 @@ std::string compare_csv_report(const std::string& file1, const std::string& file
 
             if (mismatch) {
                 row_has_mismatch = true;
-                row_report << "    Col " << col+1 << ": "
-                           << "File1=" << val1 << ", "
-                           << "File2=" << val2 << ", "
-                           << "AbsErr=" << abs_error << ", "
-                           << "RelErr=" << rel_error << "\n";
+                if (verbose){
+                    row_report << "    Col " << col+1 << ": "
+                            << "File1=" << val1 << ", "
+                            << "File2=" << val2 << ", "
+                            << "AbsErr=" << abs_error << ", "
+                            << "RelErr=" << rel_error << "\n";
+                }
             }
         }
 
         if (row_has_mismatch) {
             anyMismatch = true;
-            report << "Row " << row << " (Variable " << labels[stokesIndex] << "):\n";
-            report << row_report.str() << "\n";
+            if (verbose) {
+                report << "Row " << row << " (Variable " << labels[stokesIndex] << "):\n";
+                report << row_report.str() << "\n";
+            }
         }
     }
 
+    CSVMaxDiff results;
+    for (int i = 0; i < 4; i++){
+        results.max_abs[i] = max_abs_diff[i];
+        results.max_rel[i] = max_rel_diff[i];
+    }
+
     if (std::getline(f1, line1) || std::getline(f2, line2)) {
-        report << "Row count mismatch detected\n\n";
+        if (verbose) {
+            report << "Row count mismatch detected\n\n";
+        }
         anyMismatch = true;
     }
-
-    report << "** Maximum Differences per Variable **\n";
-    report << "Variable | MaxAbsDiff      | MaxRelDiff\n";
-    report << "---------|----------------|----------------\n";
-    for (int i=0; i<4; i++)
-    {
-        report << labels[i] << "        | "
-               << max_abs_diff[i] << " | "
-               << max_rel_diff[i] << "\n";
-    }
-    report << "\n";
-
     is_equal = !anyMismatch;
-    return report.str();
+
+    if (verbose) {
+        report << "** Maximum Differences per Variable **\n";
+        report << "Variable | MaxAbsDiff      | MaxRelDiff\n";
+        report << "---------|----------------|----------------\n";
+        for (int i=0; i<4; i++)
+        {
+            report << labels[i] << "        | "
+                << max_abs_diff[i] << " | "
+                << max_rel_diff[i] << "\n";
+        }
+        report << "\n";
+        if (!is_equal)  report << RED << "==== ERROR: TEST NOT PASSED ====\n" << RESET;
+        else report << GREEN << "==== TEST PASSED ====\n" << RESET;
+
+        std::cout << report.str();
+    }
+
+    return results;
 }
 
 
@@ -146,6 +180,9 @@ int main(int argc, char *argv[])
 	int mpi_rank, mpi_size;
 	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+
+    // Flag for verbose output
+    bool verbose = false;
 	
 	// import input file config.yml
 	const std::string yaml_config_file = getOptionArgument(argc, argv, "--yaml_config");
@@ -199,6 +236,8 @@ int main(int argc, char *argv[])
 
 		const std::string test_out_path  = "../tests/test_output/test_profiles";
 
+        std::vector<CSVMaxDiff> file_summaries;
+        int failed = 0;
 		for (int i = 0; i < N_x; ++i)
 		{
 			for (int j = 0; j < N_y; ++j)
@@ -210,18 +249,39 @@ int main(int argc, char *argv[])
 					std::string test_file      = test_out_path + "_" + std::to_string(i) + "_" + std::to_string(j) + ".csv";
 					std::string reference_file = (cfg.reference_sol_directory).string() + "profiles_" + std::to_string(i) + "_" + std::to_string(j) + ".csv";        
 
-
                     bool equal;
-                    std::string report = compare_csv_report(test_file, reference_file, equal);
-                    if (!equal) {
-                        std::cout << RED << "==== ERROR: TEST NOT PASSED ====\n" << RESET;
-                    } else {
-                        std::cout << GREEN << "==== TEST PASSED ====\n" << RESET;
-                    }
-                    std::cout << report;
+                    CSVMaxDiff report = compare_csv_report(test_file, reference_file, equal, verbose);
+                    file_summaries.push_back(report);
+                    if (!equal) failed++;
 				}
 			}
-		}			
+		}	
+        
+        if (failed > 0) {
+            std::cout << RED << "==== ERROR: " << failed << "/" << N_x * N_y << " TESTS NOT PASSED ====\n" << RESET;
+        } else {
+            std::cout << GREEN << "==== TEST PASSED ====\n" << RESET;
+        }
+
+
+        // Compute maximum over all files
+        CSVMaxDiff global_max{};
+        for (const auto& d : file_summaries) {
+            for (int k=0; k<4; ++k) {
+                global_max.max_abs[k] = std::max(global_max.max_abs[k], d.max_abs[k]);
+                global_max.max_rel[k] = std::max(global_max.max_rel[k], d.max_rel[k]);
+            }
+        }
+        // Print summary table
+        std::cout << "** Maximum Differences Across All Files **\n";
+        std::cout << "Variable | MaxAbsDiff | MaxRelDiff\n";
+        std::cout << "---------|------------|------------\n";
+        const char* labels[4] = {"I","Q/I[%]","U/I[%]","V/I[%]"};
+        for (int i=0; i<4; ++i) {
+            std::cout << labels[i] << "        | "
+                    << global_max.max_abs[i] << " | "
+                    << global_max.max_rel[i] << "\n";
+        }
 	} // end scope for RT_problem and RT_solver
 
 #if ACC_SOLAR_3D == _ON_

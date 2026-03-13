@@ -1,7 +1,7 @@
 # TRIP
 Three-dimensional Radiative transfer Including Polarization and PRD
 
-### Cite 
+## Cite 
 If you use TRIP in your research, please cite:
 ```bibtex
 @article{benedusi2023scalable,
@@ -120,7 +120,16 @@ The scattering module can be changed via the `emissivity_model` field, between t
 srun ./solar_3D --yaml_config ${PATH_TO_YAML_CONFIG}
 ```
 
-# Contributors
+## Testing
+```bash
+cd ${TRIP_MAIN_DIR}/build/;
+make -j 20 build_test;
+../bin/run_test.sh;
+```
+
+## Contributors
 
 **TRIP** is developed by [Pietro Benedusi](https://pietrobe.github.io/), Simone Riva, and [Melanie Tonarelli](https://github.com/melanie-t27) in Luca Belluzzi's group at [IRSOL](https://www.irsol.usi.ch/).
+
+
 
