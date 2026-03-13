@@ -148,6 +148,7 @@ struct SolverConfig
 	KSPType ksp_solver_type = "KSPFGMRES";
 	double	ksp_rtol		= 1e-5;
 	int		ksp_max_it		= 1000;
+	bool    ksp_use_J_KQ    = false;
 	int		gmres_restart	= 30;
 };
 
@@ -156,6 +157,7 @@ struct PrecConfig
 	KSPType pc_solver_type = "KSPGMRES";
 	double	pc_rtol		   = 1e-5;
 	int		pc_max_it	   = 1000;
+	bool    pc_use_J_KQ    = false;
 };
 
 struct AppConfig
@@ -169,8 +171,9 @@ struct AppConfig
 	// Output settings
 	bool output						 = false;
 	bool output_overwrite_prevention = false;
+	bool write_whole_3D_field_hdf5	 = true; // testing
 
-	// testing 
+	// testing
 	std::filesystem::path reference_sol_directory;
 
 	// emissivity
@@ -178,7 +181,7 @@ struct AppConfig
 
 	// Physical switches
 	bool use_B			  = true;
-	bool use_Vb 		  = true;
+	bool use_Vb			  = true;
 	bool enable_continuum = true;
 
 	// Set constant magnetic field
@@ -238,5 +241,9 @@ acc_devices_print_info(const int mpi_rank, const int mpi_size, std::ostream &os)
 
 int
 write_emergent_field_hdf5(RT_problem &rt_problem_ptr, const std::string &output_file);
+
+int
+write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file, //
+						  const int step_z_ = 1, bool normalized_output = false); //
 
 #endif

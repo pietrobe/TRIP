@@ -1,8 +1,8 @@
 # Compiler and flags
 CC ?= gcc
 MPICC ?= mpicc
-CFLAGS += -O3 -std=c99
-CFLAGS += -Wall -Wextra --pedantic 
+CFLAGS += -O3 -std=c11
+CFLAGS += -Wall -Wextra --pedantic -march=native -mtune=native
 CFLAGS += -I. 
 
 # HDF5 configuration (use pkg-config or hdf5 compiler wrapper)
@@ -16,7 +16,7 @@ LDFLAGS = $(HDF5_LIBS) -lm
 BUILD_DIR = build
 
 # Source files
-SRCS = hdf_output_field.c hdf_output_ar_field.c hdf_output_JKQ.c
+SRCS = hdf_output_field.c hdf_output_ar_field.c hdf_output_JKQ.c hdf_output_3D_field.c hdf_output_example_3D.c
 OBJS = $(SRCS:%.c=$(BUILD_DIR)/%.o)
 DEPS = $(SRCS:%.c=$(BUILD_DIR)/%.d)
 
@@ -57,7 +57,7 @@ $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 clean:
-	rm -rfv  $(LIB) $(EXE) $(DEMO) $(MPI_EXE) *.h5 $(BUILD_DIR)
+	rm -rfv  $(LIB) $(EXE) $(DEMO) $(MPI_EXE) *.h5 $(BUILD_DIR) *.png
 
 # Include dependency files
 -include $(DEPS)

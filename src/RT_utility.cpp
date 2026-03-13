@@ -5,10 +5,10 @@
 inline KSPType
 toKSPType(const std::string &name)
 {
-	if (name == "KSPGMRES")   return KSPGMRES;
-	if (name == "KSPFGMRES")  return KSPFGMRES; // PETSc literal
-	if (name == "KSPPGMRES")  return KSPPGMRES;
-	if (name == "KSPBCGS")    return KSPBCGS;
+	if (name == "KSPGMRES") return KSPGMRES;
+	if (name == "KSPFGMRES") return KSPFGMRES; // PETSc literal
+	if (name == "KSPPGMRES") return KSPPGMRES;
+	if (name == "KSPBCGS") return KSPBCGS;
 	if (name == "KSPPREONLY") return KSPPREONLY;
 
 	throw std::runtime_error("Unknown KSPType: " + name);
@@ -17,10 +17,10 @@ toKSPType(const std::string &name)
 inline std::string
 KSPTypeToString(KSPType type)
 {
-	if (type == KSPGMRES)   return "KSPGMRES";
-	if (type == KSPFGMRES)  return "KSPFGMRES";
-	if (type == KSPPGMRES)  return "KSPPGMRES";
-	if (type == KSPBCGS)    return "KSPBCGS";
+	if (type == KSPGMRES) return "KSPGMRES";
+	if (type == KSPFGMRES) return "KSPFGMRES";
+	if (type == KSPPGMRES) return "KSPPGMRES";
+	if (type == KSPBCGS) return "KSPBCGS";
 	if (type == KSPPREONLY) return "KSPPREONLY";
 
 	return "UNKNOWN";
@@ -95,6 +95,9 @@ loadConfig(const std::string &filename)
 
 	if (config["output_overwrite_prevention"])
 		cfg.output_overwrite_prevention = config["output_overwrite_prevention"].as<bool>();
+
+	if (config["write_whole_3D_field_hdf5"])
+		cfg.write_whole_3D_field_hdf5 = config["write_whole_3D_field_hdf5"].as<bool>();
 
 	// Optional string (converted to filesystem::path)
 	if (config["output_directory"])
@@ -192,9 +195,10 @@ loadConfig(const std::string &filename)
 		auto s = config["solver"];
 
 		if (s["ksp_solver_type"]) cfg.solver.ksp_solver_type = toKSPType(s["ksp_solver_type"].as<std::string>());
-		if (s["ksp_rtol"]) cfg.solver.ksp_rtol = s["ksp_rtol"].as<double>();
-		if (s["ksp_max_it"]) cfg.solver.ksp_max_it = s["ksp_max_it"].as<int>();
-		if (s["gmres_restart"]) cfg.solver.gmres_restart = s["gmres_restart"].as<int>();
+		if (s["ksp_rtol"])        cfg.solver.ksp_rtol        = s["ksp_rtol"].as<double>();
+		if (s["ksp_max_it"])      cfg.solver.ksp_max_it      = s["ksp_max_it"].as<int>();
+		if (s["gmres_restart"])   cfg.solver.gmres_restart   = s["gmres_restart"].as<int>();
+		if (s["ksp_use_J_KQ"])    cfg.solver.ksp_use_J_KQ    = s["ksp_use_J_KQ"].as<bool>();
 	}
 
 	// Preconditioner section
@@ -203,8 +207,9 @@ loadConfig(const std::string &filename)
 		auto p = config["prec"];
 
 		if (p["pc_solver_type"]) cfg.prec.pc_solver_type = toKSPType(p["pc_solver_type"].as<std::string>());
-		if (p["pc_rtol"]) cfg.prec.pc_rtol = p["pc_rtol"].as<double>();
-		if (p["pc_max_it"]) cfg.prec.pc_max_it = p["pc_max_it"].as<int>();
+		if (p["pc_rtol"])        cfg.prec.pc_rtol        = p["pc_rtol"].as<double>();
+		if (p["pc_max_it"])      cfg.prec.pc_max_it      = p["pc_max_it"].as<int>();
+		if (p["pc_use_J_KQ"])    cfg.prec.pc_use_J_KQ  = p["pc_use_J_KQ"].as<bool>();
 	}
 
 	// Arbitrary beams section
@@ -228,6 +233,13 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 	const int label_width = 44;
 	auto	  print		  = [&](const std::string &label, const std::string &value)
 	{ os << std::left << std::setw(label_width) << (label + ":") << value << std::endl; };
+
+	auto to_sci = [](double v, int prec = 2)
+	{
+		std::ostringstream oss;
+		oss << std::scientific << std::setprecision(prec) << v;
+		return oss.str();
+	};
 
 	os << "YAML Configuration Summary:" << std::endl;
 	print("Input Directory", cfg.input_directory.string());
@@ -270,13 +282,13 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 
 	os << std::endl << "Solver Configuration:" << std::endl;
 	print("KSP Solver Type", KSPTypeToString(cfg.solver.ksp_solver_type));
-	print("KSP Relative Tolerance", std::to_string(cfg.solver.ksp_rtol));
+	print("KSP Relative Tolerance", to_sci(cfg.solver.ksp_rtol));
 	print("KSP Maximum Iterations", std::to_string(cfg.solver.ksp_max_it));
 	print("GMRES Restart", std::to_string(cfg.solver.gmres_restart));
 
 	os << std::endl << "Preconditioner Configuration:" << std::endl;
 	print("PC Solver Type", KSPTypeToString(cfg.prec.pc_solver_type));
-	print("PC Relative Tolerance", std::to_string(cfg.prec.pc_rtol));
+	print("PC Relative Tolerance", to_sci(cfg.prec.pc_rtol));
 	print("PC Maximum Iterations", std::to_string(cfg.prec.pc_max_it));
 
 	os << std::endl;
@@ -419,7 +431,7 @@ acc_devices_print_info(const int mpi_rank, const int mpi_size, std::ostream &os)
 {
 #if ACC_SOLAR_3D == _ON_
 
-	for (int i = 0; i < LIMIT_OUT_DEVICE_MEMORY_USAGE; i++)
+	for (int i = 0; i < 2 /* LIMIT_OUT_DEVICE_MEMORY_USAGE */; i++)
 	{
 		MPI_Barrier(MPI_COMM_WORLD);
 		if (mpi_rank == i && RII_epsilon_contrib::RII_contrib_MPI_Is_Device_Handler())

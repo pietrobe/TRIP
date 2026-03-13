@@ -1,85 +1,140 @@
+#ifndef TEST_MAIN_CPP
+#define TEST_MAIN_CPP
+
 #include "RT_solver.hpp"
 
-#define NUM_TOL 1e-7
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <cmath>
+#include <algorithm>
+
+#define ABS_TOL 1e-7
+#define REL_TOL 1e-6
 
 #define RED     "\033[31m"
 #define GREEN   "\033[32m"
 #define RESET   "\033[0m"
 
-// Helper to get the next "token" regardless of newlines
-bool getNextValue(std::ifstream& file, double& value) 
+
+// Trim leading and trailing whitespace
+std::string trim(const std::string& str)
 {
-    std::string token;
-    // Read until a comma or whitespace
-    // We use a custom loop to handle the commas manually
-    char c;
-    while (file.get(c)) {
-        if (c == ',' || std::isspace(c)) {
-            if (!token.empty()) break; // We found our number
-            continue; // Skip leading commas/spaces
-        }
-        token += c;
-    }
-    
-    if (token.empty()) return false;
-    
-    try {
-        value = std::stod(token);
-        return true;
-    } catch (...) {
-        return false; 
-    }
+    size_t start = str.find_first_not_of(" \t\r\n");
+    size_t end = str.find_last_not_of(" \t\r\n");
+    return (start == std::string::npos) ? "" : str.substr(start, end - start + 1);
 }
 
-bool compare_csv(const std::string& file1, const std::string& file2, double epsilon) 
+
+// Split CSV line into cells, trimming whitespace
+std::vector<std::string> split_csv_line(const std::string& line)
+{
+    std::vector<std::string> cells;
+    std::stringstream ss(line);
+    std::string cell;
+    while (std::getline(ss, cell, ',')) {
+        cells.push_back(trim(cell));
+    }
+    return cells;
+}
+
+// Compare two CSV files
+std::string compare_csv_report(const std::string& file1, const std::string& file2, bool &is_equal)
 {
     std::ifstream f1(file1), f2(file2);
-    
-    if (!f1.is_open()) 
+    if (!f1.is_open()) { is_equal = false; return "Cannot open " + file1; }
+    if (!f2.is_open()) { is_equal = false; return "Cannot open " + file2; }
+
+    const char* labels[4] = {"I","Q","U","V"};
+    const double absTol[4] = {ABS_TOL, ABS_TOL, ABS_TOL, ABS_TOL};
+    const double relTol[4] = {REL_TOL, REL_TOL*100, REL_TOL*100, REL_TOL*100};
+
+    double max_abs_diff[4] = {0.0,0.0,0.0,0.0};
+    double max_rel_diff[4] = {0.0,0.0,0.0,0.0};
+
+    std::string line1, line2;
+    int row = 0;
+    bool anyMismatch = false;
+    const double small_value_eps = 1e-8; 
+
+    std::ostringstream report;
+    report << "Comparing files:\n"
+           << "  File1: " << file1 << "\n"
+           << "  File2: " << file2 << "\n\n";
+
+    while (std::getline(f1, line1) && std::getline(f2, line2))
     {
-    	std::cerr << "Cannot open " << file1 << "\n";
-    	return false;
-	}	
+        row++;
+        int stokesIndex = (row-1) % 4;
+        double abs_epsilon = absTol[stokesIndex];
+        double rel_epsilon = relTol[stokesIndex];
 
-	if (!f2.is_open()) 
-	{
-    	std::cerr << "Cannot open " << file2 << "\n";
-    	return false;
-	}
+        auto cells1 = split_csv_line(line1);
+        auto cells2 = split_csv_line(line2);
 
-    double val1, val2;
-    int count = 0;
-    double max_diff = 0;
+        if (cells1.size() != cells2.size()) {
+            report << "Row " << row << ": Column count mismatch (" 
+                   << cells1.size() << " vs " << cells2.size() << ")\n\n";
+            anyMismatch = true;
+            continue;
+        }
 
-    while (getNextValue(f1, val1) && getNextValue(f2, val2)) 
-    {
-        count++;
-        if (std::fabs(val1 - val2) > max_diff) max_diff = std::fabs(val1 - val2);
-        
-        if (std::fabs(val1 - val2) > epsilon) 
+        bool row_has_mismatch = false;
+        std::ostringstream row_report;
+
+        for (size_t col = 0; col < cells1.size(); ++col)
         {
-            std::cout << "Mismatch at value index " << count << "\n";
-            std::cout << "File 1: " << val1 << "\n";
-            std::cout << "File 2: " << val2 << "\n";
-            std::cout << "Absolute difference: " << std::fabs(val1 - val2) << "\n";
-            return false;
+            double val1 = std::stod(cells1[col]);
+            double val2 = std::stod(cells2[col]);
+
+            double abs_error = std::fabs(val1 - val2);
+            double denom = std::max(std::fabs(val1), std::fabs(val2));
+            double rel_error = (denom == 0.0) ? 0.0 : abs_error / denom;
+
+            bool small_values_check = (std::fabs(val1) > small_value_eps || std::fabs(val2) > small_value_eps);
+            bool mismatch = (abs_error > abs_epsilon) || (small_values_check && rel_error > rel_epsilon);
+
+            max_abs_diff[stokesIndex] = std::max(max_abs_diff[stokesIndex], abs_error);
+            max_rel_diff[stokesIndex] = std::max(max_rel_diff[stokesIndex], rel_error);
+
+            if (mismatch) {
+                row_has_mismatch = true;
+                row_report << "    Col " << col+1 << ": "
+                           << "File1=" << val1 << ", "
+                           << "File2=" << val2 << ", "
+                           << "AbsErr=" << abs_error << ", "
+                           << "RelErr=" << rel_error << "\n";
+            }
+        }
+
+        if (row_has_mismatch) {
+            anyMismatch = true;
+            report << "Row " << row << " (Variable " << labels[stokesIndex] << "):\n";
+            report << row_report.str() << "\n";
         }
     }
 
-    // Check if one file has more numbers than the other
-    bool more1 = getNextValue(f1, val1);
-    bool more2 = getNextValue(f2, val2);
-
-    if (more1 || more2) 
-    {
-        std::cerr << "Files have different total counts of numbers.\n";
-        return false;
+    if (std::getline(f1, line1) || std::getline(f2, line2)) {
+        report << "Row count mismatch detected\n\n";
+        anyMismatch = true;
     }
 
-    std::cout << "Maximum absolute difference: " << max_diff << std::endl;
+    report << "** Maximum Differences per Variable **\n";
+    report << "Variable | MaxAbsDiff      | MaxRelDiff\n";
+    report << "---------|----------------|----------------\n";
+    for (int i=0; i<4; i++)
+    {
+        report << labels[i] << "        | "
+               << max_abs_diff[i] << " | "
+               << max_rel_diff[i] << "\n";
+    }
+    report << "\n";
 
-    return true;
+    is_equal = !anyMismatch;
+    return report.str();
 }
+
 
 //////////////////////////////////////////////////////////////////////////
 // Build executable for testing
@@ -107,7 +162,6 @@ int main(int argc, char *argv[])
 	}
 
 	PetscInitialize(&argc, &argv, (char *)0, NULL);
-	Kokkos::initialize(argc, argv);
 
 #if ACC_SOLAR_3D == _ON_
 
@@ -156,14 +210,15 @@ int main(int argc, char *argv[])
 					std::string test_file      = test_out_path + "_" + std::to_string(i) + "_" + std::to_string(j) + ".csv";
 					std::string reference_file = (cfg.reference_sol_directory).string() + "profiles_" + std::to_string(i) + "_" + std::to_string(j) + ".csv";        
 
-					if (!compare_csv(test_file, reference_file, NUM_TOL))			
-			    	{			    		
-			    		std::cout << RED << "==== ERROR: TEST NOT PASSED ====\n" << RESET;
-			    	}    		
-			    	else
-			    	{
-			    		std::cout << GREEN << "==== TEST PASSED ====\n" << RESET;
-			    	}
+
+                    bool equal;
+                    std::string report = compare_csv_report(test_file, reference_file, equal);
+                    if (!equal) {
+                        std::cout << RED << "==== ERROR: TEST NOT PASSED ====\n" << RESET;
+                    } else {
+                        std::cout << GREEN << "==== TEST PASSED ====\n" << RESET;
+                    }
+                    std::cout << report;
 				}
 			}
 		}			
@@ -176,9 +231,10 @@ int main(int argc, char *argv[])
 	RII_epsilon_contrib::RII_contrib_MPI_Finalize();
 #endif // ACC_SOLAR_3D
 
-	Kokkos::finalize();
 	PetscFinalize(); 
 	MPI_CHECK(MPI_Finalize());
 
 	return 0;
 }
+
+#endif // TEST_MAIN_CPP

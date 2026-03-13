@@ -7,14 +7,14 @@
 #SBATCH --ntasks=512
 
 ## to be defined !!!!!!!!! 
-#SBATCH --time=00:45:00
+#SBATCH --time=00:30:00
 
 #SBATCH --job-name="TRIP_PRD_3D"
 
 #SBATCH --exclusive
 #SBATCH --cpus-per-task=1
 #SBATCH --account=u2
-#SBATCH --partition=normal
+#SBATCH --partition=debug
 #SBATCH --ntasks-per-socket=46
 
 

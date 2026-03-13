@@ -6,6 +6,7 @@
 #include <string>
 #include <iostream>
 #include <cmath>
+
 #include <mpi.h>
 
 typedef const std::vector<Real> input_vec;

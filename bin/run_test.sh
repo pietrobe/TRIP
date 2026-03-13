@@ -8,11 +8,24 @@
 #SBATCH --qos=gp_ehpc
 #SBATCH --exclusive
 
+export APP_PATH=${HOME}/git/TRIP/build
+export TESTS_DIR=${HOME}/git/TRIP/tests
+export BIN_DIR=${HOME}/git/TRIP/bin
+
 echo -e "\n\033[1;34m========== Running Test 1 (CRD with B = 0) ==========\033[0m"
-srun ./solar_3D_tests --yaml_config ../tests/config_test_5x5_CRD_B0.yml 
+srun ${APP_PATH}/solar_3D_tests --yaml_config ${TESTS_DIR}/config_test_5x5_CRD_B0.yml 
+cd ${TESTS_DIR}/test_output
+rm test_profiles*.csv
+cd ${BIN_DIR}
 
 echo -e "\n\033[1;34m========== Running Test 2 (CRD with uniform B) ==========\033[0m"
-srun ./solar_3D_tests --yaml_config ../tests/config_test_5x5_CRD_B.yml
+srun ${APP_PATH}/solar_3D_tests --yaml_config ${TESTS_DIR}/config_test_5x5_CRD_B.yml
+cd ${TESTS_DIR}/test_output
+rm test_profiles*.csv
+cd ${BIN_DIR}
 
-echo -e "\n\033[1;34m========== Running Test 3 (PRD with uniform B) ==========\033[0m"
-srun ./solar_3D_tests --yaml_config ../tests/config_test_5x5_PRD_B.yml
+echo -e "\n\033[1;34m========== Running Test 3 (PRD with B = 0) ==========\033[0m"
+srun ${APP_PATH}/solar_3D_tests --yaml_config ${TESTS_DIR}/config_test_5x5_PRD_B0.yml
+cd ${TESTS_DIR}/test_output
+rm test_profiles*.csv
+cd ${BIN_DIR}

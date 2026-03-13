@@ -10,7 +10,10 @@ main(int argc, char *argv[])
 	MPI_CHECK(MPI_Init(&argc, &argv));
 	print_PETSc_mem();
 
-	const double main_start_time = MPI_Wtime();
+	ExecutionClocks clocks;
+	clocks.start_time = MPI_Wtime();
+
+	// const double main_start_time = MPI_Wtime();
 
 	int mpi_rank, mpi_size;
 	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
@@ -54,7 +57,7 @@ main(int argc, char *argv[])
 	}
 
 	PetscInitialize(&argc, &argv, (char *)0, NULL);
-	Kokkos::initialize(argc, argv);
+	// Kokkos::initialize(argc, argv);
 
 #if ACC_SOLAR_3D == _ON_
 
@@ -86,6 +89,7 @@ main(int argc, char *argv[])
 
 		// create problem object
 		auto rt_problem_ptr = std::make_shared<RT_problem>(cfg);
+		rt_problem_ptr->space_grid_->dumpDecompositionCSV("decomposition.csv");
 
 		// create solver object
 		RT_solver rt_solver(rt_problem_ptr);
@@ -137,12 +141,12 @@ main(int argc, char *argv[])
 		} // end if (output)
 
 		// print some timing info
-		const double main_setup_time = MPI_Wtime();
+		clocks.setup_time = MPI_Wtime();
 		if (mpi_rank == 0)
 		{
 			std::stringstream ss_mem;
 			ss_mem << std::fixed << std::setprecision(2);
-			ss_mem << "Setup time: " << (main_setup_time - main_start_time) << " seconds." << std::endl;
+			ss_mem << "Setup time: " << (clocks.setup_time - clocks.start_time) << " seconds." << std::endl;
 
 			std::cout << ss_mem.str();
 			if (cfg.output)
@@ -158,10 +162,15 @@ main(int argc, char *argv[])
 		rt_solver.solve();
 		// rt_solver.apply_formal_solver();
 
-		const double main_solve_end_time = MPI_Wtime();
+		clocks.solve_end_time = MPI_Wtime();
 
 		// print some memory info
 		print_PETSc_mem();
+
+		double time_output_csv;
+		double time_output_hdf5_emergent;
+		double time_output_hdf5_JKQ;
+		double time_output_whole_3D_field_hdf5;
 
 		if (cfg.output)
 		{
@@ -169,9 +178,10 @@ main(int argc, char *argv[])
 			const int N_x = rt_problem_ptr->N_x_;
 			const int N_y = rt_problem_ptr->N_y_;
 
-			// Old scool output ....
+			// Old school output ....
 			// Where the output is written in separate files for each emergent spatial point
 			////////////////////////////////////////////////////////////////////////////////////////////////
+			clocks.csv_out_time = MPI_Wtime();
 			for (int i = 0; i < N_x; ++i)
 			{
 				for (int j = 0; j < N_y; ++j)
@@ -193,13 +203,28 @@ main(int argc, char *argv[])
 					}
 				}
 			}
+			clocks.csv_out_time = MPI_Wtime() - clocks.csv_out_time;
 
 			// New HDF5 output .... TESTING PASSED
 			////////////////////////////////////////////////////////////////////////////////////////////////
+			clocks.hdf5_out_time_emergent = MPI_Wtime();
 			write_emergent_field_hdf5(*rt_problem_ptr,											  //
 									  (output_path / "emergent_field_angular_grid.h5").string()); //
+			clocks.hdf5_out_time_emergent = MPI_Wtime() - clocks.hdf5_out_time_emergent;
 
+			clocks.hdf5_out_time_JKQ = MPI_Wtime();
 			rt_problem_ptr->write_JKQ_field_hdf5((output_path / "JKQ_field.h5").string()); //
+			clocks.hdf5_out_time_JKQ = MPI_Wtime() - clocks.hdf5_out_time_JKQ;
+
+			clocks.hdf5_out_time_whole_3D_field = MPI_Wtime();
+
+			if (cfg.write_whole_3D_field_hdf5)
+			{
+				write_3D_whole_field_hdf5(*rt_problem_ptr, (output_path / "whole_3D_radiation_field.h5").string(), 3,
+										  false); //
+			}
+
+			clocks.hdf5_out_time_whole_3D_field = MPI_Wtime() - clocks.hdf5_out_time_whole_3D_field;
 
 			////////////////////////////////////////////////////////////////////////////////////////////////
 			// compute arbitrary beams
@@ -209,13 +234,16 @@ main(int argc, char *argv[])
 			rt_problem_ptr->free_fields_memory();
 			rt_solver.free_fields_memory();
 
+			clocks.arbitrary_beam_time = MPI_Wtime();
+
 			process_arbitrary_beams_hdf(cfg.arbitrary_beams,										 //
 										rt_solver,													 //
 										rt_problem_ptr,												 //
 										(output_path / "emergent_field_abitrary_Omega.h5").string(), //
 										output_info_file_name);										 //
 
-			const double main_end_time = MPI_Wtime();
+			clocks.arbitrary_beam_time = MPI_Wtime() - clocks.arbitrary_beam_time;
+			clocks.end_time			   = MPI_Wtime();
 
 			////////////////////////////////////////////////////////////////////////////////////////////////
 #if ACC_SOLAR_3D == _ON_
@@ -264,11 +292,7 @@ main(int argc, char *argv[])
 				ss_mem << "Total number of devices (accelerators) used: " << devices_cnt << std::endl;
 #endif // ACC_SOLAR_3D
 
-				ss_mem << format_execution_time_summary(rt_problem_ptr->mpi_size_, //
-														main_start_time,		   //
-														main_setup_time,		   //
-														main_solve_end_time,	   //
-														main_end_time);			   //
+				ss_mem << format_execution_time_summary(rt_problem_ptr->mpi_size_, clocks); //
 
 				std::cout << ss_mem.str();
 
@@ -289,7 +313,7 @@ main(int argc, char *argv[])
 	RII_epsilon_contrib::RII_contrib_MPI_Finalize();
 #endif // ACC_SOLAR_3D
 
-	Kokkos::finalize();
+	// Kokkos::finalize();
 	PetscFinalize(); // CHKERRQ(ierr);
 
 	MPI_Barrier(MPI_COMM_WORLD);

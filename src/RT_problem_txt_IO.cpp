@@ -4,40 +4,34 @@
 // Write surface point profiles to file
 // write_surface_point_profiles
 //////////////////////////////////////////////////////////////////////////
-void const
-RT_problem::write_surface_point_profiles(input_string file_name, const int i_space, const int j_space)
+void 
+RT_problem::write_surface_point_profiles(input_string file_name, const int i_space, const int j_space) const
 {
 	// // a single MPI rank writes output
 	// if (mpi_rank_ == 0) std::cout << " Writing output in spatial point (" << i_space << ", " << j_space << ")" <<
 	// std::endl;
-
-	const auto f_dev = I_field_->view_device();
-	const auto g_dev = space_grid_->view_device();
-
 	// indeces
-	const int i_start = g_dev.margin[0];
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); 
+	const int j_end = j_start + space_grid_->getLocalSizeY();
 
 	int i_global, j_global;
 
 	double I, QUV;
 
 	// write profiles
-	if (g_dev.global_coord(2, k_start) == 0)
+	if (space_grid_->local_to_global_coordinate(2, k_start) == 0)
 	{
 		for (int i = i_start; i < i_end; ++i)
 		{
-			i_global = g_dev.global_coord(0, i);
+			i_global = space_grid_->local_to_global_coordinate(0, i);
 
 			if (i_global == i_space)
 			{
 				for (int j = j_start; j < j_end; ++j)
 				{
-					j_global = g_dev.global_coord(1, j);
+					j_global = space_grid_->local_to_global_coordinate(1, j);
 
 					if (j_global == j_space)
 					{
@@ -77,7 +71,7 @@ RT_problem::write_surface_point_profiles(input_string file_name, const int i_spa
 							{
 								for (int k_chi = 0; k_chi < N_chi_; ++k_chi)
 								{
-									const int b_start = local_to_block(j_theta, k_chi, 0);
+									const int b_start = I_field_->local_to_block(j_theta, k_chi, 0);
 
 									for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
 									{
@@ -86,7 +80,7 @@ RT_problem::write_surface_point_profiles(input_string file_name, const int i_spa
 
 										for (int b = 0; b < 4 * N_nu_; b = b + 4)
 										{
-											I = f_dev.block(i, j, k_start)[b_start + b];
+											I = I_field_->block(i, j, k_start)[b_start + b];
 
 											if (i_stokes == 0)
 											{
@@ -94,7 +88,7 @@ RT_problem::write_surface_point_profiles(input_string file_name, const int i_spa
 											}
 											else
 											{
-												QUV = f_dev.block(i, j, k_start)[b_start + b + i_stokes];
+												QUV = I_field_->block(i, j, k_start)[b_start + b + i_stokes];
 
 												outputFile << std::scientific << std::setprecision(15) << 100.0 * QUV / I
 														   << " ";
@@ -127,37 +121,33 @@ RT_problem::write_surface_point_profiles(input_string file_name, const int i_spa
 // Write surface point angular grid to file
 // write_angular_grid_csv
 //////////////////////////////////////////////////////////////////////////
-void const
+void 
 RT_problem::write_angular_grid_csv(input_string file_name, const int i_space, const int j_space,
-								   const unsigned int precision)
+								   const unsigned int precision) const
 {
-	const auto f_dev = I_field_->view_device();
-	const auto g_dev = space_grid_->view_device();
-
 	// indeces
-	const int i_start = g_dev.margin[0];
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); 
+	const int j_end = j_start + space_grid_->getLocalSizeY(); 
+
 
 	int i_global, j_global;
 
 	double I, QUV;
 
 	// write profiles
-	if (g_dev.global_coord(2, k_start) == 0)
+	if (space_grid_->local_to_global_coordinate(2, k_start) == 0)
 	{
 		for (int i = i_start; i < i_end; ++i)
 		{
-			i_global = g_dev.global_coord(0, i);
+			i_global = space_grid_->local_to_global_coordinate(0, i);
 
 			if (i_global == i_space)
 			{
 				for (int j = j_start; j < j_end; ++j)
 				{
-					j_global = g_dev.global_coord(1, j);
+					j_global = space_grid_->local_to_global_coordinate(1, j);
 
 					if (j_global == j_space)
 					{
@@ -195,37 +185,32 @@ RT_problem::write_angular_grid_csv(input_string file_name, const int i_space, co
 // Write surface point frequency grid to file
 // write_frequencies_grid_csv
 //////////////////////////////////////////////////////////////////////////
-void const
+void 
 RT_problem::write_frequencies_grid_csv(input_string file_name, const int i_space, const int j_space,
-									   const unsigned int precision)
+									   const unsigned int precision) const
 {
-	const auto f_dev = I_field_->view_device();
-	const auto g_dev = space_grid_->view_device();
-
 	// indeces
-	const int i_start = g_dev.margin[0];
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX();
+	const int j_end = j_start + space_grid_->getLocalSizeY();
 
 	int i_global, j_global;
 
 	double I, QUV;
 
 	// write profiles
-	if (g_dev.global_coord(2, k_start) == 0)
+	if (space_grid_->local_to_global_coordinate(2, k_start) == 0)
 	{
 		for (int i = i_start; i < i_end; ++i)
 		{
-			i_global = g_dev.global_coord(0, i);
+			i_global = space_grid_->local_to_global_coordinate(0, i);
 
 			if (i_global == i_space)
 			{
 				for (int j = j_start; j < j_end; ++j)
 				{
-					j_global = g_dev.global_coord(1, j);
+					j_global = space_grid_->local_to_global_coordinate(1, j);
 
 					if (j_global == j_space)
 					{
@@ -257,37 +242,32 @@ RT_problem::write_frequencies_grid_csv(input_string file_name, const int i_space
 // Write surface point profiles to file in CSV format
 // write_surface_point_profiles_csv
 //////////////////////////////////////////////////////////////////////////
-void const
+void 
 RT_problem::write_surface_point_profiles_csv(input_string file_name, const int i_space, const int j_space,
-											 const unsigned int precision)
+											 const unsigned int precision) const
 {
-	const auto f_dev = I_field_->view_device();
-	const auto g_dev = space_grid_->view_device();
-
 	// indeces
-	const int i_start = g_dev.margin[0];
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX();
+	const int j_end = j_start + space_grid_->getLocalSizeY();
 
 	int i_global, j_global;
 
 	double I, QUV;
 
 	// write profiles
-	if (g_dev.global_coord(2, k_start) == 0)
+	if (space_grid_->local_to_global_coordinate(2, k_start) == 0)
 	{
 		for (int i = i_start; i < i_end; ++i)
 		{
-			i_global = g_dev.global_coord(0, i);
+			i_global = space_grid_->local_to_global_coordinate(0, i);
 
 			if (i_global == i_space)
 			{
 				for (int j = j_start; j < j_end; ++j)
 				{
-					j_global = g_dev.global_coord(1, j);
+					j_global = space_grid_->local_to_global_coordinate(1, j);
 
 					if (j_global == j_space)
 					{
@@ -302,7 +282,7 @@ RT_problem::write_surface_point_profiles_csv(input_string file_name, const int i
 							{
 								for (int k_chi = 0; k_chi < N_chi_; ++k_chi)
 								{
-									const int b_start = local_to_block(j_theta, k_chi, 0);
+									const int b_start = I_field_->local_to_block(j_theta, k_chi, 0);
 
 									for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
 									{
@@ -311,7 +291,7 @@ RT_problem::write_surface_point_profiles_csv(input_string file_name, const int i
 
 										for (int b = 0; b < 4 * N_nu_; b = b + 4)
 										{
-											I = f_dev.block(i, j, k_start)[b_start + b];
+											I = I_field_->block(i, j, k_start)[b_start + b];
 
 											const std::string sep = b < (4 * N_nu_ - 1) ? "," : "";
 
@@ -321,7 +301,7 @@ RT_problem::write_surface_point_profiles_csv(input_string file_name, const int i
 											}
 											else
 											{
-												QUV = f_dev.block(i, j, k_start)[b_start + b + i_stokes];
+												QUV = I_field_->block(i, j, k_start)[b_start + b + i_stokes];
 
 												outputFile << std::scientific << std::setprecision(precision)
 														   << 100.0 * QUV / I << sep;
@@ -353,31 +333,26 @@ RT_problem::write_surface_point_profiles_csv(input_string file_name, const int i
 ////////////////////////////////////////////////////////////////////////////
 // write_surface_profiles
 ////////////////////////////////////////////////////////////////////////////
-void const
-RT_problem::write_surface_profiles(input_string file_name)
+void 
+RT_problem::write_surface_profiles(input_string file_name) const
 {
 	if (mpi_size_x_ > 1 or mpi_size_y_ > 1)
 	{
 		std::cerr << "\nWARNING: write_surface_profiles not supported for hotizontal decomposition!" << std::endl;
 	}
 
-	const auto f_dev = I_field_->view_device();
-	const auto g_dev = space_grid_->view_device();
-
 	// indeces
-	const int i_start = g_dev.margin[0];
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX();
+	const int j_end = j_start + space_grid_->getLocalSizeY();
 
 	int i_global, j_global;
 
 	double I, QUV;
 
 	// write profiles
-	if (g_dev.global_coord(2, k_start) == 0)
+	if (space_grid_->local_to_global_coordinate(2, k_start) == 0)
 	{
 		// Create a new file
 		input_string  output_file = file_name + ".m";
@@ -416,17 +391,17 @@ RT_problem::write_surface_profiles(input_string file_name)
 		// loop over spatial ppoints and directions
 		for (int i = i_start; i < i_end; ++i)
 		{
-			i_global = g_dev.global_coord(0, i);
+			i_global = space_grid_->local_to_global_coordinate(0, i);
 
 			for (int j = j_start; j < j_end; ++j)
 			{
-				j_global = g_dev.global_coord(1, j);
+				j_global = space_grid_->local_to_global_coordinate(1, j);
 
 				for (int j_theta = N_theta_ / 2; j_theta < N_theta_; ++j_theta)
 				{
 					for (int k_chi = 0; k_chi < N_chi_; ++k_chi)
 					{
-						const int b_start = local_to_block(j_theta, k_chi, 0);
+						const int b_start = I_field_->local_to_block(j_theta, k_chi, 0);
 
 						for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
 						{
@@ -435,7 +410,7 @@ RT_problem::write_surface_profiles(input_string file_name)
 
 							for (int b = 0; b < 4 * N_nu_; b = b + 4)
 							{
-								I = f_dev.block(i, j, k_start)[b_start + b];
+								I = I_field_->block(i, j, k_start)[b_start + b];
 
 								if (i_stokes == 0)
 								{
@@ -443,7 +418,7 @@ RT_problem::write_surface_profiles(input_string file_name)
 								}
 								else
 								{
-									QUV = f_dev.block(i, j, k_start)[b_start + b + i_stokes];
+									QUV = I_field_->block(i, j, k_start)[b_start + b + i_stokes];
 
 									outputFile << 100.0 * QUV / I << " ";
 								}
@@ -465,39 +440,34 @@ RT_problem::write_surface_profiles(input_string file_name)
 // Write surface point profiles to file in CSV format
 // write_surface_point_profiles_Omega_csv
 ////////////////////////////////////////////////////////////////////////////
-void const
+void 
 RT_problem::write_surface_point_profiles_Omega_csv(input_string file_name, const int i_space, const int j_space,
-												   const unsigned int precision)
+												   const unsigned int precision) const
 {
-	const auto I_dev = I_field_Omega_->view_device();
-	const auto g_dev = space_grid_->view_device();
-
 	const int block_size = 4 * N_nu_;
 
 	// indeces
-	const int i_start = g_dev.margin[0];
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX();
+	const int j_end = j_start + space_grid_->getLocalSizeY(); 
 
 	int i_global, j_global;
 
 	double I, QUV;
 
 	// write profiles
-	if (g_dev.global_coord(2, k_start) == 0)
+	if (space_grid_->local_to_global_coordinate(2, k_start) == 0)
 	{
 		for (int i = i_start; i < i_end; ++i)
 		{
-			i_global = g_dev.global_coord(0, i);
+			i_global = space_grid_->local_to_global_coordinate(0, i);
 
 			if (i_global == i_space)
 			{
 				for (int j = j_start; j < j_end; ++j)
 				{
-					j_global = g_dev.global_coord(1, j);
+					j_global = space_grid_->local_to_global_coordinate(1, j);
 
 					if (j_global == j_space)
 					{
@@ -514,14 +484,14 @@ RT_problem::write_surface_point_profiles_Omega_csv(input_string file_name, const
 							// Write data rows
 							for (int b = 0; b < block_size; b = b + 4)
 							{
-								I = I_dev.block(i, j, k_start)[b];
+								I = I_field_Omega_->block(i, j, k_start)[b];
 
 								outputFile << std::scientific << std::setprecision(precision) << I << ",";
 
 								// Q/I, U/I, V/I
 								for (int i_stokes = 1; i_stokes < 4; ++i_stokes)
 								{
-									QUV = I_dev.block(i, j, k_start)[b + i_stokes];
+									QUV = I_field_Omega_->block(i, j, k_start)[b + i_stokes];
 
 									std::string sep = (i_stokes < 3) ? "," : "";
 									outputFile << std::scientific << std::setprecision(precision) << 100.0 * QUV / I
@@ -551,42 +521,37 @@ RT_problem::write_surface_point_profiles_Omega_csv(input_string file_name, const
 // write surface profile in one single point
 // write_surface_point_profiles_Omega
 ////////////////////////////////////////////////////////////////////////////
-void const
-RT_problem::write_surface_point_profiles_Omega(input_string file_name, const int i_space, const int j_space)
+void 
+RT_problem::write_surface_point_profiles_Omega(input_string file_name, const int i_space, const int j_space) const
 {
 	// // a single MPI rank writes output
 	// if (mpi_rank_ == 0) std::cout << " Writing output in spatial point (" << i_space << ", " << j_space << ")" <<
 	// std::endl;
 
-	const auto I_dev = I_field_Omega_->view_device();
-	const auto g_dev = space_grid_->view_device();
-
 	const int block_size = 4 * N_nu_;
 
 	// indeces
-	const int i_start = g_dev.margin[0];
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); 
+	const int j_end = j_start + space_grid_->getLocalSizeY(); 
 
 	int i_global, j_global;
 
 	double I, QUV;
 
 	// write profiles
-	if (g_dev.global_coord(2, k_start) == 0)
+	if (space_grid_->local_to_global_coordinate(2, k_start) == 0)
 	{
 		for (int i = i_start; i < i_end; ++i)
 		{
-			i_global = g_dev.global_coord(0, i);
+			i_global = space_grid_->local_to_global_coordinate(0, i);
 
 			if (i_global == i_space)
 			{
 				for (int j = j_start; j < j_end; ++j)
 				{
-					j_global = g_dev.global_coord(1, j);
+					j_global = space_grid_->local_to_global_coordinate(1, j);
 
 					if (j_global == j_space)
 					{
@@ -606,7 +571,7 @@ RT_problem::write_surface_point_profiles_Omega(input_string file_name, const int
 
 								for (int b = 0; b < block_size; b = b + 4)
 								{
-									I = I_dev.block(i, j, k_start)[b];
+									I = I_field_Omega_->block(i, j, k_start)[b];
 
 									if (i_stokes == 0)
 									{
@@ -614,7 +579,7 @@ RT_problem::write_surface_point_profiles_Omega(input_string file_name, const int
 									}
 									else
 									{
-										QUV = I_dev.block(i, j, k_start)[b + i_stokes];
+										QUV = I_field_Omega_->block(i, j, k_start)[b + i_stokes];
 
 										outputFile << 100.0 * QUV / I << " ";
 									}
@@ -643,33 +608,28 @@ RT_problem::write_surface_point_profiles_Omega(input_string file_name, const int
 // write surface profile for arbitrary direction
 // write_surface_profiles_Omega
 ////////////////////////////////////////////////////////////////////////////
-void const
-RT_problem::write_surface_profiles_Omega(input_string file_name)
+void 
+RT_problem::write_surface_profiles_Omega(input_string file_name) const
 {
 	if (mpi_size_x_ > 1 or mpi_size_y_ > 1)
 	{
 		std::cerr << "\nWARNING: write_surface_profiles_Omega not supported for hotizontal decomposition!" << std::endl;
 	}
 
-	const auto I_dev = I_field_Omega_->view_device();
-	const auto g_dev = space_grid_->view_device();
-
 	const int block_size = 4 * N_nu_;
 
 	// indeces
-	const int i_start = g_dev.margin[0];
-	const int j_start = g_dev.margin[1];
-	const int k_start = g_dev.margin[2];
+	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
-	const int i_end = i_start + g_dev.dim[0];
-	const int j_end = j_start + g_dev.dim[1];
+	const int i_end = i_start + space_grid_->getLocalSizeX(); 
+	const int j_end = j_start + space_grid_->getLocalSizeY(); 
 
 	int i_global, j_global;
 
 	double I, QUV;
 
 	// write profiles
-	if (g_dev.global_coord(2, k_start) == 0)
+	if (space_grid_->local_to_global_coordinate(2, k_start) == 0)
 	{
 		// Create a new file
 		input_string  output_file = file_name + ".m";
@@ -689,11 +649,11 @@ RT_problem::write_surface_profiles_Omega(input_string file_name)
 
 		for (int i = i_start; i < i_end; ++i)
 		{
-			i_global = g_dev.global_coord(0, i);
+			i_global = space_grid_->local_to_global_coordinate(0, i);
 
 			for (int j = j_start; j < j_end; ++j)
 			{
-				j_global = g_dev.global_coord(1, j);
+				j_global = space_grid_->local_to_global_coordinate(1, j);
 
 				for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
 				{
@@ -701,7 +661,7 @@ RT_problem::write_surface_profiles_Omega(input_string file_name)
 
 					for (int b = 0; b < block_size; b = b + 4)
 					{
-						I = I_dev.block(i, j, k_start)[b];
+						I = I_field_Omega_->block(i, j, k_start)[b];
 
 						if (i_stokes == 0)
 						{
@@ -709,7 +669,7 @@ RT_problem::write_surface_profiles_Omega(input_string file_name)
 						}
 						else
 						{
-							QUV = I_dev.block(i, j, k_start)[b + i_stokes];
+							QUV = I_field_Omega_->block(i, j, k_start)[b + i_stokes];
 
 							outputFile << 100.0 * QUV / I << " ";
 						}

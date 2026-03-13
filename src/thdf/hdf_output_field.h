@@ -1,6 +1,7 @@
 #ifndef __THDF_OUTPUT_FIELD_H__
 #define __THDF_OUTPUT_FIELD_H__
 
+#include <float.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -15,6 +16,8 @@ extern "C" {
 
 typedef double THDF_float_t;
 typedef double THDF_n_float_t;
+
+typedef float THDF_float32_t;
 
 typedef enum { HDF_OUT_NONE, HDF_OUT_FLOAT32, HDF_OUT_FLOAT64 } THDF_float_type_t;
 typedef enum { HDF_OUT_NORM_NONE, HDF_OUT_NORM_FLOAT32, HDF_OUT_NORM_FLOAT64 } THDF_n_float_type_t;
@@ -64,6 +67,14 @@ typedef struct {
   int    *azimuthal_indices;
 } THDF_angular_grid_t;
 
+typedef struct {
+  int     N_x;
+  int     N_y;
+  int     N_z;
+  double *heights;
+  double  delta;
+} THDF_geometry_3D_t;
+
 /**
  * @brief Structure to handle HDF5 output field dataset operations.
  */
@@ -105,6 +116,9 @@ THDF_get_float_type(void);
  */
 hid_t
 THDF_get_hdf_float_datatype(void);
+
+hid_t
+THDF_get_hdf_float32_datatype(void);
 
 /**
  * @brief Get the floating-point type used for normalization multipliers (e.g., float32 or float64).
@@ -258,6 +272,16 @@ THDF_read_angular_grid_from_hdf5(hid_t file);  //
 int
 THDF_write_frequencies_grid_to_hdf5(hid_t                          file,               //
                                     const THDF_frequencies_grid_t *frequencies_grid);  //
+
+/**
+ * @brief Read the frequencies grid information from an HDF5 file.
+ *
+ * @param file HDF5 file identifier (must be open for reading)
+ * @return THDF_frequencies_grid_t
+ */
+
+int
+THDF_write_geometry_3D_to_hdf5(hid_t file, const THDF_geometry_3D_t *geometry);  //
 
 /**
  * @brief Read the frequencies grid information from an HDF5 file.

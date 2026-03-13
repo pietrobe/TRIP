@@ -8,7 +8,7 @@ frequency_file: frequency/96F/frequency.dat
 
 output: true
 output_overwrite_prevention: true
-output_directory: /capstor/scratch/cscs/sriva/PORTA/output/test_refactor_sf/main_B/
+output_directory: /capstor/scratch/cscs/sriva/PORTA/output/test_refactor_sf/main_B_v2/
 
 use_B: true
 use_Vb: true
@@ -24,11 +24,7 @@ emissivity_model: PRD
 # used only for FAL-C input
 N_theta: 8
 N_chi:   16
-
 input_cul_string:  ""
-input_qel_string:  ""
-input_llp_string:  ""
-input_back_string: ""
 
 use_prec: true
 

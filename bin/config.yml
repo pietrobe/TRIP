@@ -11,16 +11,16 @@ frequency_file:  frequency/96F/frequency.dat
 # input_file:      1_B0_V0_12T_8C_64F_64
 # frequency_file:  64F/frequency.dat
 
-output: true
+output: false
 output_overwrite_prevention: false
-output_directory: /gpfs/projects/ehpc238/output
+output_directory: ../../output
 
-use_B: true
+use_B: false
 enable_continuum: true
 formal_solver: BESSER
 use_1_5D_approx: false
 
-# set_uniform_B: true
+set_uniform_B: true
 B_field: [12.0, 0.78, 0.78]
 
 emissivity_model: PRD
@@ -28,8 +28,8 @@ emissivity_model: PRD
 # used only for FAL-C input
 N_theta: 8
 N_chi: 16
-N_x: 10
-N_y: 10
+N_x: 5
+N_y: 5
 
 #input_cul:  "AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.cul"
 #input_qel:  "AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.qel"
@@ -40,11 +40,13 @@ use_prec: true
 
 solver:
   ksp_solver_type: KSPFGMRES
-  ksp_rtol: 1e-7
-  ksp_max_it: 1000
+  ksp_rtol: 1e-6
+  ksp_max_it: 300
+  ksp_use_J_KQ: false
   # gmres_restart: 20
 
 prec:
   pc_solver_type: KSPGMRES
-  pc_rtol: 1e-6
+  pc_rtol: 1e-5
   pc_max_it: 1000
+  pc_use_J_KQ: false

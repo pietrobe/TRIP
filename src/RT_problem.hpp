@@ -1,18 +1,15 @@
 #ifndef RT_problem_hpp
 #define RT_problem_hpp
 
+#include "GridManager/GridManager.hpp"
 #include "RT_utility.hpp"
-#include "sgrid_Core.hpp"
 #include "thdf.h"
 
 // Type for storing fields
 using Real_t = double;
 
-using Grid_t  = sgrid::Grid<Real_t, 3>;
-using Field_t = sgrid::Field<Grid_t>;
-
-using Grid_ptr_t  = std::shared_ptr<Grid_t>;
-using Field_ptr_t = std::shared_ptr<Field_t>;
+using Grid_ptr_t  = std::shared_ptr<Grid3D>;
+using Field_ptr_t = std::shared_ptr<Field>;
 
 typedef const std::string input_string;
 
@@ -296,14 +293,10 @@ class RT_problem
 		set_sizes();
 
 		// init grid
-		space_grid_ = std::make_shared<Grid_t>();
-
-		// menage grid distribution // TODO: now bit hardcoded // necessary?
-		set_grid_partition();
-		space_grid_->init(MPI_COMM_WORLD, {N_x_, N_y_, N_z_}, {1, 1, 0}, {mpi_size_x_, mpi_size_y_, mpi_size_z_},
-						  use_ghost_layers_);
-
-		// space_grid_->init(MPI_COMM_WORLD, {(int)N_x_, (int)N_y_, (int)N_z_}, {1, 1, 0}, {}, use_ghost_layers);
+		space_grid_ = std::make_shared<Grid3D>(
+			MPI_COMM_WORLD, N_x_, N_y_, N_z_
+		);
+		space_grid_->print_info();
 
 		// init fields
 		allocate_fields();
@@ -322,11 +315,8 @@ class RT_problem
 		// precompute
 		set_up();
 
-		print_info();
-
-		MPI_Barrier(space_grid_->raw_comm());
-		Real end = MPI_Wtime();
-		if (mpi_rank_ == 0) printf("Set up time:\t\t%g (seconds)\n", end - start);
+	   	MPI_Barrier(space_grid_->getComm()); Real end = MPI_Wtime(); 	    
+	    if (mpi_rank_ == 0) printf("Set up time:\t\t%g (seconds)\n", end - start);	      		
 	}
 
 	inline void
@@ -348,12 +338,10 @@ class RT_problem
 		set_sizes();
 
 		// init grid
-		space_grid_ = std::make_shared<Grid_t>();
-
-		// menage grid distribution // TODO: now bit hardcoded // necessary?
-		set_grid_partition();
-		space_grid_->init(MPI_COMM_WORLD, {N_x_, N_y_, N_z_}, {1, 1, 0}, {mpi_size_x_, mpi_size_y_, mpi_size_z_},
-						  use_ghost_layers_);
+		space_grid_ = std::make_shared<Grid3D>(
+			MPI_COMM_WORLD, N_x_, N_y_, N_z_
+		);
+		space_grid_->print_info();
 
 		// init fields
 		allocate_fields();
@@ -362,18 +350,18 @@ class RT_problem
 		allocate_atmosphere();
 
 		// read atm data (needs grid object)
-		read_atmosphere_1D(input_path + "/atmosphere.dat"); // NOTE: solar surface for space index k = 0
-		read_bulk_velocity_1D(input_path + "/bulk_velocity.dat");
+		read_atmosphere_1D(    input_path + "/atmosphere.dat"); // NOTE: solar surface for space index k = 0
+		read_bulk_velocity_1D( input_path + "/bulk_velocity.dat");
 		read_magnetic_field_1D(input_path + "/magnetic_field.dat");
 
 		read_continumm_1D(input_path + "/continuum/continuum_scat_opac.dat",
-						  input_path + "/continuum/continuum_tot_opac.dat",
-						  input_path + "/continuum/continuum_therm_emiss.dat");
+						      input_path + "/continuum/continuum_tot_opac.dat",
+						      input_path + "/continuum/continuum_therm_emiss.dat");
 	}
 
 	// convert block index to to local ones = [j_theta, k_chi, n_nu, i_stokes]
-	inline std::vector<int>
-	block_to_local(const int block_index)
+	// TODO this will be deleted
+	inline std::vector<int> block_to_local(const int block_index)
 	{
 		std::vector<int> local_indeces;
 		local_indeces.reserve(4);
@@ -392,8 +380,8 @@ class RT_problem
 	}
 
 	// convert block index to to local ones = [j_theta, k_chi, n_nu]
-	inline std::vector<int>
-	block_to_local_unpol(const int block_index)
+	// TODO this will be deleted
+	inline std::vector<int> block_to_local_unpol(const int block_index)
 	{
 		std::vector<int> local_indeces;
 		local_indeces.reserve(3);
@@ -414,61 +402,55 @@ class RT_problem
 	extract_plane_k(const Field_ptr_t field, const int k_global);
 
 	// convert local indeces to block one (of fields) for the first Stokes parameter and vice versa
-	inline int
-	local_to_block(const int j, const int k, const int n)
-	{
-		return 4 * (N_nu_ * (N_chi_ * j + k) + n);
-	}
+	// TODO this will be deleted
+	inline int local_to_block(const int j, const int k, const int n) { return 4 * ( N_nu_ * ( N_chi_ * j + k ) + n); }
 
 	// convert local indeces to block one (of fields)
-	inline int
-	local_to_block_unpol(const int j, const int k, const int n)
-	{
-		return N_nu_ * (N_chi_ * j + k) + n;
-	}
+	// TODO this will be deleted
+	inline int local_to_block_unpol(const int j, const int k, const int n) { return N_nu_ * ( N_chi_ * j + k ) + n; }
 
 	// print I_field on surface
-	void const
+	void
 	print_surface_profile(const Field_ptr_t field, const int i_stoke = 0, const int i_space = 0, const int j_space = 0,
-						  const int j_theta = 0, const int k_chi = 0);
+						  const int j_theta = 0, const int k_chi = 0) const;
 
-	void const
+	void 
 	print_surface_QI_profile(const Field_ptr_t field, const int i_space = 0, const int j_space = 0, const int j_theta = 0,
-							 const int k_chi = 0, const int i_stokes = 1, const bool center_line = false);
+							 const int k_chi = 0, const int i_stokes = 1, const bool center_line = false) const;
 
-	void const
+	void 
 	print_surface_QI_point(const int i_space = 0, const int j_space = 0, const int j_theta = 0, const int k_chi = 0,
-						   const int n_nu = 0, const int i_stokes = 1);
+						   const int n_nu = 0, const int i_stokes = 1) const;
 
-	void const
+	void 
 	print_profile(const Field_ptr_t field, const int i_stoke = 0, const int i_space = 0, const int j_space = 0,
-				  const int k_space = 0, const int j_theta = 0, const int k_chi = 0);
+				  const int k_space = 0, const int j_theta = 0, const int k_chi = 0) const;
 
 	// write surface profile in file in MATLAB format in onw point and all surface
-	void const
-	write_surface_point_profiles(input_string file_name, const int i_space, const int j_space);
-	void const
-	write_surface_point_profiles_Omega(input_string file_name, const int i_space, const int j_space);
-	void const
-	write_surface_profiles(input_string file_name);
-	void const
-	write_surface_profiles_Omega(input_string file_name);
+	void 
+	write_surface_point_profiles(input_string file_name, const int i_space, const int j_space) const;
+	void 
+	write_surface_point_profiles_Omega(input_string file_name, const int i_space, const int j_space) const;
+	void 
+	write_surface_profiles(input_string file_name) const;
+	void 
+	write_surface_profiles_Omega(input_string file_name) const;
 
-	void const
+	void 
 	write_surface_point_profiles_csv(input_string file_name, const int i_space, const int j_space,
-									 const unsigned int precision = 14);
+									 const unsigned int precision = 14) const;
 
-	void const
+	void 
 	write_angular_grid_csv(input_string file_name, const int i_space, const int j_space,
-						   const unsigned int precision = 14);
+						   const unsigned int precision = 14) const;
 
-	void const
+	void 
 	write_frequencies_grid_csv(input_string file_name, const int i_space, const int j_space,
-							   const unsigned int precision = 14);
+							   const unsigned int precision = 14) const;
 
-	void const
+	void 
 	write_surface_point_profiles_Omega_csv(input_string file_name, const int i_space, const int j_space,
-										   const unsigned int precision);
+										   const unsigned int precision) const;
 
 	std::tuple<int, int>
 	make_write_surface_MPI_Comm(const MPI_Comm MPI_Comm_MAIN, MPI_Comm &write_comm);
@@ -510,8 +492,8 @@ class RT_problem
 
 	int
 	get_KQ_values(std::vector<int> &KQ_values,					//
-				  std::vector<int> &KQ_values_real_compressed,	//
-				  std::vector<int> &KQ_values_imag_compressed); //
+				     std::vector<int> &KQ_values_real_compressed,	//
+				     std::vector<int> &KQ_values_imag_compressed); //
 
 	int
 	write_JKQ_field_hdf5(const std::string &output_file); //
@@ -526,9 +508,9 @@ class RT_problem
 
 	int
 	accumulate_surface_profiles_Omega_domain_data(std::vector<double> &surface_data_I,	//
-												  std::vector<double> &surface_data_Q,	//
-												  std::vector<double> &surface_data_U,	//
-												  std::vector<double> &surface_data_V); //
+												             std::vector<double> &surface_data_Q,	//
+												             std::vector<double> &surface_data_U,	//
+												             std::vector<double> &surface_data_V); //
 
 	int																				//
 	write_beams_frequency_grids_Omega_hdf5(const std::vector<BeamDirection> &beams, //
@@ -548,7 +530,7 @@ class RT_problem
 	int mpi_rank_;
 	int mpi_size_;
 
-	// procs in each dimension
+	// procs in each dimension // TODO these will be useless
 	int mpi_size_x_;
 	int mpi_size_y_;
 	int mpi_size_z_;
@@ -591,16 +573,18 @@ class RT_problem
 	int N_z_;
 	int N_s_; // N_s_ = N_x_ * N_y_ * N_z_
 
-	int N_theta_;
-	int N_chi_;
-	int N_dirs_; // N_dirs_ = N_theta_ * N_chi_;
-	int N_nu_;
+	int N_theta_; 
+	int N_chi_;   
+	int N_dirs_; // N_dirs_ = N_theta_ * N_chi_;   
+	int N_nu_;        
 
-	int		 local_size_; // == tot_size_ con mpi_size_ = 1
+	int N_pol_ = 4; // ADDED
+		
+	int local_size_; // == tot_size_ con mpi_size_ = 1
 	PetscInt block_size_; // 4 * N_nu_ * N_theta_ * N_chi_;
 	PetscInt tot_size_;	  // N_s_ * block_size;
 
-	// unpolarized sizes (normal ones divided by 4)
+	// unpolarized sizes (normal ones divided by 4) // UNUSED when introducing the new field class, these values could be avoided
 	PetscInt local_size_unpolarized_; // == tot_size_ con mpi_size_ = 1
 	PetscInt block_size_unpolarized_; // N_nu_ * N_theta_ * N_chi_;
 	PetscInt tot_size_unpolarized_;	  // N_s_ * block_size;
@@ -609,11 +593,11 @@ class RT_problem
 	Field_ptr_t I_field_; // intensity
 	Field_ptr_t S_field_; // source function
 
-	// PETSc data structure for intensity
-	Vec I_vec_;
-
-	// propagation matrix entries
-	Field_ptr_t eta_field_;
+	// PETSc data structure for intensity	
+	Vec I_vec_; // TODO useless
+		
+	// propagation matrix entries 
+	Field_ptr_t eta_field_; 
 	Field_ptr_t rho_field_;
 
 	// reduced fields for unpolarized CRD or AA solutions
@@ -648,75 +632,35 @@ class RT_problem
 	Field_ptr_t eps_c_th_;
 
 	// Access to the atomic model parameters
-	inline double
-	atomic_mass() const
-	{
-		return mass_;
-	}
-	inline double
-	atomic_El() const
-	{
-		return El_;
-	}
-	inline double
-	atomic_Eu() const
-	{
-		return Eu_;
-	}
-	inline int
-	atomic_Jl2() const
-	{
-		return Jl2_;
-	}
-	inline int
-	atomic_Ju2() const
-	{
-		return Ju2_;
-	}
-	inline double
-	atomic_gl() const
-	{
-		return gl_;
-	}
-	inline double
-	atomic_gu() const
-	{
-		return gu_;
-	}
-	inline double
-	atomic_Aul() const
-	{
-		return Aul_;
-	}
-	inline Field_ptr_t
-	get_D2() const
-	{
-		return D2_;
-	}
+	inline double atomic_mass() const { return mass_;}
+	inline double atomic_El()   const { return El_;  }
+	inline double atomic_Eu()   const { return Eu_;  }
+	inline int    atomic_Jl2()  const { return Jl2_; }
+	inline int    atomic_Ju2()  const { return Ju2_; }
+	inline double atomic_gl()   const { return gl_;  }
+	inline double atomic_gu()   const { return gu_;  } 
+	inline double atomic_Aul()  const { return Aul_; }
+	inline Field_ptr_t get_D2() const { return D2_;  }
 
-	bool
-	field_is_zero(const Field_ptr_t field);
+	bool field_is_zero(const Field_ptr_t field);
 
 	// auxiliary_fields for single direction Omega outside theta and chi grids
-	void
-	allocate_fields_Omega();
-	void
-	set_eta_and_rhos_Omega(const Real theta, const Real chi);
+	void allocate_fields_Omega(); 
+	void set_eta_and_rhos_Omega(const Real theta, const Real chi);	
 
-	// allcoate reduced data structeres
-	void
-	allocate_unpolarized_fields();
-	void
-	allocate_J_KQ_field();
+	// allocate reduced data structeres
+	void allocate_unpolarized_fields();	
+	void allocate_J_KQ_field();	
 
-	// polarized_to_unpolarized
-	void
-	polarized_to_unpolarized_field(const Field_ptr_t field, Field_ptr_t field_unpol);
+	// polarized_to_unpolarized 
+	void polarized_to_unpolarized_field(const Field_ptr_t field, Field_ptr_t field_unpol);
+	
 
-	Field_ptr_t I_field_Omega_; // intensity
+	Field_ptr_t I_field_Omega_; // intensity     
 	Field_ptr_t S_field_Omega_; // source function
-	Field_ptr_t eta_field_Omega_;
-	Field_ptr_t rho_field_Omega_;
+	Field_ptr_t eta_field_Omega_; 
+	Field_ptr_t rho_field_Omega_; 
+
 
 	inline void
 	free_fields_memory()
@@ -743,9 +687,9 @@ class RT_problem
 
 
 	// physical constants
-	const double c_	  = 2.99792458e+10;
+	const double c_	= 2.99792458e+10;
 	const double k_B_ = 1.38065e-16;
-	const double h_	  = 6.62607e-27;
+	const double h_	= 6.62607e-27;
 
 	// 2-level atom constants
 	double mass_;
@@ -755,8 +699,8 @@ class RT_problem
 	double gu_;
 	double Aul_;   // Einstein coefficients for spontaneous emission
 	double T_ref_; // Reference temperature
-	int	   Jl2_;
-	int	   Ju2_;
+	int	 Jl2_;
+	int	 Ju2_;
 
 	// reference frame
 	const double gamma_ = 0.5 * M_PI;
@@ -783,7 +727,7 @@ class RT_problem
 
 	// init fields
 	void
-	init_field(Field_ptr_t input_field, const Real input_value);
+	init_field(Field_ptr_t input_field, const Real input_value); // UNUSED
 
 	// set grids and sizes
 	void
@@ -792,10 +736,8 @@ class RT_problem
 	set_sizes();
 
 	// menage grid distribution
-	void
-	set_grid_partition();
-	void
-	set_3D_decomposition(const int N_x, const int N_y, const int N_z);
+	void set_grid_partition();	
+	void set_3D_decomposition(const int N_x, const int N_y, const int N_z); // UNUSED
 
 	// read inputs
 	void
@@ -859,8 +801,8 @@ class RT_problem
 	set_up();
 
 	// print infos on screen
-	void const
-	print_info();
+	void
+	print_info() const;
 };
 
 #endif

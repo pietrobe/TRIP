@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "hdf_output_ar_field.h"
+#include "hdf_output_example_3D.h"
 #include "hdf_output_field.h"
 
 /////////////////////////////////////////////////////////////
@@ -159,6 +160,7 @@ int
 main(int argc, char **argv) {
 
   return main_example_ar(argc, argv);
+
   (void)argc;
   (void)argv;
 

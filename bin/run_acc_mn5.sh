@@ -4,7 +4,7 @@
 #SBATCH --ntasks=512
 
 ## to be defined !!!!!!!!! 
-#SBATCH --time=00:59:59
+#SBATCH --time=01:59:59
 
 #SBATCH --cpus-per-task=1
 #SBATCH --account=ehpc238
@@ -57,6 +57,8 @@ echo "Starting TRIP ...... "
 echo ""
 
 export OMPI_MCA_mpi_cuda_support=1
+export SLURM_CPU_BIND=none
+export OMPI_MCA_io=romio321
 
 # Define arguments as a bash array
 ARGS=(
@@ -68,6 +70,8 @@ ARGS=(
 echo "Executing command:"
 echo " srun --cpu-bind=socket  mpirun --bind-to none  ${SCRIPT_DIR}/mnacc_wrapper.sh ${APP_PATH}/solar_3D ${ARGS[@]}"
 echo ""
+
+export SLURM_CPU_BIND=none
 
 mpirun --bind-to none  \
       ${SCRIPT_DIR}/mnacc_wrapper.sh \
