@@ -3,10 +3,11 @@
 #include <algorithm> // for std::remove
 #include <cmath>	 // for std::acos
 #include <cstdio>	 // for std::snprintf
-#include <fstream>	 // for std::ofstream
-#include <iomanip>	 // for std::setw, std::setprecision
-#include <iostream>	 // for std::cout
-#include <sstream>	 // for std::stringstream
+#include <filesystem>
+#include <fstream>	// for std::ofstream
+#include <iomanip>	// for std::setw, std::setprecision
+#include <iostream> // for std::cout
+#include <sstream>	// for std::stringstream
 
 ////////////////////////////////////////////////////////
 // Compute a single arbitrary beam
@@ -117,7 +118,11 @@ compute_arbitrary_beam_hdf(RT_solver						&rt_solver,			//
 		mu_str.erase(std::remove(mu_str.begin(), mu_str.end(), '.'), mu_str.end());
 		chi_str.erase(std::remove(chi_str.begin(), chi_str.end(), '.'), chi_str.end());
 
-		const std::string output_file_Omega_mu = output_file + "_mu" + mu_str + "_chi" + chi_str;
+		const std::filesystem::path output_file_fs = output_file;
+		const std::filesystem::path head		   = output_file.parent_path();
+		const std::string			file_name_base = "emergent_field_abitrary_Omega";
+
+		const std::string output_file_Omega_mu = (head / (file_name_base + "_mu" + mu_str + "_chi" + chi_str)).string();
 
 		const int Nx = rt_problem_ptr->N_x_;
 		const int Ny = rt_problem_ptr->N_y_;
