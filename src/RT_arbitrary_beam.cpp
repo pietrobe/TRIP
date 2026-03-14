@@ -119,7 +119,7 @@ compute_arbitrary_beam_hdf(RT_solver						&rt_solver,			//
 		chi_str.erase(std::remove(chi_str.begin(), chi_str.end(), '.'), chi_str.end());
 
 		const std::filesystem::path output_file_fs = output_file;
-		const std::filesystem::path head		   = output_file.parent_path();
+		const std::filesystem::path head		   = output_file_fs.parent_path();
 		const std::string			file_name_base = "emergent_field_abitrary_Omega";
 
 		const std::string output_file_Omega_mu = (head / (file_name_base + "_mu" + mu_str + "_chi" + chi_str)).string();
