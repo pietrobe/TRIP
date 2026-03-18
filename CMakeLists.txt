@@ -191,7 +191,7 @@ add_executable(${EXECUTABLE_NAME} ${CMAKE_SOURCE_DIR}/src/main.cpp)
 target_include_directories(${EXECUTABLE_NAME} PUBLIC ${HDF5_INCLUDE_DIRS})
 
 add_library(rii SHARED IMPORTED)
-option(RII_SO_BUILD "rii subdirectiory for the librii.so" build)
+set(RII_SO_BUILD "build" CACHE STRING "Directory name for the librii.so")
 set(RII_SO_PATH "${RII_ROOT_PATH}/${RII_SO_BUILD}/librii.so")
 
 set_property(TARGET rii PROPERTY IMPORTED_LOCATION "${RII_ROOT_PATH}/${RII_SO_BUILD}/librii.so")

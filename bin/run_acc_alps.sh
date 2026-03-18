@@ -1,20 +1,20 @@
 #!/bin/bash -l
 
 ### to be defined, 12288 is tested !!!!!!!!!
-#### #SBATCH --ntasks=12288
+#SBATCH --ntasks=12288
 ### #SBATCH --ntasks=16384
 #### #SBATCH --ntasks=6144
-#SBATCH --ntasks=512
+##### #SBATCH --ntasks=512
 
 ## to be defined !!!!!!!!! 
-#SBATCH --time=00:30:00
+#SBATCH --time=04:59:59
 
 #SBATCH --job-name="TRIP_PRD_3D"
 
 #SBATCH --exclusive
 #SBATCH --cpus-per-task=1
-#SBATCH --account=u2
-#SBATCH --partition=debug
+#SBATCH --account=c40
+#SBATCH --partition=normal
 #SBATCH --ntasks-per-socket=46
 
 
