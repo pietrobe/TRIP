@@ -59,6 +59,8 @@ Thumbs.db
 *.wmv
 build
 build_2
+build_cpu
+build_*
 bld
 
 .vscode/settings.json

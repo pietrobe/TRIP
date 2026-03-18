@@ -119,7 +119,7 @@ list(APPEND HEADERS_FILES
 
 ### RII LINKAGE
 set(RII_INCLUDES "${RII_ROOT_PATH}")
-message(${RII_INCLUDES})
+message(STATUS "RII includes: ${RII_INCLUDES}")
 
 option(USE_ACC "Use ACC acceleration" OFF)
 
@@ -191,8 +191,12 @@ add_executable(${EXECUTABLE_NAME} ${CMAKE_SOURCE_DIR}/src/main.cpp)
 target_include_directories(${EXECUTABLE_NAME} PUBLIC ${HDF5_INCLUDE_DIRS})
 
 add_library(rii SHARED IMPORTED)
-set_property(TARGET rii PROPERTY IMPORTED_LOCATION "${RII_ROOT_PATH}/build/librii.so")
-message( STATUS  "RII path: ${RII_ROOT_PATH}")
+option(RII_SO_BUILD "rii subdirectiory for the librii.so" build)
+set(RII_SO_PATH "${RII_ROOT_PATH}/${RII_SO_BUILD}/librii.so")
+
+set_property(TARGET rii PROPERTY IMPORTED_LOCATION "${RII_ROOT_PATH}/${RII_SO_BUILD}/librii.so")
+message( STATUS "RII path: ${RII_ROOT_PATH}")
+message( STATUS "RII SO path ${RII_SO_PATH}")
 
 # import all the dependencies and targets
 add_subdirectory(src/GridManager)
