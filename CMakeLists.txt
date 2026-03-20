@@ -102,6 +102,8 @@ list(APPEND SOURCES_FILES
     src/Utilities.cpp
     src/RT_utility.cpp
     src/RT_arbitrary_beam.cpp
+    src/domain_decomposition.cpp
+    src/domain_decomposition_3D.cpp
 )
 
 list(APPEND HEADERS_FILES 
@@ -115,6 +117,7 @@ list(APPEND HEADERS_FILES
     src/RT_utility.hpp
     src/RT_arbitrary_beam.hpp
     src/RT_types.hpp
+    src/domain_decomposition_3D.hpp
 )
 
 ### RII LINKAGE
