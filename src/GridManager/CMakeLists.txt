@@ -32,7 +32,7 @@ target_include_directories(GridManager PUBLIC
 target_compile_features(GridManager PUBLIC cxx_std_17)
 
 target_link_libraries(GridManager PUBLIC
-    MPI::MPI_CXX
+    ${TRIP_MPI_TARGET}
     PkgConfig::PETSC
 )
 

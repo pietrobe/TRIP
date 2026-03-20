@@ -101,6 +101,8 @@ loadConfig(const std::string &filename)
 	if (config["write_whole_3D_field_hdf5"])
 		cfg.write_whole_3D_field_hdf5 = config["write_whole_3D_field_hdf5"].as<bool>();
 
+	if (config["write_text_output"]) cfg.write_text_output = config["write_text_output"].as<bool>();
+
 	// Optional string (converted to filesystem::path)
 	if (config["output_directory"])
 		cfg.output_directory = std::filesystem::path(config["output_directory"].as<std::string>());
@@ -197,10 +199,10 @@ loadConfig(const std::string &filename)
 		auto s = config["solver"];
 
 		if (s["ksp_solver_type"]) cfg.solver.ksp_solver_type = toKSPType(s["ksp_solver_type"].as<std::string>());
-		if (s["ksp_rtol"])        cfg.solver.ksp_rtol        = s["ksp_rtol"].as<double>();
-		if (s["ksp_max_it"])      cfg.solver.ksp_max_it      = s["ksp_max_it"].as<int>();
-		if (s["gmres_restart"])   cfg.solver.gmres_restart   = s["gmres_restart"].as<int>();
-		if (s["ksp_use_J_KQ"])    cfg.solver.ksp_use_J_KQ    = s["ksp_use_J_KQ"].as<bool>();
+		if (s["ksp_rtol"]) cfg.solver.ksp_rtol = s["ksp_rtol"].as<double>();
+		if (s["ksp_max_it"]) cfg.solver.ksp_max_it = s["ksp_max_it"].as<int>();
+		if (s["gmres_restart"]) cfg.solver.gmres_restart = s["gmres_restart"].as<int>();
+		if (s["ksp_use_J_KQ"]) cfg.solver.ksp_use_J_KQ = s["ksp_use_J_KQ"].as<bool>();
 	}
 
 	// Preconditioner section
@@ -250,6 +252,10 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 	print("Output Directory", cfg.output_directory.string());
 	print("Output Enabled", (cfg.output ? "Yes" : "No"));
 	print("Output Overwrite Prevention", (cfg.output_overwrite_prevention ? "Yes" : "No"));
+	print("Write Whole 3D Field (HDF5)", (cfg.write_whole_3D_field_hdf5 ? "Yes" : "No"));
+	print("Write Text Output", (cfg.write_text_output ? "Yes" : "No"));
+	print("Reference Solution Directory", cfg.reference_sol_directory.string());
+	print("Verbose", (cfg.verbose ? "Yes" : "No"));
 	print("Emissivity Model", emissivity_model_to_string_long(cfg.emissivity_model));
 	print("Use Magnetic Field", (cfg.use_B ? "Yes" : "No"));
 	print("Use Bulk Velocity", (cfg.use_Vb ? "Yes" : "No"));
@@ -269,29 +275,42 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 	print("Set Uniform Magnetic Field", (cfg.set_uniform_B ? "Yes" : "No"));
 	if (cfg.set_uniform_B)
 	{
-		print("* Uniform Magnetic Field Value (Gauss)", std::to_string(cfg.B_field[0]));
-		print("* Uniform Magnetic Field Theta (rad)", std::to_string(cfg.B_field[1]));
-		print("* Uniform Magnetic Field Chi (rad)", std::to_string(cfg.B_field[2]));
+		print("├─ Uniform Magnetic Field Value (Gauss)", std::to_string(cfg.B_field[0]));
+		print("├─ Uniform Magnetic Field Theta (rad)", std::to_string(cfg.B_field[1]));
+		print("└─ Uniform Magnetic Field Chi (rad)", std::to_string(cfg.B_field[2]));
 	}
 
 	print("Set Uniform Bulk Velocity", (cfg.set_uniform_Vb ? "Yes" : "No"));
 	if (cfg.set_uniform_Vb)
 	{
-		print("* Uniform Bulk Velocity Vx (cm/s)", std::to_string(cfg.Vb_field[0]));
-		print("* Uniform Bulk Velocity Vy (cm/s)", std::to_string(cfg.Vb_field[1]));
-		print("* Uniform Bulk Velocity Vz (cm/s)", std::to_string(cfg.Vb_field[2]));
+		print("├─ Uniform Bulk Velocity Vx (cm/s)", std::to_string(cfg.Vb_field[0]));
+		print("├─ Uniform Bulk Velocity Vy (cm/s)", std::to_string(cfg.Vb_field[1]));
+		print("└─ Uniform Bulk Velocity Vz (cm/s)", std::to_string(cfg.Vb_field[2]));
+	}
+
+	print("Arbitrary Beams Count", std::to_string(cfg.arbitrary_beams.size()));
+	for (size_t i = 0; i < cfg.arbitrary_beams.size(); ++i)
+	{
+		const auto		 &beam		   = cfg.arbitrary_beams[i];
+		const bool		  is_last_beam = (i + 1 == cfg.arbitrary_beams.size());
+		const std::string beam_prefix  = is_last_beam ? "└─" : "├─";
+		print(beam_prefix + " Beam", std::to_string(i));
+		print("   ├─ mu", std::to_string(beam.mu));
+		print("   └─ chi (rad)", std::to_string(beam.chi));
 	}
 
 	os << std::endl << "Solver Configuration:" << std::endl;
 	print("KSP Solver Type", KSPTypeToString(cfg.solver.ksp_solver_type));
 	print("KSP Relative Tolerance", to_sci(cfg.solver.ksp_rtol));
 	print("KSP Maximum Iterations", std::to_string(cfg.solver.ksp_max_it));
+	print("KSP Use J/KQ", (cfg.solver.ksp_use_J_KQ ? "Yes" : "No"));
 	print("GMRES Restart", std::to_string(cfg.solver.gmres_restart));
 
 	os << std::endl << "Preconditioner Configuration:" << std::endl;
 	print("PC Solver Type", KSPTypeToString(cfg.prec.pc_solver_type));
 	print("PC Relative Tolerance", to_sci(cfg.prec.pc_rtol));
 	print("PC Maximum Iterations", std::to_string(cfg.prec.pc_max_it));
+	print("PC Use J/KQ", (cfg.prec.pc_use_J_KQ ? "Yes" : "No"));
 
 	os << std::endl;
 }

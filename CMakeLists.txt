@@ -30,17 +30,18 @@ endif()
 # The test fails but we can link the library directly
 set(MPI_SKIP_COMPILER_TEST TRUE)
 
-# Find only C component - will create CXX target from it
+# Find only the C component. Some environments do not provide a working
+# MPI::MPI_CXX target for C++ compilation, but the C target is sufficient for
+# linking code that uses the C MPI interface.
 find_package(MPI REQUIRED COMPONENTS C)
 
-# Create MPI::MPI_CXX that links with NVIDIA C++ compiler
-if(NOT TARGET MPI::MPI_CXX AND TARGET MPI::MPI_C)
-    message(STATUS "Creating MPI::MPI_CXX from MPI::MPI_C for NVHPC compiler")
-    add_library(MPI::MPI_CXX INTERFACE IMPORTED)
-    set_target_properties(MPI::MPI_CXX PROPERTIES
-        INTERFACE_INCLUDE_DIRECTORIES "$<TARGET_PROPERTY:MPI::MPI_C,INTERFACE_INCLUDE_DIRECTORIES>"
-        INTERFACE_LINK_LIBRARIES "$<TARGET_PROPERTY:MPI::MPI_C,INTERFACE_LINK_LIBRARIES>"
-    )
+if(TARGET MPI::MPI_CXX)
+    set(TRIP_MPI_TARGET MPI::MPI_CXX)
+elseif(TARGET MPI::MPI_C)
+    set(TRIP_MPI_TARGET MPI::MPI_C)
+    message(STATUS "Using MPI::MPI_C for C++ targets")
+else()
+    message(FATAL_ERROR "No usable MPI imported target was found")
 endif()
 
 find_package(HDF5 REQUIRED)
@@ -101,6 +102,7 @@ list(APPEND SOURCES_FILES
     src/Utilities.cpp
     src/RT_utility.cpp
     src/RT_arbitrary_beam.cpp
+    src/domain_decomposition_3D.cpp
 )
 
 list(APPEND HEADERS_FILES 
@@ -114,11 +116,12 @@ list(APPEND HEADERS_FILES
     src/RT_utility.hpp
     src/RT_arbitrary_beam.hpp
     src/RT_types.hpp
+    src/domain_decomposition_3D.hpp
 )
 
 ### RII LINKAGE
 set(RII_INCLUDES "${RII_ROOT_PATH}")
-message(${RII_INCLUDES})
+message(STATUS "RII includes: ${RII_INCLUDES}")
 
 option(USE_ACC "Use ACC acceleration" OFF)
 
@@ -190,15 +193,19 @@ add_executable(${EXECUTABLE_NAME} ${CMAKE_SOURCE_DIR}/src/main.cpp)
 target_include_directories(${EXECUTABLE_NAME} PUBLIC ${HDF5_INCLUDE_DIRS})
 
 add_library(rii SHARED IMPORTED)
-set_property(TARGET rii PROPERTY IMPORTED_LOCATION "${RII_ROOT_PATH}/build/librii.so")
-message( STATUS  "RII path: ${RII_ROOT_PATH}")
+set(RII_SO_BUILD "build" CACHE STRING "Directory name for the librii.so")
+set(RII_SO_PATH "${RII_ROOT_PATH}/${RII_SO_BUILD}/librii.so")
+
+set_property(TARGET rii PROPERTY IMPORTED_LOCATION "${RII_ROOT_PATH}/${RII_SO_BUILD}/librii.so")
+message( STATUS "RII path: ${RII_ROOT_PATH}")
+message( STATUS "RII SO path ${RII_SO_PATH}")
 
 # import all the dependencies and targets
 add_subdirectory(src/GridManager)
 target_link_libraries(${EXECUTABLE_NAME} PUBLIC GridManager)
 target_link_libraries(${EXECUTABLE_NAME} PUBLIC rii)
 target_link_libraries(${EXECUTABLE_NAME} PUBLIC ${Boost_LIBRARIES})
-target_link_libraries(${EXECUTABLE_NAME} PUBLIC MPI::MPI_CXX)
+target_link_libraries(${EXECUTABLE_NAME} PUBLIC ${TRIP_MPI_TARGET})
 target_link_libraries(${EXECUTABLE_NAME} PUBLIC ${HDF5_LIBRARIES})
 target_link_libraries(${EXECUTABLE_NAME} PUBLIC ${HDF5_HL_LIBRARIES})
 target_sources(${EXECUTABLE_NAME} PUBLIC ${SOURCES_FILES})
@@ -269,7 +276,7 @@ add_executable(solar_3D_tests ${CMAKE_SOURCE_DIR}/tests/test.cpp)
 
 
 # import all the dependencies and targets
-target_link_libraries(solar_3D_tests PUBLIC rii ${Boost_LIBRARIES} MPI::MPI_CXX)
+target_link_libraries(solar_3D_tests PUBLIC rii ${Boost_LIBRARIES} ${TRIP_MPI_TARGET})
 target_link_libraries(solar_3D_tests PUBLIC ${HDF5_LIBRARIES})
 target_link_libraries(solar_3D_tests PUBLIC ${HDF5_HL_LIBRARIES})
 target_sources(solar_3D_tests PUBLIC ${SOURCES_FILES})

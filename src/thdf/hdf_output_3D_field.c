@@ -633,7 +633,10 @@ write_3d_field_block_to_hdf5(const char *filename, MPI_Comm comm, bool normalize
 
   const double write_elapsed = MPI_Wtime() - write_start;
   if (comm_rank == 0) {
-    printf("MPI write elapsed time: %.6f s\n", write_elapsed);
+    printf("MPI write elapsed time: %.6f s, at coords: (%d, %d, %d) for block size: %d x %d x %d, incl: %d, azimuth: %d, frequencies: %d\n",
+       write_elapsed, 
+       local_start_x, local_start_y, local_start_z, N_local_x,
+           N_local_y, N_local_z, N_incl, N_azimuth, N_frequencies);
   }
 
   THDF_close_3D_field_handler_mpi(field_handler);

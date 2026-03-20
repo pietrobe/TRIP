@@ -3,10 +3,11 @@
 #include <algorithm> // for std::remove
 #include <cmath>	 // for std::acos
 #include <cstdio>	 // for std::snprintf
-#include <fstream>	 // for std::ofstream
-#include <iomanip>	 // for std::setw, std::setprecision
-#include <iostream>	 // for std::cout
-#include <sstream>	 // for std::stringstream
+#include <filesystem>
+#include <fstream>	// for std::ofstream
+#include <iomanip>	// for std::setw, std::setprecision
+#include <iostream> // for std::cout
+#include <sstream>	// for std::stringstream
 
 ////////////////////////////////////////////////////////
 // Compute a single arbitrary beam
@@ -55,11 +56,12 @@ compute_arbitrary_beam(RT_solver				   &rt_solver,		//
 // compute_arbitrary_beam_hdf
 ////////////////////////////////////////////////////////
 void
-compute_arbitrary_beam_hdf(RT_solver						&rt_solver,		 //
-						   std::shared_ptr<RT_problem>		&rt_problem_ptr, //
-						   const std::vector<BeamDirection> &beams,			 //
-						   const int						 beam_index,	 //
-						   const std::string				&output_file)					 //
+compute_arbitrary_beam_hdf(RT_solver						&rt_solver,			//
+						   bool								 write_text_output, //
+						   std::shared_ptr<RT_problem>		&rt_problem_ptr,	//
+						   const std::vector<BeamDirection> &beams,				//
+						   const int						 beam_index,		//
+						   const std::string				&output_file)						//
 {
 	const Real mu  = beams[beam_index].mu;
 	const Real chi = beams[beam_index].chi;
@@ -99,6 +101,7 @@ compute_arbitrary_beam_hdf(RT_solver						&rt_solver,		 //
 	MPI_Barrier(write_comm);
 	MPI_Comm_free(&write_comm);
 
+	if (write_text_output)
 	{ // Write individual surface profiles too
 		// For TESTING and comparison with old output
 
@@ -115,7 +118,11 @@ compute_arbitrary_beam_hdf(RT_solver						&rt_solver,		 //
 		mu_str.erase(std::remove(mu_str.begin(), mu_str.end(), '.'), mu_str.end());
 		chi_str.erase(std::remove(chi_str.begin(), chi_str.end(), '.'), chi_str.end());
 
-		const std::string output_file_Omega_mu = output_file + "_mu" + mu_str + "_chi" + chi_str;
+		const std::filesystem::path output_file_fs = output_file;
+		const std::filesystem::path head		   = output_file_fs.parent_path();
+		const std::string			file_name_base = "emergent_field_abitrary_Omega";
+
+		const std::string output_file_Omega_mu = (head / (file_name_base + "_mu" + mu_str + "_chi" + chi_str)).string();
 
 		const int Nx = rt_problem_ptr->N_x_;
 		const int Ny = rt_problem_ptr->N_y_;
@@ -128,7 +135,7 @@ compute_arbitrary_beam_hdf(RT_solver						&rt_solver,		 //
 				rt_problem_ptr->write_surface_point_profiles_Omega_csv(output_file_Omega_mu, i, j, 14);
 			}
 		}
-	} // END write individual surface profiles
+	} // END if (write_text_output)
 }
 
 ////////////////////////////////////////////////////////
@@ -222,11 +229,12 @@ process_arbitrary_beams(const std::vector<BeamDirection> &beams, RT_solver &rt_s
 }
 
 int
-process_arbitrary_beams_hdf(const std::vector<BeamDirection> &beams,			//
-							RT_solver						 &rt_solver,		//
-							std::shared_ptr<RT_problem>		 &rt_problem_ptr,	//
-							const std::string				 &output_file,		//
-							const std::filesystem::path		 &output_info_file_name) //
+process_arbitrary_beams_hdf(const std::vector<BeamDirection> &beams,			 //
+							bool							  write_text_output, //
+							RT_solver						 &rt_solver,		 //
+							std::shared_ptr<RT_problem>		 &rt_problem_ptr,	 //
+							const std::string				 &output_file,		 //
+							const std::filesystem::path		 &output_info_file_name)	 //
 {
 	const int mpi_rank = rt_problem_ptr->mpi_rank_;
 
@@ -266,7 +274,7 @@ process_arbitrary_beams_hdf(const std::vector<BeamDirection> &beams,			//
 					  << std::endl;
 		}
 
-		compute_arbitrary_beam_hdf(rt_solver, rt_problem_ptr, beams, beam_index, output_file);
+		compute_arbitrary_beam_hdf(rt_solver, write_text_output, rt_problem_ptr, beams, beam_index, output_file);
 		beams_counter++;
 	}
 

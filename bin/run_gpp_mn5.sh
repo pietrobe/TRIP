@@ -1,6 +1,6 @@
 #!/bin/bash -l
 
-#SBATCH --ntasks=4096
+#SBATCH --ntasks=12288
 #### #SBATCH --ntasks=512
 
 ## to be defined !!!!!!!!! 
@@ -9,11 +9,10 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --account=ehpc238
 #SBATCH --job-name="TRIP_PRD_3D"
-#SBATCH --qos=acc_ehpc
+#SBATCH --qos=gp_ehpc
 
 #SBATCH --exclusive
 #SBATCH --cpus-per-task=1
-#SBATCH --gres=gpu:4
 
 echo ""
 echo "=========================================="
@@ -33,14 +32,12 @@ printf "%-30s %s\n" "SLURM_SUBMIT_HOST:" "$SLURM_SUBMIT_HOST"
 printf "%-30s %s\n" "SLURM_NODEID:" "$SLURM_NODEID"
 printf "%-30s %s\n" "SLURM_PROCID:" "$SLURM_PROCID"
 printf "%-30s %s\n" "SLURM_LOCALID:" "$SLURM_LOCALID"
-printf "%-30s %s\n" "SLURM_GPUS:" "$SLURM_GPUS"
-printf "%-30s %s\n" "SLURM_GPUS_PER_NODE:" "$SLURM_GPUS_PER_NODE"
 printf "%-30s %s\n" "SLURM_OUTPUT_LOG:" "slurm-${SLURM_JOB_ID}.out"
 
 echo "=========================================="
 echo ""
 
-export APP_PATH=${HOME}/git/TRIP/build
+export APP_PATH=${HOME}/git/TRIP/build_cpu
 export SCRIPT_DIR=${HOME}/git/TRIP/bin
 
 echo ""
@@ -56,9 +53,21 @@ echo ""
 echo "Starting TRIP ...... "
 echo ""
 
-export OMPI_MCA_mpi_cuda_support=1
-export SLURM_CPU_BIND=none
-export OMPI_MCA_io=romio321
+# Carica i moduli corretti
+module load intel-oneapi-compilers
+module load intel-oneapi-mpi
+module load hdf5/1.14.1-2-intel-impi # Assicurati che sia la versione IMPI!
+
+# Tuning Intel MPI
+export I_MPI_FABRICS=shm:ofi
+export I_MPI_ADAPTIVE_PROGRESS=1
+
+# Tuning I/O per GPFS
+export I_MPI_EXTRA_FILESYSTEM=on
+export I_MPI_EXTRA_FILESYSTEM_LIST=gpfs
+export HDF5_USE_FILE_LOCKING=FALSE
+export ROMIO_HINTS="romio_cb_write=enable,romio_ds_write=disable"
+
 
 # Define arguments as a bash array
 ARGS=(
@@ -68,11 +77,7 @@ ARGS=(
 )
 
 echo "Executing command:"
-echo " srun --cpu-bind=socket  mpirun --bind-to none  ${SCRIPT_DIR}/mnacc_wrapper.sh ${APP_PATH}/solar_3D ${ARGS[@]}"
+echo " srun ${APP_PATH}/solar_3D ${ARGS[@]}"
 echo ""
 
-export SLURM_CPU_BIND=none
-
-mpirun --bind-to none  \
-      ${SCRIPT_DIR}/mnacc_wrapper.sh \
-      ${APP_PATH}/solar_3D "${ARGS[@]}"
+srun ${APP_PATH}/solar_3D "${ARGS[@]}"
