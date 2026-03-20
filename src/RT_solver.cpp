@@ -2988,7 +2988,7 @@ void MF_context::set_up_emission_module(){
     // ecc_sh_ptr_->set_threads_number(2);
 
     // in case needed, set up the emission module for J_KQ input
-    if (use_J_KQ_prec_ or solve_with_J_KQ_)     
+    if (pc_use_J_KQ_ or ksp_use_J_KQ_)     
     {
         if (mpi_rank_ == 0) std::cout << "Setting up emissivity module for CRD (no csc) using J_KQ tensors" << std::endl;
 
@@ -3449,7 +3449,7 @@ void MF_context::I_vec_to_J_KQ_vec(const Vec &I_vec, Vec &J_KQ_vec){
 
 void MF_context::I_field_to_J_KQ_vec(const Field_ptr_t field, Vec &J_KQ_vec){
 
-    if (mpi_rank_ == 0) std::cout << "\nCopying field to Vec...";
+    if (mpi_rank_ == 0 and RT_problem_->verbose_) std::cout << "\nCopying field to Vec...";
 
     PetscErrorCode ierr; 
         
@@ -3515,7 +3515,7 @@ void MF_context::I_field_to_J_KQ_vec(const Field_ptr_t field, Vec &J_KQ_vec){
 
     ierr = PetscFree(ix_J_KQ);CHKERRV(ierr); 
 
-    if (mpi_rank_ == 0) std::cout << "done" << std::endl;
+    if (mpi_rank_ == 0 and RT_problem_->verbose_) std::cout << "done" << std::endl;
 }
 
 // emissivity from scattering (line + continuum)
@@ -4245,7 +4245,6 @@ PetscErrorCode UserMult_JKQ(Mat mat, Vec x, Vec y){
 }
 
 
-
 // matrix-free matrix vector multiplication y = (Id - LJ)x
 PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
 
@@ -4260,7 +4259,7 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
     Real start = MPI_Wtime();       
     
     // TODO: create update_emission_unpol not needing in/out conversions 
-    if (mf_ctx_->use_J_KQ_prec_)
+    if (mf_ctx_->pc_use_J_KQ_)
     {
         // compute new emission in S_field_ 
         mf_ctx_->update_emission_J_KQ(x);          
@@ -4285,7 +4284,7 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
     MPI_Reduce(&emission_timer, &emission_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     if (RT_problem->mpi_rank_ == 0 and RT_problem->verbose_) printf("Update preconditioner emission:\t\t%g seconds\n", emission_timer_max);          
     
-    if (mf_ctx_->use_J_KQ_prec_)
+    if (mf_ctx_->pc_use_J_KQ_)
     {
         // fill rhs_ from formal solve with zero bc     
         mf_ctx_->formal_solve(RT_problem->I_field_, RT_problem->S_field_, 0.0);
@@ -4334,6 +4333,7 @@ PetscErrorCode MF_pc_Destroy(PC pc){
 	return ierr;
 }
 
+
 PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y){
 
 	PetscErrorCode ierr;
@@ -4345,7 +4345,7 @@ PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y){
     auto RT_problem = mf_ctx->RT_problem_;
 
 	// apply	
-    if (mf_ctx->use_J_KQ_prec_)
+    if (mf_ctx->pc_use_J_KQ_)
     {                
         // Restrict full radiation field to J_KQ
         mf_ctx->I_vec_to_J_KQ_vec(x, mf_ctx->x_J_KQ_);        
@@ -4386,7 +4386,7 @@ PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y){
         ierr = KSPSolve(mf_ctx->pc_solver_, x, y);CHKERRQ(ierr);
     }
 	
-    // print preconditioner ConvergedReason 
+    // print preconditioner ConvergedReason
     KSPConvergedReason reason;
     ierr = KSPGetConvergedReason(mf_ctx->pc_solver_, &reason);CHKERRQ(ierr);
     

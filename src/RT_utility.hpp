@@ -171,7 +171,7 @@ struct AppConfig
 	// Output settings
 	bool output						 = false;
 	bool output_overwrite_prevention = false;
-	bool write_whole_3D_field_hdf5	 = true; // testing
+	bool write_whole_3D_field_hdf5	 = false; // testing
 
 	// testing
 	std::filesystem::path reference_sol_directory;

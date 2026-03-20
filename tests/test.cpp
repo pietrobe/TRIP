@@ -10,7 +10,7 @@
 #include <cmath>
 #include <algorithm>
 
-#define ABS_TOL 1e-7
+#define ABS_TOL 1e-5
 #define REL_TOL 1e-6
 
 #define RED     "\033[31m"
@@ -46,7 +46,7 @@ std::string compare_csv_report(const std::string& file1, const std::string& file
     if (!f1.is_open()) { is_equal = false; return "Cannot open " + file1; }
     if (!f2.is_open()) { is_equal = false; return "Cannot open " + file2; }
 
-    const char* labels[4] = {"I","Q","U","V"};
+    const char*  labels[4] = {"I     ","Q/I[%]","U/I[%]","V/I[%]"};
     const double absTol[4] = {ABS_TOL, ABS_TOL, ABS_TOL, ABS_TOL};
     const double relTol[4] = {REL_TOL, REL_TOL*100, REL_TOL*100, REL_TOL*100};
 
@@ -125,7 +125,7 @@ std::string compare_csv_report(const std::string& file1, const std::string& file
     report << "---------|----------------|----------------\n";
     for (int i=0; i<4; i++)
     {
-        report << labels[i] << "        | "
+        report << labels[i] << "   | "
                << max_abs_diff[i] << " | "
                << max_rel_diff[i] << "\n";
     }

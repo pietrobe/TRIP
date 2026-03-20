@@ -2458,8 +2458,6 @@ void RT_problem::set_3D_decomposition(const int N_x, const int N_y, const int N_
    mpi_size_x_ = best_px;
    mpi_size_y_ = best_py;
    mpi_size_z_ = best_pz;
-
-   if (mpi_rank_ == 0) std::cout << "Load balancing factor Vmax/Vmin (1.0 = optimal): " << best_score << std::endl;   
 }
 
 

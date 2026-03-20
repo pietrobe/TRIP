@@ -55,14 +55,14 @@ struct MF_context {
 	const bool use_always_long_ray_  = true;
 
 	// use JKQ vector as unknown
-	bool solve_with_J_KQ_;
+	bool ksp_use_J_KQ_;
 	int tot_J_KQ_size_; // e.g. N_s * J_KQ_size_
 	int local_J_KQ_size_; 
 	const int J_KQ_size_ = 18;
 
 	// reduced models flags for preconditioner
 	const bool unpolarized_prec_ = false;
-	bool use_J_KQ_prec_; 
+	bool pc_use_J_KQ_; 
 	
 	// formal solution in arbitrary direction
 	bool formal_solution_Omega_ = false;
@@ -201,24 +201,30 @@ public:
 
     	mf_ctx_.formal_solver_ = Formal_solver(cfg.formal_solver);     
 
-    	mf_ctx_.solve_with_J_KQ_ = cfg.solver.ksp_use_J_KQ;
-    	mf_ctx_.use_J_KQ_prec_   = cfg.prec.pc_use_J_KQ;
+    	mf_ctx_.ksp_use_J_KQ_ = cfg.solver.ksp_use_J_KQ;
+    	mf_ctx_.pc_use_J_KQ_  = cfg.prec.pc_use_J_KQ;
 
     	// safety check when J_KQ solution is enabled
     	const std::string emissivity_model = emissivity_model_to_string_long(cfg.emissivity_model);
 
-		if (mf_ctx_.solve_with_J_KQ_ and emissivity_model.find("PRD") != std::string::npos)
+		if (mf_ctx_.ksp_use_J_KQ_ and emissivity_model.find("PRD") != std::string::npos)
 		{
 		    if (mpi_rank_ == 0)
 		    {
 		        std::cout << "WARNING: J_KQ solver cannot be used with PRD "
 		                  << "(emissivity_model = " << emissivity_model << "). "
-		                  << "Swithicing to solve_with_J_KQ_ = false.\n";
+		                  << "Switching to ksp_use_J_KQ_ = false.\n";
 		    }
 		    
-		    mf_ctx_.solve_with_J_KQ_ = false;
+		    mf_ctx_.ksp_use_J_KQ_ = false;
 		}   	
-    	
+    
+		if (cfg.formal_solver == "BESSER" and emissivity_model.find("PRD") != std::string::npos and strcmp(ksp_type_, KSPRICHARDSON) != 0 and mpi_rank_ == 0)
+                {
+                   std::cout << "WARNING: BESSER with GMRES can stagnate in PRD, switch to DELO_linear or KSPRICHARDSON for better stability.\n";
+                }
+
+
     	// init serial grids for formal solution (not needed for 1.5D)
     	if (RT_problem_->use_1_5D_approx_)
     	{
@@ -231,7 +237,7 @@ public:
     	}
     	
     	// init unpolarized formal solver and data structures
-    	if (mf_ctx_.use_J_KQ_prec_ or mf_ctx_.solve_with_J_KQ_)    	
+    	if (mf_ctx_.pc_use_J_KQ_ or mf_ctx_.ksp_use_J_KQ_)    	
     	{    		
     		mf_ctx_.init_J_KQ_vectors();    		
     	}
@@ -260,7 +266,7 @@ public:
 		ierr = VecGetLocalSize(rhs_, &local_size);CHKERRV(ierr); 		
 
 		// init user defined Mat mult
-		if (mf_ctx_.solve_with_J_KQ_)
+		if (mf_ctx_.ksp_use_J_KQ_)
 		{
 			ierr = MatCreateShell(PETSC_COMM_WORLD,mf_ctx_.local_J_KQ_size_,mf_ctx_.local_J_KQ_size_,mf_ctx_.tot_J_KQ_size_,mf_ctx_.tot_J_KQ_size_,
 													   (void*)&mf_ctx_,&MF_operator_);CHKERRV(ierr); 	
@@ -293,7 +299,7 @@ public:
     	// set MF_operator_approx_		
     	if (using_prec_)
     	{    	    		
-    		if (mf_ctx_.use_J_KQ_prec_)        		
+    		if (mf_ctx_.pc_use_J_KQ_)        		
     		{    			
     			ierr = MatCreateShell(PETSC_COMM_WORLD,mf_ctx_.local_J_KQ_size_,mf_ctx_.local_J_KQ_size_,
     												   mf_ctx_.tot_J_KQ_size_,mf_ctx_.tot_J_KQ_size_,
@@ -344,11 +350,18 @@ public:
     	// adding some options for verbosity
 		if (RT_problem_->verbose_)  {
 			ierr = PetscOptionsSetValue(NULL, "-ksp_monitor", "");CHKERRV(ierr);
-			// ierr = PetscOptionsSetValue(NULL, "-ksp_monitor_true_residual", "");CHKERRV(ierr);    
+			// ierr = PetscOptionsSetValue(NULL, "-ksp_monitor_true_residual", "");CHKERRV(ierr);    // WARNING: this costs 
 			ierr = PetscOptionsSetValue(NULL, "-ksp_view", "");CHKERRV(ierr);		
-		}
-		ierr = PetscOptionsSetValue(NULL, "-ksp_converged_reason", "");CHKERRV(ierr);		
-		
+		}		
+
+		ierr = PetscOptionsSetValue(NULL, "-ksp_converged_reason", "");CHKERRV(ierr);
+
+
+		PetscBool ksp_true_res_flg;
+  		PetscOptionsHasName(NULL,NULL,"-ksp_monitor_true_residual",&ksp_true_res_flg);
+                if (ksp_true_res_flg) PetscPrintf(PETSC_COMM_WORLD,"WARNING: -ksp_monitor_true_residual may significantly impact performance.\n\n");
+  
+
     	// extra options from command line   	
     	ierr = KSPSetFromOptions(ksp_solver_);CHKERRV(ierr);
     	// ierr = KSPSetFromOptions(mf_ctx_.pc_solver_);CHKERRV(ierr);    
@@ -369,7 +382,7 @@ public:
 		
 		if (mpi_rank_ == 0) std::cout << "\nStart linear solve..." << std::endl;		
 
-		if (mf_ctx_.solve_with_J_KQ_)
+		if (mf_ctx_.ksp_use_J_KQ_)
 		{
 			solve_with_J_KQ();
 		}	

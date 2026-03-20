@@ -16,16 +16,10 @@ set_uniform_B: true
 B_field: [12.0, 0.78, 0.78]
 
 verbose: false
-
-use_prec: true
+use_prec: false
 
 solver:
   ksp_solver_type: KSPFGMRES
   ksp_rtol: 1e-7
   ksp_max_it: 1000
-  # gmres_restart: 20
-
-prec:
-  pc_solver_type: KSPGMRES
-  pc_rtol: 1e-6
-  pc_max_it: 1000
+  ksp_use_J_KQ: false

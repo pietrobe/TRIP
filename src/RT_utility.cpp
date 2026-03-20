@@ -10,6 +10,7 @@ toKSPType(const std::string &name)
 	if (name == "KSPPGMRES") return KSPPGMRES;
 	if (name == "KSPBCGS") return KSPBCGS;
 	if (name == "KSPPREONLY") return KSPPREONLY;
+	if (name == "KSPRICHARDSON") return KSPRICHARDSON;
 
 	throw std::runtime_error("Unknown KSPType: " + name);
 }
@@ -22,6 +23,7 @@ KSPTypeToString(KSPType type)
 	if (type == KSPPGMRES) return "KSPPGMRES";
 	if (type == KSPBCGS) return "KSPBCGS";
 	if (type == KSPPREONLY) return "KSPPREONLY";
+	if (type == KSPRICHARDSON) return "KSPRICHARDSON";
 
 	return "UNKNOWN";
 }
@@ -209,7 +211,7 @@ loadConfig(const std::string &filename)
 		if (p["pc_solver_type"]) cfg.prec.pc_solver_type = toKSPType(p["pc_solver_type"].as<std::string>());
 		if (p["pc_rtol"])        cfg.prec.pc_rtol        = p["pc_rtol"].as<double>();
 		if (p["pc_max_it"])      cfg.prec.pc_max_it      = p["pc_max_it"].as<int>();
-		if (p["pc_use_J_KQ"])    cfg.prec.pc_use_J_KQ  = p["pc_use_J_KQ"].as<bool>();
+		if (p["pc_use_J_KQ"])    cfg.prec.pc_use_J_KQ    = p["pc_use_J_KQ"].as<bool>();
 	}
 
 	// Arbitrary beams section
