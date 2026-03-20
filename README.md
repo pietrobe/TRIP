@@ -24,8 +24,7 @@ Optional dependencies:
 * CUDA (for accelerator support)
 
 ## Compilation and Execution
-We assume the following environment variables:
-- `TRIP_MAIN_DIR` — root directory of TRIP
+We assume the environment variables `TRIP_MAIN_DIR` as the root directory of TRIP.
 
 ### Standard build
 After cloning the TRIP repository:
