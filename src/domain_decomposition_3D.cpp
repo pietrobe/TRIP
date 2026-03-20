@@ -95,15 +95,15 @@ namespace domain_decomposition_3D
 	int
 	DomainInfo::neighbor_rank(int dix, int diy, int diz) const noexcept
 	{
-		const int nx = ix + dix;
-		const int ny = iy + diy;
-		const int nz = iz + diz;
+		const int nx = this->ix + dix;
+		const int ny = this->iy + diy;
+		const int nz = this->iz + diz;
 
 		if (nx < 0 || nx >= Px) return MPI_PROC_NULL;
 		if (ny < 0 || ny >= Py) return MPI_PROC_NULL;
 		if (nz < 0 || nz >= Pz) return MPI_PROC_NULL;
 
-		return rank_of(nx, ny, nz);
+		return this->rank_of(nx, ny, nz);
 	}
 
 	// ---------------------------------------------------------------------------
@@ -178,13 +178,15 @@ namespace domain_decomposition_3D
 		}
 
 		DomainInfo result{};
-		result.Px = info_.Px;
-		result.Py = info_.Py;
-		result.Pz = info_.Pz;
 
-		result.N_x = info_.N_x;
-		result.N_y = info_.N_y;
-		result.N_z = info_.N_z;
+		result.set_global_decomposition(info_.N_x, info_.N_y, info_.N_z, info_.Px, info_.Py, info_.Pz);
+		// result.Px = info_.Px;
+		// result.Py = info_.Py;
+		// result.Pz = info_.Pz;
+
+		// result.N_x = info_.N_x;
+		// result.N_y = info_.N_y;
+		// result.N_z = info_.N_z;
 
 		// Map linear rank -> 3D processor coordinate (row-major)
 		// rank = ix*(Py*Pz) + iy*Pz + iz
@@ -193,9 +195,9 @@ namespace domain_decomposition_3D
 		// result.iy = (rank % (result.Py * result.Pz)) / result.Pz;
 		// result.iz = rank % result.Pz;
 
-		get_1d_decomposition(result.N_x, result.Px, result.ix, result.N_local_x, result.local_start_x);
-		get_1d_decomposition(result.N_y, result.Py, result.iy, result.N_local_y, result.local_start_y);
-		get_1d_decomposition(result.N_z, result.Pz, result.iz, result.N_local_z, result.local_start_z);
+		// get_1d_decomposition(result.N_x, result.Px, result.ix, result.N_local_x, result.local_start_x);
+		// get_1d_decomposition(result.N_y, result.Py, result.iy, result.N_local_y, result.local_start_y);
+		// get_1d_decomposition(result.N_z, result.Pz, result.iz, result.N_local_z, result.local_start_z);
 
 		return result;
 	}

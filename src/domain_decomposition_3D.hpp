@@ -50,6 +50,18 @@ namespace domain_decomposition_3D
 		int
 		rank_of(int px, int py, int pz) const noexcept;
 
+		inline void
+		set_global_decomposition(const int Nx, const int Ny, const int Nz, const int Px, const int Py,
+								 const int Pz) noexcept
+		{
+			this->N_x = Nx;
+			this->N_y = Ny;
+			this->N_z = Nz;
+			this->Px  = Px;
+			this->Py  = Py;
+			this->Pz  = Pz;
+		}
+
 		/// Returns the MPI rank of the neighbor at grid offset (dix, diy, diz)
 		/// relative to this rank, or MPI_PROC_NULL at domain boundaries.
 		int
@@ -101,9 +113,13 @@ namespace domain_decomposition_3D
 		inline void
 		set_rank(int rank) noexcept
 		{
-			ix = rank / (Py * Pz);
-			iy = (rank % (Py * Pz)) / Pz;
-			iz = rank % Pz;
+			this->ix = rank / (this->Py * this->Pz);
+			this->iy = (rank % (this->Py * this->Pz)) / this->Pz;
+			this->iz = rank % this->Pz;
+
+			get_1d_decomposition(this->N_x, this->Px, this->ix, this->N_local_x, this->local_start_x);
+			get_1d_decomposition(this->N_y, this->Py, this->iy, this->N_local_y, this->local_start_y);
+			get_1d_decomposition(this->N_z, this->Pz, this->iz, this->N_local_z, this->local_start_z);
 		}
 
 		inline double
