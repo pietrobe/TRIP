@@ -117,13 +117,16 @@ namespace domain_decomposition_3D
 
 		for (int px = 1; px <= size; ++px)
 		{
-			if (size % px != 0) continue;
+			if (size % px != 0 or px > Nx) continue;
 
 			for (int py = 1; py <= size / px; ++py)
 			{
-				if ((size / px) % py != 0) continue;
+				if ((size / px) % py != 0 or py > Ny) continue;
 
 				const int pz = size / (px * py);
+
+				const bool is_feasible = (px <= Nx and py <= Ny and pz <= Nz);
+				if (not is_feasible) continue;
 
 				// Local subdomain extents for this factorization
 				const double lx = static_cast<double>(Nx) / px;
@@ -155,7 +158,7 @@ namespace domain_decomposition_3D
 					this->factorization_cache_.emplace_back(std::move(info));
 				}
 
-				if (this->factorization_cache_.size() > 10)
+				if (this->factorization_cache_.size() > 15)
 				{
 					// Assuming factorization_cache_ is sorted by score_ ascending,
 					// the worst score is at the back.
@@ -430,12 +433,19 @@ namespace domain_decomposition_3D
 		const int default_mpi_rank = 0;
 		const int default_mpi_size = 4098 * 6;
 
-		int mpi_rank = read_env_int_or_default("DD_MPI_RANK", default_mpi_rank);
-		int mpi_size = read_env_int_or_default("DD_MPI_SIZE", default_mpi_size);
+		const int mpi_rank = read_env_int_or_default("DD_MPI_RANK", default_mpi_rank);
+		const int mpi_size = read_env_int_or_default("DD_MPI_SIZE", default_mpi_size);
+
+		const int N_x = read_env_int_or_default("DD_HDF_N_X", 128);
+		const int N_y = read_env_int_or_default("DD_HDF_N_Y", 128);
+		const int N_z = read_env_int_or_default("DD_HDF_N_Z", 128);
 
 		std::printf("Environment overrides (defaults in use when unset/invalid):\n");
 		std::printf("export DD_MPI_RANK=%d\n", mpi_rank);
 		std::printf("export DD_MPI_SIZE=%d\n\n\n", mpi_size);
+		std::printf("export DD_HDF_N_X=%d\n", N_x);
+		std::printf("export DD_HDF_N_Y=%d\n", N_y);
+		std::printf("export DD_HDF_N_Z=%d\n\n\n", N_z);
 
 		auto primes	   = prime_factors(mpi_size);
 		int	 max_prime = primes.empty() ? 1 : std::max(0, primes.back());
@@ -445,10 +455,6 @@ namespace domain_decomposition_3D
 			std::printf(" %d", p);
 		}
 		std::printf("  max prime factor: %d\n", max_prime);
-
-		const int N_x = read_env_int_or_default("HDF_N_X", 128);
-		const int N_y = read_env_int_or_default("HDF_N_Y", 128);
-		const int N_z = read_env_int_or_default("HDF_N_Z", 128);
 
 		if (max_prime > std::min({N_x, N_y, N_z}))
 		{

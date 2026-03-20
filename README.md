@@ -45,6 +45,12 @@ cmake .. -DRII_ROOT_PATH=/path_to_rii/rii/rii-c/ \
          -DUSE_ACC=ON;
 make -j
 ```
+#### troubleshooting
+If Petsc is installed by the user and is not in a default system path before the compilation it is necessary to export the env variables:
+```bash
+export PETSC_DIR=${PETSC_MAIN_PATH}/petsc-install;
+export PKG_CONFIG_PATH=$PETSC_DIR/lib/pkgconfig:$PKG_CONFIG_PATH;
+```
 
 ## Input
 Input is provided via a YAML configuration file.
@@ -58,9 +64,9 @@ The scattering module can be changed via the `emissivity_model` field, between t
 | **CRD_limit**  | CRD limit (default set to CRD_GL)                                  |
 | **CRD_limit_VHP** | CRD limit with VHP (very high precision) approximation         |
 | **PRD**        | default (PRD_FAST), partial redistribution (default grid)           |
-| **PRD_NORMAL** | force PRD with original grid                                       |
-| **PRD_MEDIUM** | force PRD with the same or better accuracy w.r.t. PRD_NORMAL but faster          |
-| **PRD_FAST**   | force PRD with fast grid                                           |
+| **PRD_NORMAL** | PRD with original grid                                       |
+| **PRD_MEDIUM** | PRD with the same or better accuracy w.r.t. PRD_NORMAL but faster          |
+| **PRD_FAST**   | PRD with fast grid                                           |
 | **PRD_AA**     | angle-averaged PRD method                                          |
 | **PRD_AA_MAPV** | angle-averaged PRD storing a value map (**high memory usage**), 2 .. 3 times faster   |
 | **ZERO**       | continuum                                                          |
