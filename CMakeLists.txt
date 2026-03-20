@@ -102,7 +102,6 @@ list(APPEND SOURCES_FILES
     src/Utilities.cpp
     src/RT_utility.cpp
     src/RT_arbitrary_beam.cpp
-    src/domain_decomposition.cpp
     src/domain_decomposition_3D.cpp
 )
 

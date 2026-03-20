@@ -24,6 +24,9 @@ namespace domain_decomposition_3D
 	// DomainInfo — plain data holder for a single rank's decomposition result
 	// ---------------------------------------------------------------------------
 
+	void
+	get_1d_decomposition(int n_global, int p_dims, int p_coord, int &n_local, int &start) noexcept;
+
 	struct DomainInfo
 	{
 		// Processor grid dimensions
@@ -93,6 +96,14 @@ namespace domain_decomposition_3D
 		operator>=(const DomainInfo &other) const noexcept
 		{
 			return !(*this < other);
+		}
+
+		inline void
+		set_rank(int rank) noexcept
+		{
+			ix = rank / (Py * Pz);
+			iy = (rank % (Py * Pz)) / Pz;
+			iz = rank % Pz;
 		}
 
 		inline double
@@ -173,15 +184,31 @@ namespace domain_decomposition_3D
 
 		/// Splits \p n_global cells across \p p_dims ranks;
 		/// returns (n_local, start) for rank \p p_coord.
-		static void
-		get_1d_decomposition(int n_global, int p_dims, int p_coord, int &n_local, int &start) noexcept;
 	};
 
 	// ---------------------------------------------------------------------------
 	// Stand-alone demo (mirrors demo_decompose_domain_3d)
 	// ---------------------------------------------------------------------------
+
+	/// Result from select_best_decomposition
+	struct DecompositionSelection
+	{
+		DomainInfo best_info;
+		double	   aspect_ratio	  = 0.0;
+		double	   score		  = 0.0;
+		double	   grid_ratio	  = 0.0;
+		double	   load_imbalance = 0.0;
+		bool	   found		  = false;
+	};
+
 	void
 	analyze_decomposition(const DomainInfo &info, int mpi_size);
+
+	/// Selects the best decomposition from a list of candidates based on:
+	/// load imbalance, aspect ratio, score, and grid ratio (max/min processor count).
+	/// If verbose is true, prints evaluation details for each candidate.
+	DecompositionSelection
+	select_best_decomposition(const std::deque<DomainInfo> &candidates, bool verbose = true);
 
 	void
 	demo_decompose_domain_3d();

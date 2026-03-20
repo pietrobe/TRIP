@@ -40,10 +40,30 @@ namespace domain_decomposition_3D
 	}
 
 	// ---------------------------------------------------------------------------
+	// DomainDecomposition class definition
+	// ---------------------------------------------------------------------------
+	void
+	get_1d_decomposition(int n_global, int p_dims, int p_coord, int &n_local, int &start) noexcept
+	{
+		const int base		= n_global / p_dims;
+		const int remainder = n_global % p_dims;
+
+		if (p_coord < remainder)
+		{
+			n_local = base + 1;
+			start	= p_coord * (base + 1);
+		}
+		else
+		{
+			n_local = base;
+			start	= remainder * (base + 1) + (p_coord - remainder) * base;
+		}
+	}
+
+	// ---------------------------------------------------------------------------
 	// Helpers: read an environment variable as a positive int, or fall back to a
 	// default value.
 	// ---------------------------------------------------------------------------
-
 	static int
 	read_env_int_or_default(const char *name, int default_value) noexcept
 	{
@@ -66,7 +86,6 @@ namespace domain_decomposition_3D
 	// ---------------------------------------------------------------------------
 	// DomainInfo member functions
 	// ---------------------------------------------------------------------------
-
 	int
 	DomainInfo::rank_of(int px, int py, int pz) const noexcept
 	{
@@ -90,7 +109,6 @@ namespace domain_decomposition_3D
 	// ---------------------------------------------------------------------------
 	// DomainDecomposition — private static helpers
 	// ---------------------------------------------------------------------------
-
 	void
 	DomainDecomposition::factorize_procs(int size, int Nx, int Ny, int Nz, int &Px, int &Py, int &Pz)
 	{
@@ -151,24 +169,6 @@ namespace domain_decomposition_3D
 		Pz = best_pz;
 	}
 
-	void
-	DomainDecomposition::get_1d_decomposition(int n_global, int p_dims, int p_coord, int &n_local, int &start) noexcept
-	{
-		const int base		= n_global / p_dims;
-		const int remainder = n_global % p_dims;
-
-		if (p_coord < remainder)
-		{
-			n_local = base + 1;
-			start	= p_coord * (base + 1);
-		}
-		else
-		{
-			n_local = base;
-			start	= remainder * (base + 1) + (p_coord - remainder) * base;
-		}
-	}
-
 	DomainInfo
 	DomainDecomposition::info_for_rank(int rank) const
 	{
@@ -188,9 +188,10 @@ namespace domain_decomposition_3D
 
 		// Map linear rank -> 3D processor coordinate (row-major)
 		// rank = ix*(Py*Pz) + iy*Pz + iz
-		result.ix = rank / (result.Py * result.Pz);
-		result.iy = (rank % (result.Py * result.Pz)) / result.Pz;
-		result.iz = rank % result.Pz;
+		result.set_rank(rank);
+		// result.ix = rank / (result.Py * result.Pz);
+		// result.iy = (rank % (result.Py * result.Pz)) / result.Pz;
+		// result.iz = rank % result.Pz;
 
 		get_1d_decomposition(result.N_x, result.Px, result.ix, result.N_local_x, result.local_start_x);
 		get_1d_decomposition(result.N_y, result.Py, result.iy, result.N_local_y, result.local_start_y);
@@ -211,9 +212,7 @@ namespace domain_decomposition_3D
 
 			// Map linear rank -> 3D processor coordinate (row-major)
 			// rank = ix*(Py*Pz) + iy*Pz + iz
-			new_info.ix = rank / (info_itr->Py * info_itr->Pz);
-			new_info.iy = (rank % (info_itr->Py * info_itr->Pz)) / info_itr->Pz;
-			new_info.iz = rank % info_itr->Pz;
+			new_info.set_rank(rank);
 
 			get_1d_decomposition(info_itr->N_x, info_itr->Px, new_info.ix, new_info.N_local_x, new_info.local_start_x);
 			get_1d_decomposition(info_itr->N_y, info_itr->Py, new_info.iy, new_info.N_local_y, new_info.local_start_y);
@@ -249,6 +248,9 @@ namespace domain_decomposition_3D
 		info_ = info_for_rank(mpi_rank);
 	}
 
+	// ---------------------------------------------------------------------------
+	// DomainDecomposition — analysis and demo
+	// ---------------------------------------------------------------------------
 	void
 	analyze_decomposition(const DomainInfo &info, int mpi_size)
 	{
@@ -283,9 +285,11 @@ namespace domain_decomposition_3D
 			info_i.N_y = info.N_y;
 			info_i.N_z = info.N_z;
 
-			info_i.ix = rank_i / (info_i.Py * info_i.Pz);
-			info_i.iy = (rank_i % (info_i.Py * info_i.Pz)) / info_i.Pz;
-			info_i.iz = rank_i % info_i.Pz;
+			info_i.set_rank(rank_i);
+
+			// info_i.ix = rank_i / (info_i.Py * info_i.Pz);
+			// info_i.iy = (rank_i % (info_i.Py * info_i.Pz)) / info_i.Pz;
+			// info_i.iz = rank_i % info_i.Pz;
 
 			const auto fill_1d = [](int n_global, int p_dims, int p_coord, int &n_local, int &start)
 			{
@@ -323,6 +327,22 @@ namespace domain_decomposition_3D
 		const double imbalance = static_cast<double>(num_cells_max) / average_cells;
 		std::printf("  Load imbalance (max/average): %.3f\n", imbalance);
 
+		const int total_local_domains = static_cast<int>(all_info.size());
+		if (total_local_domains == mpi_size)
+			std::printf("  Local-domain count check: OK - %d local domains for %d MPI ranks.\n", total_local_domains,
+						mpi_size);
+		else
+			std::printf("  Local-domain count check: FAILED - %d local domains for %d MPI ranks.\n", total_local_domains,
+						mpi_size);
+
+		const long long expected_total_cells = 1LL * info.N_x * info.N_y * info.N_z;
+		if (static_cast<long long>(total_cells) == expected_total_cells)
+			std::printf("  Cell-sum check: OK - sum(local cells) = %d matches global cells = %lld.\n", total_cells,
+						expected_total_cells);
+		else
+			std::printf("  Cell-sum check: FAILED - sum(local cells) = %d, expected global cells = %lld.\n", total_cells,
+						expected_total_cells);
+
 		int overlap_count = 0;
 		for (int i = 0; i < mpi_size; ++i)
 		{
@@ -357,14 +377,63 @@ namespace domain_decomposition_3D
 	}
 
 	// ---------------------------------------------------------------------------
+	// select_best_decomposition
+	// ---------------------------------------------------------------------------
+	DecompositionSelection
+	select_best_decomposition(const std::deque<DomainInfo> &candidates, bool verbose)
+	{
+		DecompositionSelection result{};
+
+		for (const auto &info : candidates)
+		{
+			const double aspect_ratio	= info.aspect_ratio_score();
+			const int	 p_max			= std::max(info.Px, std::max(info.Py, info.Pz));
+			const int	 p_min			= std::min(info.Px, std::min(info.Py, info.Pz));
+			const double grid_ratio		= static_cast<double>(p_max) / p_min;
+			const double load_imbalance = info.load_imbalance();
+
+			const bool is_better = !result.found
+								   || std::tie(load_imbalance, aspect_ratio, info.score_, grid_ratio) < std::tie(
+										  result.load_imbalance, result.aspect_ratio, result.score, result.grid_ratio);
+
+			if (verbose)
+			{
+				std::printf(
+					"C: aspect ratio: %.3f || score: %.3f || g-ratio max/min: %.3f || imbalance: %.3f || grid: %d x %d x "
+					"%d%s\n",
+					aspect_ratio, info.score_, grid_ratio, load_imbalance, info.Px, info.Py, info.Pz,
+					is_better ? "  *" : "");
+			}
+
+			if (is_better)
+			{
+				result.best_info	  = info;
+				result.aspect_ratio	  = aspect_ratio;
+				result.score		  = info.score_;
+				result.grid_ratio	  = grid_ratio;
+				result.load_imbalance = load_imbalance;
+				result.found		  = true;
+			}
+		}
+
+		return result;
+	}
+
+	// ---------------------------------------------------------------------------
 	// demo_decompose_domain_3d
 	// ---------------------------------------------------------------------------
-
 	void
 	demo_decompose_domain_3d()
 	{
-		constexpr int mpi_rank = 0;
-		constexpr int mpi_size = 4096 * 6;
+		const int default_mpi_rank = 0;
+		const int default_mpi_size = 4098 * 6;
+
+		int mpi_rank = read_env_int_or_default("DD_MPI_RANK", default_mpi_rank);
+		int mpi_size = read_env_int_or_default("DD_MPI_SIZE", default_mpi_size);
+
+		std::printf("Environment overrides (defaults in use when unset/invalid):\n");
+		std::printf("export DD_MPI_RANK=%d\n", mpi_rank);
+		std::printf("export DD_MPI_SIZE=%d\n\n\n", mpi_size);
 
 		auto primes	   = prime_factors(mpi_size);
 		int	 max_prime = primes.empty() ? 1 : std::max(0, primes.back());
@@ -400,51 +469,18 @@ namespace domain_decomposition_3D
 		analyze_decomposition(d, mpi_size);
 
 		auto best_infos = dd.best_infos(mpi_rank);
+		auto selection	= select_best_decomposition(best_infos, true);
 
-		DomainInfo best_info{};
-		bool	   has_best_info	   = false;
-		double	   best_aspect_ratio   = 0.0;
-		double	   best_score		   = 0.0;
-		double	   best_grid_ratio	   = 0.0;
-		double	   best_load_imbalance = 0.0;
+		analyze_decomposition(selection.best_info, mpi_size);
 
-		for (const auto &info : best_infos)
-		{
-			const double aspect_ratio	= info.aspect_ratio_score();
-			const int	 p_max			= std::max(info.Px, std::max(info.Py, info.Pz));
-			const int	 p_min			= std::min(info.Px, std::min(info.Py, info.Pz));
-			const double grid_ratio		= static_cast<double>(p_max) / p_min;
-			const double load_imbalance = info.load_imbalance();
-
-			const bool is_better = !has_best_info
-								   || std::tie(load_imbalance, aspect_ratio, info.score_, grid_ratio)
-										  < std::tie(best_load_imbalance, best_aspect_ratio, best_score, best_grid_ratio);
-
-			std::printf(
-				"C: aspect ratio: %.3f || score: %.3f || g-ratio max/min: %.3f || imbalance: %.3f || grid: %d x %d x "
-				"%d%s\n",
-				aspect_ratio, info.score_, grid_ratio, load_imbalance, info.Px, info.Py, info.Pz, is_better ? "  *" : "");
-
-			if (is_better)
-			{
-				best_info			= info;
-				best_aspect_ratio	= aspect_ratio;
-				best_score			= info.score_;
-				best_grid_ratio		= grid_ratio;
-				best_load_imbalance = load_imbalance;
-				has_best_info		= true;
-			}
-		}
-
-		analyze_decomposition(best_info, mpi_size);
-
-		if (has_best_info)
+		if (selection.found)
 		{
 			std::printf(
-				"\n\n  Selected best info: aspect ratio = %.3f || score = %.3f || grid ratio max/min = %.3f || load "
-				"imbalance = %.3f || grid: %d x %d x %d\n",
-				best_aspect_ratio, best_score, best_grid_ratio, best_load_imbalance, best_info.Px, best_info.Py,
-				best_info.Pz);
+				"\n\nSelected best info:\n> aspect ratio: %.2f || score: %.2f || grid ratio max/min: %.2f || load "
+				"imbalance: "
+				"%.2f || grid: %d x %d x %d\n",
+				selection.aspect_ratio, selection.score, selection.grid_ratio, selection.load_imbalance,
+				selection.best_info.Px, selection.best_info.Py, selection.best_info.Pz);
 		}
 	}
 
