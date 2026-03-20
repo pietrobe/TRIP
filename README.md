@@ -26,54 +26,6 @@ Optional dependencies:
 ## Compilation and Execution
 We assume the following environment variables:
 - `TRIP_MAIN_DIR` — root directory of TRIP
-- `RII_MAIN_DIR` — root directory of rii
-
-### Prerequisite: Build rii
-Clone the *rii* repository, then:
-```bash
-mkdir -p ${RII_MAIN_DIR}/rii-c/build/;
-cd ${RII_MAIN_DIR}/rii-c/build/;
-
-cmake .. -DDYNAMIC_LIBRARY=ON \
-         -DUSE_RII_CONTRIB_V4=ON \
-         -DOUT_LOG_LEVEL=0 \
-         -DDEBUG=OFF \
-         -DUSE_KERNEL_DIRECT_VECT=ON \
-         -DCMAKE_CXX_COMPILER=g++ \
-         -DRII_GLOBALJUMP=8;
-make -j
-```
-
-**Accelerator support (optional)**
-
-Build the *rii* accelerated module:
-```bash
-cd ${RII_MAIN_DIR}/rii-c/src_acc;
-make clean;
-make cuda_arch=90 -j12;
-```
-The `cuda_arch=90` option targets the NVIDIA H100 GPUs (e.g. on the MareNostrum 5 ACC and Alps Daint systems). Adjust this flag for other GPU architectures.
-
-For the MareNostrum 5 ACC system, use:
-```bash
-make cuda_arch=90 CXX=/apps/ACC/GCC/11.4.0/bin/g++ -j12
-```
-
-Then rebuild *rii* with accelerator support:
-```bash
-mkdir -p ${RII_MAIN_DIR}/rii-c/build/;
-cd ${RII_MAIN_DIR}/rii-c/build/;
-
-cmake .. -DDYNAMIC_LIBRARY=ON \
-         -DENABLE_MPI=ON \
-         -DGPU_AWARE_MPI=ON \
-         -DUSE_ACCELERATOR=cuda \
-         -DOUT_LOG_LEVEL=0 \
-         -DRII_GLOBALJUMP=64;
-make -j
-```
-
-Add additional `cmake` flags if needed.
 
 ### Standard build
 After cloning the TRIP repository:
