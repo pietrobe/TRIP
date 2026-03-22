@@ -7,176 +7,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "hdf_output_example_3D.h"
-
-#ifndef PATH_MAX
-#define PATH_MAX 4096
+#ifndef M_PI
+#define M_PI 3.141592653589793238462643383279502984
+//           1 23456789 123456789 123456789 1234567
 #endif
 
-static int
-read_env_int_or_default(const char *name, int default_value) {
-  const char *value = getenv(name);
-  if (value == NULL || *value == '\0') {
-    return default_value;
-  }
-
-  char *end    = NULL;
-  long  parsed = strtol(value, &end, 10);
-  if (end == value || *end != '\0' || parsed <= 0 || parsed > INT_MAX) {
-    return default_value;
-  }
-
-  return (int)parsed;
-}
-
-static void
-build_output_filepath(char *out_path, size_t out_path_size, const char *default_filename) {
-  const char *base_dir = getenv("HDF_OUT_PATH");
-  if (base_dir == NULL || *base_dir == '\0') {
-    (void)snprintf(out_path, out_path_size, "%s", default_filename);
-    return;
-  }
-
-  const size_t base_len = strlen(base_dir);
-  const int    has_sep  = (base_len > 0 && base_dir[base_len - 1] == '/');
-
-  int written = snprintf(out_path, out_path_size, has_sep ? "%s%s" : "%s/%s", base_dir, default_filename);
-  if (written < 0 || (size_t)written >= out_path_size) {
-    fprintf(stderr, "[hdf_output_example_3D] WARNING: output path too long, using '%s'\n", default_filename);
-    (void)snprintf(out_path, out_path_size, "%s", default_filename);
-  }
-}
-
-/**
- * Factorizes 'size' into (Px, Py, Pz) such that Px*Py*Pz == size
- * and the processor grid matches the domain aspect ratio as closely as possible.
- */
-void
-factorize_procs(int size, int Nx, int Ny, int Nz, int *Px, int *Py, int *Pz) {
-  int    best_px = 1, best_py = 1, best_pz = size;
-  double best_score = 1e18;
-
-  for (int px = 1; px <= size; px++) {
-    if (size % px != 0)
-      continue;
-    for (int py = 1; py <= size / px; py++) {
-      if ((size / px) % py != 0)
-        continue;
-      int pz = size / (px * py);
-
-      /* Local subdomain extents for this factorization */
-      double lx = (double)Nx / px;
-      double ly = (double)Ny / py;
-      double lz = (double)Nz / pz;
-
-      /* Score: sum of pairwise aspect ratios (minimum = 6.0 for a cube) */
-      double score = (lx / ly + ly / lx) + (ly / lz + lz / ly) + (lx / lz + lz / lx);
-
-      // printf("  (%d x %d x %d)  local=(%.1f x %.1f x %.1f)  score=%.3f%s\n", px, py, pz, lx, ly, lz, score,
-      //        score < best_score ? "  <-- new best" : "");
-
-      if (score < best_score) {
-        best_score = score;
-        best_px    = px;
-        best_py    = py;
-        best_pz    = pz;
-      }
-    }
-  }
-
-  *Px = best_px;
-  *Py = best_py;
-  *Pz = best_pz;
-}
-
-/**
- * Distributes n_global points among p_dims ranks.
- * First `remainder` ranks get (base+1), the rest get base.
- */
-static void
-get_1d_decomposition(int n_global, int p_dims, int p_coord, int *n_local, int *start) {
-  int base      = n_global / p_dims;
-  int remainder = n_global % p_dims;
-
-  if (p_coord < remainder) {
-    *n_local = base + 1;
-    *start   = p_coord * (base + 1);
-  } else {
-    *n_local = base;
-    *start   = remainder * (base + 1) + (p_coord - remainder) * base;
-  }
-}
-
-/**
- * 3D Domain Decomposition — no MPI Cartesian communicator.
- *
- * Maps each MPI rank to a unique (ix, iy, iz) coordinate in a
- * Px x Py x Pz processor grid using simple row-major indexing:
- *
- *   rank = ix * (Py * Pz) + iy * Pz + iz
- *
- * Inputs:
- *   N_x, N_y, N_z  — global domain extents
- *   comm            — MPI communicator
- *
- * Outputs:
- *   N_local_{x,y,z}      — size of this rank's subdomain
- *   local_start_{x,y,z}  — global start index of this rank's subdomain
- *   P{x,y,z}             — processor grid dimensions (optional, can be NULL)
- */
-void
-decompose_domain_3d(int N_x, int N_y, int N_z, MPI_Comm comm, int *N_local_x, int *N_local_y, int *N_local_z,
-                    int *local_start_x, int *local_start_y, int *local_start_z, int *out_Px, int *out_Py, int *out_Pz) {
-  int rank, size;
-  MPI_Comm_rank(comm, &rank);
-  MPI_Comm_size(comm, &size);
-
-  /* --- 1. Find best (Px, Py, Pz) factorization of 'size' --- */
-  int Px, Py, Pz;
-  factorize_procs(size, N_x, N_y, N_z, &Px, &Py, &Pz);
-
-  if (rank == 0)
-    printf("[decompose_domain_3d] grid: %d x %d x %d procs over %d x %d x %d domain\n", Px, Py, Pz, N_x, N_y, N_z);
-
-  /* --- 2. Map linear rank -> 3D processor coordinate (row-major) ---
-   *
-   *   rank = ix*(Py*Pz) + iy*Pz + iz
-   */
-  int ix = rank / (Py * Pz);
-  int iy = (rank % (Py * Pz)) / Pz;
-  int iz = rank % Pz;
-
-  /* --- 3. Compute local subdomain size and global start offset --- */
-  get_1d_decomposition(N_x, Px, ix, N_local_x, local_start_x);
-  get_1d_decomposition(N_y, Py, iy, N_local_y, local_start_y);
-  get_1d_decomposition(N_z, Pz, iz, N_local_z, local_start_z);
-
-  /* --- 4. Expose grid dims if caller needs them (e.g. to find neighbors) --- */
-  if (out_Px)
-    *out_Px = Px;
-  if (out_Py)
-    *out_Py = Py;
-  if (out_Pz)
-    *out_Pz = Pz;
-}
-
-/**
- * Given the processor grid (Px, Py, Pz), returns the rank of a neighbor.
- * Returns MPI_PROC_NULL for out-of-bounds neighbors (domain boundary).
- *
- * Usage example — find the +X neighbor:
- *   int nbr = get_neighbor_rank(Px, Py, Pz, ix+1, iy, iz);
- */
-int
-get_neighbor_rank(int Px, int Py, int Pz, int ix, int iy, int iz) {
-  if (ix < 0 || ix >= Px)
-    return MPI_PROC_NULL;
-  if (iy < 0 || iy >= Py)
-    return MPI_PROC_NULL;
-  if (iz < 0 || iz >= Pz)
-    return MPI_PROC_NULL;
-  return ix * (Py * Pz) + iy * Pz + iz;
-}
+#include "hdf_output_domain_decomposition_3D.h"
+#include "hdf_output_example_3D.h"
 
 void
 make_input_example_dataset(double *stokes_IQUI, int N_x, int N_y, int N_z, int N_incl, int N_azimuth, int N_frequencies,
@@ -268,19 +105,21 @@ make_input_example_dataset_zz(double *stokes_IQUI, int N_x, int N_y, int N_z, in
                 double zz    = (k + 1) / (0.2 * N_z);
 
                 if (s == 0) {  // Stokes I
-                  value = sin(xx * f / (0.1 * N_frequencies)) * cos(yy + zz + z_par) +
+                  value = z_par + k + sin(xx * f / (0.1 * N_frequencies)) * cos(yy + zz + z_par) +
                           sin(zz + z_par) * (incl + 1) / (0.2 * N_incl) * (az + 1) / (0.2 * N_azimuth) * (f + 1) /
                               (0.05 * N_frequencies);
                 } else if (s == 1) {  // Stokes Q/I
                   value = sin(2.0 * xx * yy * zz * (incl * (z_par + 1)) / (0.2 * N_incl) * (az + 1) / (0.2 * N_azimuth) *
                               (f + 1) / (0.1 * N_frequencies));
                 } else if (s == 2) {  // Stokes U/I
-                  value = cos(3.0 * xx * yy * zz * (incl + 1) / (0.2 * N_incl) * (az + 1) / (0.2 * N_azimuth) * (f + 1) /
+                  value = z_par + k +
+                          cos(3.0 * xx * yy * zz * (incl + 1) / (0.2 * N_incl) * (az + 1) / (0.2 * N_azimuth) * (f + 1) /
                               (0.1 * N_frequencies)) +
                           sin(5.0 * xx * yy * (zz + z_par) * (incl + 1) / (0.2 * N_incl) * (az + 1) / (0.2 * N_azimuth) *
                               (f + 1) / (0.1 * N_frequencies));
                 } else if (s == 3) {  // Stokes V/I
-                  value = cos(4.0 * xx * yy * zz * (incl + 2) / (0.2 * N_incl) * (az + 1) / (0.2 * N_azimuth) * (f + 1) /
+                  value = z_par + k +
+                          cos(4.0 * xx * yy * zz * (incl + 2) / (0.2 * N_incl) * (az + 1) / (0.2 * N_azimuth) * (f + 1) /
                               (0.1 * N_frequencies)) -
                           sin(6.0 * xx * yy * zz * (z_par + 1) * (incl + 1) / (0.2 * N_incl) * (az + 1) /
                               (0.2 * N_azimuth) * (f + 1) / (0.1 * N_frequencies));
@@ -304,179 +143,18 @@ make_input_example_dataset_zz(double *stokes_IQUI, int N_x, int N_y, int N_z, in
   *stride_x           = N_stokes * N_frequencies * N_azimuth * N_incl * N_z * N_y;
 }
 
-int
-main_3d_example(int argc, char **argv) {
-
-  (void)argc;
-  (void)argv;
-
-  MPI_Init(&argc, &argv);
-  int mpi_rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-
-  int mpi_size;
-  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-
-  int  N_x               = read_env_int_or_default("HDF_N_X", 32);
-  int  N_y               = read_env_int_or_default("HDF_N_Y", 32);
-  int  N_z               = read_env_int_or_default("HDF_N_Z", 4);
-  int  N_frequencies     = read_env_int_or_default("HDF_N_FREQUENCIES", 96);
-  int  N_incl            = read_env_int_or_default("HDF_N_INCL", 8);
-  int  N_azimuth         = read_env_int_or_default("HDF_N_AZIMUTH", 16);
-  int  N_stokes          = read_env_int_or_default("HDF_N_STOKES", 4);
-  bool normalized_output = read_env_int_or_default("HDF_NORMALIZE_OUTPUT", 0) != 0;
-
-  double *frequencies = (double *)malloc(N_frequencies * sizeof(double));
-
-  for (int i = 0; i < N_frequencies; i++) {
-    frequencies[i] = 1.0e14 + i * 1.0e12;
-  }
-
-  double *theta                = (double *)malloc(N_incl * sizeof(double));
-  int    *inclinations_indices = (int *)malloc(N_incl * sizeof(int));
-
-  double *chi               = (double *)malloc(N_azimuth * sizeof(double));
-  int    *azimuthal_indices = (int *)malloc(N_azimuth * sizeof(int));
-
-  for (int i = 0; i < N_incl; i++) {
-    theta[i]                = (i) * (3.141592653589793 / N_incl);  // just example values in radians
-    inclinations_indices[i] = i;
-  }
-
-  for (int j = 0; j < N_azimuth; j++) {
-    chi[j]               = j * (3.141592653589793 * 2.0 / N_azimuth);  // just example values
-    azimuthal_indices[j] = j;
-  }
-
-  char filename[PATH_MAX];
-  build_output_filepath(filename, sizeof(filename), "output_3D_field_mpi.h5");
-
-  if (mpi_rank == 0) {
-    hid_t                    file_id       = THDF_open_file(filename);
-    THDF_3D_field_handler_t *field_handler = THDF_create_3D_field_handler_mpi(file_id,                            //
-                                                                              normalized_output,                  //
-                                                                              N_x, N_y, N_z,                      //
-                                                                              N_incl, N_azimuth, N_frequencies);  //
-
-    THDF_frequencies_grid_t frequencies_grid;
-    frequencies_grid.N_frequencies = N_frequencies;
-    frequencies_grid.frequencies   = frequencies;
-    THDF_write_frequencies_grid_to_hdf5(file_id, &frequencies_grid);
-
-    THDF_angular_grid_t angular_grid;
-    angular_grid.N_azimuthal_angles   = N_azimuth;
-    angular_grid.N_inclination_angles = N_incl;
-    angular_grid.N_directions         = N_incl * N_azimuth;
-
-    angular_grid.inclination_angles   = theta;
-    angular_grid.inclinations_indices = inclinations_indices;
-    angular_grid.azimuthal_angles     = chi;
-    angular_grid.azimuthal_indices    = azimuthal_indices;
-    THDF_write_angular_grid_to_hdf5(file_id, &angular_grid);
-
-    THDF_close_3D_field_handler_mpi(field_handler);
-    H5Fclose(file_id);
-  }
-
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  int N_local_x, N_local_y, N_local_z;
-  int local_start_x, local_start_y, local_start_z;
-  int local_end_x, local_end_y, local_end_z;
-
-  decompose_domain_3d(N_x, N_y, N_z, MPI_COMM_WORLD, &N_local_x, &N_local_y, &N_local_z, &local_start_x, &local_start_y,
-                      &local_start_z, NULL, NULL, NULL);
-  local_end_x = local_start_x + N_local_x;
-  local_end_y = local_start_y + N_local_y;
-  local_end_z = local_start_z + N_local_z;
-
-  // if (mpi_rank >= 0) {
-  printf("Rank %d: Local domain in X [%d:%d], Y [%d:%d], Z [%d:%d]\n", mpi_rank, local_start_x, local_end_x,
-         local_start_y, local_end_y, local_start_z, local_end_z);
-  // }
-
-  int          stride_x, stride_y, stride_z, stride_incl, stride_azimuth, stride_frequencies, stride_stokes;
-  const size_t input_size  = (size_t)N_local_x * N_local_y * N_local_z * N_incl * N_azimuth * N_frequencies * N_stokes;
-  const size_t output_size = (size_t)N_local_x * N_local_y * N_local_z * N_incl * N_azimuth * N_frequencies;
-
-  double         *stokes_IQUI = (double *)malloc(input_size * sizeof(double));
-  THDF_float32_t *stokes_I    = (THDF_float32_t *)malloc(output_size * sizeof(THDF_float32_t));
-  THDF_float32_t *stokes_QI   = (THDF_float32_t *)malloc(output_size * sizeof(THDF_float32_t));
-  THDF_float32_t *stokes_UI   = (THDF_float32_t *)malloc(output_size * sizeof(THDF_float32_t));
-  THDF_float32_t *stokes_VI   = (THDF_float32_t *)malloc(output_size * sizeof(THDF_float32_t));
-
-  THDF_float_t *norm_multiplier_I  = NULL;
-  THDF_float_t *norm_multiplier_QI = NULL;
-  THDF_float_t *norm_multiplier_UI = NULL;
-  THDF_float_t *norm_multiplier_VI = NULL;
-
-  if (normalized_output) {
-    const size_t norm_size = (size_t)N_local_x * N_local_y * N_local_z * N_incl * N_azimuth;
-    norm_multiplier_I      = (THDF_float_t *)malloc(norm_size * sizeof(THDF_float_t));
-    norm_multiplier_QI     = (THDF_float_t *)malloc(norm_size * sizeof(THDF_float_t));
-    norm_multiplier_UI     = (THDF_float_t *)malloc(norm_size * sizeof(THDF_float_t));
-    norm_multiplier_VI     = (THDF_float_t *)malloc(norm_size * sizeof(THDF_float_t));
-  }
-
-  make_input_example_dataset(stokes_IQUI, N_local_x, N_local_y, N_local_z, N_incl, N_azimuth, N_frequencies, N_stokes,
-                             &stride_x, &stride_y, &stride_z, &stride_incl, &stride_azimuth, &stride_frequencies,
-                             &stride_stokes);
-
-  write_3d_field_block_mpi(filename,            //
-                           MPI_COMM_WORLD,      //
-                           normalized_output,   //
-                           N_x,                 //
-                           N_y,                 //
-                           N_z,                 //
-                           N_incl,              //
-                           N_azimuth,           //
-                           N_frequencies,       //
-                           N_stokes,            //
-                           N_local_x,           //
-                           N_local_y,           //
-                           N_local_z,           //
-                           local_start_x,       //
-                           local_start_y,       //
-                           local_start_z,       //
-                           stokes_IQUI,         //
-                           stokes_I,            //
-                           stokes_QI,           //
-                           stokes_UI,           //
-                           stokes_VI,           //
-                           norm_multiplier_I,   //
-                           norm_multiplier_QI,  //
-                           norm_multiplier_UI,  //
-                           norm_multiplier_VI,  //
-                           stride_x,            //
-                           stride_y,            //
-                           stride_z,            //
-                           stride_incl,         //
-                           stride_azimuth,      //
-                           stride_frequencies,  //
-                           stride_stokes);      //
-
-  free(stokes_IQUI);
-  free(stokes_I);
-  free(stokes_QI);
-  free(stokes_UI);
-  free(stokes_VI);
-  free(norm_multiplier_I);
-  free(norm_multiplier_QI);
-  free(norm_multiplier_UI);
-  free(norm_multiplier_VI);
-
-  free(frequencies);
-  free(theta);
-  free(chi);
-  free(inclinations_indices);
-  free(azimuthal_indices);
-
-  MPI_Finalize();
-  return 0;
-}
-
 /////////////////////////////////////////////////////////////////////////
-// main_3d_example_v2
+// main_3d_example_v2  —  refactored
+//
+// Fasi:
+//   1. rank 0: crea struttura HDF5 (seriale, nessun FAPL MPI)
+//   2. rank 0: scrive metadata (grids, geometry) su file seriale
+//              → H5Fclose seriale
+//   3. MPI_Barrier — tutti i rank aspettano che rank 0 abbia finito
+//   4. tutti: aprono il file con FAPL MPI su persistent_comm
+//   5. tutti: THDF_open_3D_field_handler_mpi  (una volta sola)
+//   6. loop Z: solo scrittura Stokes, nessun open/close
+//   7. tutti: THDF_close_3D_field_handler_mpi + H5Fclose
 /////////////////////////////////////////////////////////////////////////
 int
 main_3d_example_v2(int argc, char **argv) {
@@ -485,235 +163,281 @@ main_3d_example_v2(int argc, char **argv) {
   (void)argv;
 
   MPI_Init(&argc, &argv);
-  int mpi_rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
-  int mpi_size;
+  int mpi_rank, mpi_size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 
+  /* ----------------------------------------------------------------
+   * Parametri
+   * ---------------------------------------------------------------- */
   const int  N_x               = read_env_int_or_default("HDF_N_X", 8);
   const int  N_y               = read_env_int_or_default("HDF_N_Y", 8);
-  const int  N_z               = read_env_int_or_default("HDF_N_Z", 17);
+  const int  N_z               = read_env_int_or_default("HDF_N_Z", 18);
   const int  N_frequencies     = read_env_int_or_default("HDF_N_FREQUENCIES", 96);
-  const int  N_incl            = read_env_int_or_default("HDF_N_INCL", 8);
-  const int  N_azimuth         = read_env_int_or_default("HDF_N_AZIMUTH", 16);
+  const int  N_incl            = read_env_int_or_default("HDF_N_INCL", 16);
+  const int  N_azimuth         = read_env_int_or_default("HDF_N_AZIMUTH", 8);
   const int  N_stokes          = read_env_int_or_default("HDF_N_STOKES", 4);
   const bool normalized_output = read_env_int_or_default("HDF_NORMALIZE_OUTPUT", 0) != 0;
-  int        step_z            = read_env_int_or_default("HDF_STEP_Z", 1);
+  int        step_z            = read_env_int_or_default("HDF_STEP_Z", 2);
 
-  double *frequencies = (double *)malloc(N_frequencies * sizeof(double));
+  /* ----------------------------------------------------------------
+   * Allocazione array di griglia
+   * ---------------------------------------------------------------- */
+  double *frequencies      = malloc(N_frequencies * sizeof(double));
+  double *theta            = malloc(N_incl * sizeof(double));
+  double *chi              = malloc(N_azimuth * sizeof(double));
+  int    *inclinations_idx = malloc(N_incl * N_azimuth * sizeof(int));
+  int    *azimuthal_idx    = malloc(N_incl * N_azimuth * sizeof(int));
+  double *heights          = malloc(N_z * sizeof(double));
 
-  for (int i = 0; i < N_frequencies; i++) {
-    frequencies[i] = 1.0e14 + i * 1.0e12;
-  }
+  for (int i = 0; i < N_frequencies; i++) frequencies[i] = 1.0e14 + i * 1.0e12;
+  for (int k = 0; k < N_z; k++) heights[k] = k * 100.0;
 
-  double *theta                = (double *)malloc(N_incl * sizeof(double));
-  int    *inclinations_indices = (int *)malloc(N_incl * N_azimuth * sizeof(int));
+  for (int i = 0; i < N_incl; i++) theta[i] = (M_PI / (N_incl - 1)) * i;
+  for (int j = 0; j < N_azimuth; j++) chi[j] = j * (2.0 * M_PI / N_azimuth);
 
-  double *chi               = (double *)malloc(N_azimuth * sizeof(double));
-  int    *azimuthal_indices = (int *)malloc(N_incl * N_azimuth * sizeof(int));
-
-  double *heights = (double *)malloc(N_z * sizeof(double));
-  for (int k = 0; k < N_z; k++) {
-    heights[k] = k * 100.0;  // example heights in km
-  }
-
-  for (int i = 0; i < N_incl; i++) {
-    theta[i]                = (3.141592653589793 / (N_incl - 1)) * (i);  // example values from 0 to 90 degrees in radians
-    inclinations_indices[i] = i;
-  }
-
-  for (int j = 0; j < N_azimuth; j++) {
-    chi[j]               = j * (3.141592653589793 * 2.0 / N_azimuth);  // example values from 0 to 360 degrees in radians
-    azimuthal_indices[j] = j;
-  }
-
-  for (int i = 0; i < N_incl; i++) {
+  for (int i = 0; i < N_incl; i++)
     for (int j = 0; j < N_azimuth; j++) {
-      inclinations_indices[i * N_azimuth + j] = i;
-      azimuthal_indices[i * N_azimuth + j]    = j;
+      inclinations_idx[i * N_azimuth + j] = i;
+      azimuthal_idx[i * N_azimuth + j]    = j;
     }
-  }
 
   char filename[PATH_MAX];
   build_output_filepath(filename, sizeof(filename), "output_3D_field_mpi.h5");
 
+  /* ================================================================
+   * FASE 1+2 — rank 0: crea file + scrive metadata (seriale)
+   * ================================================================ */
   if (mpi_rank == 0) {
-    hid_t                    file_id       = THDF_open_file(filename);
-    THDF_3D_field_handler_t *field_handler = THDF_create_3D_field_handler_mpi(file_id,                            //
-                                                                              normalized_output,                  //
-                                                                              N_x, N_y, N_z,                      //
-                                                                              N_incl, N_azimuth, N_frequencies);  //
 
-    THDF_frequencies_grid_t frequencies_grid;
-    frequencies_grid.N_frequencies = N_frequencies;
-    frequencies_grid.frequencies   = frequencies;
-    THDF_write_frequencies_grid_to_hdf5(file_id, &frequencies_grid);
+    const double t0 = MPI_Wtime();
 
-    THDF_angular_grid_t angular_grid;
-    angular_grid.N_azimuthal_angles   = N_azimuth;
-    angular_grid.N_inclination_angles = N_incl;
-    angular_grid.N_directions         = N_incl * N_azimuth;
+    printf("Rank 0: creating HDF5 structure in '%s'...\n", filename);
+    if (THDF_create_3D_field_handler_mpi(filename, normalized_output, N_x, N_y, N_z, N_incl, N_azimuth, N_frequencies) <
+        0) {
+      fprintf(stderr, "Error creating /radiation_field structure\n");
+      MPI_Abort(MPI_COMM_WORLD, -1);
+    }
+    printf("[timing] create structure: %.6f s\n", MPI_Wtime() - t0);
 
-    angular_grid.inclination_angles   = theta;
-    angular_grid.inclinations_indices = inclinations_indices;
-    angular_grid.azimuthal_angles     = chi;
-    angular_grid.azimuthal_indices    = azimuthal_indices;
-    THDF_write_angular_grid_to_hdf5(file_id, &angular_grid);
+    /* ---- Apri serialmente per scrivere i metadata di griglia ---- */
+    hid_t fserial = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT);
+    if (fserial < 0) {
+      fprintf(stderr, "Rank 0: error opening file for metadata write\n");
+      MPI_Abort(MPI_COMM_WORLD, -1);
+    }
 
-    THDF_geometry_3D_t geometry_3D;
-    geometry_3D.N_x     = N_x;
-    geometry_3D.N_y     = N_y;
-    geometry_3D.N_z     = N_z;
-    geometry_3D.heights = heights;
-    geometry_3D.delta   = 100.0;
-    THDF_write_geometry_3D_to_hdf5(file_id, &geometry_3D);
+    /* ---- Frequenze ---- */
+    THDF_frequencies_grid_t fg;
+    fg.N_frequencies = N_frequencies;
+    fg.frequencies   = frequencies;
+    THDF_write_frequencies_grid_to_hdf5(fserial, &fg);
 
-    THDF_close_3D_field_handler_mpi(field_handler);
-    H5Fclose(file_id);
+    /* ---- Griglia angolare ---- */
+    THDF_angular_grid_t ag;
+    ag.N_azimuthal_angles   = N_azimuth;
+    ag.N_inclination_angles = N_incl;
+    ag.N_directions         = N_incl * N_azimuth;
+    ag.inclination_angles   = theta;
+    ag.inclinations_indices = inclinations_idx;
+    ag.azimuthal_angles     = chi;
+    ag.azimuthal_indices    = azimuthal_idx;
+    THDF_write_angular_grid_to_hdf5(fserial, &ag);
+
+    /* ---- Geometria ---- */
+    THDF_geometry_3D_t g3;
+    g3.N_x     = N_x;
+    g3.N_y     = N_y;
+    g3.N_z     = N_z;
+    g3.heights = heights;
+    g3.delta   = 100.0;
+    THDF_write_geometry_3D_to_hdf5(fserial, &g3);
+
+    /* Flush esplicito prima del close — garantisce visibilità su GPFS */
+    H5Fflush(fserial, H5F_SCOPE_GLOBAL);
+    H5Fclose(fserial);
+
+    printf("Rank 0: metadata written, releasing serial file handle\n");
   }
 
+  /* ================================================================
+   * FASE 3 — tutti i rank aspettano che rank 0 abbia chiuso il file
+   * ================================================================ */
   MPI_Barrier(MPI_COMM_WORLD);
 
+  /* ================================================================
+   * Decomposizione dominio
+   * ================================================================ */
   int N_local_x, N_local_y, N_local_z;
   int local_start_x, local_start_y, local_start_z;
-  int local_end_x, local_end_y, local_end_z;
 
-  decompose_domain_3d(N_x, N_y, N_z, MPI_COMM_WORLD, &N_local_x, &N_local_y, &N_local_z, &local_start_x, &local_start_y,
-                      &local_start_z, NULL, NULL, NULL);
+  decompose_domain_3d(mpi_rank, mpi_size,                              //
+                      N_x, N_y, N_z,                                   //
+                      &N_local_x, &N_local_y, &N_local_z,              //
+                      &local_start_x, &local_start_y, &local_start_z,  //
+                      NULL, NULL, NULL);                               //
 
-  local_end_x = local_start_x + N_local_x;
-  local_end_y = local_start_y + N_local_y;
-  local_end_z = local_start_z + N_local_z;
+  if (mpi_rank == 0)
+    printf("Rank 0: local domain X[%d+%d] Y[%d+%d] Z[%d+%d]\n", local_start_x, N_local_x, local_start_y, N_local_y,
+           local_start_z, N_local_z);
 
-  if (mpi_rank == 0) {
-    printf("Rank %d: Local domain in X [%d:%d], Y [%d:%d], Z [%d:%d]\n", mpi_rank, local_start_x, local_end_x,
-           local_start_y, local_end_y, local_start_z, local_end_z);
+  /* ================================================================
+   * FASE 4 — apri il file collettivamente (una volta sola)
+   *
+   * persistent_comm include SOLO i rank con N_local_z > 0.
+   * Con decomposizioni bilanciate coincide con MPI_COMM_WORLD,
+   * ma gestisce correttamente il caso edge N_z < mpi_size.
+   * ================================================================ */
+  const int has_z_data = (N_local_z > 0) ? 1 : MPI_UNDEFINED;
+
+  MPI_Comm persistent_comm = MPI_COMM_NULL;
+  MPI_Comm_split(MPI_COMM_WORLD, has_z_data, mpi_rank, &persistent_comm);
+
+  hid_t                    file_id = -1;
+  THDF_3D_field_handler_t *handler = NULL;
+
+  if (persistent_comm != MPI_COMM_NULL) {
+
+    /* FAPL con MPI-IO collettivo e hint GPFS */
+    MPI_Info info;
+    MPI_Info_create(&info);
+    MPI_Info_set(info, "cb_buffer_size", "67108864"); /* 64 MB aggregator buf */
+    MPI_Info_set(info, "cb_nodes", "8");
+
+    hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+    H5Pset_fapl_mpio(fapl, persistent_comm, info);
+    H5Pset_alignment(fapl, 1, 4 * 1024 * 1024); /* allinea a 4 MB stripe */
+    H5Pset_all_coll_metadata_ops(fapl, 1);
+    H5Pset_coll_metadata_write(fapl, 1);
+    MPI_Info_free(&info);
+
+    file_id = H5Fopen(filename, H5F_ACC_RDWR, fapl);
+    H5Pclose(fapl);
+
+    if (file_id < 0) {
+      fprintf(stderr, "Rank %d: error opening file collectively\n", mpi_rank);
+      MPI_Abort(MPI_COMM_WORLD, -1);
+    }
+
+    /* ================================================================
+     * FASE 5 — apri handler (H5Gopen + H5Dopen × 4-8): UNA VOLTA SOLA
+     * ================================================================ */
+    handler = THDF_open_3D_field_handler_mpi(file_id, normalized_output, N_x, N_y, N_z, N_incl, N_azimuth, N_frequencies);
+    if (!handler) {
+      fprintf(stderr, "Rank %d: error opening 3D field handler\n", mpi_rank);
+      MPI_Abort(MPI_COMM_WORLD, -1);
+    }
   }
 
-  int          stride_x, stride_y, stride_z, stride_incl, stride_azimuth, stride_frequencies, stride_stokes;
-  const size_t input_size  = (size_t)N_local_x * N_local_y * step_z * N_incl * N_azimuth * N_frequencies * N_stokes;
-  const size_t output_size = (size_t)N_local_x * N_local_y * step_z * N_incl * N_azimuth * N_frequencies;
+  /* Tutti i rank sincronizzati dopo l'apertura */
+  MPI_Barrier(MPI_COMM_WORLD);
 
-  double         *stokes_IQUI = (double *)malloc(input_size * sizeof(double));
-  THDF_float32_t *stokes_I    = (THDF_float32_t *)malloc(output_size * sizeof(THDF_float32_t));
-  THDF_float32_t *stokes_QI   = (THDF_float32_t *)malloc(output_size * sizeof(THDF_float32_t));
-  THDF_float32_t *stokes_UI   = (THDF_float32_t *)malloc(output_size * sizeof(THDF_float32_t));
-  THDF_float32_t *stokes_VI   = (THDF_float32_t *)malloc(output_size * sizeof(THDF_float32_t));
-
-  THDF_float_t *norm_multiplier_I  = NULL;
-  THDF_float_t *norm_multiplier_QI = NULL;
-  THDF_float_t *norm_multiplier_UI = NULL;
-  THDF_float_t *norm_multiplier_VI = NULL;
-
-  if (normalized_output) {
-    const size_t norm_size = (size_t)N_local_x * N_local_y * step_z * N_incl * N_azimuth;
-    norm_multiplier_I      = (THDF_float_t *)malloc(norm_size * sizeof(THDF_float_t));
-    norm_multiplier_QI     = (THDF_float_t *)malloc(norm_size * sizeof(THDF_float_t));
-    norm_multiplier_UI     = (THDF_float_t *)malloc(norm_size * sizeof(THDF_float_t));
-    norm_multiplier_VI     = (THDF_float_t *)malloc(norm_size * sizeof(THDF_float_t));
-  }
-
-  int max_N_local_z;
-  int min_N_local_z;
+  /* ================================================================
+   * Allocazione buffer locali
+   * ================================================================ */
+  int max_N_local_z, min_N_local_z;
   MPI_Allreduce(&N_local_z, &max_N_local_z, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
   MPI_Allreduce(&N_local_z, &min_N_local_z, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
 
   if (max_N_local_z < step_z) {
-    if (mpi_rank == 0) {
-      printf("Warning: max local Z size (%d) is smaller than step_z (%d). Adjusting step_z to %d.\n", max_N_local_z,
-             step_z, max_N_local_z);
-    }
-    step_z = 1;
+    if (mpi_rank == 0)
+      printf("Warning: step_z (%d) > max_N_local_z (%d), adjusting\n", step_z, max_N_local_z);
+    step_z = max_N_local_z;
   }
 
   if (mpi_rank == 0) {
-    printf("Max local Z size across all ranks: %d\n", max_N_local_z);
-    printf("Min local Z size across all ranks: %d\n", min_N_local_z);
-    printf("Writing in Z blocks of size %d (last block may be smaller)\n", step_z);
+    printf("Max/min local Z: %d / %d — Z blocks of %d\n", max_N_local_z, min_N_local_z, step_z);
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  const size_t input_size  = (size_t)N_local_x * N_local_y * step_z * N_incl * N_azimuth * N_frequencies * N_stokes;
+  const size_t output_size = (size_t)N_local_x * N_local_y * step_z * N_incl * N_azimuth * N_frequencies;
 
-  for (int local_zi = 0; local_zi < max_N_local_z; local_zi += 1) {
+  double         *stokes_IQUI = malloc(input_size * sizeof(double));
+  THDF_float32_t *stokes_I    = malloc(output_size * sizeof(THDF_float32_t));
+  THDF_float32_t *stokes_QI   = malloc(output_size * sizeof(THDF_float32_t));
+  THDF_float32_t *stokes_UI   = malloc(output_size * sizeof(THDF_float32_t));
+  THDF_float32_t *stokes_VI   = malloc(output_size * sizeof(THDF_float32_t));
 
-    const int current_N_local_z = 1;
-    const int is_writer         = (local_zi < N_local_z) ? 1 : 0;
-    // Only ranks that still have Z slices to write in this block participate as writers
+  THDF_float_t *norm_I = NULL, *norm_QI = NULL, *norm_UI = NULL, *norm_VI = NULL;
+  if (normalized_output) {
+    const size_t ns = (size_t)N_local_x * N_local_y * step_z * N_incl * N_azimuth;
+    norm_I          = malloc(ns * sizeof(THDF_float_t));
+    norm_QI         = malloc(ns * sizeof(THDF_float_t));
+    norm_UI         = malloc(ns * sizeof(THDF_float_t));
+    norm_VI         = malloc(ns * sizeof(THDF_float_t));
+  }
 
-    const int id_z = local_start_z + local_zi;
+  /* ================================================================
+   * FASE 6 — loop Z: solo compute + scrittura, nessun open/close
+   * ================================================================ */
+  const double write_t0 = MPI_Wtime();
 
-    MPI_Comm write_communicator;
-    MPI_Comm_split(MPI_COMM_WORLD, is_writer ? 1 : MPI_UNDEFINED, mpi_rank, &write_communicator);
+  for (int local_zi = 0; local_zi < max_N_local_z; local_zi += step_z) {
+
+    const int current_nz = (local_zi + step_z <= N_local_z) ? step_z : (N_local_z - local_zi);
+    const int is_writer  = (local_zi < N_local_z) ? 1 : 0;
+    const int id_z       = local_start_z + local_zi;
 
     if (is_writer) {
 
-      if (mpi_rank < 10) {
-        printf("Rank %d writing Z block [%d:%d] (local Z indices [%d:%d])\n", mpi_rank, local_start_z + local_zi,
-               local_start_z + local_zi + current_N_local_z, local_zi, local_zi + current_N_local_z);
-      }
+      if (mpi_rank < 4)
+        printf("Rank %d: writing Z block [%d:%d]\n", mpi_rank, id_z, id_z + current_nz);
 
-      make_input_example_dataset_zz(stokes_IQUI, N_local_x, N_local_y, current_N_local_z, N_incl, N_azimuth,
-                                    N_frequencies, N_stokes, &stride_x, &stride_y, &stride_z, &stride_incl,
-                                    &stride_azimuth, &stride_frequencies, &stride_stokes, id_z);
+      int sx, sy, sz, si, sa, sf, ss;
+      make_input_example_dataset_zz(stokes_IQUI, N_local_x, N_local_y, current_nz, N_incl, N_azimuth, N_frequencies,
+                                    N_stokes, &sx, &sy, &sz, &si, &sa, &sf, &ss, id_z);
 
-      write_3d_field_block_mpi(filename,            //
-                               write_communicator,  //
-                               normalized_output,   //
-                               N_x,                 //
-                               N_y,                 //
-                               N_z,                 //
-                               N_incl,              //
-                               N_azimuth,           //
-                               N_frequencies,       //
-                               N_stokes,            //
-                               N_local_x,           //
-                               N_local_y,           //
-                               1,                   //
-                               local_start_x,       //
-                               local_start_y,       //
-                               id_z,                //
-                               stokes_IQUI,         //
-                               stokes_I,            //
-                               stokes_QI,           //
-                               stokes_UI,           //
-                               stokes_VI,           //
-                               norm_multiplier_I,   //
-                               norm_multiplier_QI,  //
-                               norm_multiplier_UI,  //
-                               norm_multiplier_VI,  //
-                               stride_x,            //
-                               stride_y,            //
-                               stride_z,            //
-                               stride_incl,         //
-                               stride_azimuth,      //
-                               stride_frequencies,  //
-                               stride_stokes);      //
+      THDF_3D_field_t output_field;
+      THDF_copy_3D_block_field(&output_field, normalized_output, stokes_IQUI, stokes_I, stokes_QI, stokes_UI, stokes_VI,
+                               norm_I, norm_QI, norm_UI, norm_VI, 0, 0, 0, N_local_x, N_local_y, current_nz, N_incl,
+                               N_azimuth, N_frequencies, sx, sy, sz, si, sa, sf, ss);
 
-      MPI_Barrier(write_communicator);  // Ensure all writers have finished before we free the communicator
-      MPI_Comm_free(&write_communicator);
+      /* handler già aperto — nessun open/close qui */
+      THDF_write_3D_field_dataset_to_hdf5(handler, &output_field, local_start_x, local_start_y, id_z, 0, 0, N_local_x,
+                                          N_local_y, current_nz, N_incl, N_azimuth, N_frequencies);
     }
 
-    // Keep all ranks in lockstep between Z blocks; non-writers have MPI_COMM_NULL.
+    /*
+     * Lockstep tra tutti i rank (inclusi quelli senza dati).
+     * Necessario perché persistent_comm potrebbe non includere
+     * tutti i rank — la barriera su MPI_COMM_WORLD è l'unico
+     * punto di sincronizzazione globale sicuro.
+     */
     MPI_Barrier(MPI_COMM_WORLD);
   }
 
+  if (mpi_rank == 0)
+    printf("[timing] total Z write loop: %.6f s\n", MPI_Wtime() - write_t0);
+
+  /* ================================================================
+   * FASE 7 — chiudi handler e file (una volta sola)
+   * ================================================================ */
+  if (persistent_comm != MPI_COMM_NULL) {
+    THDF_close_3D_field_handler_mpi(handler); /* H5Dclose × 4-8, H5Gclose */
+    H5Fclose(file_id);                        /* sync GPFS — una volta sola */
+    MPI_Comm_free(&persistent_comm);
+  }
+
+  /* ================================================================
+   * Cleanup
+   * ================================================================ */
   free(stokes_IQUI);
   free(stokes_I);
   free(stokes_QI);
   free(stokes_UI);
   free(stokes_VI);
-  free(norm_multiplier_I);
-  free(norm_multiplier_QI);
-  free(norm_multiplier_UI);
-  free(norm_multiplier_VI);
+  free(norm_I);
+  free(norm_QI);
+  free(norm_UI);
+  free(norm_VI);
   free(heights);
   free(frequencies);
   free(theta);
   free(chi);
-  free(inclinations_indices);
-  free(azimuthal_indices);
+  free(inclinations_idx);
+  free(azimuthal_idx);
 
   MPI_Finalize();
   return 0;
-}  // END: main_3d_example_v2
+}

@@ -46,14 +46,20 @@ write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 
 	if (mpi_rank == 0)
 	{
-		const double			 hdf_open_and_handler_start = MPI_Wtime();
-		hid_t					 file_id					= THDF_open_file(output_file.c_str());
-		THDF_3D_field_handler_t *field_handler = THDF_create_3D_field_handler_mpi(file_id,							 //
-																				  normalized_output,				 //
-																				  N_x, N_y, N_z,					 //
-																				  N_incl, N_azimuth, N_frequencies); //
-		const double			 hdf_open_and_handler_end = MPI_Wtime();
-		std::cout << "[rank 0] THDF_write 3D field + THDF_create_3D_field_handler_mpi: "
+		const double hdf_open_and_handler_start = MPI_Wtime();
+		// hid_t					 file_id					= THDF_open_file(output_file.c_str());
+		if (THDF_create_3D_field_handler_mpi(output_file.c_str(), //
+											 normalized_output,	  //
+											 N_x, N_y, N_z,		  //
+											 N_incl, N_azimuth, N_frequencies)
+			< 0)
+		{
+			std::cerr << "[rank 0] THDF_create_3D_field_handler_mpi failed\n";
+			MPI_Abort(MPI_COMM_WORLD, -1);
+		}
+		hid_t		 file_id				  = H5Fopen(output_file.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+		const double hdf_open_and_handler_end = MPI_Wtime();
+		std::cout << "[rank 0] THDF_create_3D_field_handler_mpi: "
 				  << hdf_open_and_handler_end - hdf_open_and_handler_start << " s" << std::endl;
 
 		std::vector<double>		frequencies(rt_problem.nu_grid_.begin(), rt_problem.nu_grid_.end());
@@ -101,7 +107,6 @@ write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 
 		THDF_write_geometry_3D_to_hdf5(file_id, &geometry_3D);
 
-		THDF_close_3D_field_handler_mpi(field_handler);
 		H5Fclose(file_id);
 	} // End of writing shared parameters from MPI rank 0,
 
@@ -136,9 +141,14 @@ write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 
 		if (is_writer)
 		{
+			hid_t w_fapl = H5Pcreate(H5P_FILE_ACCESS);
+			H5Pset_fapl_mpio(w_fapl, write_communicator, MPI_INFO_NULL);
+			hid_t write_file_id = H5Fopen(output_file.c_str(), H5F_ACC_RDWR, w_fapl);
+			H5Pclose(w_fapl);
+
 			Real *stokes_IQUI = rt_problem.I_field_->block(0, 0, local_k);
 
-			write_3d_field_block_mpi(output_file.c_str(),		 //
+			write_3d_field_block_mpi(write_file_id,				 //
 									 write_communicator,		 //
 									 normalized_output,			 // If true the output will be normalized.
 									 N_x,						 // Global sizes of the field in x y z directions
@@ -171,6 +181,7 @@ write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 									 stride_frequencies,		 //
 									 stride_stokes);			 //
 
+			H5Fclose(write_file_id);
 			MPI_Barrier(write_communicator); // Ensure all writers have finished before we free the communicator
 			MPI_Comm_free(&write_communicator);
 		}

@@ -1,0 +1,66 @@
+# Example: Parent project using hdf_output as a subproject
+# 
+# This demonstrates how to integrate the hdf_output library into another CMake project.
+# 
+# Project structure:
+# my_project/
+# ├── CMakeLists.txt (this file)
+# ├── src/
+# │   └── main.c
+# └── hdf5_demo/output/  (subproject)
+#     ├── CMakeLists.txt
+#     ├── *.c, *.h
+#     └── ...
+
+cmake_minimum_required(VERSION 3.15)
+project(my_hdf5_app)
+
+set(CMAKE_C_STANDARD 18)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+
+# ==============================================================================
+# METHOD 1: Direct subdirectory integration (recommended for local subprojects)
+# ==============================================================================
+# Uncomment the line below if hdf5_demo/output is in your source tree
+
+add_subdirectory(hdf5_demo/output)
+
+# ==============================================================================
+# METHOD 2: Alternative - Using find_package (for installed library)
+# ==============================================================================
+# Uncomment this section if you want to use an installed hdf_output library
+# find_package(hdf_output REQUIRED CONFIG)
+
+# ==============================================================================
+# CREATE YOUR APPLICATION
+# ==============================================================================
+
+add_executable(my_app
+    src/main.c
+)
+
+# Link against the hdf_output library
+# The target automatically includes:
+#   - All necessary header directories
+#   - HDF5 libraries
+#   - System libraries (libm)
+target_link_libraries(my_app
+    PRIVATE
+        hdf_output
+)
+
+# ==============================================================================
+# INSTALLATION (optional)
+# ==============================================================================
+
+install(TARGETS my_app
+    RUNTIME DESTINATION bin
+)
+
+# ==============================================================================
+# BUILD INFORMATION
+# ==============================================================================
+
+message(STATUS "Building: ${PROJECT_NAME}")
+message(STATUS "Using hdf_output as subproject")
+message(STATUS "Link target: hdf_output")

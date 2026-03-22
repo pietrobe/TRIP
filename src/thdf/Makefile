@@ -1,12 +1,29 @@
-# Compiler and flags
+COMPILER ?= standard
+
 CC ?= gcc
 MPICC ?= mpicc
-CFLAGS += -O3 -std=c11
-CFLAGS += -Wall -Wextra --pedantic -march=native -mtune=native
-CFLAGS += -I. 
 
-# HDF5 configuration (use pkg-config or hdf5 compiler wrapper)
-HDF5_CFLAGS = $(shell pkg-config --cflags hdf5 2>/dev/null || h5cc -showconfig | grep -i cflags)
+# Base flags applied to all compilations
+CFLAGS += -O3 -Wall -Wextra -march=native -mtune=native -I. 
+
+ifeq ($(COMPILER),cray)
+	# On Cray systems, 'cc' acts as both the C and MPI compiler, 
+	# and automatically links loaded modules (like HDF5) seamlessly!
+	CC = cc
+	MPICC = cc
+	CFLAGS += -std=gnu18
+	HDF5_CFLAGS = 
+	HDF5_LIBS = 
+else ifeq ($(COMPILER),nvidia)
+	# NVIDIA HPC SDK specific flags
+	CFLAGS += -std=gnu18 -D_Float128=__float128
+else
+	# Standard compilation flags (GCC, Clang, etc.)
+	CFLAGS += -std=c18
+endif
+
+# HDF5 configuration
+HDF5_CFLAGS = $(shell pkg-config --cflags hdf5 2>/dev/null || h5cc -showconfig 2>/dev/null | grep -i cflags)
 HDF5_LIBS = $(shell pkg-config --libs hdf5 hdf5_hl 2>/dev/null || echo "-lhdf5 -lhdf5_hl")
 
 CFLAGS += $(HDF5_CFLAGS)
@@ -16,7 +33,18 @@ LDFLAGS = $(HDF5_LIBS) -lm
 BUILD_DIR = build
 
 # Source files
-SRCS = hdf_output_field.c hdf_output_ar_field.c hdf_output_JKQ.c hdf_output_3D_field.c hdf_output_example_3D.c
+SRCS = output_utils.c hdf_output_field.c \
+	hdf_output_ar_field.c \
+	hdf_output_JKQ.c hdf_output_3D_field.c \
+	hdf_output_example_3D.c \
+	hdf_fapl_from_env.c \
+	hdf_output_domain_decomposition_3D.c \
+	hdf_output_zslice_3D.c \
+	hdf_output_single_zslice_3D.c \
+	hdf_output_example_zslice_3D.c  \
+	hdf_output_example_multi_zslice_3D.c \
+	hdf_output_example_single_zslice_3D.c
+
 OBJS = $(SRCS:%.c=$(BUILD_DIR)/%.o)
 DEPS = $(SRCS:%.c=$(BUILD_DIR)/%.d)
 
@@ -43,21 +71,25 @@ $(LIB): $(OBJS)
 	$(AR) rcs $@ $^
 
 example: $(EXE)
+
 $(EXE): hdf_output_example.c $(LIB)
-	$(CC) $(CFLAGS) -o $@ $< -L. -lhdf_output $(LDFLAGS)
+	$(MPICC) $(CFLAGS) -o $@ $< -L. -lhdf_output $(LDFLAGS)
 
 mpi: $(MPI_EXE)
-$(MPI_EXE): hdf_output_mpi_example.c $(LIB)
-	$(MPICC) $(CFLAGS) -o $@ $< -L. -lhdf_output $(LDFLAGS)
+
+$(MPI_EXE): hdf_output_mpi_example.c  $(LIB)
+	$(MPICC) $(CFLAGS) -o $@ hdf_output_mpi_example.c  -L. -lhdf_output $(LDFLAGS)
+
 demo: $(DEMO)
 
 $(DEMO): hdf_output_demo.c $(LIB) ../atmos/libhdf_atmos.a
-	$(CC) $(CFLAGS) -o $@ $< -L. -lhdf_output $(LDFLAGS)
+	$(MPICC) $(CFLAGS) -o $@ $< -L. -lhdf_output $(LDFLAGS)
+
 $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 clean:
-	rm -rfv  $(LIB) $(EXE) $(DEMO) $(MPI_EXE) *.h5 $(BUILD_DIR) *.png
+	rm -rfv $(LIB) $(EXE) $(DEMO) $(MPI_EXE) *.h5 $(BUILD_DIR) *.png 3d_field/*.h5 3d_field
 
 # Include dependency files
 -include $(DEPS)
