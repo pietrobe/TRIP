@@ -27,6 +27,7 @@ namespace domain_decomposition_3D
 	void
 	get_1d_decomposition(int n_global, int p_dims, int p_coord, int &n_local, int &start) noexcept;
 
+  #pragma pack(push, 1)
 	struct DomainInfo
 	{
 		// Processor grid dimensions
@@ -142,6 +143,7 @@ namespace domain_decomposition_3D
 			return max_len / min_len;
 		}
 	};
+  #pragma pack(pop)
 
 	// ---------------------------------------------------------------------------
 	// DomainDecomposition — performs and owns the 3-D decomposition
@@ -217,14 +219,15 @@ namespace domain_decomposition_3D
 		bool	   found		  = false;
 	};
 
-	void
+	bool
 	analyze_decomposition(const DomainInfo &info, int mpi_size);
 
 	/// Selects the best decomposition from a list of candidates based on:
 	/// load imbalance, aspect ratio, score, and grid ratio (max/min processor count).
 	/// If verbose is true, prints evaluation details for each candidate.
 	DecompositionSelection
-	select_best_decomposition(const std::deque<DomainInfo> &candidates, bool verbose = true);
+	select_best_decomposition(const std::deque<DomainInfo> &candidates, bool verbose = true, //
+							  const double li_rel_tol = 0.01);
 
 	void
 	demo_decompose_domain_3d();

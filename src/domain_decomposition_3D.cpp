@@ -256,20 +256,20 @@ namespace domain_decomposition_3D
 	// ---------------------------------------------------------------------------
 	// DomainDecomposition — analysis and demo
 	// ---------------------------------------------------------------------------
-	void
+	bool
 	analyze_decomposition(const DomainInfo &info, int mpi_size)
 	{
 		if (mpi_size <= 0)
 		{
 			std::fprintf(stderr, "Invalid mpi_size: %d\n", mpi_size);
-			return;
+			return false;
 		}
 
 		if (info.Px * info.Py * info.Pz != mpi_size)
 		{
 			std::fprintf(stderr, "Invalid decomposition: Px*Py*Pz=%d does not match mpi_size=%d\n",
 						 info.Px * info.Py * info.Pz, mpi_size);
-			return;
+			return false;
 		}
 
 		int num_cells_max = 0;
@@ -345,8 +345,11 @@ namespace domain_decomposition_3D
 			std::printf("  Cell-sum check: OK - sum(local cells) = %d matches global cells = %lld.\n", total_cells,
 						expected_total_cells);
 		else
+		{
 			std::printf("  Cell-sum check: FAILED - sum(local cells) = %d, expected global cells = %lld.\n", total_cells,
 						expected_total_cells);
+			return false;
+		}
 
 		int overlap_count = 0;
 		for (int i = 0; i < mpi_size; ++i)
@@ -378,14 +381,19 @@ namespace domain_decomposition_3D
 		if (overlap_count == 0)
 			std::printf("  Overlap check: OK - no overlapping subdomains.\n");
 		else
+		{
 			std::printf("  Overlap check: FAILED - %d overlapping pair(s) found.\n", overlap_count);
+			return false;
+		}
+
+		return true;
 	}
 
 	// ---------------------------------------------------------------------------
 	// select_best_decomposition
 	// ---------------------------------------------------------------------------
 	DecompositionSelection
-	select_best_decomposition(const std::deque<DomainInfo> &candidates, bool verbose)
+	select_best_decomposition(const std::deque<DomainInfo> &candidates, bool verbose, const double li_rel_tol)
 	{
 		DecompositionSelection result{};
 
@@ -397,9 +405,10 @@ namespace domain_decomposition_3D
 			const double grid_ratio		= static_cast<double>(p_max) / p_min;
 			const double load_imbalance = info.load_imbalance();
 
-			const bool is_better = !result.found
-								   || std::tie(load_imbalance, aspect_ratio, info.score_, grid_ratio) < std::tie(
-										  result.load_imbalance, result.aspect_ratio, result.score, result.grid_ratio);
+			const double result_load_imbalance = result.load_imbalance + result.load_imbalance * li_rel_tol;
+			const bool	 is_better = !result.found
+									 || std::tie(load_imbalance, aspect_ratio, info.score_, grid_ratio) < std::tie(
+											result_load_imbalance, result.aspect_ratio, result.score, result.grid_ratio);
 
 			if (verbose)
 			{

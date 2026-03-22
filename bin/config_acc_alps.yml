@@ -1,7 +1,7 @@
 # I/O
 input_directory: /capstor/scratch/cscs/sriva/PORTA/
-input_file: AR_385_Cut_64x64x128_mirrorxy-CRD_I_V0-B0_fix_conv_KQ_MC.pmd
-# input_file:      cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_wider_pp_it100.pmd
+# input_file: AR_385_Cut_64x64x128_mirrorxy-CRD_I_V0-B0_fix_conv_KQ_MC.pmd
+input_file:      cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_wider_pp_it100.pmd
 ### input_file:     FALC93_70_v0_B20
 # frequency_file:  frequency/fal-c_299/frequency.dat
 frequency_file: frequency/96F/frequency.dat
@@ -17,10 +17,10 @@ output_overwrite_prevention: true
 
 ## This will ensure that the output files are distributed across all the OSTs, 
 ## and not just one, which would cause a bottleneck.
-write_whole_3D_field_hdf5: true
+write_whole_3D_field_hdf5: false
 write_text_output: false
 
-output_directory: /capstor/scratch/cscs/sriva/hdf/test_weak/t2
+output_directory: /capstor/scratch/cscs/sriva/hdf/dd/t1
 
 use_B: true
 use_Vb: true
