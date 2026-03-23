@@ -3,6 +3,275 @@
 
 #include <cstdio>
 
+namespace
+{
+	void
+	write_shared_hdf5_metadata(const hid_t file_id, RT_problem &rt_problem, const int N_x, const int N_y, const int N_z,
+							   const int N_incl, const int N_azimuth, const int N_frequencies)
+	{
+		std::vector<double>		frequencies(rt_problem.nu_grid_.begin(), rt_problem.nu_grid_.end());
+		THDF_frequencies_grid_t frequencies_grid;
+		frequencies_grid.N_frequencies = N_frequencies;
+		frequencies_grid.frequencies   = frequencies.data();
+
+		THDF_write_frequencies_grid_to_hdf5(file_id, &frequencies_grid);
+
+		THDF_angular_grid_t angular_grid;
+		angular_grid.N_azimuthal_angles	  = N_azimuth;
+		angular_grid.N_inclination_angles = N_incl;
+		angular_grid.N_directions		  = N_incl * N_azimuth;
+
+		std::vector<double> theta_grid_rad(rt_problem.theta_grid_.begin(), rt_problem.theta_grid_.end());
+		std::vector<double> chi_grid_rad(rt_problem.chi_grid_.begin(), rt_problem.chi_grid_.end());
+
+		std::vector<int> inclinations_indices(angular_grid.N_directions);
+		std::vector<int> azimuthal_indices(angular_grid.N_directions);
+
+		for (int i = 0; i < N_incl; i++)
+		{
+			for (int j = 0; j < N_azimuth; j++)
+			{
+				inclinations_indices[i * N_azimuth + j] = i;
+				azimuthal_indices[i * N_azimuth + j]	= j;
+			}
+		}
+
+		angular_grid.inclination_angles	  = theta_grid_rad.data();
+		angular_grid.azimuthal_angles	  = chi_grid_rad.data();
+		angular_grid.inclinations_indices = inclinations_indices.data();
+		angular_grid.azimuthal_indices	  = azimuthal_indices.data();
+		THDF_write_angular_grid_to_hdf5(file_id, &angular_grid);
+
+		THDF_geometry_3D_t geometry_3D;
+
+		std::vector<double> heights(rt_problem.depth_grid_.begin(), rt_problem.depth_grid_.end());
+
+		geometry_3D.N_x		= N_x;
+		geometry_3D.N_y		= N_y;
+		geometry_3D.N_z		= N_z;
+		geometry_3D.heights = heights.data();
+		geometry_3D.delta	= rt_problem.L_;
+
+		THDF_write_geometry_3D_to_hdf5(file_id, &geometry_3D);
+	}
+} // namespace
+
+////////////////////////////////////////////////////////////////////////
+// Main function to write the whole 3D field to HDF5 using the FAL-C input format
+////////////////////////////////////////////////////////////////////////
+int
+write_3D_whole_field_falp_hdf5(RT_problem &rt_problem, const std::string &output_file, //
+							   const int step_z_, bool normalized_output)
+{
+	const double t_start = MPI_Wtime();
+
+	const int step_z = step_z_;
+
+	const int mpi_rank = rt_problem.mpi_rank_;
+
+	const auto [i_start, j_start, k_start] = rt_problem.space_grid_->getGhostMargins();
+
+	const int size_i = rt_problem.space_grid_->getLocalSizeX();
+	const int size_j = rt_problem.space_grid_->getLocalSizeY();
+	const int size_k = rt_problem.space_grid_->getLocalSizeZ();
+
+	const int local_start_x = rt_problem.space_grid_->local_to_global_coordinate(0, i_start);
+	const int local_start_y = rt_problem.space_grid_->local_to_global_coordinate(1, j_start);
+	const int local_start_z = rt_problem.space_grid_->local_to_global_coordinate(2, k_start);
+
+	const int N_x = rt_problem.N_x_;
+	const int N_y = rt_problem.N_y_;
+	const int N_z = rt_problem.N_z_;
+
+	const int N_stokes		= 4;
+	const int N_frequencies = rt_problem.N_nu_;
+	const int N_azimuth		= rt_problem.N_chi_;
+	const int N_incl		= rt_problem.N_theta_;
+
+	const int stride_stokes		 = 1;
+	const int stride_frequencies = N_stokes;
+	const int stride_azimuth	 = N_stokes * N_frequencies;
+	const int stride_incl		 = N_stokes * N_frequencies * N_azimuth;
+	const int stride_z			 = N_stokes * N_frequencies * N_azimuth * N_incl;
+	const int stride_y			 = N_stokes * N_frequencies * N_azimuth * N_incl * size_k;
+	const int stride_x			 = N_stokes * N_frequencies * N_azimuth * N_incl * size_k * size_j;
+
+	int max_size_k;
+	int min_size_k;
+
+	const double total_size = (double)(N_x * N_y * N_z) * (double)(N_incl * N_azimuth * N_frequencies * N_stokes);
+
+	MPI_Allreduce(&size_k, &max_size_k, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+	MPI_Allreduce(&size_k, &min_size_k, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+
+	{ // Collective file creation:
+		double t0 = MPI_Wtime();
+
+		const int flag_create_file = THDF_create_zslab_file_single(MPI_COMM_WORLD, output_file.c_str(), normalized_output,
+																   N_x, N_y, N_z, N_incl, N_azimuth, N_frequencies);
+
+		if (flag_create_file < 0)
+		{
+			fprintf(stderr, "Rank %d: create failed\n", mpi_rank);
+			MPI_Abort(MPI_COMM_WORLD, -1);
+		}
+		MPI_Barrier(MPI_COMM_WORLD);
+		if (mpi_rank == 0) printf("[t] create: %.3f s\n", MPI_Wtime() - t0);
+	}
+
+	if (mpi_rank == 0)
+	{
+		hid_t file_id = H5Fopen(output_file.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+		if (file_id < 0)
+		{
+			fprintf(stderr, "Rank 0: serial open failed\n");
+			MPI_Abort(MPI_COMM_WORLD, -1);
+		}
+
+		write_shared_hdf5_metadata(file_id, rt_problem,				  //
+								   N_x, N_y, N_z,					  //
+								   N_incl, N_azimuth, N_frequencies); //
+
+		H5Fflush(file_id, H5F_SCOPE_GLOBAL);
+		H5Fclose(file_id);
+
+		// printf("[t] metadata written\n");
+	}
+
+	MPI_Barrier(MPI_COMM_WORLD);
+
+	{
+		const double t0		 = MPI_Wtime();
+		hid_t		 fapl	 = build_fapl_from_env(MPI_COMM_WORLD);
+		hid_t		 file_id = H5Fopen(output_file.c_str(), H5F_ACC_RDWR, fapl);
+		H5Pclose(fapl);
+		if (file_id < 0)
+		{
+			fprintf(stderr, "Rank %d: H5Fopen failed\n", mpi_rank);
+			MPI_Abort(MPI_COMM_WORLD, -1);
+		}
+
+		THDF_zslab_handler_t *handler = THDF_open_zslab_handler_single(file_id,							  //
+																	   normalized_output,				  //
+																	   N_x, N_y, N_z,					  //
+																	   N_incl, N_azimuth, N_frequencies); //
+		if (!handler)
+		{
+			fprintf(stderr, "Rank %d: open_handler failed\n", mpi_rank);
+			MPI_Abort(MPI_COMM_WORLD, -1);
+		}
+		MPI_Barrier(MPI_COMM_WORLD);
+		if (mpi_rank == 0) printf("[write 3D] open handler: %.3f s\n", MPI_Wtime() - t0);
+
+		// Prepare data buffer for writing slices
+		std::vector<THDF_float32_t> stokes_I_buffer(size_i * size_j * step_z * N_incl * N_azimuth * N_frequencies);
+		std::vector<THDF_float32_t> stokes_Q_buffer(size_i * size_j * step_z * N_incl * N_azimuth * N_frequencies);
+		std::vector<THDF_float32_t> stokes_U_buffer(size_i * size_j * step_z * N_incl * N_azimuth * N_frequencies);
+		std::vector<THDF_float32_t> stokes_V_buffer(size_i * size_j * step_z * N_incl * N_azimuth * N_frequencies);
+
+		const double wt0 = MPI_Wtime();
+
+		const int N_local_z = size_k;
+		const int N_local_x = size_i;
+		const int N_local_y = size_j;
+
+		for (int local_zi = 0; local_zi < max_size_k; local_zi += step_z)
+		{
+			const int is_writer	 = (local_zi < N_local_z);
+			const int current_nz = is_writer ? ((local_zi + step_z <= N_local_z) ? step_z : (N_local_z - local_zi)) : 0;
+			const int global_start_z = local_start_z + local_zi;
+
+			Real *stokes_IQUV = rt_problem.I_field_->block(0, 0, local_zi);
+
+			THDF_3D_field_t field;
+			if (is_writer)
+			{
+				THDF_copy_3D_block_field(&field, normalized_output, stokes_IQUV, // Input data in float 64 bits
+										 stokes_I_buffer.data(),				 //
+										 stokes_Q_buffer.data(),				 //
+										 stokes_U_buffer.data(),				 //
+										 stokes_V_buffer.data(),				 //
+										 nullptr,								 //
+										 nullptr,								 //
+										 nullptr,								 //
+										 nullptr,								 //
+										 0, 0, 0,								 //
+										 size_i, size_j, current_nz,			 //
+										 N_incl, N_azimuth, N_frequencies,		 //
+										 stride_x,								 //
+										 stride_y,								 //
+										 stride_z,								 //
+										 stride_incl,							 //
+										 stride_azimuth,						 //
+										 stride_frequencies,					 //
+										 stride_stokes);						 //
+			}
+
+			double tw0 = MPI_Wtime();
+
+			/* ALL ranks call this — non-writers pass current_nz=0 */
+			THDF_write_zslab_block_single(handler, is_writer ? &field : NULL, local_start_x, local_start_y,
+										  global_start_z, /* GLOBAL z offset */
+										  N_local_x, N_local_y, current_nz, N_incl, N_azimuth, N_frequencies);
+
+			MPI_Barrier(MPI_COMM_WORLD);
+			if (mpi_rank == 0)
+			{
+				printf("[write 3D] z=%d nz=%d: %.3f s\n", global_start_z, current_nz, MPI_Wtime() - tw0);
+				const double gb_written = (double)N_x * N_y * current_nz * N_incl * N_azimuth * N_frequencies * N_stokes
+										  * sizeof(THDF_float32_t) / (1024.0 * 1024.0 * 1024.0);
+				printf("[write 3D] local written: %.3f GB  approx. peak-bandwidth: %.3f GB/s\n", gb_written,
+					   gb_written / (MPI_Wtime() - tw0));
+			}
+		} // End of loop over z-slices
+
+		MPI_Barrier(MPI_COMM_WORLD);
+
+		if (mpi_rank == 0)
+		{
+			printf("[write 3D] write loop: %.3f s\n", MPI_Wtime() - wt0);
+			double gb_written = (double)total_size * sizeof(THDF_float32_t) / (1024.0 * 1024.0 * 1024.0);
+			printf("[write 3D] total written: %.1f GB  effective loop-bandwidth: %.1f GB/s\n", gb_written,
+				   gb_written / (MPI_Wtime() - wt0));
+		}
+
+		{
+			double t0 = MPI_Wtime();
+			THDF_close_zslab_handler_single(handler);
+			H5Fflush(file_id, H5F_SCOPE_GLOBAL);
+			MPI_Barrier(MPI_COMM_WORLD);
+			if (mpi_rank == 0) printf("[write 3D] H5Fflush: %.3f s\n", MPI_Wtime() - t0);
+			t0 = MPI_Wtime();
+			H5Fclose(file_id);
+			MPI_Barrier(MPI_COMM_WORLD);
+			if (mpi_rank == 0) printf("[write 3D] H5Fclose: %.3f s\n", MPI_Wtime() - t0);
+		}
+	}
+
+	MPI_Barrier(MPI_COMM_WORLD);
+	const double t_total = MPI_Wtime() - t_start;
+	if (mpi_rank == 0)
+	{
+		const double gb = total_size * sizeof(THDF_float32_t) / (1024.0 * 1024.0 * 1024.0);
+		const int	 Px = rt_problem.mpi_size_x_;
+		const int	 Py = rt_problem.mpi_size_y_;
+		const int	 Pz = rt_problem.mpi_size_z_;
+
+		printf("[write 3D] total: %.3f s\n", t_total);
+		printf("[write 3D] N_x=%d  N_y=%d  N_z=%d  N_incl=%d  N_azimuth=%d  N_frequencies=%d  N_stokes=%d\n", N_x, N_y,
+			   N_z, N_incl, N_azimuth, N_frequencies, N_stokes);
+		printf("[write 3D] total size: %.1f GB\n", gb);
+		printf("[write 3D] max local z-slab: %d  min local z-slab: %d\n", max_size_k, min_size_k);
+		printf("[write 3D] decomposition: (%d, %d, %d) for domain (%d, %d, %d)\n", Px, Py, Pz, N_x, N_y, N_z);
+		printf("[write 3D] output: %.1f GB  TTS-bandwidth: %.1f GB/s\n", gb, gb / t_total);
+	}
+
+	return 0;
+}
+
+/////////////////////////////////////////////////////////////////////////
+// write_3D_whole_field_hdf5
+/////////////////////////////////////////////////////////////////////////
 int
 write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file, //
 						  const int step_z_, bool normalized_output)
@@ -57,55 +326,13 @@ write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 			std::cerr << "[rank 0] THDF_create_3D_field_handler_mpi failed\n";
 			MPI_Abort(MPI_COMM_WORLD, -1);
 		}
-		hid_t		 file_id				  = H5Fopen(output_file.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
-		const double hdf_open_and_handler_end = MPI_Wtime();
-		std::cout << "[rank 0] THDF_create_3D_field_handler_mpi: "
-				  << hdf_open_and_handler_end - hdf_open_and_handler_start << " s" << std::endl;
 
-		std::vector<double>		frequencies(rt_problem.nu_grid_.begin(), rt_problem.nu_grid_.end());
-		THDF_frequencies_grid_t frequencies_grid;
-		frequencies_grid.N_frequencies = N_frequencies;
-		frequencies_grid.frequencies   = frequencies.data();
+		hid_t file_id = H5Fopen(output_file.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
 
-		THDF_write_frequencies_grid_to_hdf5(file_id, &frequencies_grid);
-
-		THDF_angular_grid_t angular_grid;
-		angular_grid.N_azimuthal_angles	  = N_azimuth;
-		angular_grid.N_inclination_angles = N_incl;
-		angular_grid.N_directions		  = N_incl * N_azimuth;
-
-		std::vector<double> theta_grid_rad(rt_problem.theta_grid_.begin(), rt_problem.theta_grid_.end());
-		std::vector<double> chi_grid_rad(rt_problem.chi_grid_.begin(), rt_problem.chi_grid_.end());
-
-		std::vector<int> inclinations_indices(angular_grid.N_directions);
-		std::vector<int> azimuthal_indices(angular_grid.N_directions);
-
-		for (int i = 0; i < N_incl; i++)
-		{
-			for (int j = 0; j < N_azimuth; j++)
-			{
-				inclinations_indices[i * N_azimuth + j] = i;
-				azimuthal_indices[i * N_azimuth + j]	= j;
-			}
-		}
-
-		angular_grid.inclination_angles	  = theta_grid_rad.data();
-		angular_grid.azimuthal_angles	  = chi_grid_rad.data();
-		angular_grid.inclinations_indices = inclinations_indices.data();
-		angular_grid.azimuthal_indices	  = azimuthal_indices.data();
-		THDF_write_angular_grid_to_hdf5(file_id, &angular_grid);
-
-		THDF_geometry_3D_t geometry_3D;
-
-		std::vector<double> heights(rt_problem.depth_grid_.begin(), rt_problem.depth_grid_.end());
-
-		geometry_3D.N_x		= N_x;
-		geometry_3D.N_y		= N_y;
-		geometry_3D.N_z		= N_z;
-		geometry_3D.heights = heights.data();
-		geometry_3D.delta	= rt_problem.L_;
-
-		THDF_write_geometry_3D_to_hdf5(file_id, &geometry_3D);
+		write_shared_hdf5_metadata(file_id,							  //
+								   rt_problem,						  //
+								   N_x, N_y, N_z,					  //
+								   N_incl, N_azimuth, N_frequencies); //
 
 		H5Fclose(file_id);
 	} // End of writing shared parameters from MPI rank 0,

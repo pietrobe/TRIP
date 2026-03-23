@@ -7,6 +7,10 @@
 
 #include "hdf_output_zslice_3D.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int
 THDF_create_zslab_file_single(MPI_Comm comm, const char *path, bool normalized_output, int N_x, int N_y, int N_z,
                               int N_incl, int N_azimuth, int N_frequencies);
@@ -22,5 +26,9 @@ THDF_write_zslab_block_single(THDF_zslab_handler_t *handler, const THDF_3D_field
 
 void
 THDF_close_zslab_handler_single(THDF_zslab_handler_t *h);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
