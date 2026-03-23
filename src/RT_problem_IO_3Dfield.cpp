@@ -186,25 +186,28 @@ write_3D_whole_field_falp_hdf5(RT_problem &rt_problem, const std::string &output
 			THDF_3D_field_t field;
 			if (is_writer)
 			{
-				THDF_copy_3D_block_field(&field, normalized_output, stokes_IQUV, // Input data in float 64 bits
-										 stokes_I_buffer.data(),				 //
-										 stokes_Q_buffer.data(),				 //
-										 stokes_U_buffer.data(),				 //
-										 stokes_V_buffer.data(),				 //
-										 nullptr,								 //
-										 nullptr,								 //
-										 nullptr,								 //
-										 nullptr,								 //
-										 0, 0, 0,								 //
-										 size_i, size_j, current_nz,			 //
-										 N_incl, N_azimuth, N_frequencies,		 //
-										 stride_x,								 //
-										 stride_y,								 //
-										 stride_z,								 //
-										 stride_incl,							 //
-										 stride_azimuth,						 //
-										 stride_frequencies,					 //
-										 stride_stokes);						 //
+				// TODO rewrite this function in order to have a better control over the data layout.
+				// And the I (Q/I U/I V/I) * 100
+				THDF_copy_3D_block_field(&field,						   //
+										 normalized_output, stokes_IQUV,   // Input data in float 64 bits
+										 stokes_I_buffer.data(),		   //
+										 stokes_Q_buffer.data(),		   //
+										 stokes_U_buffer.data(),		   //
+										 stokes_V_buffer.data(),		   //
+										 nullptr,						   //
+										 nullptr,						   //
+										 nullptr,						   //
+										 nullptr,						   //
+										 0, 0, 0,						   //
+										 size_i, size_j, current_nz,	   //
+										 N_incl, N_azimuth, N_frequencies, //
+										 stride_x,						   //
+										 stride_y,						   //
+										 stride_z,						   //
+										 stride_incl,					   //
+										 stride_azimuth,				   //
+										 stride_frequencies,			   //
+										 stride_stokes);				   //
 			}
 
 			double tw0 = MPI_Wtime();

@@ -13,7 +13,7 @@
 
 #SBATCH --exclusive
 #SBATCH --cpus-per-task=1
-#SBATCH --account=c40
+#SBATCH --account=sm111
 #SBATCH --partition=debug
 #SBATCH --ntasks-per-socket=46
 
@@ -61,6 +61,7 @@ printf "%-30s %s\n" "SCRIPT_DIR:" "$SCRIPT_DIR"
 echo "=========================================="
 echo ""
 
+source ${SCRIPT_DIR}/pfs_evn/lustre_fs_cscs.sh
 
 # Define arguments as a bash array
 ARGS=(

@@ -86,11 +86,11 @@ TRIP produces HDM5 (*.h5) files by default, as well as CSV and MATLAB data scrip
 #### IMPORTANT
 In order to save the entire 3D radiation field: 
 * Set up the scratch file system as the output directory. 
-* In the sbatch script, source the bash scripts in "TODO" to optimize the writing parameters for a specific parallel file system.
+* In the sbatch script, source the bash scripts in ```${TRIP_MAIN_DIR}/bin/pfs_env``` to optimize the writing parameters for a specific parallel file system.
 
 
 **ATTENTION**: 
-* For the Lustre file system, it is necessary to set the stripes of the output directory **before** executing TRIP with the command line ```lfs setstripes TODO```. This is the case for the Capstor FS at CSCS, or for the Shaheen III at KAUST. 
+* For the **Lustre file system**, it is necessary to set the stripes of the output directory **before** executing TRIP with the command line ```lfs setstripe -c 16 -S 4m -i -1 ${BASE_OUTPUT_DIR}``` (the setstripe is applied recursively in new subdirectories). This is the case for the Capstor FS at CSCS, or for the Shaheen III at KAUST. 
 If this preventive preparation of the output direcory is not made the writing mehtods could require more than an hour to save the entire 3D radiation field.
 
 * In the gpfs filesystem on the in the MareNostrum 5 (ACC|GPP) stripes are set by default in the system, so that, preventive preparation is not required.

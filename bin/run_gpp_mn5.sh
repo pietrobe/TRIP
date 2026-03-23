@@ -58,16 +58,7 @@ module load intel-oneapi-compilers
 module load intel-oneapi-mpi
 module load hdf5/1.14.1-2-intel-impi # Assicurati che sia la versione IMPI!
 
-# Tuning Intel MPI
-export I_MPI_FABRICS=shm:ofi
-export I_MPI_ADAPTIVE_PROGRESS=1
-
-# Tuning I/O per GPFS
-export I_MPI_EXTRA_FILESYSTEM=on
-export I_MPI_EXTRA_FILESYSTEM_LIST=gpfs
-export HDF5_USE_FILE_LOCKING=FALSE
-export ROMIO_HINTS="romio_cb_write=enable,romio_ds_write=disable"
-
+source ${SCRIPT_DIR}/pfs_evn/gpfs_mn5.sh
 
 # Define arguments as a bash array
 ARGS=(
