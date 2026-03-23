@@ -45,12 +45,14 @@ cmake .. -DRII_ROOT_PATH=/path_to_rii/rii/rii-c/ \
          -DUSE_ACC=ON;
 make -j
 ```
-#### troubleshooting
+#### troubleshooting (Petsc)
 If Petsc is installed by the user and is not in a default system path before the compilation it is necessary to export the env variables:
 ```bash
 export PETSC_DIR=${PETSC_MAIN_PATH}/petsc-install;
 export PKG_CONFIG_PATH=$PETSC_DIR/lib/pkgconfig:$PKG_CONFIG_PATH;
 ```
+
+where ```${PETSC_MAIN_PATH}``` is the main installation directory of Petsc.
 
 ## Input
 Input is provided via a YAML configuration file.
@@ -76,6 +78,22 @@ The scattering module can be changed via the `emissivity_model` field, between t
 ```bash
 srun ./solar_3D --yaml_config ${PATH_TO_YAML_CONFIG}
 ```
+
+## Output files
+
+TRIP produces HDM5 (*.h5) files by default, as well as CSV and MATLAB data script files as options.
+
+#### IMPORTANT
+In order to save the entire 3D radiation field: 
+* Set up the scratch file system as the output directory. 
+* In the sbatch script, source the bash scripts in "TODO" to optimize the writing parameters for a specific parallel file system.
+
+
+**ATTENTION**: 
+* For the Lustre file system, it is necessary to set the stripes of the output directory **before** executing TRIP with the command line ```lfs setstripes TODO```. This is the case for the Capstor FS at CSCS, or for the Shaheen III at KAUST. 
+If this preventive preparation of the output direcory is not made the writing mehtods could require more than an hour to save the entire 3D radiation field.
+
+* In the gpfs filesystem on the in the MareNostrum 5 (ACC|GPP) stripes are set by default in the system, so that, preventive preparation is not required.
 
 ## Testing
 ```bash
