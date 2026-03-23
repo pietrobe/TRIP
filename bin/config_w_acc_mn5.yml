@@ -7,7 +7,8 @@ frequency_file:  frequency/96F/frequency.dat
 
 output: true
 output_overwrite_prevention: true
-output_directory: /gpfs/scratch/ehpc238/PORTA/scaling_tests_t/weak_scaling/gpp/p4096_64x64x128_crd_d/
+output_directory: /gpfs/scratch/ehpc238/PORTA/file_tests/t2
+
 write_whole_3D_field_hdf5: true
 write_text_output: false
 

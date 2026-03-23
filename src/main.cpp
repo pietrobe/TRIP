@@ -223,8 +223,9 @@ main(int argc, char *argv[])
 
 			if (cfg.write_whole_3D_field_hdf5)
 			{
-				write_3D_whole_field_hdf5(*rt_problem_ptr, (output_path / "whole_3D_radiation_field.h5").string(), 3,
-										  false); //
+				if (mpi_rank == 0) std::cout << "Writing whole 3D field to HDF5..." << std::endl;
+				write_3D_whole_field_falp_hdf5(*rt_problem_ptr, (output_path / "whole_3D_radiation_field.h5").string(), 3,
+											   false); //
 			}
 
 			clocks.hdf5_out_time_whole_3D_field = MPI_Wtime() - clocks.hdf5_out_time_whole_3D_field;
