@@ -53,11 +53,6 @@ echo ""
 echo "Starting TRIP ...... "
 echo ""
 
-# Carica i moduli corretti
-module load intel-oneapi-compilers
-module load intel-oneapi-mpi
-module load hdf5/1.14.1-2-intel-impi # Assicurati che sia la versione IMPI!
-
 source ${SCRIPT_DIR}/pfs_evn/gpfs_mn5.sh
 
 # Define arguments as a bash array
