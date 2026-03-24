@@ -87,21 +87,22 @@ main(int argc, char *argv[])
 
 	{ // start scope for RT_problem and RT_solver
 
+		//////////////////////////////////////////////////////////////////////////
+		// Prepare output directory
+		// If the output directory does not exist, create it. If it exists, abort !
+		const std::filesystem::path output_subdir =
+			std::filesystem::path(cfg.input_file.string() + "." + emissivity_model_to_string_long(cfg.emissivity_model));
+
+		const std::filesystem::path output_path =
+			std::filesystem::path(cfg.output_directory) / std::filesystem::path(output_subdir);
+		std::string output_file = (output_path / "profiles").string();
+
 		// create problem object
 		auto rt_problem_ptr = std::make_shared<RT_problem>(cfg);
 		rt_problem_ptr->space_grid_->dumpDecompositionCSV("decomposition.csv");
 
 		// create solver object
 		RT_solver rt_solver(rt_problem_ptr);
-
-		//////////////////////////////////////////////////////////////////////////
-		// Prepare output directory
-		// If the output directory does not exist, create it. If it exists, abort !
-		const std::filesystem::path output_subdir =
-			std::filesystem::path(cfg.input_file.string() + "." + emissivity_model_to_string_long(cfg.emissivity_model));
-		const std::filesystem::path output_path =
-			std::filesystem::path(cfg.output_directory) / std::filesystem::path(output_subdir);
-		std::string output_file = (output_path / "profiles").string();
 
 		if (mpi_rank == 0)
 		{
@@ -124,6 +125,8 @@ main(int argc, char *argv[])
 					MPI_Abort(MPI_COMM_WORLD, 1);
 				}
 			}
+
+			rt_problem_ptr->space_grid_->dumpDecompositionCSV((output_path / "decomposition.csv").string());
 
 			if (mpi_rank == 0)
 			{
