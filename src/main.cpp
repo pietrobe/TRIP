@@ -1,6 +1,8 @@
 #include "RT_arbitrary_beam.hpp"
 #include "RT_solver.hpp"
 
+#include <random>
+
 //////////////////////////////////////////////////////////////////////////
 // Main function
 //////////////////////////////////////////////////////////////////////////
@@ -24,6 +26,13 @@ main(int argc, char *argv[])
 	{
 		print_help();
 		return 0;
+	}
+
+	const char* slurm_job_id = std::getenv("SLURM_JOB_ID");
+	std::string slurm_JOB_ID = slurm_job_id ? slurm_job_id : "";
+	if (!slurm_JOB_ID.empty() && mpi_rank == 0)
+	{
+		std::cout << "SLURM Job ID: " << slurm_JOB_ID << std::endl;
 	}
 
 	// import input file config.yml
@@ -137,6 +146,7 @@ main(int argc, char *argv[])
 				output_info_file_name = output_path / "info.txt"; // <-- Remove 'const auto', assign to outer variable
 				std::ofstream output_file_info(output_info_file_name);
 
+				output_file_info << "SLURM Job ID: " << slurm_JOB_ID << std::endl;
 				output_file_info << ss_a.str();
 				output_file_info << ss_b.str();
 				output_file_info.close();
@@ -227,8 +237,8 @@ main(int argc, char *argv[])
 			if (cfg.write_whole_3D_field_hdf5)
 			{
 				if (mpi_rank == 0) std::cout << "Writing whole 3D field to HDF5..." << std::endl;
-				write_3D_whole_field_falp_hdf5(*rt_problem_ptr, (output_path / "whole_3D_radiation_field.h5").string(), 3,
-											   false); //
+				write_3D_whole_field_hdf5(*rt_problem_ptr, (output_path / "whole_3D_radiation_field.h5").string(), 2,
+										  false); //
 			}
 
 			clocks.hdf5_out_time_whole_3D_field = MPI_Wtime() - clocks.hdf5_out_time_whole_3D_field;

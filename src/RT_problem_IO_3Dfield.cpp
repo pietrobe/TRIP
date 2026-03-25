@@ -189,7 +189,8 @@ write_3D_whole_field_falp_hdf5(RT_problem &rt_problem, const std::string &output
 				// TODO rewrite this function in order to have a better control over the data layout.
 				// And the I (Q/I U/I V/I) * 100
 				THDF_copy_3D_block_field(&field,						   //
-										 normalized_output, stokes_IQUV,   // Input data in float 64 bits
+										 normalized_output,				   //
+										 stokes_IQUV,					   // Input data in float 64 bits
 										 stokes_I_buffer.data(),		   //
 										 stokes_Q_buffer.data(),		   //
 										 stokes_U_buffer.data(),		   //
@@ -213,8 +214,9 @@ write_3D_whole_field_falp_hdf5(RT_problem &rt_problem, const std::string &output
 			double tw0 = MPI_Wtime();
 
 			/* ALL ranks call this — non-writers pass current_nz=0 */
-			THDF_write_zslab_block_single(handler, is_writer ? &field : NULL, local_start_x, local_start_y,
-										  global_start_z, /* GLOBAL z offset */
+			THDF_write_zslab_block_single(handler,										//
+										  is_writer ? &field : nullptr,					//
+										  local_start_x, local_start_y, global_start_z, /* GLOBAL z offset */
 										  N_local_x, N_local_y, current_nz, N_incl, N_azimuth, N_frequencies);
 
 			MPI_Barrier(MPI_COMM_WORLD);
