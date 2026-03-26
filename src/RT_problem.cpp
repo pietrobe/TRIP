@@ -2514,8 +2514,9 @@ RT_problem::set_3D_decomposition_BLC(const int mpi_rank, const int mpi_size,cons
 
 	if (mpi_rank == 0)
 	{
-		std::cout << "Final decomposition: Px=" << mpi_size_x_ << ", Py=" << mpi_size_y_ << ", Pz=" << mpi_size_z_
-				  << " for MPI size = " << mpi_size_ << std::endl;
+		const double load_inbalace = d_info.load_imbalance();
+		std::printf("Final decomposition: P = (%d, %d, %d) for MPI size = %d, with load imbalance = %.3f\n", //
+			mpi_size_x_, mpi_size_y_, mpi_size_z_, mpi_size_, load_inbalace);                                //
 	}
 }
 

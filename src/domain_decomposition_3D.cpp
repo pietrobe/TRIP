@@ -413,7 +413,7 @@ namespace domain_decomposition_3D
 			if (verbose)
 			{
 				std::printf(
-					"C: aspect ratio: %.3f || score: %.3f || g-ratio max/min: %.3f || imbalance: %.3f || grid: %d x %d x "
+					"C: aspect ratio: %.3f, score: %.3f, g-ratio max/min: %.3f, imbalance: %.3f, grid: %d x %d x "
 					"%d%s\n",
 					aspect_ratio, info.score_, grid_ratio, load_imbalance, info.Px, info.Py, info.Pz,
 					is_better ? "  *" : "");
