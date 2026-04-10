@@ -21,7 +21,11 @@
 #include <vector>
 #include "RT_types.hpp"
 #include "Utilities.hpp"
+#include "thdf.h"
+#include "paschen_back.h"
+#include "mat.h"
 #include "tools.h"
+#include "mqn_map_two_term.h"
 
 // emissivty models
 enum class emissivity_model_t

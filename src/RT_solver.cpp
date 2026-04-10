@@ -3788,8 +3788,8 @@ void MF_context::init_serial_fields(const int n_tiles){
     if ((tile_size_ * n_tiles_ != n_local_rays_) and mpi_rank_ == 0) std::cout << "ERROR: in init_serial_fields(): n_local_rays_/n_tiles_ not integer" << std::endl;        
     if ((tile_size_ % 4 != 0) and mpi_rank_ == 0)                    std::cout << "ERROR: in init_serial_fields(): tile_size_ should be divisible by 4" << std::endl;            
 
-    // init serial grid
-    const bool use_ghost_layers = false;
+    // // init serial grid
+    // const bool use_ghost_layers = false;
 
     space_grid_serial_ = std::make_shared<Grid3D>(
         MPI_COMM_SELF,
@@ -3810,7 +3810,7 @@ void MF_context::init_serial_fields(const int n_tiles){
 
     eta_field_serial_ = std::make_shared<Field>(
         "eta_serial", space_grid_serial_, n_local_rays_, false
-    ); // here could tiles also be used to reduce mem footprint
+    ); // here tiles should also be used to reduce buffer size in AllToAll
     rho_field_serial_ = std::make_shared<Field>(
         "rho_serial", space_grid_serial_, n_local_rays_, false
     );

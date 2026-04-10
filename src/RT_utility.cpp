@@ -15,18 +15,33 @@ toKSPType(const std::string &name)
 	throw std::runtime_error("Unknown KSPType: " + name);
 }
 
+
 inline std::string
 KSPTypeToString(KSPType type)
 {
-	if (type == KSPGMRES) return "KSPGMRES";
-	if (type == KSPFGMRES) return "KSPFGMRES";
-	if (type == KSPPGMRES) return "KSPPGMRES";
-	if (type == KSPBCGS) return "KSPBCGS";
-	if (type == KSPPREONLY) return "KSPPREONLY";
-	if (type == KSPRICHARDSON) return "KSPRICHARDSON";
+    PetscBool match;
 
-	return "UNKNOWN";
+    PetscStrcmp(type, KSPGMRES, &match);
+    if (match) return "KSPGMRES";
+
+    PetscStrcmp(type, KSPFGMRES, &match);
+    if (match) return "KSPFGMRES";
+
+    PetscStrcmp(type, KSPPGMRES, &match);
+    if (match) return "KSPPGMRES";
+
+    PetscStrcmp(type, KSPBCGS, &match);
+    if (match) return "KSPBCGS";
+
+    PetscStrcmp(type, KSPPREONLY, &match);
+    if (match) return "KSPPREONLY";
+
+    PetscStrcmp(type, KSPRICHARDSON, &match);
+    if (match) return "KSPRICHARDSON";
+
+    return "UNKNOWN";
 }
+
 
 inline std::string
 validateFormalSolver(const std::string &s)
