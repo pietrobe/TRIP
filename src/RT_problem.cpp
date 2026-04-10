@@ -2724,6 +2724,65 @@ void RT_problem::set_3D_decomposition(const int N_x, const int N_y, const int N_
    mpi_size_z_ = best_pz;
 }
 
+void
+RT_problem::set_3D_decomposition_BLC(const int mpi_rank, const int mpi_size,const int N_x, const int N_y, const int N_z)
+{
+	namespace ddc = domain_decomposition_3D;
+
+	ddc::DomainInfo d_info;
+
+	if (mpi_rank == 0)
+	{
+		std::cout << "Starting domain decomposition for MPI size = " << mpi_size << " and grid size N_x=" << N_x << ", N_y=" << N_y
+				  << ", N_z=" << N_z << std::endl;
+		const auto primes	 = ddc::prime_factors(mpi_size);
+		const int  max_prime = primes.empty() ? 1 : std::max(0, primes.back());
+
+		if (max_prime > std::min({N_x, N_y, N_z}))
+		{
+			std::fprintf(stderr,
+						 "It is impossible to decompose the domain with size: N_x=%d, N_y=%d, N_z=%d, for MPI size=%d "
+						 "with max prime factor %d\n",
+						 N_x, N_y, N_z, mpi_size, max_prime);
+			MPI_Abort(MPI_COMM_WORLD, 1);
+			return;
+		}
+
+		ddc::DomainDecomposition dd(mpi_rank, mpi_size, N_x, N_y, N_z);
+
+		auto best_infos = dd.best_infos(mpi_rank);
+		auto selection	= ddc::select_best_decomposition(best_infos, true);
+
+		d_info = selection.best_info;
+
+		bool f = ddc::analyze_decomposition(d_info, mpi_size);
+
+		if (not f)
+		{
+			std::cerr << "Failed to decompose the mpi domain" << std::endl;
+			MPI_Abort(MPI_COMM_WORLD, 1);
+		}
+
+		std::cout << "Selected decomposition: Px=" << d_info.Px << ", Py=" << d_info.Py << ", Pz=" << d_info.Pz
+				  << std::endl;
+	}
+
+	MPI_Bcast((void *)&d_info, sizeof(ddc::DomainInfo), MPI_BYTE, 0, MPI_COMM_WORLD);
+
+	this->mpi_decomposition_ = d_info;
+	this->mpi_decomposition_.set_rank(mpi_rank);
+
+	this->mpi_size_x_ = this->mpi_decomposition_.Px;
+	this->mpi_size_y_ = this->mpi_decomposition_.Py;
+	this->mpi_size_z_ = this->mpi_decomposition_.Pz;
+
+	if (mpi_rank == 0)
+	{
+		const double load_inbalace = d_info.load_imbalance();
+		std::printf("Final decomposition: P = (%d, %d, %d) for MPI size = %d, with load imbalance = %.3f\n", //
+			mpi_size_x_, mpi_size_y_, mpi_size_z_, mpi_size_, load_inbalace);                                //
+	}
+}
 
 void RT_problem::set_grid_partition() 
 {	
@@ -2734,7 +2793,7 @@ void RT_problem::set_grid_partition()
 	}
 	else // full 3D
 	{		
-		set_3D_decomposition(N_x_, N_y_, N_z_);		
+		set_3D_decomposition_BLC(mpi_rank_, mpi_size_, N_x_, N_y_, N_z_);
 	}
 }
 

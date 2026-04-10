@@ -9,6 +9,7 @@
 #include <string>
 #include <cmath>
 #include <algorithm>
+#include <iomanip> 
 
 #define ABS_TOL 1e-5
 #define REL_TOL 1e-6
@@ -18,8 +19,8 @@
 #define RESET   "\033[0m"
 
 struct CSVMaxDiff {
-    double max_abs[4];
-    double max_rel[4];
+    double max_abs[4] = {0,0,0,0};
+    double max_rel[4] = {0,0,0,0};
 };
 
 // Trim leading and trailing whitespace
@@ -59,7 +60,7 @@ CSVMaxDiff compare_csv_report(const std::string& file1, const std::string& file2
     }
 
 
-    const char*  labels[4] = {"I     ","Q/I[%]","U/I[%]","V/I[%]"};
+    const char*  labels[4] = {"I","Q/I[%]","U/I[%]","V/I[%]"};
     const double absTol[4] = {ABS_TOL, ABS_TOL, ABS_TOL, ABS_TOL};
     const double relTol[4] = {REL_TOL, REL_TOL*100, REL_TOL*100, REL_TOL*100};
 
@@ -152,17 +153,20 @@ CSVMaxDiff compare_csv_report(const std::string& file1, const std::string& file2
 
     if (verbose) {
         report << "** Maximum Differences per Variable **\n";
-        report << "Variable | MaxAbsDiff      | MaxRelDiff\n";
-        report << "---------|----------------|----------------\n";
+        // Header
+        report << std::left  << std::setw(12) << "Variable"
+          << std::right << std::setw(18) << "MaxAbsDiff"
+          << std::setw(18) << "MaxRelDiff" << "\n";
+        report << std::string(48, '-') << "\n";
+        report << std::setprecision(6) << std::scientific;
         for (int i=0; i<4; i++)
         {
-            report << labels[i] << "        | "
-                << max_abs_diff[i] << " | "
-                << max_rel_diff[i] << "\n";
+            report << std::left << std::setw(12) << labels[i]
+                << std::right << std::setw(18) << max_abs_diff[i] 
+                << std::setw(18) << max_rel_diff[i] << "\n";
         }
-        report << "\n";
-        if (!is_equal)  report << RED << "==== ERROR: TEST NOT PASSED ====\n" << RESET;
-        else report << GREEN << "==== TEST PASSED ====\n" << RESET;
+        if (!is_equal)  report << RED << "==== ERROR: TEST NOT PASSED ====\n\n" << RESET;
+        else report << GREEN << "==== TEST PASSED ====\n\n" << RESET;
 
         std::cout << report.str();
     }
@@ -249,7 +253,8 @@ int main(int argc, char *argv[])
 				{
 					std::string test_file      = test_out_path + "_" + std::to_string(i) + "_" + std::to_string(j) + ".csv";
 					std::string reference_file = (cfg.reference_sol_directory).string() + "profiles_" + std::to_string(i) + "_" + std::to_string(j) + ".csv";        
-
+                    std::cout << "TEST: " << test_file << "\n";
+                    std::cout << "REF : " << reference_file << "\n";
                     bool equal;
                     CSVMaxDiff report = compare_csv_report(test_file, reference_file, equal, verbose);
                     file_summaries.push_back(report);
@@ -259,29 +264,38 @@ int main(int argc, char *argv[])
 		}	
         
         if (failed > 0) {
-            std::cout << RED << "==== ERROR: " << failed << "/" << N_x * N_y << " TESTS NOT PASSED ====\n" << RESET;
+            std::cout << RED << "\n==== ERROR: " << failed << "/" << N_x * N_y << " TESTS NOT PASSED ====\n" << RESET;
         } else {
-            std::cout << GREEN << "==== TEST PASSED ====\n" << RESET;
+            std::cout << GREEN << "\n==== TEST PASSED ====\n" << RESET;
         }
 
 
-        // Compute maximum over all files
-        CSVMaxDiff global_max{};
-        for (const auto& d : file_summaries) {
-            for (int k=0; k<4; ++k) {
-                global_max.max_abs[k] = std::max(global_max.max_abs[k], d.max_abs[k]);
-                global_max.max_rel[k] = std::max(global_max.max_rel[k], d.max_rel[k]);
+        if (mpi_rank == 0) {
+            // Compute maximum over all files
+            CSVMaxDiff global_max{};
+            for (const auto& d : file_summaries) {
+                for (int k=0; k<4; ++k) {
+                    global_max.max_abs[k] = std::max(global_max.max_abs[k], d.max_abs[k]);
+                    global_max.max_rel[k] = std::max(global_max.max_rel[k], d.max_rel[k]);
+                }
             }
-        }
-        // Print summary table
-        std::cout << "** Maximum Differences Across All Files **\n";
-        std::cout << "Variable | MaxAbsDiff | MaxRelDiff\n";
-        std::cout << "---------|------------|------------\n";
-        const char* labels[4] = {"I","Q/I[%]","U/I[%]","V/I[%]"};
-        for (int i=0; i<4; ++i) {
-            std::cout << labels[i] << "        | "
-                    << global_max.max_abs[i] << " | "
-                    << global_max.max_rel[i] << "\n";
+    
+            // Print summary table
+            std::cout << "\n** Maximum Differences Across All Files **\n";
+            const char* labels[4] = {"I", "Q/I[%]", "U/I[%]", "V/I[%]"};
+            // Header
+            std::cout << std::left  << std::setw(12) << "Variable"
+                    << std::right << std::setw(18) << "MaxAbsDiff"
+                    << std::setw(18) << "MaxRelDiff" << "\n";
+            std::cout << std::string(48, '-') << "\n";
+            // Data rows
+            std::cout << std::setprecision(6) << std::scientific;
+            for (int i = 0; i < 4; ++i) {
+                std::cout << std::left  << std::setw(12) << labels[i]
+                        << std::right << std::setw(18) << global_max.max_abs[i]
+                        << std::setw(18) << global_max.max_rel[i]
+                        << "\n";
+            }
         }
 	} // end scope for RT_problem and RT_solver
 
