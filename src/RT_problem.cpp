@@ -2060,20 +2060,6 @@ void RT_problem::set_eta_and_rhos_two_terms(){
 	     	}
 
 	     	if (enable_continuum_) block_eta[b] += k_c[n_nu];      
-
-	     			// print for test
-					if (n_nu == 90 and j_theta == 7 and k_chi == 15 and i == 0 and j == 0)
-					{						
-						std::cout << block_eta[b] << std::endl;						
-						std::cout << block_eta[b+1] << std::endl;
-						std::cout << block_eta[b+2] << std::endl;
-						std::cout << block_eta[b+3] << std::endl;
-															
-						// rhos
-						std::cout << block_rho[b+1] << std::endl;
-						std::cout << block_rho[b+2] << std::endl;
-						std::cout << block_rho[b+3] << std::endl;					
-					} 
       	     	
 	     	// sanity checks
 	     	if (block_eta[b] == 0) std::cerr << "\nWARNING: zero eta_I!"     << std::endl; 
