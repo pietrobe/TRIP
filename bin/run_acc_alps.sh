@@ -1,20 +1,20 @@
 #!/bin/bash -l
 
 ### to be defined, 12288 is tested !!!!!!!!!
-#SBATCH --ntasks=12288
+#### #SBATCH --ntasks=12288
 ### #SBATCH --ntasks=16384
 #### #SBATCH --ntasks=6144
-##### #SBATCH --ntasks=512
+#SBATCH --ntasks=512
 
 ## to be defined !!!!!!!!! 
-#SBATCH --time=04:59:59
+#SBATCH --time=00:30:00
 
 #SBATCH --job-name="TRIP_PRD_3D"
 
 #SBATCH --exclusive
 #SBATCH --cpus-per-task=1
-#SBATCH --account=c40
-#SBATCH --partition=normal
+#SBATCH --account=sm111
+#SBATCH --partition=debug
 #SBATCH --ntasks-per-socket=46
 
 
@@ -61,6 +61,7 @@ printf "%-30s %s\n" "SCRIPT_DIR:" "$SCRIPT_DIR"
 echo "=========================================="
 echo ""
 
+source ${SCRIPT_DIR}/pfs_evn/lustre_fs_cscs.sh
 
 # Define arguments as a bash array
 ARGS=(
@@ -70,7 +71,7 @@ ARGS=(
 )
 
 echo "Running  with MPS wrapper:"
-echo "":q:
+echo ""
 echo ""
 echo "Starting TRIP ...... "
 echo ""

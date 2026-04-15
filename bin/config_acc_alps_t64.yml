@@ -12,7 +12,7 @@ frequency_file:  frequency/96F/frequency.dat
 
 output: true
 output_overwrite_prevention: true
-output_directory: /capstor/scratch/cscs/sriva/PORTA_II/output_II/
+output_directory: /capstor/scratch/cscs/sriva/PORTA_II/output_III/
 
 use_B: true
 use_continuum: false

@@ -3,6 +3,8 @@
 
 #include "GridManager/GridManager.hpp"
 #include "RT_utility.hpp"
+#include "domain_decomposition_3D.hpp"
+#include "thdf.h"
 
 // Type for storing fields
 // using Real_t = Real;
@@ -534,6 +536,9 @@ class RT_problem
 	int mpi_size_;
 
 	// procs in each dimension // TODO these will be useless
+
+	domain_decomposition_3D::DomainInfo mpi_decomposition_;
+
 	int mpi_size_x_;
 	int mpi_size_y_;
 	int mpi_size_z_;
@@ -719,6 +724,20 @@ class RT_problem
    mdm::md_matrix<double, 1> Eu0_;    
    
 
+	// 2-terms atom constants (Jl2_ and Ju2_ are used for 2Lu and 2Ll from Luca notes atm)
+	int S2_;
+	std::vector<int> Jl2_vec_; 
+	std::vector<int> Ju2_vec_; 
+	std::vector<double> gl_vec_;
+	std::vector<double> gu_vec_;
+
+	// energy vectors in different formats
+	std::vector<double> El_vec_;
+	std::vector<double> Eu_vec_;
+	mdm::md_matrix<double, 1> El0_;
+   mdm::md_matrix<double, 1> Eu0_;    
+   
+
 	// reference frame
 	const double gamma_ = 0.5 * M_PI;
 
@@ -755,6 +774,7 @@ class RT_problem
 	// menage grid distribution
 	void set_grid_partition();	
 	void set_3D_decomposition(const int N_x, const int N_y, const int N_z); // UNUSED
+	void set_3D_decomposition_BLC(const int mpi_rank, const int mpi_size,const int N_x, const int N_y, const int N_z);
 
 	// read inputs
 	void

@@ -543,12 +543,21 @@ void RT_problem::read_3D(const char* filename){
 		xi_->ref(i,j,k) = 0; // with conversion to cm/s
 		
 		// compute Qel FIXME		
+<<<<<<< HEAD
 		const Real Dw_RH = Eu_ * std::sqrt(2 * k_B_ * T_->ref(i,j,k) / mass_real_RH);			
 		Qel_->ref(i,j,k) = a_->ref(i,j,k) * (4 * PI * Dw_RH) - Aul_RH;
 
 		// compute Qel
 		// const Real xi = 1e5 * xi_vec[k_reverse];; // with conversion to cm/s
 		// const Real Dw_RH = Eu_ * std::sqrt(xi * xi + 2 * k_B_ * T_->ref(i,j,k) / mass_real_RH);			
+=======
+		const double Dw_RH = Eu_ * std::sqrt(2 * k_B_ * T_->ref(i,j,k) / mass_real_RH);			
+		Qel_->ref(i,j,k) = a_->ref(i,j,k) * (4 * PI * Dw_RH) - Aul_RH;
+
+		// compute Qel
+		// const double xi = 1e5 * xi_vec[k_reverse];; // with conversion to cm/s
+		// const double Dw_RH = Eu_ * std::sqrt(xi * xi + 2 * k_B_ * T_->ref(i,j,k) / mass_real_RH);			
+>>>>>>> 152bc86b2d6787f4483565942795021c2c48ff76
 		// Qel_->ref(i,j,k) = a_->ref(i,j,k) * (4 * PI * Dw_RH) - Aul_RH;
 
 		// compute thermalization param 
@@ -2022,6 +2031,7 @@ void RT_problem::set_eta_and_rhos_two_terms(){
 																	
 									if (std::abs(q2) <= 2)															
 									{																	
+
 										const Real W3_1 = W3JS(2, 2, 2 * K, q2, -q2, 0); 
 										const Real W3_2 = W3JS(Ju2, Jl2,   2, -Mu2, Ml2, -q2); 
 										const Real W3_3 = W3JS(Ju2t, Jl2t, 2, -Mu2, Ml2, -q2); 
@@ -2060,20 +2070,6 @@ void RT_problem::set_eta_and_rhos_two_terms(){
 	     	}
 
 	     	if (enable_continuum_) block_eta[b] += k_c[n_nu];      
-
-	     			// print for test
-					if (n_nu == 90 and j_theta == 7 and k_chi == 15 and i == 0 and j == 0)
-					{						
-						std::cout << block_eta[b] << std::endl;						
-						std::cout << block_eta[b+1] << std::endl;
-						std::cout << block_eta[b+2] << std::endl;
-						std::cout << block_eta[b+3] << std::endl;
-															
-						// rhos
-						std::cout << block_rho[b+1] << std::endl;
-						std::cout << block_rho[b+2] << std::endl;
-						std::cout << block_rho[b+3] << std::endl;					
-					} 
       	     	
 	     	// sanity checks
 	     	if (block_eta[b] == 0) std::cerr << "\nWARNING: zero eta_I!"     << std::endl; 
@@ -2724,6 +2720,65 @@ void RT_problem::set_3D_decomposition(const int N_x, const int N_y, const int N_
    mpi_size_z_ = best_pz;
 }
 
+void
+RT_problem::set_3D_decomposition_BLC(const int mpi_rank, const int mpi_size,const int N_x, const int N_y, const int N_z)
+{
+	namespace ddc = domain_decomposition_3D;
+
+	ddc::DomainInfo d_info;
+
+	if (mpi_rank == 0)
+	{
+		std::cout << "Starting domain decomposition for MPI size = " << mpi_size << " and grid size N_x=" << N_x << ", N_y=" << N_y
+				  << ", N_z=" << N_z << std::endl;
+		const auto primes	 = ddc::prime_factors(mpi_size);
+		const int  max_prime = primes.empty() ? 1 : std::max(0, primes.back());
+
+		if (max_prime > std::min({N_x, N_y, N_z}))
+		{
+			std::fprintf(stderr,
+						 "It is impossible to decompose the domain with size: N_x=%d, N_y=%d, N_z=%d, for MPI size=%d "
+						 "with max prime factor %d\n",
+						 N_x, N_y, N_z, mpi_size, max_prime);
+			MPI_Abort(MPI_COMM_WORLD, 1);
+			return;
+		}
+
+		ddc::DomainDecomposition dd(mpi_rank, mpi_size, N_x, N_y, N_z);
+
+		auto best_infos = dd.best_infos(mpi_rank);
+		auto selection	= ddc::select_best_decomposition(best_infos, true);
+
+		d_info = selection.best_info;
+
+		bool f = ddc::analyze_decomposition(d_info, mpi_size);
+
+		if (not f)
+		{
+			std::cerr << "Failed to decompose the mpi domain" << std::endl;
+			MPI_Abort(MPI_COMM_WORLD, 1);
+		}
+
+		std::cout << "Selected decomposition: Px=" << d_info.Px << ", Py=" << d_info.Py << ", Pz=" << d_info.Pz
+				  << std::endl;
+	}
+
+	MPI_Bcast((void *)&d_info, sizeof(ddc::DomainInfo), MPI_BYTE, 0, MPI_COMM_WORLD);
+
+	this->mpi_decomposition_ = d_info;
+	this->mpi_decomposition_.set_rank(mpi_rank);
+
+	this->mpi_size_x_ = this->mpi_decomposition_.Px;
+	this->mpi_size_y_ = this->mpi_decomposition_.Py;
+	this->mpi_size_z_ = this->mpi_decomposition_.Pz;
+
+	if (mpi_rank == 0)
+	{
+		const double load_inbalace = d_info.load_imbalance();
+		std::printf("Final decomposition: P = (%d, %d, %d) for MPI size = %d, with load imbalance = %.3f\n", //
+			mpi_size_x_, mpi_size_y_, mpi_size_z_, mpi_size_, load_inbalace);                                //
+	}
+}
 
 void RT_problem::set_grid_partition() 
 {	
@@ -2734,7 +2789,7 @@ void RT_problem::set_grid_partition()
 	}
 	else // full 3D
 	{		
-		set_3D_decomposition(N_x_, N_y_, N_z_);		
+		set_3D_decomposition_BLC(mpi_rank_, mpi_size_, N_x_, N_y_, N_z_);
 	}
 }
 

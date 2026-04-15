@@ -117,13 +117,16 @@ namespace domain_decomposition_3D
 
 		for (int px = 1; px <= size; ++px)
 		{
-			if (size % px != 0) continue;
+			if (size % px != 0 or px > Nx) continue;
 
 			for (int py = 1; py <= size / px; ++py)
 			{
-				if ((size / px) % py != 0) continue;
+				if ((size / px) % py != 0 or py > Ny) continue;
 
 				const int pz = size / (px * py);
+
+				const bool is_feasible = (px <= Nx and py <= Ny and pz <= Nz);
+				if (not is_feasible) continue;
 
 				// Local subdomain extents for this factorization
 				const double lx = static_cast<double>(Nx) / px;
@@ -155,7 +158,7 @@ namespace domain_decomposition_3D
 					this->factorization_cache_.emplace_back(std::move(info));
 				}
 
-				if (this->factorization_cache_.size() > 10)
+				if (this->factorization_cache_.size() > 15)
 				{
 					// Assuming factorization_cache_ is sorted by score_ ascending,
 					// the worst score is at the back.
@@ -253,20 +256,20 @@ namespace domain_decomposition_3D
 	// ---------------------------------------------------------------------------
 	// DomainDecomposition — analysis and demo
 	// ---------------------------------------------------------------------------
-	void
+	bool
 	analyze_decomposition(const DomainInfo &info, int mpi_size)
 	{
 		if (mpi_size <= 0)
 		{
 			std::fprintf(stderr, "Invalid mpi_size: %d\n", mpi_size);
-			return;
+			return false;
 		}
 
 		if (info.Px * info.Py * info.Pz != mpi_size)
 		{
 			std::fprintf(stderr, "Invalid decomposition: Px*Py*Pz=%d does not match mpi_size=%d\n",
 						 info.Px * info.Py * info.Pz, mpi_size);
-			return;
+			return false;
 		}
 
 		int num_cells_max = 0;
@@ -342,8 +345,11 @@ namespace domain_decomposition_3D
 			std::printf("  Cell-sum check: OK - sum(local cells) = %d matches global cells = %lld.\n", total_cells,
 						expected_total_cells);
 		else
+		{
 			std::printf("  Cell-sum check: FAILED - sum(local cells) = %d, expected global cells = %lld.\n", total_cells,
 						expected_total_cells);
+			return false;
+		}
 
 		int overlap_count = 0;
 		for (int i = 0; i < mpi_size; ++i)
@@ -375,14 +381,19 @@ namespace domain_decomposition_3D
 		if (overlap_count == 0)
 			std::printf("  Overlap check: OK - no overlapping subdomains.\n");
 		else
+		{
 			std::printf("  Overlap check: FAILED - %d overlapping pair(s) found.\n", overlap_count);
+			return false;
+		}
+
+		return true;
 	}
 
 	// ---------------------------------------------------------------------------
 	// select_best_decomposition
 	// ---------------------------------------------------------------------------
 	DecompositionSelection
-	select_best_decomposition(const std::deque<DomainInfo> &candidates, bool verbose)
+	select_best_decomposition(const std::deque<DomainInfo> &candidates, bool verbose, const double li_rel_tol)
 	{
 		DecompositionSelection result{};
 
@@ -394,14 +405,15 @@ namespace domain_decomposition_3D
 			const double grid_ratio		= static_cast<double>(p_max) / p_min;
 			const double load_imbalance = info.load_imbalance();
 
-			const bool is_better = !result.found
-								   || std::tie(load_imbalance, aspect_ratio, info.score_, grid_ratio) < std::tie(
-										  result.load_imbalance, result.aspect_ratio, result.score, result.grid_ratio);
+			const double result_load_imbalance = result.load_imbalance + result.load_imbalance * li_rel_tol;
+			const bool	 is_better = !result.found
+									 || std::tie(load_imbalance, aspect_ratio, info.score_, grid_ratio) < std::tie(
+											result_load_imbalance, result.aspect_ratio, result.score, result.grid_ratio);
 
 			if (verbose)
 			{
 				std::printf(
-					"C: aspect ratio: %.3f || score: %.3f || g-ratio max/min: %.3f || imbalance: %.3f || grid: %d x %d x "
+					"C: aspect ratio: %.3f, score: %.3f, g-ratio max/min: %.3f, imbalance: %.3f, grid: %d x %d x "
 					"%d%s\n",
 					aspect_ratio, info.score_, grid_ratio, load_imbalance, info.Px, info.Py, info.Pz,
 					is_better ? "  *" : "");
@@ -430,12 +442,19 @@ namespace domain_decomposition_3D
 		const int default_mpi_rank = 0;
 		const int default_mpi_size = 4098 * 6;
 
-		int mpi_rank = read_env_int_or_default("DD_MPI_RANK", default_mpi_rank);
-		int mpi_size = read_env_int_or_default("DD_MPI_SIZE", default_mpi_size);
+		const int mpi_rank = read_env_int_or_default("DD_MPI_RANK", default_mpi_rank);
+		const int mpi_size = read_env_int_or_default("DD_MPI_SIZE", default_mpi_size);
+
+		const int N_x = read_env_int_or_default("DD_HDF_N_X", 128);
+		const int N_y = read_env_int_or_default("DD_HDF_N_Y", 128);
+		const int N_z = read_env_int_or_default("DD_HDF_N_Z", 128);
 
 		std::printf("Environment overrides (defaults in use when unset/invalid):\n");
 		std::printf("export DD_MPI_RANK=%d\n", mpi_rank);
 		std::printf("export DD_MPI_SIZE=%d\n\n\n", mpi_size);
+		std::printf("export DD_HDF_N_X=%d\n", N_x);
+		std::printf("export DD_HDF_N_Y=%d\n", N_y);
+		std::printf("export DD_HDF_N_Z=%d\n\n\n", N_z);
 
 		auto primes	   = prime_factors(mpi_size);
 		int	 max_prime = primes.empty() ? 1 : std::max(0, primes.back());
@@ -445,10 +464,6 @@ namespace domain_decomposition_3D
 			std::printf(" %d", p);
 		}
 		std::printf("  max prime factor: %d\n", max_prime);
-
-		const int N_x = read_env_int_or_default("HDF_N_X", 128);
-		const int N_y = read_env_int_or_default("HDF_N_Y", 128);
-		const int N_z = read_env_int_or_default("HDF_N_Z", 128);
 
 		if (max_prime > std::min({N_x, N_y, N_z}))
 		{

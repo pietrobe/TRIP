@@ -10,7 +10,6 @@
 #include <iostream>
 #include <petscerror.h>
 
-// using Real = double; // TODO?
 using Grid_ptr = std::shared_ptr<Grid3D>;
 
 /**

@@ -1,6 +1,8 @@
 #include "RT_arbitrary_beam.hpp"
 #include "RT_solver.hpp"
 
+#include <random>
+
 //////////////////////////////////////////////////////////////////////////
 // Main function
 //////////////////////////////////////////////////////////////////////////
@@ -24,6 +26,13 @@ main(int argc, char *argv[])
 	{
 		print_help();
 		return 0;
+	}
+
+	const char* slurm_job_id = std::getenv("SLURM_JOB_ID");
+	std::string slurm_JOB_ID = slurm_job_id ? slurm_job_id : "";
+	if (!slurm_JOB_ID.empty() && mpi_rank == 0)
+	{
+		std::cout << "SLURM Job ID: " << slurm_JOB_ID << std::endl;
 	}
 
 	// import input file config.yml
@@ -103,9 +112,17 @@ main(int argc, char *argv[])
 		// If the output directory does not exist, create it. If it exists, abort !
 		const std::filesystem::path output_subdir =
 			std::filesystem::path(cfg.input_file.string() + "." + emissivity_model_to_string_long(cfg.emissivity_model));
+
 		const std::filesystem::path output_path =
 			std::filesystem::path(cfg.output_directory) / std::filesystem::path(output_subdir);
 		std::string output_file = (output_path / "profiles").string();
+
+		// create problem object
+		auto rt_problem_ptr = std::make_shared<RT_problem>(cfg);
+		rt_problem_ptr->space_grid_->dumpDecompositionCSV("decomposition.csv");
+
+		// create solver object
+		RT_solver rt_solver(rt_problem_ptr);
 
 		if (mpi_rank == 0)
 		{
@@ -129,6 +146,8 @@ main(int argc, char *argv[])
 				}
 			}
 
+			rt_problem_ptr->space_grid_->dumpDecompositionCSV((output_path / "decomposition.csv").string());
+
 			if (mpi_rank == 0)
 			{
 				ss_b << "Output directory: " << output_path << std::endl;
@@ -138,6 +157,7 @@ main(int argc, char *argv[])
 				output_info_file_name = output_path / "info.txt"; // <-- Remove 'const auto', assign to outer variable
 				std::ofstream output_file_info(output_info_file_name);
 
+				output_file_info << "SLURM Job ID: " << slurm_JOB_ID << std::endl;
 				output_file_info << ss_a.str();
 				output_file_info << ss_b.str();
 				output_file_info.close();
@@ -227,7 +247,8 @@ main(int argc, char *argv[])
 
 			if (cfg.write_whole_3D_field_hdf5)
 			{
-				write_3D_whole_field_hdf5(*rt_problem_ptr, (output_path / "whole_3D_radiation_field.h5").string(), 3,
+				if (mpi_rank == 0) std::cout << "Writing whole 3D field to HDF5..." << std::endl;
+				write_3D_whole_field_hdf5(*rt_problem_ptr, (output_path / "whole_3D_radiation_field.h5").string(), 2,
 										  false); //
 			}
 

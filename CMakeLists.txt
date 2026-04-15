@@ -231,47 +231,51 @@ endif()
 
 # Build thdf/libhdf_output.a using its Makefile
 if(TRUE)
-    # Collect all C source and header files in src/thdf
-    file(GLOB THDF_SOURCES
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/*.c"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/*.h"
-    )
-
-    add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a
-        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf make CC=mpicc lib
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf
-        BYPRODUCTS ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a
-        DEPENDS ${THDF_SOURCES}
-        COMMENT "Building libhdf_output.a in thdf using Makefile"
-    )
-
-    add_custom_target(hdf_output_lib ALL
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a
-    )
-
-    # Ensure solar_3D depends on the static library
-    add_dependencies(${EXECUTABLE_NAME} hdf_output_lib)
-
-    # Include thdf headers
+    add_subdirectory(src/thdf)
+    target_link_libraries(${EXECUTABLE_NAME} PRIVATE hdf_output)
     target_include_directories(${EXECUTABLE_NAME} PUBLIC src/thdf/)
 
-    # Link the static library
-    target_link_libraries(${EXECUTABLE_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a)
+    # # Collect all C source and header files in src/thdf
+    # file(GLOB THDF_SOURCES
+    #     "${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/*.c"
+    #     "${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/*.h"
+    # )
 
-    # Provide a clean target for the thdf subproject
-    add_custom_target(thdf_clean
-        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf make clean
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf
-        COMMENT "Cleaning thdf subproject (make clean)"
-    )
+    # add_custom_command(
+    #     OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a
+    #     COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf make CC=mpicc lib
+    #     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf
+    #     BYPRODUCTS ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a
+    #     DEPENDS ${THDF_SOURCES}
+    #     COMMENT "Building libhdf_output.a in thdf using Makefile"
+    # )
 
-    # Convenience target to clean both top-level and thdf subproject
-    add_custom_target(clean-all
-        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target clean
-        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf make clean
-        COMMENT "Clean top-level build and thdf subproject"
-    )
+    # add_custom_target(hdf_output_lib ALL
+    #     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a
+    # )
+
+    # # Ensure solar_3D depends on the static library
+    # add_dependencies(${EXECUTABLE_NAME} hdf_output_lib)
+
+    # # Include thdf headers
+    # target_include_directories(${EXECUTABLE_NAME} PUBLIC src/thdf/)
+
+    # # Link the static library
+    # target_link_libraries(${EXECUTABLE_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a)
+
+    # # Provide a clean target for the thdf subproject
+    # add_custom_target(thdf_clean
+    #     COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf make clean
+    #     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf
+    #     COMMENT "Cleaning thdf subproject (make clean)"
+    # )
+
+    # # Convenience target to clean both top-level and thdf subproject
+    # add_custom_target(clean-all
+    #     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target clean
+    #     COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf make clean
+    #     COMMENT "Clean top-level build and thdf subproject"
+    # )
 endif()
 
 
@@ -300,7 +304,7 @@ target_compile_definitions(solar_3D_tests PUBLIC ${PETSC_DEFINITIONS})
 target_link_libraries(solar_3D_tests PUBLIC GridManager)
 # Build thdf/libhdf_output.a using its Makefile
 # Ensure solar_3D depends on the static library
-add_dependencies(solar_3D_tests hdf_output_lib)
+# add_dependencies(solar_3D_tests hdf_output_lib)
 
 # Include thdf headers
 target_include_directories(solar_3D_tests PUBLIC src/thdf/)
