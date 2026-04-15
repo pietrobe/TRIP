@@ -9,33 +9,52 @@
 
 hid_t
 THDF_open_file_MPI(const char *filename, MPI_Comm mpi_comm) {
-  hid_t file_id, plist_id;
+  hid_t    file_id, plist_id;
+  MPI_Info info;
 
-  // Create file access property list
+  // 1. Crea e configura MPI_Info per GPFS
+  MPI_Info_create(&info);
+  // Abilita il buffering collettivo (fondamentale per GPFS)
+  MPI_Info_set(info, "romio_cb_write", "enable");
+  MPI_Info_set(info, "romio_cb_read", "enable");
+  // Opzionale: allineamento ai blocchi GPFS (es. 4MB)
+  // MPI_Info_set(info, "stripping_unit", "4194304");
+
+  // 2. Create file access property list
   plist_id = H5Pcreate(H5P_FILE_ACCESS);
   if (plist_id < 0) {
     fprintf(stderr, "Error creating file access property list\n");
+    MPI_Info_free(&info);
     return -1;
   }
 
-  // Set MPI-IO file access
-  herr_t status = H5Pset_fapl_mpio(plist_id, mpi_comm, MPI_INFO_NULL);
+  // 3. Set MPI-IO file access con gli hints ottimizzati
+  // Passiamo 'info' invece di MPI_INFO_NULL
+  herr_t status = H5Pset_fapl_mpio(plist_id, mpi_comm, info);
+
+  // 4. (Opzionale ma consigliato) Ottimizzazione Metadati Collettivi
+  // Forza HDF5 a leggere/scrivere i metadati (header del file) in modo collettivo
+  H5Pset_all_coll_metadata_ops(plist_id, 1);
+  H5Pset_coll_metadata_write(plist_id, 1);
+
   if (status < 0) {
     fprintf(stderr, "Error setting MPI-IO file access property\n");
     H5Pclose(plist_id);
+    MPI_Info_free(&info);
     return -1;
   }
 
-  // Open the file
+  // 5. Open the file
   file_id = H5Fopen(filename, H5F_ACC_RDWR, plist_id);
+
+  // Pulizia (non servono più dopo l'apertura)
+  H5Pclose(plist_id);
+  MPI_Info_free(&info);
+
   if (file_id < 0) {
     fprintf(stderr, "Error opening file '%s' in MPI mode\n", filename);
-    H5Pclose(plist_id);
     return -1;
   }
-
-  // Close the property list
-  H5Pclose(plist_id);
 
   return file_id;
 }
@@ -161,13 +180,13 @@ THDF_get_hdf_n_float_datatype(void) {
 /// THDF_create_field_handler_mpi
 /////////////////////////////////////////////////////////////
 THDF_field_handler_t *
-THDF_create_field_handler_mpi(hid_t file,           //
-                              int   N_x,            //
-                              int   N_y,            //
-                              int   N_incl,         //
-                              int   N_azimuth,      //
+THDF_create_field_handler_mpi(hid_t file,             //
+                              int   N_x,              //
+                              int   N_y,              //
+                              int   N_incl,           //
+                              int   N_azimuth,        //
                               int   N_frequencies) {  //
-                                                    //
+                                                      //
   THDF_field_handler_t *output_dset = (THDF_field_handler_t *)malloc(sizeof(THDF_field_handler_t));
 
   if (!output_dset) {

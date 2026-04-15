@@ -12,6 +12,7 @@
 # include <iterator>
 # include <algorithm> 
 
+#include "RT_types.hpp"
 
 
 void legendre_rule(int order, double a, double b, std::vector<double> &nodes, std::vector<double> &weights);

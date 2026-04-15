@@ -66,15 +66,13 @@ typedef struct {
   bool normalized_output;  // Flag to indicate if the output is normalized or not
 } THDF_3D_field_handler_t;
 
+int
+THDF_create_3D_field_handler_mpi(const char *path, const bool normalized_output, const int N_x, const int N_y,
+                                 const int N_z, const int N_incl, const int N_azimuth, const int N_frequencies);
+
 THDF_3D_field_handler_t *
-THDF_create_3D_field_handler_mpi(hid_t      file,               //
-                                 const bool normalized_output,  //
-                                 const int  N_x,                //
-                                 const int  N_y,                //
-                                 const int  N_z,                //
-                                 const int  N_incl,             //
-                                 const int  N_azimuth,          //
-                                 const int  N_frequencies);      //
+THDF_open_3D_field_handler_mpi(hid_t file, const bool normalized_output, const int N_x, const int N_y, const int N_z,
+                               const int N_incl, const int N_azimuth, const int N_frequencies);
 
 int
 THDF_write_3D_field_dataset_to_hdf5(THDF_3D_field_handler_t *output_dset,    //
@@ -145,7 +143,7 @@ THDF_copy_3D_block_field(THDF_3D_field_t *field,              //
                          const int stride_in_stokes);      //
 
 void
-write_3d_field_block_mpi(const char     *filename,            //
+write_3d_field_block_mpi(hid_t           file_id,             //
                          MPI_Comm        comm,                //
                          bool            normalized_output,   //
                          int             N_x,                 //
@@ -176,7 +174,7 @@ write_3d_field_block_mpi(const char     *filename,            //
                          int             stride_incl,         //
                          int             stride_azimuth,      //
                          int             stride_frequencies,  //
-                         int             stride_stokes);                  //
+                         int             stride_stokes);      //
 
 #ifdef __cplusplus
 }  // extern "C"

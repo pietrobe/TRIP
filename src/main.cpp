@@ -51,9 +51,16 @@ main(int argc, char *argv[])
 		for (int i = 0; i < argc; ++i) ss_a << argv[i] << " ";
 		ss_a << std::endl;
 
-		ss_a << "PetscInt size: " << sizeof(PetscInt) << " bytes; " << (sizeof(PetscInt) * 8) << " bits." << std::endl
-			 << std::endl;
-		std::cout << ss_a.str();
+		ss_a << "PetscInt size: " << sizeof(PetscInt) << " bytes; " << (sizeof(PetscInt) * 8) << " bits." << std::endl;		
+
+		if (sizeof(Real) == sizeof(float))
+    		ss_a << "Real = float (single precision)" << std::endl << std::endl;
+		else if (sizeof(Real) == sizeof(double))
+    		ss_a << "Real = double (double precision)" << std::endl << std::endl;
+		else
+    		ss_a << "Real = unknown type" << std::endl << std::endl;
+
+    	std::cout << ss_a.str();
 	}
 
 	PetscInitialize(&argc, &argv, (char *)0, NULL);
@@ -80,16 +87,13 @@ main(int argc, char *argv[])
 
 #endif // ACC_SOLAR_3D
 
-	if (mpi_rank == 0)
-	{
-		writeConfigResume(cfg, ss_b);
-	}
+	if (mpi_rank == 0) writeConfigResume(cfg, ss_b);	
 
 	{ // start scope for RT_problem and RT_solver
 
 		// create problem object
 		auto rt_problem_ptr = std::make_shared<RT_problem>(cfg);
-		rt_problem_ptr->space_grid_->dumpDecompositionCSV("decomposition.csv");
+		// rt_problem_ptr->space_grid_->dumpDecompositionCSV("decomposition.csv");
 
 		// create solver object
 		RT_solver rt_solver(rt_problem_ptr);

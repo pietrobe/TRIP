@@ -138,6 +138,8 @@ write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 		{
 			Real *stokes_IQUI = rt_problem.I_field_->block(0, 0, local_k);
 
+			auto stokes_IQUI_tmp = to_double(stokes_IQUI, rt_problem.block_size_);		
+
 			write_3d_field_block_mpi(output_file.c_str(),		 //
 									 write_communicator,		 //
 									 normalized_output,			 // If true the output will be normalized.
@@ -154,7 +156,7 @@ write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 									 local_start_x,				 // Global start coordinates of the slice
 									 local_start_y,				 // in x y z directions
 									 id_z,						 // Global start coordinate of the slice in z direction
-									 stokes_IQUI,				 // Pointer to the slice data in memory
+									 stokes_IQUI_tmp.data(),				 // Pointer to the slice data in memory
 									 slice_data_I_buffer.data(), //
 									 slice_data_Q_buffer.data(), //
 									 slice_data_U_buffer.data(), //

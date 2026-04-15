@@ -23,7 +23,7 @@ using Field_ptr = std::shared_ptr<Field>;
  */
 class ReMap3D {
 public:
-    using Real = double;
+    // using Real = double;
 
     bool enable_timing = false; // default: false
 

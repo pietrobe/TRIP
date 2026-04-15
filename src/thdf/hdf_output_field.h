@@ -10,12 +10,14 @@
 #include <hdf5_hl.h>
 #include <mpi.h>
 
+#include "../RT_types.hpp"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef double THDF_float_t;
-typedef double THDF_n_float_t;
+typedef Real THDF_float_t;
+typedef Real THDF_n_float_t;
 
 typedef float THDF_float32_t;
 

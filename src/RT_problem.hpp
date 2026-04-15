@@ -3,10 +3,9 @@
 
 #include "GridManager/GridManager.hpp"
 #include "RT_utility.hpp"
-#include "thdf.h"
 
 // Type for storing fields
-using Real_t = double;
+// using Real_t = Real;
 
 using Grid_ptr_t  = std::shared_ptr<Grid3D>;
 using Field_ptr_t = std::shared_ptr<Field>;
@@ -122,7 +121,7 @@ class RT_problem
 		}
 
 		// set input files
-		const auto input_file_path		  = cfg_.input_directory / cfg_.input_file;
+		const auto input_file_path		    = cfg_.input_directory / cfg_.input_file;
 		const auto frequencies_input_path = cfg_.input_directory / cfg_.frequency_file;
 
 		// read input frequencies from separate file
@@ -141,9 +140,9 @@ class RT_problem
 			{
 				if (mpi_rank_ == 0) std::cout << "Using PORTA PMD + CUL + QEL + LLP + BACK input files" << std::endl;
 
-				auto input_cul_path	 = cfg_.input_directory / cfg_.input_cul;
-				auto input_qel_path	 = cfg_.input_directory / cfg_.input_qel;
-				auto input_llp_path	 = cfg_.input_directory / cfg_.input_llp;
+				auto input_cul_path	= cfg_.input_directory / cfg_.input_cul;
+				auto input_qel_path	= cfg_.input_directory / cfg_.input_qel;
+				auto input_llp_path	= cfg_.input_directory / cfg_.input_llp;
 				auto input_back_path = cfg_.input_directory / cfg_.input_back;
 
 				read_3D(input_file_path.string().c_str(), input_cul_path.string().c_str(),
@@ -164,7 +163,7 @@ class RT_problem
 
 		// precompute
 		set_up();
-
+		
 		// print info
 		if (verbose_) print_info();
 
@@ -192,9 +191,9 @@ class RT_problem
 		}
 
 		// set flags
-		use_PORTA_input_	= true;
+		use_PORTA_input_	  = true;
 		use_magnetic_field_ = use_magnetic_field;
-		emissivity_model_	= emissivity_model_arg;
+		emissivity_model_	  = emissivity_model_arg;
 
 		// frequency grid is not contained in PORTA input (but can be computed from T_ref)
 		// const bool use_wavelength = false; // TEST
@@ -280,7 +279,7 @@ class RT_problem
 		N_x_ = 10;
 		N_y_ = N_x_;
 		L_	 = 400.0;
-		// const double L_tot = 1000.0;
+		// const Real L_tot = 1000.0;
 		// L_ = L_tot/N_x_;
 
 		// reading some input
@@ -310,8 +309,8 @@ class RT_problem
 		read_magnetic_field_1D(input_path + "/magnetic_field.dat");
 
 		read_continumm_1D(input_path + "/continuum/continuum_scat_opac.dat",
-						  input_path + "/continuum/continuum_tot_opac.dat",
-						  input_path + "/continuum/continuum_therm_emiss.dat");
+						      input_path + "/continuum/continuum_tot_opac.dat",
+						      input_path + "/continuum/continuum_therm_emiss.dat");
 		// precompute
 		set_up();
 
@@ -337,11 +336,15 @@ class RT_problem
 		set_theta_chi_grids(cfg_.N_theta, cfg_.N_chi);
 		set_sizes();
 
-		// init grid
+		// create space grid
+		set_grid_partition();
 		space_grid_ = std::make_shared<Grid3D>(
-			MPI_COMM_WORLD, N_x_, N_y_, N_z_
-		);
-		space_grid_->print_info();
+		MPI_COMM_WORLD, 
+		N_x_, N_y_, N_z_, 
+		std::array<PetscInt, 3>{mpi_size_x_, mpi_size_y_, mpi_size_z_}
+		);	
+		
+		print_info();
 
 		// init fields
 		allocate_fields();
@@ -352,8 +355,8 @@ class RT_problem
 		// read atm data (needs grid object)
 		read_atmosphere_1D(    input_path + "/atmosphere.dat"); // NOTE: solar surface for space index k = 0
 		read_bulk_velocity_1D( input_path + "/bulk_velocity.dat");
-		read_magnetic_field_1D(input_path + "/magnetic_field.dat");
-
+		read_magnetic_field_1D(input_path + "/magnetic_field.dat");		
+		
 		read_continumm_1D(input_path + "/continuum/continuum_scat_opac.dat",
 						      input_path + "/continuum/continuum_tot_opac.dat",
 						      input_path + "/continuum/continuum_therm_emiss.dat");
@@ -398,7 +401,7 @@ class RT_problem
 	}
 
 	// extract horizontal plane k from field
-	std::vector<double>
+	std::vector<Real>
 	extract_plane_k(const Field_ptr_t field, const int k_global);
 
 	// convert local indeces to block one (of fields) for the first Stokes parameter and vice versa
@@ -456,10 +459,10 @@ class RT_problem
 	make_write_surface_MPI_Comm(const MPI_Comm MPI_Comm_MAIN, MPI_Comm &write_comm);
 
 	int
-	accumulate_surface_domain_data(std::vector<double> &surface_data_I,	 //
-								   std::vector<double> &surface_data_Q,	 //
-								   std::vector<double> &surface_data_U,	 //
-								   std::vector<double> &surface_data_V); //
+	accumulate_surface_domain_data(std::vector<Real> &surface_data_I,	 //
+								   std::vector<Real> &surface_data_Q,	 //
+								   std::vector<Real> &surface_data_U,	 //
+								   std::vector<Real> &surface_data_V); //
 
 	/**
 	 * Accumulate J, K, Q values over a given subdomain
@@ -502,15 +505,15 @@ class RT_problem
 	write_angular_frequency_grids_hdf5(const std::string &output_file); //
 
 	int
-	write_emergent_field_hdf5(const std::string &output_file, MPI_Comm write_comm, std::vector<double> &surface_data_I,
-							  std::vector<double> &surface_data_Q, std::vector<double> &surface_data_U,
-							  std::vector<double> &surface_data_V);
+	write_emergent_field_hdf5(const std::string &output_file, MPI_Comm write_comm, std::vector<Real> &surface_data_I,
+							  std::vector<Real> &surface_data_Q, std::vector<Real> &surface_data_U,
+							  std::vector<Real> &surface_data_V);
 
 	int
-	accumulate_surface_profiles_Omega_domain_data(std::vector<double> &surface_data_I,	//
-												             std::vector<double> &surface_data_Q,	//
-												             std::vector<double> &surface_data_U,	//
-												             std::vector<double> &surface_data_V); //
+	accumulate_surface_profiles_Omega_domain_data(std::vector<Real> &surface_data_I,	//
+												             std::vector<Real> &surface_data_Q,	//
+												             std::vector<Real> &surface_data_U,	//
+												             std::vector<Real> &surface_data_V); //
 
 	int																				//
 	write_beams_frequency_grids_Omega_hdf5(const std::vector<BeamDirection> &beams, //
@@ -521,10 +524,10 @@ class RT_problem
 									MPI_Comm						  write_comm,	  //
 									const std::vector<BeamDirection> &beams,		  //
 									const int						  beam_index,	  //
-									std::vector<double>				 &surface_data_I, //
-									std::vector<double>				 &surface_data_Q, //
-									std::vector<double>				 &surface_data_U, //
-									std::vector<double>				 &surface_data_V);			  //
+									std::vector<Real>				 &surface_data_I, //
+									std::vector<Real>				 &surface_data_Q, //
+									std::vector<Real>				 &surface_data_U, //
+									std::vector<Real>				 &surface_data_V);			  //
 
 	// MPI varables
 	int mpi_rank_;
@@ -680,10 +683,10 @@ class RT_problem
 	bool	     use_magnetic_field_ = false;
 	bool       use_bulk_velocity_  = false;
 	
-	bool       use_uniform_magnetic_field_   = false;
-	double     uniform_magnetic_field_value_ = 0.0; // Gauss
-	double     uniform_magnetic_field_theta_ = 0.0; // rad
-	double     uniform_magnetic_field_chi_   = 0.0; // rad
+	bool     use_uniform_magnetic_field_   = false;
+	Real     uniform_magnetic_field_value_ = 0.0; // Gauss
+	Real     uniform_magnetic_field_theta_ = 0.0; // rad
+	Real     uniform_magnetic_field_chi_   = 0.0; // rad
 
 
 	// physical constants
@@ -699,8 +702,22 @@ class RT_problem
 	double gu_;
 	double Aul_;   // Einstein coefficients for spontaneous emission
 	double T_ref_; // Reference temperature
-	int	 Jl2_;
-	int	 Ju2_;
+	int  Jl2_;
+	int  Ju2_;
+
+	// 2-terms atom constants (Jl2_ and Ju2_ are used for 2Lu and 2Ll from Luca notes atm)
+	int S2_;
+	std::vector<int> Jl2_vec_; 
+	std::vector<int> Ju2_vec_; 
+	std::vector<double> gl_vec_;
+	std::vector<double> gu_vec_;
+
+	// energy vectors in different formats
+	std::vector<double> El_vec_;
+	std::vector<double> Eu_vec_;
+	mdm::md_matrix<double, 1> El0_;
+   mdm::md_matrix<double, 1> Eu0_;    
+   
 
 	// reference frame
 	const double gamma_ = 0.5 * M_PI;
@@ -717,7 +734,7 @@ class RT_problem
 	Field_ptr_t D2_;
 
 	// quantities depending on direction
-	std::vector<std::vector<std::complex<double>>> T_KQ_; // polarization tensor
+	std::vector<std::vector<std::complex<Real>>> T_KQ_; // polarization tensor // TODO use double?
 
 	// allocate grid fields
 	void
@@ -742,6 +759,10 @@ class RT_problem
 	// read inputs
 	void
 	read_atom(input_string filename);
+
+	// TODO
+	void
+	read_atom_two_terms();
 
 	void
 	read_depth(input_string filename);
@@ -795,6 +816,9 @@ class RT_problem
 	// compute elements of the propagation matrix K
 	void
 	set_eta_and_rhos();
+
+	void
+	set_eta_and_rhos_two_terms();
 
 	// precompute quantities
 	void

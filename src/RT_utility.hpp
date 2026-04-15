@@ -21,7 +21,37 @@
 #include <vector>
 #include "RT_types.hpp"
 #include "Utilities.hpp"
+#include "thdf.h"
+#include "paschen_back.h"
+#include "mat.h"
 #include "tools.h"
+#include "mqn_map_two_term.h"
+
+// use for type casting  // TODO do not use these in case of double precision // FIXME
+inline std::vector<double>
+to_double(const Real* x, int n)
+{
+    std::vector<double> y(n);
+    for (int i = 0; i < n; ++i)
+        y[i] = static_cast<double>(x[i]);
+    return y;
+}
+
+inline void to_double(const std::vector<Real>& x,
+                      std::vector<double>& y)
+{
+    for (size_t i = 0; i < x.size(); ++i)
+        y[i] = static_cast<double>(x[i]);
+}
+
+// use for type casting 
+inline void to_double(const Real* x, int n, double* y)
+{
+    for (int i = 0; i < n; ++i)
+        y[i] = static_cast<double>(x[i]);
+}
+
+
 
 // emissivty models
 enum class emissivity_model_t

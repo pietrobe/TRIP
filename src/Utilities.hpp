@@ -255,34 +255,34 @@ void
 create_identity_matrix(int size, Mat &Id);
 
 // propagation matrix methods
-std::vector<double>
-assemble_propagation_matrix(const std::vector<double> &etas_and_rhos);
-std::vector<double>
-assemble_propagation_matrix(const std::vector<double> &etas, const std::vector<double> &rhos);
-std::vector<double>
-assemble_propagation_matrix_scaled(const std::vector<double> &etas_and_rhos);
-std::vector<double>
-assemble_propagation_matrix_scaled(const std::vector<double> &etas, const std::vector<double> &rhos);
+std::vector<Real>
+assemble_propagation_matrix(const std::vector<Real> &etas_and_rhos);
+std::vector<Real>
+assemble_propagation_matrix(const std::vector<Real> &etas, const std::vector<Real> &rhos);
+std::vector<Real>
+assemble_propagation_matrix_scaled(const std::vector<Real> &etas_and_rhos);
+std::vector<Real>
+assemble_propagation_matrix_scaled(const std::vector<Real> &etas, const std::vector<Real> &rhos);
 void
-print_propagation_matrix(const std::vector<double> &K);
+print_propagation_matrix(const std::vector<Real> &K);
 void
-print_Stokes(const std::vector<double> &I);
-std::vector<double>
-solve_4_by_4_system(const std::vector<double> &K, const std::vector<double> &rhs);
-std::vector<double>
-solve_4_by_4_system_optimized(const std::vector<double> &K, const std::vector<double> &rhs);
+print_Stokes(const std::vector<Real> &I);
+std::vector<Real>
+solve_4_by_4_system(const std::vector<Real> &K, const std::vector<Real> &rhs);
+std::vector<Real>
+solve_4_by_4_system_optimized(const std::vector<Real> &K, const std::vector<Real> &rhs);
 
 // Wigner3j symbols, use int multiples for not int inputs
 double
 W3JS(int J1, int J2, int J3, int M1, int M2, int M3);
 
 // linearly interpolate vector and double its size
-std::vector<double>
-refine_vector(const std::vector<double> &v);
-std::vector<double>
-refine_vector_blocked(const std::vector<double> &v, const int block_size);
-std::vector<double>
-refine_vector_blocked2(const std::vector<double> &v, const int block_size_fn);
+std::vector<Real>
+refine_vector(const std::vector<Real> &v);
+std::vector<Real>
+refine_vector_blocked(const std::vector<Real> &v, const int block_size);
+std::vector<Real>
+refine_vector_blocked2(const std::vector<Real> &v, const int block_size_fn);
 
 double
 pow_gen(const double x, const double exponent);

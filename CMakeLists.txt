@@ -165,6 +165,7 @@ include_directories(${RII_INCLUDES}/src/rii_aa_emission_coefficient)
 include_directories(${RII_INCLUDES}/src/utils)
 include_directories(${RII_INCLUDES}/src/rii_aa_emission_coefficient/)
 include_directories(${RII_INCLUDES}/src/acc_includes)
+include_directories(${RII_INCLUDES}/src/riii_approx_two_terms)
 if(USE_ACC)
     include_directories(${RII_INCLUDES}/src_mpi/RII_contrib)
     include_directories(${RII_INCLUDES}/src_acc/src)
@@ -173,7 +174,8 @@ endif()
 ### PETSC DEPENDENCY
 message(STATUS "Search Petsc")
 set(PETSC_TEST_RUNS TRUE)
-set(ENV{PKG_CONFIG_PATH} $ENV{PETSC_DIR}/lib/pkgconfig)
+##set(ENV{PKG_CONFIG_PATH} $ENV{PETSC_DIR}/lib/pkgconfig)
+set(ENV{PKG_CONFIG_PATH} $ENV{PETSC_DIR}/$ENV{PETSC_ARCH}/lib/pkgconfig)
 pkg_check_modules(PETSC REQUIRED IMPORTED_TARGET PETSc)
 message(STATUS "Check Petsc done")
 
@@ -216,6 +218,8 @@ target_include_directories(${EXECUTABLE_NAME} PUBLIC
 target_include_directories(${EXECUTABLE_NAME} SYSTEM PUBLIC ${PETSC_INCLUDES})
 target_link_libraries(${EXECUTABLE_NAME} PUBLIC PkgConfig::PETSC)
 target_compile_definitions(${EXECUTABLE_NAME} PUBLIC ${PETSC_DEFINITIONS})
+
+message(STATUS "PETSC_INCLUDE_DIRS = ${PETSC_INCLUDE_DIRS}")
 
 if(NOT yaml-cpp_FOUND)
     target_link_libraries(${EXECUTABLE_NAME} PUBLIC yaml-cpp::yaml-cpp)

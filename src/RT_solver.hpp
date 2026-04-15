@@ -18,8 +18,8 @@ void set_RII_contrib_block_size(const unsigned int block_size);
 // structs for ray - grid intersection 
 typedef struct t_intersect {
     int ix[4], iy[4], iz[4];
-    double w[4];
-    double distance;
+    Real w[4];
+    Real distance;
 } t_intersect;
 
 enum t_plane {
@@ -30,9 +30,9 @@ enum t_plane {
 
 typedef struct t_xyzinters {
     t_plane plane;
-    double x, y, z; // point of intersection
+    Real x, y, z; // point of intersection
     int ix, iy, iz; // left-back-from index of the intersected segment
-    double t; // distance from the origin
+    Real t; // distance from the origin
 } t_xyzinters;
 
 
@@ -77,7 +77,7 @@ struct MF_context {
 	Field_ptr_t eta_field_serial_;
 	Field_ptr_t rho_field_serial_;
 
-	std::vector<double> W_T_ij_serial_; 
+	std::vector<Real> W_T_ij_serial_; 
 
 	// auxiliary unpolarized vecotors
 	Field_ptr_t   I_unpol_field_serial_;
@@ -131,17 +131,17 @@ struct MF_context {
 	void I_field_to_J_KQ_vec(const Field_ptr_t field, Vec &J_KQ_vec);
 	
 	// find intersection
-	void find_intersection(double theta, double chi, const double Z_down, const double Z_top, const double L, t_intersect *T);
-	std::vector<t_intersect> find_prolongation(double theta, double chi, const double dz, const double L);
-	std::vector<double> long_ray_steps(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index);
-	std::vector<double> long_ray_steps_quadratic(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index, bool print_flag);
-	std::vector<double> single_long_ray_step(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index);
+	void find_intersection(Real theta, Real chi, const Real Z_down, const Real Z_top, const Real L, t_intersect *T);
+	std::vector<t_intersect> find_prolongation(Real theta, Real chi, const Real dz, const Real L);
+	std::vector<Real> long_ray_steps(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index);
+	std::vector<Real> long_ray_steps_quadratic(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index, bool print_flag);
+	std::vector<Real> single_long_ray_step(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index);
 
 	// for the unpolarized case
-	double long_ray_steps_unpolarized(          const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index, bool print_flag);
-	double long_ray_steps_quadratic_unpolarized(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index, bool print_flag);
+	Real long_ray_steps_unpolarized(          const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index, bool print_flag);
+	Real long_ray_steps_quadratic_unpolarized(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index, bool print_flag);
 
-	void get_2D_weigths(const double x, const double y, double *w);
+	void get_2D_weigths(const Real x, const Real y, Real *w);
 
 	// formal solver	
 	void formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
@@ -329,7 +329,7 @@ public:
     		// ierr = KSPGMRESSetRestart(mf_ctx_.pc_solver_, GMRES_restart);CHKERRV(ierr);	
 
     		// const int max_its = 10;
-    		// const double r_tol = 1e-11;
+    		// const Real r_tol = 1e-11;
     		// ierr = KSPSetFromOptions(mf_ctx_.pc_solver_);CHKERRV(ierr);    		
     		ierr = KSPSetTolerances(mf_ctx_.pc_solver_,cfg.prec.pc_rtol,PETSC_DEFAULT,PETSC_DEFAULT, cfg.prec.pc_max_it);CHKERRV(ierr);
     		// ierr = KSPSetTolerances(mf_ctx_.pc_solver_,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT, max_its);CHKERRV(ierr);

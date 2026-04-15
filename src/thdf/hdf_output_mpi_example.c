@@ -2,8 +2,12 @@
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "hdf_output_domain_decomposition_3D.h"
 #include "hdf_output_example_3D.h"
+#include "hdf_output_example_zslice_3D.h"
 #include "thdf.h"
+
+/* External z-slab demo */
 
 /////////////////////////////////////////////////////////////
 /// make_example_output_field_surface
@@ -939,13 +943,14 @@ main_example_ar_domain_dec(int argc, char **argv) {
 
           // Fill with example data
           for (int f = 0; f < N_frequencies; f++) {
-            field_data.stokes_I[f] = sin(1.0 * (global_ix + 1) / (0.2 * N_x) * (global_jy + 1) * (f + 1) / N_frequencies);
+            field_data.stokes_I[f] =
+                sin(1.0 * (global_ix + 1) / (di + 0.2 * N_x) * (global_jy + 1) * (f + 1) / N_frequencies);
             field_data.stokes_QI[f] =
-                cos(1.5 * (global_ix + 1) / (0.2 * N_x) * (global_jy + 1) * (f + 1) / N_frequencies);
+                cos(1.5 * (global_ix + 1) / (di + 0.2 * N_x) * (global_jy + 1) * (f + 1) / N_frequencies);
             field_data.stokes_UI[f] =
-                sin(2.0 * (global_ix + 1) / (0.2 * N_x) * (global_jy + 1) * (f + 1) / N_frequencies);
+                sin(2.0 * (global_ix + 1) / (di + 0.2 * N_x) * (global_jy + 1) * (f + 1) / N_frequencies);
             field_data.stokes_VI[f] =
-                cos(3.0 * (global_ix + 1) / (0.2 * N_x) * (global_jy + 1) * (f + 1) / N_frequencies);
+                cos(3.0 * (global_ix + 1) / (di + 0.2 * N_x) * (global_jy + 1) * (f + 1) / N_frequencies);
           }
 
           // Write field data for this position
@@ -989,5 +994,20 @@ main(int argc, char **argv) {
   // return main_domain_dec(argc, argv);  // Domain decomposition for regular fields
   // return main_example_ar_domain_dec(argc, argv);  // Domain decomposition for ARD fields
   // return main_JKQ_domain_dec(argc, argv);  // Domain decomposition for JKQ fields
-  return main_3d_example_v2(argc, argv);
+  // return main_3d_example_v2(argc, argv);
+  // return main_3d_example_zslice(argc, argv);
+  // return main_3d_example_multi_zslice(argc, argv);
+  return main_3d_example_single_file(argc, argv);
+
+  MPI_Init(&argc, &argv);
+  int mpi_rank, mpi_size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+
+  if (mpi_rank == 0) {
+    demo_decompose_domain_3d(argc, argv);
+  }
+
+  MPI_Finalize();
+  return 0;
 }

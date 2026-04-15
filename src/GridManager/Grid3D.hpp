@@ -1,5 +1,6 @@
 #ifndef GRID3D_HH
 #define GRID3D_HH 
+#include "../RT_types.hpp"
 #include <petsc.h>
 #include <petscdm.h>
 #include <petscdmda.h>

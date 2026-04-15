@@ -6,6 +6,7 @@
 // Write emergent field to HDF5
 // write_emergent_field_hdf5
 //////////////////////////////////////////////////////////////////////////
+
 int
 write_emergent_field_hdf5(RT_problem &rt_problem, const std::string &output_file)
 {
@@ -27,10 +28,10 @@ write_emergent_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 	// const int N_x = rt_problem.N_x_;
 	// const int N_y = rt_problem.N_y_;
 
-	std::vector<double> surface_data_I;
-	std::vector<double> surface_data_Q;
-	std::vector<double> surface_data_U;
-	std::vector<double> surface_data_V;
+	std::vector<Real> surface_data_I;
+	std::vector<Real> surface_data_Q;
+	std::vector<Real> surface_data_U;
+	std::vector<Real> surface_data_V;
 
 	// const int N_nu	  = rt_problem.N_nu_;
 	// const int N_theta = rt_problem.N_theta_;
@@ -142,8 +143,8 @@ RT_problem::write_angular_frequency_grids_hdf5(const std::string &output_file) /
 //////////////////////////////////////////////////////////////////////////
 int
 RT_problem::write_emergent_field_hdf5(const std::string &output_file, MPI_Comm write_comm,
-									  std::vector<double> &surface_data_I, std::vector<double> &surface_data_Q,
-									  std::vector<double> &surface_data_U, std::vector<double> &surface_data_V)
+									  std::vector<Real> &surface_data_I, std::vector<Real> &surface_data_Q,
+									  std::vector<Real> &surface_data_U, std::vector<Real> &surface_data_V)
 {
 	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
@@ -206,8 +207,8 @@ RT_problem::write_emergent_field_hdf5(const std::string &output_file, MPI_Comm w
 // accumulate_surface_data
 //////////////////////////////////////////////////////////////////////////
 int
-RT_problem::accumulate_surface_domain_data(std::vector<double> &surface_data_I, std::vector<double> &surface_data_Q,
-										   std::vector<double> &surface_data_U, std::vector<double> &surface_data_V)
+RT_problem::accumulate_surface_domain_data(std::vector<Real> &surface_data_I, std::vector<Real> &surface_data_Q,
+										   std::vector<Real> &surface_data_U, std::vector<Real> &surface_data_V)
 {
 	// indeces
 	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
@@ -253,10 +254,10 @@ RT_problem::accumulate_surface_domain_data(std::vector<double> &surface_data_I, 
 
 					for (int b = 0; b < 4 * N_nu_; b = b + 4)
 					{
-						const double I = I_field_->block(i, j, k_start)[b_start + b + 0];
-						const double Q = I_field_->block(i, j, k_start)[b_start + b + 1];
-						const double U = I_field_->block(i, j, k_start)[b_start + b + 2];
-						const double V = I_field_->block(i, j, k_start)[b_start + b + 3];
+						const Real I = I_field_->block(i, j, k_start)[b_start + b + 0];
+						const Real Q = I_field_->block(i, j, k_start)[b_start + b + 1];
+						const Real U = I_field_->block(i, j, k_start)[b_start + b + 2];
+						const Real V = I_field_->block(i, j, k_start)[b_start + b + 3];
 
 						surface_data_I.push_back(I);
 						surface_data_Q.push_back(Q / I * 100.0);
@@ -272,10 +273,10 @@ RT_problem::accumulate_surface_domain_data(std::vector<double> &surface_data_I, 
 }
 
 int
-RT_problem::accumulate_surface_profiles_Omega_domain_data(std::vector<double> &surface_data_I, //
-														  std::vector<double> &surface_data_Q, //
-														  std::vector<double> &surface_data_U, //
-														  std::vector<double> &surface_data_V)
+RT_problem::accumulate_surface_profiles_Omega_domain_data(std::vector<Real> &surface_data_I, //
+														  std::vector<Real> &surface_data_Q, //
+														  std::vector<Real> &surface_data_U, //
+														  std::vector<Real> &surface_data_V)
 {
 	// indeces
 	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
@@ -308,10 +309,10 @@ RT_problem::accumulate_surface_profiles_Omega_domain_data(std::vector<double> &s
 
 			for (int b = 0; b < 4 * N_nu_; b = b + 4)
 			{
-				const double I = I_field_Omega_->block(i, j, k_start)[b + 0];
-				const double Q = I_field_Omega_->block(i, j, k_start)[b + 1];
-				const double U = I_field_Omega_->block(i, j, k_start)[b + 2];
-				const double V = I_field_Omega_->block(i, j, k_start)[b + 3];
+				const Real I = I_field_Omega_->block(i, j, k_start)[b + 0];
+				const Real Q = I_field_Omega_->block(i, j, k_start)[b + 1];
+				const Real U = I_field_Omega_->block(i, j, k_start)[b + 2];
+				const Real V = I_field_Omega_->block(i, j, k_start)[b + 3];
 
 				surface_data_I.push_back(I);
 				surface_data_Q.push_back(Q / I * 100.0);
@@ -389,10 +390,10 @@ RT_problem::write_emergent_field_Omega_hdf5(const std::string				 &output_file,	
 											MPI_Comm						  write_comm,	  //
 											const std::vector<BeamDirection> &beams,		  //
 											const int						  beam_index,	  //
-											std::vector<double>				 &surface_data_I, //
-											std::vector<double>				 &surface_data_Q, //
-											std::vector<double>				 &surface_data_U, //
-											std::vector<double>				 &surface_data_V)
+											std::vector<Real>				 &surface_data_I, //
+											std::vector<Real>				 &surface_data_Q, //
+											std::vector<Real>				 &surface_data_U, //
+											std::vector<Real>				 &surface_data_V)
 {
 	// indeces
 	auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
@@ -438,6 +439,7 @@ RT_problem::write_emergent_field_Omega_hdf5(const std::string				 &output_file,	
 	output_field.index_k		  = 0;
 	output_field.beam_index		  = beam_index;
 	output_field.N_frequencies	  = this->N_nu_;
+	
 	// assign data pointers
 	output_field.stokes_I  = surface_data_I.data();
 	output_field.stokes_QI = surface_data_Q.data();
@@ -489,23 +491,25 @@ RT_problem::accumulate_JKQ_values(const int						   x_strat,		  //
 		{
 			for (int k = z_strat; k < z_end; ++k)
 			{
-				const Real_t *block_ptr = I_field_->block(i, j, k);
-				const double  dnd		= Doppler_width_->ref(i, j, k);
+				const Real *block_ptr = I_field_->block(i, j, k);
+				const Real  dnd		= Doppler_width_->ref(i, j, k);
 
 				for (int ui = 0; ui < this->N_nu_; ++ui)
 				{
-					const double nu = this->nu_grid_[ui];
+					const Real nu = this->nu_grid_[ui];
 					u_vec[ui]		= (this->nu_0_ - nu) / dnd;
 				}
 
-				const double v_b	   = v_b_->block(i, j, k)[0];
-				const double v_b_theta = v_b_->block(i, j, k)[1];
-				const double v_b_chi   = v_b_->block(i, j, k)[2];
-				const double T		   = T_->ref(i, j, k);
+				const Real v_b	     = v_b_->block(i, j, k)[0];
+				const Real v_b_theta = v_b_->block(i, j, k)[1];
+				const Real v_b_chi   = v_b_->block(i, j, k)[2];
+				const Real T		 = T_->ref(i, j, k);
+
+				auto block_tmp = to_double(block_ptr, block_size_);				
 
 				// This calculate JKQ in the comoving frame
 				auto JKQ_matrix_sh_ptr =												   //
-					rii_include::make_JKQ_matrix_norm_comp(block_ptr,					   //
+					rii_include::make_JKQ_matrix_norm_comp(block_tmp.data(),					   //
 														   u_vec.data(),				   //
 														   this->N_nu_,					   //
 														   this->N_theta_,				   //

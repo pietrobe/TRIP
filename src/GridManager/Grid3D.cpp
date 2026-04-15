@@ -11,7 +11,7 @@
 
 void Grid3D::print_info()
 {
-    Int local_owned = getLocalNumNodes();
+    Int local_owned   = getLocalNumNodes();
     Int local_ghosted = getLocalNumNodesWithGhosts();
 
     std::cout << "[Rank " << rank << "] " << name << ":\n"
