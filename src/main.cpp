@@ -89,12 +89,16 @@ main(int argc, char *argv[])
 
 #endif // ACC_SOLAR_3D
 
-	if (mpi_rank == 0)
-	{
-		writeConfigResume(cfg, ss_b);
-	}
+	if (mpi_rank == 0) writeConfigResume(cfg, ss_b);	
 
 	{ // start scope for RT_problem and RT_solver
+
+		// create problem object
+		auto rt_problem_ptr = std::make_shared<RT_problem>(cfg);
+		// rt_problem_ptr->space_grid_->dumpDecompositionCSV("decomposition.csv");
+
+		// create solver object
+		RT_solver rt_solver(rt_problem_ptr);
 
 		//////////////////////////////////////////////////////////////////////////
 		// Prepare output directory

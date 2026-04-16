@@ -10,8 +10,8 @@
 #include <iostream>
 #include <petscerror.h>
 
-using Real = double;
-using Grid_ptr  = std::shared_ptr<Grid3D>;
+using Real = double; // TODO?
+using Grid_ptr = std::shared_ptr<Grid3D>;
 
 /**
  * @brief Field class represents a physical quantity defined on a Grid3D.
