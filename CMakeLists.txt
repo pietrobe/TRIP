@@ -215,11 +215,12 @@ target_include_directories(${EXECUTABLE_NAME} PUBLIC
     src
     ${CMAKE_CURRENT_BINARY_DIR}  # Add binary dir for configure.h
 )
-target_include_directories(${EXECUTABLE_NAME} SYSTEM PUBLIC ${PETSC_INCLUDES})
+target_include_directories(${EXECUTABLE_NAME} SYSTEM PUBLIC ${PETSC_INCLUDE_DIRS})
 target_link_libraries(${EXECUTABLE_NAME} PUBLIC PkgConfig::PETSC)
+#target_link_libraries(${EXECUTABLE_NAME} PUBLIC ${PETSC_LIBRARIES})
 target_compile_definitions(${EXECUTABLE_NAME} PUBLIC ${PETSC_DEFINITIONS})
 
-message(STATUS "PETSC_INCLUDE_DIRS = ${PETSC_INCLUDE_DIRS}")
+message(STATUS "PETSC_INCLUDES = ${PETSC_INCLUDE_DIRS}")
 
 if(NOT yaml-cpp_FOUND)
     target_link_libraries(${EXECUTABLE_NAME} PUBLIC yaml-cpp::yaml-cpp)

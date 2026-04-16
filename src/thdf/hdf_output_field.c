@@ -4,6 +4,33 @@
 #include <stdlib.h>
 
 //============================================================================
+// Internal helpers
+//============================================================================
+
+/* Write a double array to an HDF5 group as either float32 or float64 on disk.
+ * HDF5 performs the in-memory double -> on-disk float conversion automatically. */
+static int
+write_double_array_as(hid_t group, const char *name, hsize_t n, const double *data, THDF_float_type_t ft) {
+  hid_t   space  = H5Screate_simple(1, &n, NULL);
+  hid_t   dtype  = (ft == HDF_OUT_FLOAT32) ? H5T_NATIVE_FLOAT : H5T_NATIVE_DOUBLE;
+  hid_t   dset   = H5Dcreate2(group, name, dtype, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (dset < 0) {
+    H5Sclose(space);
+    return -1;
+  }
+  herr_t status = H5Dwrite(dset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, data);
+  H5Dclose(dset);
+  H5Sclose(space);
+  return (status < 0) ? -1 : 0;
+}
+
+/* Write a single double scalar to an HDF5 group as either float32 or float64 on disk. */
+static int
+write_double_scalar_as(hid_t group, const char *name, double value, THDF_float_type_t ft) {
+  return write_double_array_as(group, name, 1, &value, ft);
+}
+
+//============================================================================
 // MPI Utility Functions
 //============================================================================
 
@@ -180,13 +207,14 @@ THDF_get_hdf_n_float_datatype(void) {
 /// THDF_create_field_handler_mpi
 /////////////////////////////////////////////////////////////
 THDF_field_handler_t *
-THDF_create_field_handler_mpi(hid_t file,             //
-                              int   N_x,              //
-                              int   N_y,              //
-                              int   N_incl,           //
-                              int   N_azimuth,        //
-                              int   N_frequencies) {  //
-                                                      //
+THDF_create_field_handler_mpi(hid_t             file,            //
+                              int               N_x,             //
+                              int               N_y,             //
+                              int               N_incl,          //
+                              int               N_azimuth,       //
+                              int               N_frequencies,   //
+                              THDF_float_type_t float_type) {    //
+                                                                 //
   THDF_field_handler_t *output_dset = (THDF_field_handler_t *)malloc(sizeof(THDF_field_handler_t));
 
   if (!output_dset) {
@@ -201,6 +229,7 @@ THDF_create_field_handler_mpi(hid_t file,             //
   output_dset->N_incl        = N_incl;
   output_dset->N_azimuth     = N_azimuth;
   output_dset->N_frequencies = N_frequencies;
+  output_dset->float_type    = float_type;
   output_dset->is_open       = 0;
 
   // const int N_stokes = 4;  // I, Q, U, V
@@ -221,8 +250,9 @@ THDF_create_field_handler_mpi(hid_t file,             //
     }
   }
 
-  // Create the datatype for double
-  output_dset->datatype_id = H5Tcopy(THDF_get_hdf_float_datatype());
+  // Create the on-disk datatype based on the requested float_type
+  hid_t disk_type = (float_type == HDF_OUT_FLOAT32) ? H5T_NATIVE_FLOAT : H5T_NATIVE_DOUBLE;
+  output_dset->datatype_id = H5Tcopy(disk_type);
   // Create dataspace and dataset with MPI support (all processes collectively)
   output_dset->dataspace_id_I = H5Screate_simple(5, dims, NULL);
   output_dset->dataset_id_I   = H5Dcreate2(output_dset->group_id, "emergent_I", output_dset->datatype_id,
@@ -321,10 +351,13 @@ THDF_write_field_dataset_to_hdf5(THDF_field_handler_t *output_dset,    //
   H5Sselect_hyperslab(dataspace_U, H5S_SELECT_SET, start, NULL, count, NULL);
   H5Sselect_hyperslab(dataspace_V, H5S_SELECT_SET, start, NULL, count, NULL);
 
+  // Derive the in-memory HDF5 type from the field's float_type
+  hid_t mem_type = (output_field->float_type == HDF_OUT_FLOAT32) ? H5T_NATIVE_FLOAT : H5T_NATIVE_DOUBLE;
+
   // Write each Stokes parameter separately
   herr_t status_I =                        //
       H5Dwrite(output_dset->dataset_id_I,  //
-               output_dset->datatype_id,   //
+               mem_type,                   //
                memspace,                   //
                dataspace_I,                //
                H5P_DEFAULT,                //
@@ -333,7 +366,7 @@ THDF_write_field_dataset_to_hdf5(THDF_field_handler_t *output_dset,    //
 
   herr_t status_Q =                        //
       H5Dwrite(output_dset->dataset_id_Q,  //
-               output_dset->datatype_id,   //
+               mem_type,                   //
                memspace,                   //
                dataspace_Q,                //
                H5P_DEFAULT,                //
@@ -341,7 +374,7 @@ THDF_write_field_dataset_to_hdf5(THDF_field_handler_t *output_dset,    //
   HDF5_CHECK_WRITE(status_Q, "Stokes QI", memspace);
   herr_t status_U =                        //
       H5Dwrite(output_dset->dataset_id_U,  //
-               output_dset->datatype_id,   //
+               mem_type,                   //
                memspace,                   //
                dataspace_U,                //
                H5P_DEFAULT,                //
@@ -350,7 +383,7 @@ THDF_write_field_dataset_to_hdf5(THDF_field_handler_t *output_dset,    //
 
   herr_t status_V =                        //
       H5Dwrite(output_dset->dataset_id_V,  //
-               output_dset->datatype_id,   //
+               mem_type,                   //
                memspace,                   //
                dataspace_V,                //
                H5P_DEFAULT,                //
@@ -413,12 +446,28 @@ THDF_read_field_from_hdf5(hid_t     file,           //
   output_field.index_j       = y_i;
   output_field.index_incl    = incl_i;
   output_field.index_azimuth = azimuth_i;
-  output_field.stokes_I      = (THDF_float_t *)malloc(N_frequencies * sizeof(THDF_float_t));
-  output_field.stokes_QI     = (THDF_float_t *)malloc(N_frequencies * sizeof(THDF_float_t));
-  output_field.stokes_UI     = (THDF_float_t *)malloc(N_frequencies * sizeof(THDF_float_t));
-  output_field.stokes_VI     = (THDF_float_t *)malloc(N_frequencies * sizeof(THDF_float_t));
 
-  hid_t HDF_DATATYPE_ID = THDF_get_hdf_float_datatype();
+  // Detect on-disk precision from the dataset type and allocate accordingly
+  hid_t  ftype      = H5Dget_type(dataset_id_I);
+  size_t ftype_size = H5Tget_size(ftype);
+  H5Tclose(ftype);
+
+  size_t elem_size;
+  hid_t  HDF_DATATYPE_ID;
+  if (ftype_size == 4) {
+    output_field.float_type = HDF_OUT_FLOAT32;
+    elem_size               = sizeof(float);
+    HDF_DATATYPE_ID         = H5T_NATIVE_FLOAT;
+  } else {
+    output_field.float_type = HDF_OUT_FLOAT64;
+    elem_size               = sizeof(double);
+    HDF_DATATYPE_ID         = H5T_NATIVE_DOUBLE;
+  }
+
+  output_field.stokes_I  = malloc((size_t)N_frequencies * elem_size);
+  output_field.stokes_QI = malloc((size_t)N_frequencies * elem_size);
+  output_field.stokes_UI = malloc((size_t)N_frequencies * elem_size);
+  output_field.stokes_VI = malloc((size_t)N_frequencies * elem_size);
 
   // Define hyperslab to read
   hsize_t start[5] = {x_i, y_i, incl_i, azimuth_i, 0};
@@ -484,11 +533,19 @@ THDF_write_angular_grid_to_hdf5(hid_t                      file,  //
   H5LTmake_dataset_int(angular_group, "N_azimuthal_angles", 1, (hsize_t[]){1},  //
                        &angular_grid->N_azimuthal_angles);
 
-  H5LTmake_dataset_double(angular_group, "inclination_angles", 1, (hsize_t[]){angular_grid->N_inclination_angles},
-                          angular_grid->inclination_angles);
+  if (write_double_array_as(angular_group, "inclination_angles", (hsize_t)angular_grid->N_inclination_angles,
+                            angular_grid->inclination_angles, angular_grid->float_type) < 0) {
+    fprintf(stderr, "Error writing inclination_angles to HDF5\n");
+    H5Gclose(angular_group);
+    return -1;
+  }
 
-  H5LTmake_dataset_double(angular_group, "azimuthal_angles", 1, (hsize_t[]){angular_grid->N_azimuthal_angles},
-                          angular_grid->azimuthal_angles);
+  if (write_double_array_as(angular_group, "azimuthal_angles", (hsize_t)angular_grid->N_azimuthal_angles,
+                            angular_grid->azimuthal_angles, angular_grid->float_type) < 0) {
+    fprintf(stderr, "Error writing azimuthal_angles to HDF5\n");
+    H5Gclose(angular_group);
+    return -1;
+  }
 
   H5LTmake_dataset_int(angular_group, "inclinations_indices", 1, (hsize_t[]){angular_grid->N_directions},
                        angular_grid->inclinations_indices);
@@ -570,8 +627,12 @@ THDF_write_frequencies_grid_to_hdf5(hid_t                          file,        
     fprintf(stderr, "Error creating output frequencies grid group\n");
     return -1;
   }
-  H5LTmake_dataset_double(freq_group, "frequencies", 1, (hsize_t[]){frequencies_grid->N_frequencies},
-                          frequencies_grid->frequencies);
+  if (write_double_array_as(freq_group, "frequencies", (hsize_t)frequencies_grid->N_frequencies,
+                            frequencies_grid->frequencies, frequencies_grid->float_type) < 0) {
+    fprintf(stderr, "Error writing frequencies to HDF5\n");
+    H5Gclose(freq_group);
+    return -1;
+  }
   H5Gclose(freq_group);
   return 0;
 }
@@ -590,8 +651,17 @@ THDF_write_geometry_3D_to_hdf5(hid_t file, const THDF_geometry_3D_t *geometry) {
   H5LTmake_dataset_int(geom_group, "N_x", 1, (hsize_t[]){1}, &geometry->N_x);
   H5LTmake_dataset_int(geom_group, "N_y", 1, (hsize_t[]){1}, &geometry->N_y);
   H5LTmake_dataset_int(geom_group, "N_z", 1, (hsize_t[]){1}, &geometry->N_z);
-  H5LTmake_dataset_double(geom_group, "heights", 1, (hsize_t[]){(hsize_t)(geometry->N_z)}, geometry->heights);
-  H5LTmake_dataset_double(geom_group, "delta", 1, (hsize_t[]){1}, &geometry->delta);
+  if (write_double_array_as(geom_group, "heights", (hsize_t)geometry->N_z, geometry->heights,
+                            geometry->float_type) < 0) {
+    fprintf(stderr, "Error writing heights to HDF5\n");
+    H5Gclose(geom_group);
+    return -1;
+  }
+  if (write_double_scalar_as(geom_group, "delta", geometry->delta, geometry->float_type) < 0) {
+    fprintf(stderr, "Error writing delta to HDF5\n");
+    H5Gclose(geom_group);
+    return -1;
+  }
 
   H5Gclose(geom_group);
   return 0;
@@ -636,6 +706,7 @@ THDF_make_empty_field(void) {
   output_field.index_j       = -1;
   output_field.index_incl    = -1;
   output_field.index_azimuth = -1;
+  output_field.float_type    = HDF_OUT_FLOAT64;
   output_field.stokes_I      = NULL;
   output_field.stokes_QI     = NULL;
   output_field.stokes_UI     = NULL;
@@ -656,10 +727,13 @@ THDF_angular_grid_t
 THDF_make_empty_angular_grid(void) {
   THDF_angular_grid_t angular_grid;
   angular_grid.N_directions         = -1;
+  angular_grid.N_inclination_angles = 0;
+  angular_grid.N_azimuthal_angles   = 0;
   angular_grid.inclination_angles   = NULL;
   angular_grid.azimuthal_angles     = NULL;
   angular_grid.inclinations_indices = NULL;
   angular_grid.azimuthal_indices    = NULL;
+  angular_grid.float_type           = HDF_OUT_FLOAT64;
   return angular_grid;
 }
 
@@ -671,6 +745,7 @@ THDF_make_empty_frequencies_grid(void) {
   THDF_frequencies_grid_t frequencies_grid;
   frequencies_grid.N_frequencies = 0;
   frequencies_grid.frequencies   = NULL;
+  frequencies_grid.float_type    = HDF_OUT_FLOAT64;
   return frequencies_grid;
 }
 

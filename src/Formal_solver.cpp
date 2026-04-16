@@ -4,32 +4,32 @@
 
 /////////////////////// for BESSER
 
-inline Real PSI_M_LIN(Real ex, Real t) {
+inline double PSI_M_LIN(double ex, double t) {
     return ( t > 0.11 ? ((1.0-ex*(1.0+t))/t) : ((t*(t*(t*(t*(t*(t*((63.0-8.0*t)*t-432.0)+2520.0)-12096.0)+45360.0)-120960.0)+181440.0))/362880.0) );
 }
 
-inline Real PSI_O_LIN(Real ex, Real t) {
+inline double PSI_O_LIN(double ex, double t) {
     return ( t > 0.11 ? ((ex+t-1.0)/t)       : ((t*(t*(t*(t*(t*(t*((9.0-t)*t-72.0)+504.0)-3024.0)+15120.0)-60480.0)+181440.0))/362880.0) );
 }
 
-inline Real OMEGA_M(Real ex, Real t) {
+inline double OMEGA_M(double ex, double t) {
     return ( t > 0.14 ? ((2.0-ex*(t*t+2.0*t+2.0))/(t*t))    : ((t*(t*(t*(t*(t*(t*((140.0-18.0*t)*t-945.0)+5400.0)-25200.0)+90720.0)-226800.0)+302400.0))/907200.0) );
 }
 
-inline Real OMEGA_O(Real ex, Real t) {
+inline double OMEGA_O(double ex, double t) {
     return ( t > 0.18 ? (1.0-2.0*(t+ex-1.0)/(t*t))          : ((t*(t*(t*(t*(t*(t*((10.0-t)*t-90.0)+720.0)-5040.0)+30240.0)-151200.0)+604800.0))/1814400.0) );
 }
 
-inline Real OMEGA_C(Real ex, Real t) {
+inline double OMEGA_C(double ex, double t) {
     return ( t > 0.18 ? (2.0*(t-2.0+ex*(t+2.0))/(t*t))      : ((t*(t*(t*(t*(t*(t*((35.0-4.0*t)*t-270.0)+1800.0)-10080.0)+45360.0)-151200.0)+302400.0))/907200.0) );
 }
 
-inline int YBETWAB(Real y, Real a, Real b) {
+inline int YBETWAB(double y, double a, double b) {
     return (((a<=b && y>=a && y<=b) || (a>=b && y<=a && y>=b)) ? 1 : 0);
 }
 
 // some basic scalar functions for the SC method (Kunasz Auer 1988)
-inline Real SC_linear(const Real dt, const Real I_in, const Real S1, const Real S2)
+inline double SC_linear(const double dt, const double I_in, const double S1, const double S2)
 {	
 	const long double dt_aux = -dt;     
 	const long double e_dt = std::exp(-dt_aux); // TOD check this
@@ -42,7 +42,7 @@ inline Real SC_linear(const Real dt, const Real I_in, const Real S1, const Real 
 }
 
 
-inline Real SC_parabolic(const Real dt1, const Real dt2, const Real I_in, const Real S1, const Real S2, const Real S3)
+inline double SC_parabolic(const double dt1, const double dt2, const double I_in, const double S1, const double S2, const double S3)
 {
 	const long double dt_aux1 = -dt1;     
 	const long double dt_aux2 = -dt2;
@@ -60,15 +60,15 @@ inline Real SC_parabolic(const Real dt1, const Real dt2, const Real I_in, const 
 }
 
 
-Real CorrectYAB(Real y, Real a, Real b) {
-    Real min = fmin(a,b), max = fmax(a,b);
+double CorrectYAB(double y, double a, double b) {
+    double min = fmin(a,b), max = fmax(a,b);
     if (y < min) return min;
     else if (y > max) return max;
     else return y;
 }
 
-Real mat_QBezierC0(Real h0, Real h1, Real ym, Real yo, Real yp) {
-    Real dm, dp, yder, c0, c1;
+double mat_QBezierC0(double h0, double h1, double ym, double yo, double yp) {
+    double dm, dp, yder, c0, c1;
     int cond0, cond1;
 
     if (h0>0.0 && h1>0.0) {
@@ -119,7 +119,7 @@ Real mat_QBezierC0(Real h0, Real h1, Real ym, Real yo, Real yp) {
 
 // solve I' = KI - S
 
-void Formal_solver::one_step(const Real dt, input_vec &K1, input_vec &K2, input_vec &S1, input_vec &S2, input_vec &I_in, output_vec &I_out){
+void Formal_solver::one_step(const double dt, input_vec &K1, input_vec &K2, input_vec &S1, input_vec &S2, input_vec &I_in, output_vec &I_out){
 
 	// sanity checks
 	if (debug_mode_ and mpi_rank_ == 0)
@@ -127,8 +127,8 @@ void Formal_solver::one_step(const Real dt, input_vec &K1, input_vec &K2, input_
 		if (K2.size() != 16 or S2.size() != 4 or I_in.size() != 4)  std::cerr << "ERROR: wrong input size in one_step().\n";		
 	}
 	
-	std::vector<Real> A(16); 
-	std::vector<Real> b(4); 
+	std::vector<double> A(16); 
+	std::vector<double> b(4); 
 	
 	if (type_ == "implicit_Euler") // K1 and S1 are not needed here 
 	{		
@@ -153,9 +153,9 @@ void Formal_solver::one_step(const Real dt, input_vec &K1, input_vec &K2, input_
 	{		
 		if (debug_mode_ and (K1.size() != 16 or S1.size() != 4) and mpi_rank_ == 0) std::cerr << "\nERROR: wrong input size for Crank–Nicolson!\n";
 
-		std::vector<Real> K_times_I_in(4); 
+		std::vector<double> K_times_I_in(4); 
 
-		Real dt_half = 0.5 * dt;
+		double dt_half = 0.5 * dt;
 
 		int index_ij;
 
@@ -187,7 +187,7 @@ void Formal_solver::one_step(const Real dt, input_vec &K1, input_vec &K2, input_
         const long double F = 1.0 - E;
         const long double G = (1.0 - (1.0 + dt_aux) * E) / dt_aux; 
         
-        std::vector<Real> K_times_I_in(4, 0.0);
+        std::vector<double> K_times_I_in(4, 0.0);
         int index_ij;
 				
         bool Id;
@@ -220,21 +220,21 @@ void Formal_solver::one_step(const Real dt, input_vec &K1, input_vec &K2, input_
 }
 
 // scalar equations
-Real Formal_solver::one_step(const Real dt, const Real I_in, const Real S1, const Real S2)
+double Formal_solver::one_step(const double dt, const double I_in, const double S1, const double S2)
 {
 	// for now only SC_linear 	
 	return SC_linear(dt, I_in, S1, S2);
 }
 
 
-Real Formal_solver::one_step_quadratic(const Real dt1, const Real dt2, const Real I_in, const Real S1, const Real S2, const Real S3)
+double Formal_solver::one_step_quadratic(const double dt1, const double dt2, const double I_in, const double S1, const double S2, const double S3)
 {
 	// for now only SC_quadratic 
 	return SC_parabolic(dt1, dt2, I_in, S1, S2, S3);
 }
 
 
-void Formal_solver::one_step_quadratic(const Real dt_1, const Real dt_2, input_vec &K1, input_vec &K2, input_vec &K3,
+void Formal_solver::one_step_quadratic(const double dt_1, const double dt_2, input_vec &K1, input_vec &K2, input_vec &K3,
 								  							   input_vec &S1, input_vec &S2, input_vec &S3,
 								 							   input_vec &I_in, output_vec &I_out){
 	// sanity checks
@@ -249,22 +249,22 @@ void Formal_solver::one_step_quadratic(const Real dt_1, const Real dt_2, input_v
 
 	if (type_ == "BESSER")
 	{
-		static const Real VACUUM_OPACITY = 1e-30;
+		static const double VACUUM_OPACITY = 1e-30;
 	    static const int ETA_I = 0, ETA_Q = 1, ETA_U = 2, ETA_V = 3, RHO_Q = 11, RHO_U = 13, RHO_V = 6;
 	    static const int STOKES_I = 0, STOKES_Q = 1, STOKES_U = 2, STOKES_V = 3;
 	 
-	    Real tm = - dt_1 + VACUUM_OPACITY, tp = - dt_2 + VACUUM_OPACITY; // added minus since input dt are negative
-	    Real ex = exp(-tm);
-	    Real om_m = OMEGA_M(ex, tm), om_o = OMEGA_O(ex, tm), om_c = OMEGA_C(ex, tm);
-	    Real vec[4], kappa[4][4], id, c0[4];
+	    double tm = - dt_1 + VACUUM_OPACITY, tp = - dt_2 + VACUUM_OPACITY; // added minus since input dt are negative
+	    double ex = exp(-tm);
+	    double om_m = OMEGA_M(ex, tm), om_o = OMEGA_O(ex, tm), om_c = OMEGA_C(ex, tm);
+	    double vec[4], kappa[4][4], id, c0[4];
 	    int i, j;
-	    Real psi_m_lin = PSI_M_LIN(ex,tm), psi_o_lin = PSI_O_LIN(ex,tm);
-	    Real a = -psi_m_lin * K1[ETA_Q]/(K1[ETA_I]+VACUUM_OPACITY);
-	    Real b = -psi_m_lin * K1[ETA_U]/(K1[ETA_I]+VACUUM_OPACITY);
-	    Real c = -psi_m_lin * K1[ETA_V]/(K1[ETA_I]+VACUUM_OPACITY);
-	    Real s = -psi_m_lin * K1[RHO_V]/(K1[ETA_I]+VACUUM_OPACITY);
-	    Real q = -psi_m_lin * K1[RHO_U]/(K1[ETA_I]+VACUUM_OPACITY);
-	    Real r = -psi_m_lin * K1[RHO_Q]/(K1[ETA_I]+VACUUM_OPACITY);
+	    double psi_m_lin = PSI_M_LIN(ex,tm), psi_o_lin = PSI_O_LIN(ex,tm);
+	    double a = -psi_m_lin * K1[ETA_Q]/(K1[ETA_I]+VACUUM_OPACITY);
+	    double b = -psi_m_lin * K1[ETA_U]/(K1[ETA_I]+VACUUM_OPACITY);
+	    double c = -psi_m_lin * K1[ETA_V]/(K1[ETA_I]+VACUUM_OPACITY);
+	    double s = -psi_m_lin * K1[RHO_V]/(K1[ETA_I]+VACUUM_OPACITY);
+	    double q = -psi_m_lin * K1[RHO_U]/(K1[ETA_I]+VACUUM_OPACITY);
+	    double r = -psi_m_lin * K1[RHO_Q]/(K1[ETA_I]+VACUUM_OPACITY);
 
 	    c0[0] = mat_QBezierC0(tm, tp, S1[STOKES_I], S2[STOKES_I], S3[STOKES_I]);
 	    c0[1] = mat_QBezierC0(tm, tp, S1[STOKES_Q], S2[STOKES_Q], S3[STOKES_Q]);

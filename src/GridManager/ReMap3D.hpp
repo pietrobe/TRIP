@@ -128,15 +128,15 @@ private:
     /** @brief unpack the received block_buffer communicator buffer into the local block-distributed field. */ 
     void unpack_block_distr_field(Field_ptr field);
 
-    template<class T>
-    MPI_Datatype mpi_type() const {
-        if (std::is_same<T, double>::value) return MPI_DOUBLE;
-        if (std::is_same<T, float>::value) return MPI_FLOAT;
-        if (std::is_same<T, int>::value) return MPI_INT;
-        if (std::is_same<T, long>::value) return MPI_LONG;
-        if (std::is_same<T, PetscInt>::value) return MPIU_INT;
-        return MPI_BYTE; 
-    }
+    // template<class T>
+    // MPI_Datatype mpi_type() const {
+    //     if (std::is_same<T, double>::value) return MPI_DOUBLE;
+    //     if (std::is_same<T, float>::value) return MPI_FLOAT;
+    //     if (std::is_same<T, int>::value) return MPI_INT;
+    //     if (std::is_same<T, long>::value) return MPI_LONG;
+    //     if (std::is_same<T, PetscInt>::value) return MPIU_INT;
+    //     return MPI_BYTE; 
+    // }
 
 };
 #endif

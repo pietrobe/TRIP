@@ -174,14 +174,14 @@ void create_identity_matrix(int size, Mat &Id)
   ierr = MatShift(Id, 1.0);CHKERRV(ierr);
 }
 
-std::vector<Real> assemble_propagation_matrix(const std::vector<Real> &etas_and_rhos)
+std::vector<double> assemble_propagation_matrix(const std::vector<double> &etas_and_rhos)
 {
   // check input sizes
   if (etas_and_rhos.size() != 7) std::cout << "\nERROR in assemble_propagation_matrix()\n" << std::endl;
 
   // etas_and_rhos = [eta0 eta1 eta2 eta3 rho1 rho2 rho3]
 
-  std::vector<Real> K(16);
+  std::vector<double> K(16);
 
   // etas
   K[0]  = etas_and_rhos[0];
@@ -207,18 +207,18 @@ std::vector<Real> assemble_propagation_matrix(const std::vector<Real> &etas_and_
 }
 
 // entries divided by eta_I
-std::vector<Real> assemble_propagation_matrix_scaled(const std::vector<Real> &etas_and_rhos)
+std::vector<double> assemble_propagation_matrix_scaled(const std::vector<double> &etas_and_rhos)
 {
   // check input sizes
   if (etas_and_rhos.size() != 7) std::cout << "\nERROR in assemble_propagation_matrix()\n" << std::endl;
 
   // etas_and_rhos = [eta0 eta1 eta2 eta3 rho1 rho2 rho3]
 
-  std::vector<Real> K(16);
+  std::vector<double> K(16);
 
   if ( etas_and_rhos[0] == 0) std::cout << "\n WARNING: eta_I = 0!\n" << std::endl;
   
-  const Real scaling_factor = 1.0 / etas_and_rhos[0];
+  const double scaling_factor = 1.0 / etas_and_rhos[0];
 
   // etas
   K[0]  = 1.0;
@@ -244,14 +244,14 @@ std::vector<Real> assemble_propagation_matrix_scaled(const std::vector<Real> &et
 }
 
 
-std::vector<Real> assemble_propagation_matrix(const std::vector<Real> &etas, const std::vector<Real> &rhos){
+std::vector<double> assemble_propagation_matrix(const std::vector<double> &etas, const std::vector<double> &rhos){
 
   // check input sizes
   if (etas.size() != 4 or rhos.size() != 4) std::cout << "\nERROR in assemble_propagation_matrix()\n" << std::endl;
   
   if ( etas[0] == 0) std::cout << "\n WARNING: eta_I = 0!\n" << std::endl;
 
-  std::vector<Real> K(16);
+  std::vector<double> K(16);
 
   // etas
   K[0]  = etas[0];
@@ -279,7 +279,7 @@ std::vector<Real> assemble_propagation_matrix(const std::vector<Real> &etas, con
 
 
 // This one is used 
-std::vector<Real> assemble_propagation_matrix_scaled(const std::vector<Real> &etas, const std::vector<Real> &rhos)
+std::vector<double> assemble_propagation_matrix_scaled(const std::vector<double> &etas, const std::vector<double> &rhos)
 {
   // check input sizes
   if (etas.size() != 4 or rhos.size() != 4) std::cout << "\nERROR in assemble_propagation_matrix()\n" << std::endl;
@@ -289,9 +289,9 @@ std::vector<Real> assemble_propagation_matrix_scaled(const std::vector<Real> &et
 
   if (etas[0] == 0) std::cout << "etas[0] == 0 in mpi_rank = " << mpi_rank << std::endl;
 
-  std::vector<Real> K(16);
+  std::vector<double> K(16);
   
-  const Real scaling_factor = 1.0 / etas[0];
+  const double scaling_factor = 1.0 / etas[0];
   
   // etas
   K[0]  = 1.0;
@@ -316,7 +316,7 @@ std::vector<Real> assemble_propagation_matrix_scaled(const std::vector<Real> &et
   return K;
 }
 
-void print_propagation_matrix(const std::vector<Real> &K)
+void print_propagation_matrix(const std::vector<double> &K)
 {
 
   int mpi_rank;
@@ -337,7 +337,7 @@ void print_propagation_matrix(const std::vector<Real> &K)
   }
 }
 
-void print_Stokes(const std::vector<Real> &I){
+void print_Stokes(const std::vector<double> &I){
 
   int mpi_rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
@@ -414,13 +414,13 @@ double W3JS(int J1, int J2, int J3, int M1, int M2, int M3) {
 }
 
  
-std::vector<Real> solve_4_by_4_system(const std::vector<Real>  &K, const std::vector<Real> &rhs)
+std::vector<double> solve_4_by_4_system(const std::vector<double>  &K, const std::vector<double> &rhs)
 {
   // check input sizes
   if (K.size() != 16 || rhs.size() != 4 ) std::cout << "\nERROR in solve_4_by_4_system()\n" << std::endl;
               
-  std::vector<Real> sol(4);
-  std::vector<Real> inv(16);
+  std::vector<double> sol(4);
+  std::vector<double> inv(16);
 
   inv[0] = K[5]  * K[10] * K[15] - 
            K[5]  * K[11] * K[14] - 
@@ -562,13 +562,13 @@ std::vector<Real> solve_4_by_4_system(const std::vector<Real>  &K, const std::ve
 
 
 // for matrix K having identity diagonal
-std::vector<Real> solve_4_by_4_system_optimized(const std::vector<Real>  &K, const std::vector<Real> &rhs)
+std::vector<double> solve_4_by_4_system_optimized(const std::vector<double>  &K, const std::vector<double> &rhs)
 {
   // check input sizes
   if (K.size() != 16 || rhs.size() != 4 ) std::cout << "\nERROR in solve_4_by_4_system()\n" << std::endl;
               
-  std::vector<Real> sol(4);
-  std::vector<Real> inv(16);
+  std::vector<double> sol(4);
+  std::vector<double> inv(16);
 
   if (K[0] != 1.0 or K[5] != 1.0 or K[10] != 1.0 or K[15] != 1.0)  std::cout << "\nERROR can not use solve_4_by_4_system_optimized()!\n" << std::endl;
 
@@ -711,12 +711,12 @@ std::vector<Real> solve_4_by_4_system_optimized(const std::vector<Real>  &K, con
 }
 
 
-std::vector<Real> refine_vector(const std::vector<Real> &v)
+std::vector<double> refine_vector(const std::vector<double> &v)
 {
   const int n = v.size();
   const int n_fn = 2 * n - 1;
 
-  std::vector<Real> v_fine;
+  std::vector<double> v_fine;
 
   v_fine.reserve(n_fn);
   v_fine.resize(n_fn);  
@@ -737,7 +737,7 @@ std::vector<Real> refine_vector(const std::vector<Real> &v)
 }
 
 
-std::vector<Real> refine_vector_blocked(const std::vector<Real> &v, const int block_size)
+std::vector<double> refine_vector_blocked(const std::vector<double> &v, const int block_size)
 {
 
   const int n = v.size();
@@ -748,7 +748,7 @@ std::vector<Real> refine_vector_blocked(const std::vector<Real> &v, const int bl
   
   const int n_fn = (2 * number_of_blocks - 1 ) * block_size;
 
-  std::vector<Real> v_fine;
+  std::vector<double> v_fine;
 
   v_fine.reserve(n_fn);
   v_fine.resize(n_fn);  
@@ -782,7 +782,7 @@ std::vector<Real> refine_vector_blocked(const std::vector<Real> &v, const int bl
 }
 
 // refine lines 
-std::vector<Real> refine_vector_blocked2(const std::vector<Real> &v, const int block_size)
+std::vector<double> refine_vector_blocked2(const std::vector<double> &v, const int block_size)
 {
   const int n = v.size();
   const int number_of_blocks = n / block_size;
@@ -790,7 +790,7 @@ std::vector<Real> refine_vector_blocked2(const std::vector<Real> &v, const int b
   const int n_fn = number_of_blocks * block_size_fn;
 
   
-  std::vector<Real> v_fine;
+  std::vector<double> v_fine;
 
   v_fine.reserve(n_fn);
   v_fine.resize(n_fn);  

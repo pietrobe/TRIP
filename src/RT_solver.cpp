@@ -15,7 +15,7 @@ unsigned int get_RII_contrib_block_size() { return RII_contrib_block_size; }
 //////////////////////////////////////////////////////
 // Jiri functions for find_prolongation
 static bool wError(const t_intersect &inters) {
-    Real ws = 0;
+    double ws = 0;
     for (int i=0; i<4; i++) {
         if (inters.w[i] < 0. || inters.w[i]>1.) return true;
         ws += inters.w[i];
@@ -25,11 +25,11 @@ static bool wError(const t_intersect &inters) {
 }
 
 // r is "almost an integer" with possible small rounding error; convert it to int
-inline static int r2int(Real r) {
+inline static int r2int(double r) {
     return r >= 0. ? (int)(r+1e-3) : (int)(r-1e-3);
 }
 
-static void setIXYZ(Real L, t_xyzinters &intersect) {
+static void setIXYZ(double L, t_xyzinters &intersect) {
     switch (intersect.plane) {
         case I_YZ:
             intersect.ix = r2int(intersect.x/L);
@@ -242,7 +242,7 @@ void MF_context::apply_bc_serial(Field_ptr_t I_field, const Real I0, const bool 
 }
 
 
-void MF_context::find_intersection(Real theta, Real chi, const Real Z_down, const Real Z_top, const Real L, t_intersect *T) 
+void MF_context::find_intersection(double theta, double chi, const double Z_down, const double Z_top, const double L, t_intersect *T) 
 {
     // check theta and possibly correct
     if (theta == 0 or chi == 0) 
@@ -257,23 +257,23 @@ void MF_context::find_intersection(Real theta, Real chi, const Real Z_down, cons
     if (L      <= 0 ) std::cout << "WARNING: L not positive"      << std::endl;       
     
     // unit vector in the direction of the ray (minus for different convection in formal solver)
-    const Real x = - sin(theta) * cos(chi);
-    const Real y = - sin(theta) * sin(chi); 
-    const Real z = - cos(theta); 
+    const double x = - sin(theta) * cos(chi);
+    const double y = - sin(theta) * sin(chi); 
+    const double z = - cos(theta); 
 
     const int dix = (x > 0. ? 1 : -1);
     const int diy = (y > 0. ? 1 : -1);
     const int diz = (z > 0. ? 1 : -1);
 
-    const Real x_inters = L * dix;
-    const Real y_inters = L * diy;
-    const Real z_inters = diz > 0 ? Z_top : -Z_down;
+    const double x_inters = L * dix;
+    const double y_inters = L * diy;
+    const double z_inters = diz > 0 ? Z_top : -Z_down;
 
-    const Real tx = x_inters / x;
-    const Real ty = y_inters / y;
-    const Real tz = z_inters / z;
+    const double tx = x_inters / x;
+    const double ty = y_inters / y;
+    const double tz = z_inters / z;
 
-    Real u1, u2, v1, v2, u, v;
+    double u1, u2, v1, v2, u, v;
 
     if (tz <= tx && tz <= ty) {
         T->distance = tz;
@@ -309,7 +309,7 @@ void MF_context::find_intersection(Real theta, Real chi, const Real Z_down, cons
         u = T->distance * y; v = T->distance * z;
     }
 
-    Real norm = 1.0 / ((u2-u1) * (v2-v1));
+    double norm = 1.0 / ((u2-u1) * (v2-v1));
 
     T->w[0] = norm * (u2-u) * (v2-v);
     T->w[1] = norm * (u-u1) * (v2-v);
@@ -332,7 +332,7 @@ void MF_context::find_intersection(Real theta, Real chi, const Real Z_down, cons
     		std::cout << "w = " << T->w[i] << std::endl;         	
     	}  
 
-        const Real w_sum = T->w[0] + T->w[1] + T->w[2] + T->w[3];
+        const double w_sum = T->w[0] + T->w[1] + T->w[2] + T->w[3];
 
         if (std::abs(w_sum - 1.0) > 1e-15) std::cout << "WARNING: w_sum - 1 = " << w_sum - 1.0 << ", it should be 0!" << std::endl;            
     }
@@ -343,10 +343,10 @@ void MF_context::find_intersection(Real theta, Real chi, const Real Z_down, cons
 ////////////////////////////////////
 
 
-std::vector<t_intersect> MF_context::find_prolongation(Real theta, Real chi, const Real dz, const Real L) {
+std::vector<t_intersect> MF_context::find_prolongation(double theta, double chi, const double dz, const double L) {
 
     #ifdef DEBUG_MODE
-        const Real small = 1e-10;
+        const double small = 1e-10;
         if (theta<0. || theta>PI || chi<0. || chi>2.*PI) {
             std::cout << "WARNING: angles out of allowed intervals!" << std::endl;
         }
@@ -363,10 +363,10 @@ std::vector<t_intersect> MF_context::find_prolongation(Real theta, Real chi, con
     #endif
     
     // unit vector in the direction of the ray (minus for different convention in formal solver)
-    const Real st = sin(theta);
-    const Real x = - st * cos(chi);
-    const Real y = - st * sin(chi); 
-    const Real z = - cos(theta);
+    const double st = sin(theta);
+    const double x = - st * cos(chi);
+    const double y = - st * sin(chi); 
+    const double z = - cos(theta);
 
     std::vector<t_intersect> is;
     std::vector<t_xyzinters> xyi;
@@ -376,8 +376,8 @@ std::vector<t_intersect> MF_context::find_prolongation(Real theta, Real chi, con
     int diy = (y > 0. ? 1 : -1);
     int diz = (z > 0. ? 1 : -1);
 
-    Real x1 = x/sqrt(x*x+y*y), y1 = y/sqrt(x*x+y*y); // unit vector of the ray projection to the xy plane
-    Real T = fabs(dz/z); // total length of the ray
+    double x1 = x/sqrt(x*x+y*y), y1 = y/sqrt(x*x+y*y); // unit vector of the ray projection to the xy plane
+    double T = fabs(dz/z); // total length of the ray
 
     // ALGORITHM: find all intersections with x and y planes, add them to a vector and sort w/ respect to distance:
     t_xyzinters xyi_tmp;
@@ -390,9 +390,9 @@ std::vector<t_intersect> MF_context::find_prolongation(Real theta, Real chi, con
     xyi.push_back(xyi_tmp); // add to the list as the first element
 
     // 2) add the intersections with the xz planes:
-    Real t = 0;
+    double t = 0;
     for (int iy=diy; t<T; iy+=diy) {
-        Real txy = L*iy / y1;
+        double txy = L*iy / y1;
         xyi_tmp.x = x1*txy;
         xyi_tmp.y = L*iy;
         xyi_tmp.t = t = fabs(sqrt(xyi_tmp.x*xyi_tmp.x+xyi_tmp.y*xyi_tmp.y)/st);
@@ -407,7 +407,7 @@ std::vector<t_intersect> MF_context::find_prolongation(Real theta, Real chi, con
     // 3) add the intersections with the yz planes:
     t = 0;
     for (int ix=dix; t<T; ix+=dix) {
-        Real txy = L*ix / x1;
+        double txy = L*ix / x1;
         xyi_tmp.x = L*ix;
         xyi_tmp.y = y1*txy;
         xyi_tmp.t = t = fabs(sqrt(xyi_tmp.x*xyi_tmp.x+xyi_tmp.y*xyi_tmp.y)/st);
@@ -428,7 +428,7 @@ std::vector<t_intersect> MF_context::find_prolongation(Real theta, Real chi, con
 
     for (unsigned int i=0; i<xyi.size(); i++) {
         t_intersect is_tmp;
-        Real u1, u2, v1, v2, u, v, norm;
+        double u1, u2, v1, v2, u, v, norm;
 
         is_tmp.distance = xyi[i].t;
         switch (xyi[i].plane) {
@@ -497,7 +497,7 @@ std::vector<t_intersect> MF_context::find_prolongation(Real theta, Real chi, con
 
 
 // given a intersection type with N cells and grid indeces ijk, get I1, S1, K1 i.e. quantities needed for the last step of formal solution
-std::vector<Real> MF_context::long_ray_steps(const std::vector<t_intersect> T, 
+std::vector<double> MF_context::long_ray_steps(const std::vector<t_intersect> T, 
                                                const Field_ptr_t I_field, const Field_ptr_t S_field, 
                                                const int i, const int j, const int k, const int block_index)
 {   
@@ -511,16 +511,16 @@ std::vector<Real> MF_context::long_ray_steps(const std::vector<t_intersect> T,
     // const auto S_dev = S_field->view_device(); 
     
 	// coeff trap + cm conversion = - 0.5 * 1e5;
-	const Real coeff = -50000;
+	const double coeff = -50000;
 
     // number of traversec cells 
     const int N = T.size();
 
 	int i_intersect, j_intersect, k_intersect, b_index;
 
-	Real eta_I_1, weight, dtau;
+	double eta_I_1, weight, dtau;
 
-	std::vector<Real> I1(4), I2(4), S1(4), S2(4), etas(4), rhos(4), K1(16), K2(16);    
+	std::vector<double> I1(4), I2(4), S1(4), S2(4), etas(4), rhos(4), K1(16), K2(16);    
 
 	for (int cell = 0; cell < N; ++cell)
 	{							
@@ -636,7 +636,7 @@ std::vector<Real> MF_context::long_ray_steps(const std::vector<t_intersect> T,
         }
 
         // compute current interval distance
-        const Real cell_distance = (cell < N - 1) ? T[cell].distance - T[cell + 1].distance : T[cell].distance;         
+        const double cell_distance = (cell < N - 1) ? T[cell].distance - T[cell + 1].distance : T[cell].distance;         
 
 		// optical depth step		        
 		dtau = coeff * (eta_I_1 + etas[0]) * cell_distance;									
@@ -721,7 +721,7 @@ std::vector<Real> MF_context::long_ray_steps(const std::vector<t_intersect> T,
 
 
 // given a intersection type with N cells and grid indeces ijk, get I1, S1, K1 i.e. quantities needed for the last step of formal solution
-std::vector<Real> MF_context::long_ray_steps_quadratic(const std::vector<t_intersect> T, 
+std::vector<double> MF_context::long_ray_steps_quadratic(const std::vector<t_intersect> T, 
                                                          const Field_ptr_t I_field, const Field_ptr_t S_field, 
                                                          const int i, const int j, const int k, const int block_index,
                                                          bool print_flag) // to test
@@ -735,18 +735,18 @@ std::vector<Real> MF_context::long_ray_steps_quadratic(const std::vector<t_inter
     const auto rho_dev = (formal_solution_Omega_) ? rho_field_serial_Omega_ : rho_field_serial_; 
 
     // coeff trap + cm conversion = - 0.5 * 1e5;
-    const Real coeff = -50000;
+    const double coeff = -50000;
 
     // number of traversec cells 
     const int N = T.size() - 1;
 
     int i_intersect, j_intersect, k_intersect, b_index;
 
-    Real eta_I_1, weight, dtau_1, dtau_2, cell_distance;
+    double eta_I_1, weight, dtau_1, dtau_2, cell_distance;
 
-    Real distance_test, etas_1_print;
+    double distance_test, etas_1_print;
 
-    std::vector<Real> I1(4), I2(4), S1(4), S2(4), S3(4), etas(4), rhos(4), K1(16), K2(16), K3(16);   
+    std::vector<double> I1(4), I2(4), S1(4), S2(4), S3(4), etas(4), rhos(4), K1(16), K2(16), K3(16);   
 
     // TEST
     auto T_dev = RT_problem_->T_;  
@@ -1064,7 +1064,7 @@ std::vector<Real> MF_context::long_ray_steps_quadratic(const std::vector<t_inter
 
 
 // given a intersection type with N cells and grid indeces ijk, get I1, S1, K1 i.e. quantities needed for the last step of formal solution
-std::vector<Real> MF_context::single_long_ray_step(const std::vector<t_intersect> T, 
+std::vector<double> MF_context::single_long_ray_step(const std::vector<t_intersect> T, 
                                                const Field_ptr_t I_field, const Field_ptr_t S_field, 
                                                const int i, const int j, const int k, const int block_index)                                               
 {             
@@ -1075,14 +1075,14 @@ std::vector<Real> MF_context::single_long_ray_step(const std::vector<t_intersect
     const auto rho_dev = (formal_solution_Omega_) ? rho_field_serial_Omega_ : rho_field_serial_; 
 
     // coeff trap + cm conversion = - 0.5 * 1e5;
-    const Real coeff = -50000;
+    const double coeff = -50000;
     
     int i_intersect, j_intersect, k_intersect, b_index;
 
-    Real eta_I_1, weight;
-    Real total_distance = 0;
+    double eta_I_1, weight;
+    double total_distance = 0;
 
-    std::vector<Real> I1(4), I2(4), S1(4), S2(4), etas(4), rhos(4), K1(16), K2(16);
+    std::vector<double> I1(4), I2(4), S1(4), S2(4), etas(4), rhos(4), K1(16), K2(16);
    
     // total distance 
     total_distance = T[0].distance;  
@@ -1097,7 +1097,7 @@ std::vector<Real> MF_context::single_long_ray_step(const std::vector<t_intersect
         I1[i_stokes]   = 0;
     }
 
-    const Real debug_value = std::abs(T[0].iz[0] + T[0].iz[1] + T[0].iz[2] + T[0].iz[3]);
+    const double debug_value = std::abs(T[0].iz[0] + T[0].iz[1] + T[0].iz[2] + T[0].iz[3]);
 
     if (debug_value != 4) std::cout << "ERROR in single_long_ray_step()" << std::endl;
 
@@ -1151,7 +1151,7 @@ std::vector<Real> MF_context::single_long_ray_step(const std::vector<t_intersect
     K2 = assemble_propagation_matrix_scaled(etas, rhos);        
 
     // optical depth step                               
-    const Real dtau = coeff * (eta_I_1 + etas[0]) * total_distance;                                  
+    const double dtau = coeff * (eta_I_1 + etas[0]) * total_distance;                                  
 
     if (dtau > 0 ) std::cout << "ERROR in dtau sign, dtau = " << dtau << std::endl;
     if (dtau == 0) std::cout << "WARNING: dtau = 0, possible e.g. for N_chi = 4"<< std::endl;
@@ -1162,14 +1162,14 @@ std::vector<Real> MF_context::single_long_ray_step(const std::vector<t_intersect
 }
 
 
-void MF_context::formal_solve_ray(const Real theta, const Real chi)
+void MF_context::formal_solve_ray(const double theta, const double chi)
 {       
     // timers
     const bool timing_debug = false;
     if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
-    const Real start_total = MPI_Wtime(); 
+    const double start_total = MPI_Wtime(); 
 
-    const Real mu = cos(theta);
+    const double mu = cos(theta);
 
     if (mpi_rank_ == 0) std::cout << "\nStart formal solution for mu = " << mu << 
                                     ", theta = " << theta << ", and chi = " << chi << std::endl;    
@@ -1214,12 +1214,12 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
     std::vector<int> local_idx;    
 
     // misc coeffs
-    Real dtau, weight, eta_I_1, dz;
+    double dtau, weight, eta_I_1, dz;
     
     bool boundary, horizontal_face, long_ray;
 
     // quantities depending on spatial point i
-    std::vector<Real> I1(4), I2(4), S1(4), S2(4), etas(4), rhos(4), K1(16), K2(16);
+    std::vector<double> I1(4), I2(4), S1(4), S2(4), etas(4), rhos(4), K1(16), K2(16);
 
     // intersection object
     t_intersect intersection_data;        
@@ -1229,14 +1229,14 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
     t_intersect intersection_data_next;
 
     // minus for optical depth conversion, trap rule and conversion to cm (- 0.5 * 1e5)
-    const Real coeff = -50000;
+    const double coeff = -50000;
     
     // timers
-    Real comm_timer     = 0;
-    Real one_step_timer = 0;    
+    double comm_timer     = 0;
+    double one_step_timer = 0;    
 
     if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);    
-    Real start_comm  = MPI_Wtime();                                 
+    double start_comm  = MPI_Wtime();                                 
     ///////////// data movement ////////////////////
     // write eta and rhos to the serial grid
     Omega_remap.from_space_to_block_distributed(
@@ -1310,9 +1310,9 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
                         {                                                 
                             if ( k_global > 0 and k_global < N_z - 1)
                             {
-                                const Real dz_2    = (mu > 0) ? depth_grid[k_global - 1] -  depth_grid[k_global] : depth_grid[k_global] - depth_grid[k_global + 1]; 
-                                const Real theta_2 = PI - theta;
-                                const Real chi_2   = chi + PI;                                           
+                                const double dz_2    = (mu > 0) ? depth_grid[k_global - 1] -  depth_grid[k_global] : depth_grid[k_global] - depth_grid[k_global + 1]; 
+                                const double theta_2 = PI - theta;
+                                const double chi_2   = chi + PI;                                           
 
                                 // find one extra intersection data for last stencil point
                                 find_intersection(theta_2, chi_2, dz_2, dz_2, L, &intersection_data_next);       
@@ -1352,7 +1352,7 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
                         for (int b = 0; b < local_block_size_; b = b + 4)
                         {                
                             if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);                                                                                                                 
-                            Real start_one = MPI_Wtime();                                               
+                            double start_one = MPI_Wtime();                                               
                             
                             // solve ODE
                             if (not use_linear_method)
@@ -1513,8 +1513,8 @@ void MF_context::formal_solve_ray(const Real theta, const Real chi)
     comm_timer += MPI_Wtime() - start_comm;      
 
     // print timers    
-    const Real total_timer = MPI_Wtime() - start_total;
-    Real comm_timer_max, one_step_timer_max, total_timer_max;
+    const double total_timer = MPI_Wtime() - start_total;
+    double comm_timer_max, one_step_timer_max, total_timer_max;
     MPI_Reduce(&comm_timer,     &comm_timer_max,     1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     MPI_Reduce(&one_step_timer, &one_step_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     MPI_Reduce(&total_timer,    &total_timer_max,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
@@ -1537,7 +1537,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     // timers
     const bool timing_debug = false;
     if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
-    const Real start_total = MPI_Wtime();                                    
+    const double start_total = MPI_Wtime();                                    
     
 	// init some quantities 	    
     const auto N_x = RT_problem_->N_x_;
@@ -1586,12 +1586,12 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     int block_start, block_end, j_theta_start, k_chi_start, n_nu_start, j_theta_end, k_chi_end, n_nu_end;
 
 	// misc coeffs
-	Real theta, chi, mu, dtau, weight, eta_I_1, dz;
+	double theta, chi, mu, dtau, weight, eta_I_1, dz;
 	
 	bool boundary, horizontal_face, long_ray;
 
 	// quantities depending on spatial point i
-	std::vector<Real> I1(4), I2(4), S1(4), S2(4), etas(4), rhos(4), K1(16), K2(16);
+	std::vector<double> I1(4), I2(4), S1(4), S2(4), etas(4), rhos(4), K1(16), K2(16);
 
 	// intersection object
 	t_intersect intersection_data;        
@@ -1601,11 +1601,11 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     t_intersect intersection_data_next;
 
 	// minus for optical depth conversion, trap rule and conversion to cm (- 0.5 * 1e5)
-	const Real coeff = -50000;
+	const double coeff = -50000;
 	
-    Real comm_timer1    = 0;
-    Real comm_timer2    = 0;
-    Real one_step_timer = 0;    
+    double comm_timer1    = 0;
+    double comm_timer2    = 0;
+    double one_step_timer = 0;    
 
     // impose boundary conditions 
     apply_bc_serial(I_field_serial_, I0);  
@@ -1621,7 +1621,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
                          
         // communication	                
         if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
-        Real start_comm = MPI_Wtime();                                    
+        double start_comm = MPI_Wtime();                                    
         
         // write S to the serial grid and I to get initial condition              
         Pol_remap.from_space_to_block_distributed(S_field, S_field_serial_, tile_number);                        
@@ -1714,9 +1714,9 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
                                         // last point has to use linear method     
                                         if (k_global > 0 and k_global < N_z - 1)
                                         {
-                                            const Real dz_2    = (mu > 0) ? depth_grid[k_global - 1] -  depth_grid[k_global] : depth_grid[k_global] - depth_grid[k_global + 1]; 
-                                            const Real theta_2 = PI - theta;
-                                            const Real chi_2   = chi + PI;                                           
+                                            const double dz_2    = (mu > 0) ? depth_grid[k_global - 1] -  depth_grid[k_global] : depth_grid[k_global] - depth_grid[k_global + 1]; 
+                                            const double theta_2 = PI - theta;
+                                            const double chi_2   = chi + PI;                                           
 
                                             // find one extra intersection data for last stencil point
                                             find_intersection(theta_2, chi_2, dz_2, dz_2, L, &intersection_data_next);       
@@ -1756,7 +1756,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
                                     for (int n = n_nu_start; n < n_nu_end; ++n)
     								{			     
                                         if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);                                                                                                                 
-                                        Real start_one = MPI_Wtime();                                               
+                                        double start_one = MPI_Wtime();                                               
 
     									// block index (corrected for tile size)                                    
     									b_start = RT_problem_->local_to_block(j_theta, k_chi, n) % tile_size_;                                   
@@ -1942,8 +1942,8 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     }                
     
     // print timers
-    const Real total_timer = MPI_Wtime() - start_total;
-    Real comm_timer_max1, comm_timer_max2, one_step_timer_max, total_timer_max;
+    const double total_timer = MPI_Wtime() - start_total;
+    double comm_timer_max1, comm_timer_max2, one_step_timer_max, total_timer_max;
     MPI_Reduce(&comm_timer1,    &comm_timer_max1,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     MPI_Reduce(&comm_timer2,    &comm_timer_max2,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     MPI_Reduce(&one_step_timer, &one_step_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
@@ -1966,7 +1966,7 @@ void MF_context::formal_solve_1_5D(Field_ptr_t I_field, const Field_ptr_t S_fiel
     if (mpi_rank_ == 0) std::cout << "\nStarting 1.5D formal solution...";
 
     // timer    
-    const Real start_total = MPI_Wtime();                                    
+    const double start_total = MPI_Wtime();                                    
     
     // init some quantities         
     const auto N_z     = RT_problem_->N_z_;
@@ -2002,18 +2002,18 @@ void MF_context::formal_solve_1_5D(Field_ptr_t I_field, const Field_ptr_t S_fiel
     int k_aux, k_prev, k_next, b_start, b_index;
     
     // misc coeffs
-    Real mu, dtau, distance, dz;
+    double mu, dtau, distance, dz;
 
     // quantities depending on spatial point (1) and (2)
-    std::vector<Real> I1(4), S1(4), etas1(4), rhos1(4), K1(16);
-    std::vector<Real> I2(4), S2(4), etas2(4), rhos2(4), K2(16);
+    std::vector<double> I1(4), S1(4), etas1(4), rhos1(4), K1(16);
+    std::vector<double> I2(4), S2(4), etas2(4), rhos2(4), K2(16);
 
     // quantities depending on spatial point (3) in case of prabolic method
-    std::vector<Real> S3(4), etas3(4), rhos3(4), K3(16);    
-    Real dtau2, distance2, dz2;
+    std::vector<double> S3(4), etas3(4), rhos3(4), K3(16);    
+    double dtau2, distance2, dz2;
  
     // minus for optical depth conversion, trap rule and conversion to cm (- 0.5 * 1e5)
-    const Real coeff = -50000;
+    const double coeff = -50000;
         
     // impose boundary conditions 
     apply_bc(I_field, I0);  
@@ -2158,8 +2158,8 @@ void MF_context::formal_solve_1_5D(Field_ptr_t I_field, const Field_ptr_t S_fiel
     }
                                   
     // print timers
-    const Real total_timer = MPI_Wtime() - start_total;
-    Real total_timer_max;    
+    const double total_timer = MPI_Wtime() - start_total;
+    double total_timer_max;    
     MPI_Reduce(&total_timer, &total_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
     if (mpi_rank_ == 0) printf("done, time:\t%g seconds\n",     total_timer_max);                            
@@ -2181,7 +2181,7 @@ void MF_context::formal_solve(Field_ptr_t I_field, const Field_ptr_t S_field, co
 }   
 
 // given a intersection type with N cells and grid indeces ijk
-Real MF_context::long_ray_steps_unpolarized(const std::vector<t_intersect> T, 
+double MF_context::long_ray_steps_unpolarized(const std::vector<t_intersect> T, 
                                                const Field_ptr_t I_field, const Field_ptr_t S_field, 
                                                const int i, const int j, const int k, const int block_index, 
                                                bool print_flag)
@@ -2197,14 +2197,14 @@ Real MF_context::long_ray_steps_unpolarized(const std::vector<t_intersect> T,
     const int eta_block_index = 4 * block_index;
     
     // coeff trap + cm conversion = - 0.5 * 1e5;
-    const Real coeff = -50000;
+    const double coeff = -50000;
 
     // number of traversec cells 
     const int N = T.size();
 
     int i_intersect, j_intersect, k_intersect;    
 
-    Real I1, I2, S1, S2, eta1, eta2, weight, dtau;    
+    double I1, I2, S1, S2, eta1, eta2, weight, dtau;    
 
     for (int cell = 0; cell < N; ++cell)
     {                           
@@ -2284,7 +2284,7 @@ Real MF_context::long_ray_steps_unpolarized(const std::vector<t_intersect> T,
         }
 
         // compute current interval distance
-        const Real cell_distance = (cell < N - 1) ? T[cell].distance - T[cell + 1].distance : T[cell].distance;         
+        const double cell_distance = (cell < N - 1) ? T[cell].distance - T[cell + 1].distance : T[cell].distance;         
 
         // optical depth step               
         dtau = coeff * (eta1 + eta2) * cell_distance;                                 
@@ -2320,7 +2320,7 @@ Real MF_context::long_ray_steps_unpolarized(const std::vector<t_intersect> T,
 
 
 // given a intersection type with N cells and grid indeces ijk, get I1, S1, K1 i.e. quantities needed for the last step of formal solution
-Real MF_context::long_ray_steps_quadratic_unpolarized(const std::vector<t_intersect> T, 
+double MF_context::long_ray_steps_quadratic_unpolarized(const std::vector<t_intersect> T, 
                                                          const Field_ptr_t I_field, const Field_ptr_t S_field, 
                                                          const int i, const int j, const int k, const int block_index,
                                                          bool print_flag) // to test
@@ -2335,18 +2335,18 @@ Real MF_context::long_ray_steps_quadratic_unpolarized(const std::vector<t_inters
     const int eta_block_index = 4 * block_index;
     
     // coeff trap + cm conversion = - 0.5 * 1e5;
-    const Real coeff = -50000;
+    const double coeff = -50000;
 
     // number of traversec cells 
     const int N = T.size() - 1;
 
     int i_intersect, j_intersect, k_intersect, b_index;
 
-    Real weight, dtau_1, dtau_2, cell_distance;
+    double weight, dtau_1, dtau_2, cell_distance;
 
-    Real distance_test, etas_1_print;
+    double distance_test, etas_1_print;
 
-    Real I1, I2, S1, S2, S3, eta1, eta2, eta3;   
+    double I1, I2, S1, S2, S3, eta1, eta2, eta3;   
     
     for (int cell = 0; cell < N; ++cell)
     {                           
@@ -2564,12 +2564,12 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
     int block_start, block_end, j_theta_start, k_chi_start, n_nu_start, j_theta_end, k_chi_end, n_nu_end;
 
     // misc coeffs
-    Real theta, chi, mu, dtau, weight, dz;
+    double theta, chi, mu, dtau, weight, dz;
     
     bool boundary, horizontal_face, long_ray;
 
     // quantities depending on spatial point i
-    Real I1, I2, S1, S2, eta1, eta2;
+    double I1, I2, S1, S2, eta1, eta2;
 
     // intersection object
     t_intersect intersection_data;        
@@ -2579,10 +2579,10 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
     t_intersect intersection_data_next;
 
     // minus for optical depth conversion, trap rule and conversion to cm (- 0.5 * 1e5)
-    const Real coeff = -50000;
+    const double coeff = -50000;
     
-    Real comm_timer     = 0;
-    Real one_step_timer = 0;   
+    double comm_timer     = 0;
+    double one_step_timer = 0;   
 
     // impose boundary conditions 
     apply_bc_serial(I_unpol_field_serial_, I0, false);  
@@ -2600,7 +2600,7 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
     if (idle_proc) std::cout << "IDLE proc with mpi_rank_ = " << mpi_rank_ << std::endl;
                      
     // communication                        
-    Real start_comm = MPI_Wtime();                                    
+    double start_comm = MPI_Wtime();                                    
     // write S to the serial grid and I to get initial condition              
     Unpol_remap.from_space_to_block_distributed(S_field, S_unpol_field_serial_);                        
     // Unpol_remap.from_space_to_block_distributed(I_field, I_unpol_field_serial_); 
@@ -2683,9 +2683,9 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
                                     // last point has to use linear method     
                                     if (k_global > 0 and k_global < N_z - 1)
                                     {
-                                        const Real dz_2    = (mu > 0) ? depth_grid[k_global - 1] -  depth_grid[k_global] : depth_grid[k_global] - depth_grid[k_global + 1]; 
-                                        const Real theta_2 = PI - theta;
-                                        const Real chi_2   = chi + PI;                                           
+                                        const double dz_2    = (mu > 0) ? depth_grid[k_global - 1] -  depth_grid[k_global] : depth_grid[k_global] - depth_grid[k_global + 1]; 
+                                        const double theta_2 = PI - theta;
+                                        const double chi_2   = chi + PI;                                           
 
                                         // find one extra intersection data for last stencil point
                                         find_intersection(theta_2, chi_2, dz_2, dz_2, L, &intersection_data_next);       
@@ -2724,7 +2724,7 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
                                 // loop on freqs
                                 for (int n = n_nu_start; n < n_nu_end; ++n)
                                 {                                                                                                                                                                
-                                    Real start_one = MPI_Wtime();                                               
+                                    double start_one = MPI_Wtime();                                               
 
                                     // block index (corrected for tile size)                                    
                                     b_start = RT_problem_->local_to_block_unpol(j_theta, k_chi, n) % n_local_rays_unpol_;                                   
@@ -2839,8 +2839,8 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
     comm_timer += MPI_Wtime() - start_comm;              
     
     // print timers
-    const Real total_timer = MPI_Wtime() - start_total;
-    Real comm_timer_max, one_step_timer_max, total_timer_max;
+    const double total_timer = MPI_Wtime() - start_total;
+    double comm_timer_max, one_step_timer_max, total_timer_max;
     MPI_Reduce(&comm_timer,     &comm_timer_max,     1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     MPI_Reduce(&one_step_timer, &one_step_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     MPI_Reduce(&total_timer,    &total_timer_max,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
@@ -3313,10 +3313,11 @@ void MF_context::update_emission_J_KQ(const Vec &J_KQ_vec){
         if (j >= j_end) std::cout << "ERROR with counters in update_emission(), j = " << j << std::endl;
         if (k >= k_end) std::cout << "ERROR with counters in update_emission(), k = " << k << std::endl;
 
+        // convert to double (just copy if Real = double)
         to_double(input,input_tmp);
-
+        
         J_KQ_ijk->build_from_array(input_tmp.data());        
-
+        
         const auto out_epsilon = epsilon_fun_J_KQ_(i,j,k,J_KQ_ijk);
 
         rii_include::make_indices_convertion_function<Real>(out_epsilon, offset_fun_)(output.data());                    
@@ -3420,7 +3421,7 @@ void MF_context::I_vec_to_J_KQ_vec(const Vec &I_vec, Vec &J_KQ_vec){
         // get the J_KQ object
         const auto J_KQ_ijk = compute_JKQ_values_(i,j,k);
 
-        // TODO, do it just for float
+        // reduntant for Real = double
         to_double(J_KQ_ijk_vec,J_KQ_ijk_vec_tmp);
 
         // transform the J_KQ object to a standard vector 
@@ -3477,8 +3478,8 @@ void MF_context::I_field_to_J_KQ_vec(const Field_ptr_t field, Vec &J_KQ_vec){
     ierr = PetscMalloc1(J_KQ_size_, &ix_J_KQ);CHKERRV(ierr);   
 
     std::vector<Real> I_ijk_vec(block_size);
-    std::vector<Real> J_KQ_ijk_vec(J_KQ_size_);
-    std::vector<double> J_KQ_ijk_vec_tmp(J_KQ_size_);
+    std::vector<double> J_KQ_ijk_vec(J_KQ_size_);
+    std::vector<Real> J_KQ_ijk_vec_tmp(J_KQ_size_);
 
     PetscInt i_J_KQ_start, starting_index;
     
@@ -3501,21 +3502,26 @@ void MF_context::I_field_to_J_KQ_vec(const Field_ptr_t field, Vec &J_KQ_vec){
                 ecc_sh_ptr_->update_incoming_field(i, j, k, offset_fun_, I_ijk_vec.data());
 
                 // get the J_KQ object
-                const auto J_KQ_ijk = compute_JKQ_values_(i,j,k);
-
-                // TODO, remove if not needed 
-                to_double(J_KQ_ijk_vec, J_KQ_ijk_vec_tmp);
+                const auto J_KQ_ijk = compute_JKQ_values_(i,j,k);            
 
                 // transform the J_KQ object to a standard vector J_KQ_ijk_vec                
-                J_KQ_ijk->fill_array(J_KQ_ijk_vec_tmp.data());   
+                J_KQ_ijk->fill_array(J_KQ_ijk_vec.data());   
 
                 // set indeces STRANGE?
                 starting_index = i_J_KQ_start + counter * J_KQ_size_;
                 std::iota(ix_J_KQ, ix_J_KQ + J_KQ_size_, starting_index);                
 
                 // now J_KQ_ijk_vec is filled and should be inserted in the PETSC Vec
-                ierr = VecSetValues(J_KQ_vec, J_KQ_size_, ix_J_KQ, J_KQ_ijk_vec.data(), INSERT_VALUES);CHKERRV(ierr); 
-                
+                // ierr = VecSetValues(J_KQ_vec, J_KQ_size_, ix_J_KQ, J_KQ_ijk_vec.data(), INSERT_VALUES);CHKERRV(ierr); 
+
+                // NEW mixed precision                
+                for (size_t i = 0; i < J_KQ_size_; ++i) 
+                {
+                    J_KQ_ijk_vec_tmp[i] = static_cast<Real>(J_KQ_ijk_vec[i]); // TODO -> not necessary for double precision 
+                }
+
+                ierr = VecSetValues(J_KQ_vec, J_KQ_size_, ix_J_KQ, J_KQ_ijk_vec_tmp.data(), INSERT_VALUES);CHKERRV(ierr); 
+                                   
                 counter++;
             }
         }
@@ -3533,7 +3539,7 @@ void MF_context::I_field_to_J_KQ_vec(const Field_ptr_t field, Vec &J_KQ_vec){
 // emissivity block for a arbitrary direction (mu,chi) is saved in first N_nu block entries of S_field 
 // for each spatial point (i,j,k)
 //TODO I_vec should be field now
-void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const Real chi)
+void MF_context::update_emission_Omega(const Vec &I_vec, const double theta, const double chi)
 {      
     const bool include_eps_lth = true;        
     // const bool include_continuum = false;
@@ -3731,7 +3737,7 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const Real theta, const
 
 // TODO  look at remap
 void MF_context::init_serial_fields(const int n_tiles){
-    
+
     auto block_size = RT_problem_->block_size_;
 
     auto N_x = RT_problem_->N_x_;
@@ -3827,9 +3833,8 @@ void MF_context::init_serial_fields(const int n_tiles){
     );
 
     // init remaps 
-    Pol_remap.init(
-        RT_problem_->space_grid_, space_grid_serial_, block_size, tile_size_
-    );
+    Pol_remap.init(RT_problem_->space_grid_, space_grid_serial_, block_size, tile_size_);
+
     Pol_remap.from_space_to_block_distributed(RT_problem_->eta_field_, eta_field_serial_); 
     Pol_remap.from_space_to_block_distributed(RT_problem_->rho_field_, rho_field_serial_); 
 
@@ -3837,7 +3842,7 @@ void MF_context::init_serial_fields(const int n_tiles){
     {        
         // Craete also vector with shared initial condition     
         W_T_ij_serial_ = RT_problem_->extract_plane_k(RT_problem_->W_T_, RT_problem_->N_z_ - 1);       
-
+        
         // non-serial rho is not needed after this point 
         RT_problem_->rho_field_.reset(); // TEST
     }   
@@ -4198,14 +4203,14 @@ PetscErrorCode UserMult(Mat mat, Vec x, Vec y){
 
   	auto RT_problem = mf_ctx_->RT_problem_;    
 
-    Real start = MPI_Wtime();       
+    const double start = MPI_Wtime();       
     
     // compute new emission in S_field_ 
     mf_ctx_->update_emission(x); 
 
     // timer
-    Real emission_timer = MPI_Wtime() - start;
-    Real emission_timer_max;
+    const double emission_timer = MPI_Wtime() - start;
+    double emission_timer_max;
     MPI_Reduce(&emission_timer, &emission_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     if (RT_problem->mpi_rank_ == 0 and RT_problem->verbose_) printf("update_emission:\t\t%g seconds\n", emission_timer_max);                  
   	    
@@ -4232,14 +4237,14 @@ PetscErrorCode UserMult_JKQ(Mat mat, Vec x, Vec y){
 
     auto RT_problem = mf_ctx_->RT_problem_;    
 
-    Real start = MPI_Wtime();       
+    const double start = MPI_Wtime();       
     
     // compute new emission in S_field_ 
     mf_ctx_->update_emission_J_KQ(x); 
 
     // timer
-    Real emission_timer = MPI_Wtime() - start;
-    Real emission_timer_max;
+    const double emission_timer = MPI_Wtime() - start;
+    double emission_timer_max;
     MPI_Reduce(&emission_timer, &emission_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     if (RT_problem->mpi_rank_ == 0 and RT_problem->verbose_) printf("update_emission:\t\t%g seconds\n", emission_timer_max);                  
         
@@ -4267,7 +4272,7 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
 
     auto RT_problem = mf_ctx_->RT_problem_;     
 
-    Real start = MPI_Wtime();       
+    const double start = MPI_Wtime();       
     
     // TODO: create update_emission_unpol not needing in/out conversions 
     if (mf_ctx_->pc_use_J_KQ_)
@@ -4290,8 +4295,8 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
         mf_ctx_->update_emission(x, true);  
     }
    
-    Real emission_timer = MPI_Wtime() - start;
-    Real emission_timer_max;
+    const double emission_timer = MPI_Wtime() - start;
+    double emission_timer_max;
     MPI_Reduce(&emission_timer, &emission_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     if (RT_problem->mpi_rank_ == 0 and RT_problem->verbose_) printf("Update preconditioner emission:\t\t%g seconds\n", emission_timer_max);          
     

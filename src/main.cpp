@@ -100,12 +100,7 @@ main(int argc, char *argv[])
 
 	{ // start scope for RT_problem and RT_solver
 
-		// create problem object
-		auto rt_problem_ptr = std::make_shared<RT_problem>(cfg);
-		// rt_problem_ptr->space_grid_->dumpDecompositionCSV("decomposition.csv");
-
-		// create solver object
-		RT_solver rt_solver(rt_problem_ptr);
+	if (mpi_rank == 0) std::cout << "WARNING: testing single precision, THDF types are hardocded to float!" << std::endl << std::endl;
 
 		//////////////////////////////////////////////////////////////////////////
 		// Prepare output directory
@@ -119,10 +114,11 @@ main(int argc, char *argv[])
 
 		// create problem object
 		auto rt_problem_ptr = std::make_shared<RT_problem>(cfg);
-		rt_problem_ptr->space_grid_->dumpDecompositionCSV("decomposition.csv");
+		// rt_problem_ptr->space_grid_->dumpDecompositionCSV("decomposition.csv");
 
 		// create solver object
 		RT_solver rt_solver(rt_problem_ptr);
+
 
 		if (mpi_rank == 0)
 		{

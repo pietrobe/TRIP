@@ -18,8 +18,8 @@ void set_RII_contrib_block_size(const unsigned int block_size);
 // structs for ray - grid intersection 
 typedef struct t_intersect {
     int ix[4], iy[4], iz[4];
-    Real w[4];
-    Real distance;
+    double w[4];
+    double distance;
 } t_intersect;
 
 enum t_plane {
@@ -30,9 +30,9 @@ enum t_plane {
 
 typedef struct t_xyzinters {
     t_plane plane;
-    Real x, y, z; // point of intersection
+    double x, y, z; // point of intersection
     int ix, iy, iz; // left-back-from index of the intersected segment
-    Real t; // distance from the origin
+    double t; // distance from the origin
 } t_xyzinters;
 
 
@@ -131,21 +131,21 @@ struct MF_context {
 	void I_field_to_J_KQ_vec(const Field_ptr_t field, Vec &J_KQ_vec);
 	
 	// find intersection
-	void find_intersection(Real theta, Real chi, const Real Z_down, const Real Z_top, const Real L, t_intersect *T);
-	std::vector<t_intersect> find_prolongation(Real theta, Real chi, const Real dz, const Real L);
-	std::vector<Real> long_ray_steps(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index);
-	std::vector<Real> long_ray_steps_quadratic(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index, bool print_flag);
-	std::vector<Real> single_long_ray_step(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index);
+	void find_intersection(double theta, double chi, const double Z_down, const double Z_top, const double L, t_intersect *T);
+	std::vector<t_intersect> find_prolongation(double theta, double chi, const double dz, const double L);
+	std::vector<double> long_ray_steps(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index);
+	std::vector<double> long_ray_steps_quadratic(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index, bool print_flag);
+	std::vector<double> single_long_ray_step(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index);
 
 	// for the unpolarized case
-	Real long_ray_steps_unpolarized(          const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index, bool print_flag);
-	Real long_ray_steps_quadratic_unpolarized(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index, bool print_flag);
+	double long_ray_steps_unpolarized(          const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index, bool print_flag);
+	double long_ray_steps_quadratic_unpolarized(const std::vector<t_intersect> T, const Field_ptr_t I_field, const Field_ptr_t S_field, const int i, const int j, const int k, const int block_index, bool print_flag);
 
-	void get_2D_weigths(const Real x, const Real y, Real *w);
+	void get_2D_weigths(const double x, const double y, double *w);
 
 	// formal solver	
 	void formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
-	void formal_solve_ray(const Real mu, const Real chi);		
+	void formal_solve_ray(const double mu, const double chi);		
 	void formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
 	void formal_solve_1_5D(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);	
 	void formal_solve(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
@@ -161,7 +161,7 @@ struct MF_context {
 	void update_emission_J_KQ(const Vec &I_field);
 
 	// update emission in all spatial points (given the current I_field_, update S_field_) for an arbitrary direction 
-	void update_emission_Omega(const Vec &I_field, const Real theta, const Real chi);
+	void update_emission_Omega(const Vec &I_field, const double theta, const double chi);
 
 	// init serial fields (serial eta and rho are filled)
 	void init_serial_fields(const int n_tiles);	
@@ -206,7 +206,7 @@ public:
 
     	// safety check when J_KQ solution is enabled
     	const std::string emissivity_model = emissivity_model_to_string_long(cfg.emissivity_model);
-
+    	
 		if (mf_ctx_.ksp_use_J_KQ_ and emissivity_model.find("PRD") != std::string::npos)
 		{
 		    if (mpi_rank_ == 0)
@@ -224,7 +224,6 @@ public:
                    std::cout << "WARNING: BESSER with GMRES can stagnate in PRD, switch to DELO_linear or KSPRICHARDSON for better stability.\n";
                 }
 
-
     	// init serial grids for formal solution (not needed for 1.5D)
     	if (RT_problem_->use_1_5D_approx_)
     	{
@@ -235,6 +234,7 @@ public:
     		const int n_tiles = 1; 
 	    	mf_ctx_.init_serial_fields(n_tiles);	
     	}
+    	
     	
     	// init unpolarized formal solver and data structures
     	if (mf_ctx_.pc_use_J_KQ_ or mf_ctx_.ksp_use_J_KQ_)    	
@@ -247,8 +247,8 @@ public:
     		mf_ctx_.init_unpol_fields();    		
     		mf_ctx_.formal_solver_unpol_ = Formal_solver("SC_parabolic");	    		
     	}
-    	    	
-    	mf_ctx_.set_up_emission_module();  	      	
+    	   
+    	mf_ctx_.set_up_emission_module();  	      	    	
         	
     	// assemble rhs
     	assemble_rhs();
@@ -378,7 +378,7 @@ public:
 	//TODO
 	inline void solve()
 	{	
-		Real start = MPI_Wtime();	
+		double start = MPI_Wtime();	
 		
 		if (mpi_rank_ == 0) std::cout << "\nStart linear solve..." << std::endl;		
 
@@ -392,7 +392,7 @@ public:
 			ierr = KSPSolve(ksp_solver_, rhs_, RT_problem_->I_vec_);CHKERRV(ierr);
 		}
 
-		MPI_Barrier(MPI_COMM_WORLD); Real end = MPI_Wtime();
+		MPI_Barrier(MPI_COMM_WORLD); double end = MPI_Wtime();
 		if (mpi_rank_ == 0) std::cout << "Solve time (s) = " << end - start << std::endl;	
 
 		// update I_field for later use
@@ -460,7 +460,7 @@ public:
 	//TODO 
 	inline void apply_formal_solver()
 	{		
-		Real start = MPI_Wtime();		
+		double start = MPI_Wtime();		
 
 		// // set source fun
 		// if (mpi_rank_ == 0) std::cout << "WARNING: setting source function in apply_formal_solver()" << std::endl;
@@ -482,7 +482,7 @@ public:
 		
 		mf_ctx_.formal_solve_global(RT_problem_->I_field_, RT_problem_->S_field_, 1.0);		
 						
-		MPI_Barrier(MPI_COMM_WORLD); Real end = MPI_Wtime();
+		MPI_Barrier(MPI_COMM_WORLD); double end = MPI_Wtime();
 		if (mpi_rank_ == 0) std::cout << "Formal solve time (s) = " << end - start << std::endl;	
 
 		// update I_vec for later use
@@ -492,7 +492,7 @@ public:
 	//TODO
 	inline void compute_emission()
 	{
-		Real start = MPI_Wtime();		
+		double start = MPI_Wtime();		
 		if (mpi_rank_ == 0) std::cout << "Computing emission..." << std::endl;
 
 		// // test
@@ -518,7 +518,7 @@ public:
 
 	//TODO
 	// set the radiation field in an arbitrary direction Omega
-	inline void apply_formal_solver_Omega(const Real theta, const Real chi)
+	inline void apply_formal_solver_Omega(const double theta, const double chi)
 	{
 		// allocate new data structure
 		if (not mf_ctx_.formal_solution_Omega_)
@@ -535,13 +535,13 @@ public:
 		// set eta and rhos 
 	    RT_problem_->set_eta_and_rhos_Omega(theta, chi);
 	
-		const Real clock_start = MPI_Wtime();				
+		const double clock_start = MPI_Wtime();				
 
 		// update emissivity with current I_field (in all directions)
 		mf_ctx_.update_emission_Omega(RT_problem_->I_vec_, theta, chi);	// TODO RT_problem_->I_vec_ => field->getVec()	
 
-		const Real clock_end = MPI_Wtime();
-		const Real clock_diff = clock_end - clock_start;
+		const double clock_end = MPI_Wtime();
+		const double clock_diff = clock_end - clock_start;
 
 		if (mpi_rank_ == 0){ 
 			std::cout << "Computing emission took (s) = " << clock_diff << "    file: " << __FILE__ << ":" << __LINE__ << std::endl;
@@ -553,13 +553,13 @@ public:
 
 		if (mpi_rank_ == 0) std::cout << "Start formal solve in Omega..." << "    file: " << __FILE__ << ":" << __LINE__ << std::endl;
 		
-		Real clock_start_formal = MPI_Wtime();
+		double clock_start_formal = MPI_Wtime();
 		mf_ctx_.formal_solve_ray(theta, chi);
 
 		MPI_Barrier(MPI_COMM_WORLD);
-		Real clock_end_formal = MPI_Wtime();
+		double clock_end_formal = MPI_Wtime();
 
-		Real clock_diff_formal = clock_end_formal - clock_start_formal;
+		double clock_diff_formal = clock_end_formal - clock_start_formal;
 		if (mpi_rank_ == 0) std::cout << "Formal solve time (s) = " << clock_diff_formal << "    file: " << __FILE__ << ":" << __LINE__ << std::endl;
 	}
 	

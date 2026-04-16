@@ -13,4 +13,4 @@
 #include "hdf_output_zslice_3D.h"
 #include "output_utils.h"
 
-#endif // __THDF_H__
+#endif  // __THDF_H__

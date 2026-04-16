@@ -9,11 +9,11 @@
 
 #include <mpi.h>
 
-typedef const std::vector<Real> input_vec;
-typedef const std::vector<std::vector<Real> > input_field;
+typedef const std::vector<double> input_vec;
+typedef const std::vector<std::vector<double> > input_field;
 
-typedef std::vector<Real> output_vec;
-typedef std::vector<std::vector<Real> > output_field;
+typedef std::vector<double> output_vec;
+typedef std::vector<std::vector<double> > output_field;
 
 
 // base class
@@ -75,17 +75,17 @@ public:
 	void solve(input_vec &dts, input_field &K, input_field &S, input_vec &I_in, output_field &I_out);
 
 	// solve, for one step (dt), I' = K * I - S with initial condition I_in and K = [K1 K2] and S = [S1 S2]
-	void one_step(const Real dt, input_vec &K1, input_vec &K2, input_vec &S1, input_vec &S2, input_vec &I_in, output_vec &I_out);
+	void one_step(const double dt, input_vec &K1, input_vec &K2, input_vec &S1, input_vec &S2, input_vec &I_in, output_vec &I_out);
 
 
 	// one step method for quadratic stencils
-	void one_step_quadratic(const Real dt_1, const Real dt_2, input_vec &K1, input_vec &K2, input_vec &K3,
+	void one_step_quadratic(const double dt_1, const double dt_2, input_vec &K1, input_vec &K2, input_vec &K3,
 								 						      input_vec &S1, input_vec &S2, input_vec &S3,
 								 							  input_vec &I_in, output_vec &I_out);
 
 	// in the case of scalar equations (just intensity)
-	Real one_step(const Real dt, const Real I_in, const Real S1, const Real S2);
-	Real one_step_quadratic(const Real dt1, const Real dt2, const Real I_in, const Real S1, const Real S2, const Real S3);
+	double one_step(const double dt, const double I_in, const double S1, const double S2);
+	double one_step_quadratic(const double dt1, const double dt2, const double I_in, const double S1, const double S2, const double S3);
 
 private:
 

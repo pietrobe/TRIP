@@ -34,6 +34,29 @@ export HDF_LUSTRE_STRIPING_UNIT=4194304
 # =============================================================================
 # Cray MPICH — Slingshot (Alps)
 # =============================================================================
-export MPICH_OFI_STARTUP_CONNECT=1
-export MPICH_OFI_NIC_POLICY=BLOCK
-export MPICH_OFI_EAGER_THRESHOLD=262144
+# export MPICH_OFI_STARTUP_CONNECT=1
+# export MPICH_OFI_NIC_POLICY=BLOCK
+# export MPICH_OFI_EAGER_THRESHOLD=262144
+
+# =============================================================================
+# Print Environment Variable Status
+# =============================================================================
+printf "\n============ Lustre Environment Variables Status ============\n"
+printf "Filesystem Configuration:\n"
+printf "  HDF_FS_TYPE:                 %s\n" "$HDF_FS_TYPE"
+printf "  HDF_ALIGNMENT_THRESHOLD:     %s\n" "$HDF_ALIGNMENT_THRESHOLD"
+printf "  HDF_ALIGNMENT_VALUE:         %s\n" "$HDF_ALIGNMENT_VALUE"
+printf "  HDF_META_BLOCK_SIZE:         %s\n" "$HDF_META_BLOCK_SIZE"
+printf "  HDF_COLL_METADATA_OPS:       %s\n" "$HDF_COLL_METADATA_OPS"
+printf "  HDF_COLL_METADATA_WRITE:     %s\n" "$HDF_COLL_METADATA_WRITE"
+printf "  HDF5_USE_FILE_LOCKING:       %s\n" "$HDF5_USE_FILE_LOCKING"
+printf "\nROMIO Collective Buffering:\n"
+printf "  HDF_CB_NODES:                %s\n" "$HDF_CB_NODES"
+printf "  HDF_CB_BUFFER_SIZE:          %s\n" "$HDF_CB_BUFFER_SIZE"
+printf "  HDF_ROMIO_CB_WRITE:          %s\n" "$HDF_ROMIO_CB_WRITE"
+printf "  HDF_ROMIO_DS_WRITE:          %s\n" "$HDF_ROMIO_DS_WRITE"
+printf "  HDF_ROMIO_DS_READ:           %s\n" "$HDF_ROMIO_DS_READ"
+printf "\nLustre Hints:\n"
+printf "  HDF_LUSTRE_STRIPING_FACTOR:  %s\n" "$HDF_LUSTRE_STRIPING_FACTOR"
+printf "  HDF_LUSTRE_STRIPING_UNIT:    %s\n" "$HDF_LUSTRE_STRIPING_UNIT"
+printf "============================================================\n\n"

@@ -93,3 +93,20 @@ Output files:
 [MPI] mpi_size: 1024
 [t] output: 384.0 GB  TTS-bandwidth: 2.3 GB/s
 ```
+
+```text
+[t] open handler: 2.382 s
+[t] z=0 nz=4: 28.813 s
+[t] local written: 12.000 GB  approx. peak-bandwidth: 0.416 GB/s
+[t] write loop: 28.982 s
+[t] total written: 384.0 GB  effective loop-bandwidth: 13.2 GB/s
+[t] H5Fflush: 1.097 s
+[t] H5Fclose: 0.165 s
+[t] total: 62.975 s
+[sizes] N_x=128  N_y=128  N_z=128  N_incl=16  N_azimuth=8  N_frequencies=96  N_stokes=4
+[t] total size: 384.0 GB
+[MPI] max local z-slab: 4  min local z-slab: 4
+[MPI] decomposition: (20, 32, 32) for domain (128, 128, 128)
+[MPI] mpi_size: 20480
+[t] output: 384.0 GB  TTS-bandwidth: 6.1 GB/s
+```

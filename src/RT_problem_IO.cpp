@@ -146,6 +146,8 @@ RT_problem::write_emergent_field_hdf5(const std::string &output_file, MPI_Comm w
 									  std::vector<Real> &surface_data_I, std::vector<Real> &surface_data_Q,
 									  std::vector<Real> &surface_data_U, std::vector<Real> &surface_data_V)
 {
+	constexpr THDF_float_type_t out_float_type = std::is_same_v<Real, float> ? HDF_OUT_FLOAT32 : HDF_OUT_FLOAT64;
+
 	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
 	if (space_grid_->local_to_global_coordinate(2, k_start) != 0) return EXIT_SUCCESS;
@@ -165,9 +167,10 @@ RT_problem::write_emergent_field_hdf5(const std::string &output_file, MPI_Comm w
 
 	hid_t file_id = THDF_open_file_MPI(output_file.c_str(), write_comm);
 
-	THDF_field_handler_t *output_dset_handler = THDF_create_field_handler_mpi(file_id,						//
-																			  N_x_, N_y_,					//
-																			  N_theta_ / 2, N_chi_, N_nu_); //
+	THDF_field_handler_t *output_dset_handler = THDF_create_field_handler_mpi(file_id,					   //
+																			  N_x_, N_y_,				   //
+																			  N_theta_ / 2, N_chi_, N_nu_, //
+																			  out_float_type);			   //
 
 	if (output_dset_handler == NULL)
 	{
@@ -180,6 +183,7 @@ RT_problem::write_emergent_field_hdf5(const std::string &output_file, MPI_Comm w
 	output_field.index_j	   = j_start;
 	output_field.index_incl	   = 0;
 	output_field.index_azimuth = 0;
+	output_field.float_type	   = out_float_type;
 
 	// assign data pointers
 	output_field.stokes_I  = surface_data_I.data();

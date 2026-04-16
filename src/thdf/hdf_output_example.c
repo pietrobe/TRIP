@@ -24,17 +24,22 @@ make_example_output_field_surface(int N_frequencies, const int N_x, const int N_
     output_field[i].index_j       = (i / N_x) % N_y;
     output_field[i].index_incl    = (i / (N_x * N_y)) % N_incl;
     output_field[i].index_azimuth = (i / (N_x * N_y * N_incl)) % N_azimuth;
+    output_field[i].float_type    = HDF_OUT_FLOAT64;
 
-    output_field[i].stokes_I  = (THDF_float_t *)malloc(N_frequencies * sizeof(THDF_float_t));
-    output_field[i].stokes_QI = (THDF_float_t *)malloc(N_frequencies * sizeof(THDF_float_t));
-    output_field[i].stokes_UI = (THDF_float_t *)malloc(N_frequencies * sizeof(THDF_float_t));
-    output_field[i].stokes_VI = (THDF_float_t *)malloc(N_frequencies * sizeof(THDF_float_t));
+    output_field[i].stokes_I  = malloc(N_frequencies * sizeof(double));
+    output_field[i].stokes_QI = malloc(N_frequencies * sizeof(double));
+    output_field[i].stokes_UI = malloc(N_frequencies * sizeof(double));
+    output_field[i].stokes_VI = malloc(N_frequencies * sizeof(double));
 
+    double *si  = (double *)output_field[i].stokes_I;
+    double *sqi = (double *)output_field[i].stokes_QI;
+    double *sui = (double *)output_field[i].stokes_UI;
+    double *svi = (double *)output_field[i].stokes_VI;
     for (int f = 0; f < N_frequencies; f++) {
-      output_field[i].stokes_I[f]  = 1.0 * (i + 1) * (f + 1);
-      output_field[i].stokes_QI[f] = 1.0 * (i + 1) * (f + 1);
-      output_field[i].stokes_UI[f] = 1.0 * (i + 1) * (f + 1);
-      output_field[i].stokes_VI[f] = 1.0 * (i + 1) * (f + 1) * 1000;
+      si[f]  = 1.0 * (i + 1) * (f + 1);
+      sqi[f] = 1.0 * (i + 1) * (f + 1);
+      sui[f] = 1.0 * (i + 1) * (f + 1);
+      svi[f] = 1.0 * (i + 1) * (f + 1) * 1000;
     }
   }
 
@@ -234,7 +239,8 @@ main(int argc, char **argv) {
   }
 
   // Create output field dataset
-  THDF_field_handler_t *output_dset = THDF_create_field_handler_mpi(file, N_x, N_y, N_theta, N_chi, N_frequencies);
+  THDF_field_handler_t *output_dset =
+      THDF_create_field_handler_mpi(file, N_x, N_y, N_theta, N_chi, N_frequencies, HDF_OUT_FLOAT64);
 
   for (int i = 0; i < total_entries; i++) {
     if (THDF_write_field_dataset_to_hdf5(output_dset, &output_field[i], output_field[i].index_i, output_field[i].index_j,

@@ -631,12 +631,6 @@ THDF_copy_3D_block_field(THDF_3D_field_t *field,              //
                                     stride_in_y, stride_in_z, stride_in_incl, stride_in_azimuth, stride_in_frequencies,
                                     stride_in_stokes);  // Stokes V/I is at offset 3 in the stokes dimension
 
-                // THDF_float_t inv_pc_stokes_I_value = 1.0;
-                // if (!normalized_output)
-                // {
-                //   inv_pc_stokes_I_value = 100.0 / stokes_IQUI[in_index_I];
-                // }
-
                 if (fabs(stokes_IQUI[in_index_I]) > abs_max_I) {
                   abs_max_I = fabs(stokes_IQUI[in_index_I]);
                 }
@@ -701,25 +695,19 @@ THDF_copy_3D_block_field(THDF_3D_field_t *field,              //
                                   stride_in_y, stride_in_z, stride_in_incl, stride_in_azimuth, stride_in_frequencies,
                                   stride_in_stokes);  // Stokes V/I is at offset 3 in the stokes dimension
 
-              THDF_float_t inv_pc_stokes_I_value = 1.0;
-              if (!normalized_output)
-              {
-                inv_pc_stokes_I_value = 100.0 / stokes_IQUI[in_index_I];
-              }
-
-			        field->stokes_I[idx] = (THDF_float32_t)((THDF_float_t)stokes_IQUI[in_index_I] *  //
+              field->stokes_I[idx] = (THDF_float32_t)((THDF_float_t)stokes_IQUI[in_index_I] *  //
                                                       (THDF_float_t)inv_norm_multiplier_I_);   //
 
-              field->stokes_QI[idx] = (THDF_float32_t)((THDF_float_t)(stokes_IQUI[in_index_QI] * inv_pc_stokes_I_value) *  //  
+              field->stokes_QI[idx] = (THDF_float32_t)((THDF_float_t)stokes_IQUI[in_index_QI] *  //
                                                        (THDF_float_t)inv_norm_multiplier_QI_);   //
 
-              field->stokes_UI[idx] = (THDF_float32_t)((THDF_float_t)(stokes_IQUI[in_index_UI] * inv_pc_stokes_I_value) *  //
+              field->stokes_UI[idx] = (THDF_float32_t)((THDF_float_t)stokes_IQUI[in_index_UI] *  //
                                                        (THDF_float_t)inv_norm_multiplier_UI_);   //
 
-              field->stokes_VI[idx] = (THDF_float32_t)((THDF_float_t)(stokes_IQUI[in_index_VI] * inv_pc_stokes_I_value) *  //
+              field->stokes_VI[idx] = (THDF_float32_t)((THDF_float_t)stokes_IQUI[in_index_VI] *  //
                                                        (THDF_float_t)inv_norm_multiplier_VI_);   //
             }
-          } // End azimuth loop
+          }
         }
       }
     }

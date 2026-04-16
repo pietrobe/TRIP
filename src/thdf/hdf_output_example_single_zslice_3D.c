@@ -117,11 +117,11 @@ main_3d_example_single_file(int argc, char **argv) {
       fprintf(stderr, "Rank 0: serial open failed\n");
       MPI_Abort(MPI_COMM_WORLD, -1);
     }
-    THDF_frequencies_grid_t fg = {N_frequencies, frequencies};
+    THDF_frequencies_grid_t fg = {N_frequencies, frequencies, HDF_OUT_FLOAT64};
     THDF_write_frequencies_grid_to_hdf5(fs, &fg);
-    THDF_angular_grid_t ag = {N_incl * N_azimuth, N_incl, N_azimuth, theta, chi, inclinations_idx, azimuthal_idx};
+    THDF_angular_grid_t ag = {N_incl * N_azimuth, N_incl, N_azimuth, theta, chi, inclinations_idx, azimuthal_idx, HDF_OUT_FLOAT64};
     THDF_write_angular_grid_to_hdf5(fs, &ag);
-    THDF_geometry_3D_t g3 = {N_x, N_y, N_z, heights, 100.0};
+    THDF_geometry_3D_t g3 = {N_x, N_y, N_z, heights, 100.0, HDF_OUT_FLOAT64};
     THDF_write_geometry_3D_to_hdf5(fs, &g3);
     H5Fflush(fs, H5F_SCOPE_GLOBAL);
     H5Fclose(fs);

@@ -32,14 +32,14 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename_back, MPI_MODE_RDONLY, MPI_INFO_NULL, &f_back));
 
 	// buffers
-	Real entry;
+	double entry;
 	char c;
 
     // some irrelevant data
 	for (int i = 0; i < PMD_MAIN_HEADER1 - 48; i++) { MPI_CHECK(MPI_File_read_all(fh, &c, 1, MPI_CHAR, MPI_STATUS_IGNORE)); }
 
 	// TODO there are not used 
-	Real Lx, Ly, Lz, x_origin, y_origin, z_origin; // 48 in previuos line for these
+	double Lx, Ly, Lz, x_origin, y_origin, z_origin; // 48 in previuos line for these
 	
 	MPI_CHECK(MPI_File_read_all(fh, &Lx, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 	MPI_CHECK(MPI_File_read_all(fh, &Ly, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
@@ -57,7 +57,7 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	L_ = 1e-5 * Lx/N_x_; // conversion from cm to km
 
 	// some irrelevant data (x,y coordinates)	
-	int skip_size = 16384 * sizeof(Real);
+	int skip_size = 16384 * sizeof(double);
 	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));
 
 	// get z grid (depth)
@@ -73,7 +73,7 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	reverse(depth_grid_.begin(), depth_grid_.end());
 
 	// some irrelevant data (extra z coordinates)
-	skip_size = (8192 - N_z_) * sizeof(Real);	
+	skip_size = (8192 - N_z_) * sizeof(double);	
 	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));
 
 	// inclinations and azimuths per octant 	
@@ -121,7 +121,7 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	Eu_ = 23652.304;    
  
   	// some irrelevant data Real temp[ny][nx];    matrix of ground (iz=0) for Planckian boundary
-	skip_size = (N_x_ * N_y_) * sizeof(Real);
+	skip_size = (N_x_ * N_y_) * sizeof(double);
 	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));		
 
 	// set angualr grids and sizes and print	
@@ -168,7 +168,7 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 		// Cul_->ref(i,j,k)     = tmp_vector[1];		
 		T_->ref(i,j,k)      = tmp_vector[2];			
 		// Nl_->ref(i,j,k)      = tmp_vector[9];		
-		a_->ref(i,j,k)       = tmp_vector[10];		
+		a_->ref(i,j,k)      = tmp_vector[10];		
 		D2_->ref(i,j,k)     = tmp_vector[11];
 
 		// hardcoding xi to zero
@@ -260,7 +260,7 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
         // emissivity [cgs]. Binary file with Real precision numbers.
         // Order (z > y > x > [kappa,sigma,epsilon]).
 
-			Real kappa, sigma, epsilon;
+			double kappa, sigma, epsilon;
 			read_single_node_triple_field(f_back, i_global, j_global, k_reverse, kappa, sigma, epsilon);
 
 			const bool sigma_flag = false; // hardcoded to 0.0 as in PORTA // TODO add a specific option.
@@ -277,7 +277,7 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 
 			for (int n = 0; n < N_nu_; ++n)
 			{			
-				sigma_->block(   i, j, k)[n] = Real(sigma * sigma_mult);
+				sigma_->block(   i, j, k)[n] = double(sigma * sigma_mult);
 				k_c_->block(     i, j, k)[n] = kappa;
 				eps_c_th_->block(i, j, k)[n] = epsilon;	
 
@@ -296,16 +296,16 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 }
 
 
-Real RT_problem::read_single_node_single_field(MPI_File input_file, const int i, const int j, const int k){
+double RT_problem::read_single_node_single_field(MPI_File input_file, const int i, const int j, const int k){
 
 	// Output
-    Real output;
+    double output;
 
     // Compute jump
     const int jump = N_x_ * (N_y_ * k + j) + i;
 
     // Jump to data of interest
-    MPI_CHECK(MPI_File_seek(input_file, jump * sizeof(Real), MPI_SEEK_SET));
+    MPI_CHECK(MPI_File_seek(input_file, jump * sizeof(double), MPI_SEEK_SET));
 
     // 0 // epsilon
     MPI_CHECK(MPI_File_read(input_file, &output, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); 
@@ -313,7 +313,7 @@ Real RT_problem::read_single_node_single_field(MPI_File input_file, const int i,
     return output;
 }
 
-void RT_problem::read_single_node_triple_field(MPI_File input_file, const int i, const int j, const int k, Real &kappa, Real &sigma, Real &epsilon){
+void RT_problem::read_single_node_triple_field(MPI_File input_file, const int i, const int j, const int k, double &kappa, double &sigma, double &epsilon){
 
 
 	// back: Continuum quantities. For each node, total absorption
@@ -326,9 +326,9 @@ void RT_problem::read_single_node_triple_field(MPI_File input_file, const int i,
 
 	{
 		// Output
-		Real output;
+		double output;
 		// Jump to data of interest
-		MPI_CHECK(MPI_File_seek(input_file, 3 * jump * sizeof(Real), MPI_SEEK_SET));
+		MPI_CHECK(MPI_File_seek(input_file, 3 * jump * sizeof(double), MPI_SEEK_SET));
 		MPI_CHECK(MPI_File_read(input_file, &output, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); 
 		
 		kappa = output;
@@ -336,9 +336,9 @@ void RT_problem::read_single_node_triple_field(MPI_File input_file, const int i,
 
 	{
 		// Output
-		Real output;
+		double output;
 		// Jump to data of interest
-		MPI_CHECK(MPI_File_seek(input_file,  (3 * jump + 1) * sizeof(Real) , MPI_SEEK_SET));
+		MPI_CHECK(MPI_File_seek(input_file,  (3 * jump + 1) * sizeof(double) , MPI_SEEK_SET));
 		MPI_CHECK(MPI_File_read(input_file, &output, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)); 
 		
 		sigma = output;
@@ -346,9 +346,9 @@ void RT_problem::read_single_node_triple_field(MPI_File input_file, const int i,
 
 	{
 		// Output
-		Real output;
+		double output;
 		// Jump to data of interest
-		MPI_CHECK(MPI_File_seek(input_file,  (3 * jump + 2) * sizeof(Real), MPI_SEEK_SET));
+		MPI_CHECK(MPI_File_seek(input_file,  (3 * jump + 2) * sizeof(double), MPI_SEEK_SET));
 		MPI_CHECK(MPI_File_read(input_file, &output, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 
 		epsilon = output;
@@ -366,19 +366,18 @@ void RT_problem::read_3D(const char* filename){
 	MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_RDONLY, MPI_INFO_NULL, &fh));
 
 	// buffers
-	Real entry;
-	char c;
+	double entry;
 
     // some irrelevant data
 	MPI_Offset offset = PMD_MAIN_HEADER1 - 48;
 	MPI_CHECK(MPI_File_seek(fh, offset, MPI_SEEK_CUR));
 
 	// read space grid params 
-	Real Lx; 
+	double Lx; 
 	MPI_CHECK(MPI_File_read_all(fh, &Lx, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 
 	//skip Ly, Lz, x_origin, y_origin, z_origin;
-	int skip_size = 5 * sizeof(Real);
+	int skip_size = 5 * sizeof(double);
 	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));
 	// MPI_CHECK(MPI_File_read_all(fh, &Ly, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 	// MPI_CHECK(MPI_File_read_all(fh, &Lz, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
@@ -401,13 +400,13 @@ void RT_problem::read_3D(const char* filename){
 	L_ = 1e-5 * Lx/N_x_; // conversion from cm to km
 
 	// some irrelevant data (x,y coordinates)	
-	skip_size = 16384 * sizeof(Real);
+	skip_size = 16384 * sizeof(double);
 	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));
 
 	depth_grid_.reserve(N_z_);
 
 	// get z grid (depth)
-	std::vector<Real> buffer(N_z_);
+	std::vector<double> buffer(N_z_);
 	MPI_CHECK(MPI_File_read_all(fh, buffer.data(), N_z_, MPI_DOUBLE, MPI_STATUS_IGNORE));
 
 	for (auto entry : buffer)
@@ -420,7 +419,7 @@ void RT_problem::read_3D(const char* filename){
 	reverse(depth_grid_.begin(), depth_grid_.end());
 
 	// some irrelevant data (extra z coordinates)
-	skip_size = (8192 - N_z_) * sizeof(Real);	
+	skip_size = (8192 - N_z_) * sizeof(double);	
 	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));
 
 	// // inclinations and azimuths per octant 	
@@ -457,7 +456,7 @@ void RT_problem::read_3D(const char* filename){
    MPI_CHECK(MPI_File_seek(fh, TWOLEVEL_HEADER1, MPI_SEEK_CUR));
 
 	// reading atomic data    
-   std::vector<Real> atomic_buffer(3);
+   std::vector<double> atomic_buffer(3);
    MPI_CHECK(MPI_File_read_all(fh, atomic_buffer.data(), 3, MPI_DOUBLE, MPI_STATUS_IGNORE));
    mass_ = atomic_buffer[0];
 	Aul_  = atomic_buffer[1];
@@ -484,7 +483,7 @@ void RT_problem::read_3D(const char* filename){
 	Eu_ = 23652.304;    
     
   	// some irrelevant data Real temp[ny][nx];    matrix of ground (iz=0) for Planckian boundary
-	skip_size = (N_x_ * N_y_) * sizeof(Real);
+	skip_size = (N_x_ * N_y_) * sizeof(double);
 	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));	
 
 	// set angualr grids and sizes and print
@@ -512,13 +511,13 @@ void RT_problem::read_3D(const char* filename){
 
 	// some constants hardcoded	
 	if (mpi_rank_ == 0) std::cout << "WARNING: hardcoding quantities for PORTA input read!" << std::endl;
-	const Real Aul_RH = 2.17674e8;    
-	const Real mass_real_RH = 6.65511e-23; // hardcoded		
+	const double Aul_RH = 2.17674e8;    
+	const double mass_real_RH = 6.65511e-23; // hardcoded		
 
 	// hardcoded xi
-	std::array<Real, 134> xi_vec = { 2.0, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 1.9886373912499999e+00, 1.9773626719999999e+00, 1.9419696239999999e+00, 1.8600738539999999e+00, 1.7778424079999999e+00, 1.6824751599999999e+00, 1.5795074739999999e+00, 1.4744281220000000e+00, 1.3537171600000000e+00, 1.2327272599999999e+00, 1.1129887319999998e+00, 9.9467995799999975e-01, 8.7645056999999993e-01, 7.8089990399999998e-01, 6.8735903999999992e-01, 6.0959461199999998e-01, 5.6051231999999995e-01, 5.1142826399999997e-01, 4.9363330559999996e-01, 4.8427622399999998e-01, 4.7908703999999996e-01, 4.8846167039999999e-01, 4.9785317760000003e-01, 5.1861966000000015e-01, 5.4516093000000010e-01, 5.8094278171428582e-01, 6.2224760000000012e-01, 6.7522791428571438e-01, 7.3142138000000012e-01, 8.0070458000000022e-01, 8.7089629200000007e-01, 9.5220700000000047e-01, 1.0332738400000001e+00, 1.1213362909090909e+00, 1.2152569890909093e+00, 1.3094004363636367e+00, 1.4048512000000004e+00, 1.5007467520000004e+00, 1.5978336000000002e+00, 1.6978324000000005e+00, 1.7978304000000003e+00, 1.8947160320000005e+00, 1.9907144960000005e+00, 2.0867125760000005e+00, 2.1827118080000001e+00, 2.2787102720000001e+00, 2.3705575253333340e+00, 2.4612234666666670e+00, 2.5518886826666671e+00, 2.6425844611764711e+00, 2.7343480658823536e+00, 2.8261127717647065e+00, 2.9178771105882353e+00, 3.0096418164705878e+00, 3.0936051408695651e+00, 3.1753403478260873e+00, 3.2570791513043482e+00, 3.3388189356521742e+00, 3.4205534886956523e+00, 3.5020644897959188e+00, 3.5755338775510208e+00, 3.6489997387755104e+00, 3.7224691265306125e+00, 3.7959382204081633e+00, 3.8687040000000006e+00, 3.9367072639999998e+00, 4.0047040000000003e+00, 4.0727037280000005e+00, 4.1407040000000004e+00, 4.2084453608247427e+00, 4.2744210474226803e+00, 4.3404041237113411e+00, 4.4063803381443298e+00, 4.4723597195876286e+00, 4.5390595657142860e+00, 4.6076277028571422e+00, 4.6761985828571433e+00, 4.7447738514285716e+00, 4.8133414400000003e+00, 4.8820457066666672e+00, 4.9553796266666668e+00, 5.0287088533333337e+00, 5.1020427733333342e+00, 5.1753755200000002e+00, 5.2502169904761908e+00, 5.3264074666666668e+00, 5.4025979428571436e+00, 5.4787847619047625e+00, 5.5549752380952384e+00, 5.6335312941176472e+00, 5.7182371764705886e+00, 5.8029430588235300e+00, 5.8876489411764705e+00, 5.9725229090909098e+00, 6.0634269090909090e+00, 6.1543359999999998e+00, 6.2481976369230772e+00, 6.3497304123076930e+00, 6.4512745600000008e+00, 6.5531384216216226e+00, 6.6666519351351363e+00, 6.7818653538461549e+00, 6.9049422769230784e+00, 7.0308618105263161e+00, 7.1716484000000005e+00, 7.3142758956521750e+00, 7.4573813333333341e+00, 7.6035485714285720e+00, 7.7321138285714301e+00, 7.8826903272727300e+00, 8.3409513513513822e+00, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01};
+	std::array<double, 134> xi_vec = { 2.0, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 1.9886373912499999e+00, 1.9773626719999999e+00, 1.9419696239999999e+00, 1.8600738539999999e+00, 1.7778424079999999e+00, 1.6824751599999999e+00, 1.5795074739999999e+00, 1.4744281220000000e+00, 1.3537171600000000e+00, 1.2327272599999999e+00, 1.1129887319999998e+00, 9.9467995799999975e-01, 8.7645056999999993e-01, 7.8089990399999998e-01, 6.8735903999999992e-01, 6.0959461199999998e-01, 5.6051231999999995e-01, 5.1142826399999997e-01, 4.9363330559999996e-01, 4.8427622399999998e-01, 4.7908703999999996e-01, 4.8846167039999999e-01, 4.9785317760000003e-01, 5.1861966000000015e-01, 5.4516093000000010e-01, 5.8094278171428582e-01, 6.2224760000000012e-01, 6.7522791428571438e-01, 7.3142138000000012e-01, 8.0070458000000022e-01, 8.7089629200000007e-01, 9.5220700000000047e-01, 1.0332738400000001e+00, 1.1213362909090909e+00, 1.2152569890909093e+00, 1.3094004363636367e+00, 1.4048512000000004e+00, 1.5007467520000004e+00, 1.5978336000000002e+00, 1.6978324000000005e+00, 1.7978304000000003e+00, 1.8947160320000005e+00, 1.9907144960000005e+00, 2.0867125760000005e+00, 2.1827118080000001e+00, 2.2787102720000001e+00, 2.3705575253333340e+00, 2.4612234666666670e+00, 2.5518886826666671e+00, 2.6425844611764711e+00, 2.7343480658823536e+00, 2.8261127717647065e+00, 2.9178771105882353e+00, 3.0096418164705878e+00, 3.0936051408695651e+00, 3.1753403478260873e+00, 3.2570791513043482e+00, 3.3388189356521742e+00, 3.4205534886956523e+00, 3.5020644897959188e+00, 3.5755338775510208e+00, 3.6489997387755104e+00, 3.7224691265306125e+00, 3.7959382204081633e+00, 3.8687040000000006e+00, 3.9367072639999998e+00, 4.0047040000000003e+00, 4.0727037280000005e+00, 4.1407040000000004e+00, 4.2084453608247427e+00, 4.2744210474226803e+00, 4.3404041237113411e+00, 4.4063803381443298e+00, 4.4723597195876286e+00, 4.5390595657142860e+00, 4.6076277028571422e+00, 4.6761985828571433e+00, 4.7447738514285716e+00, 4.8133414400000003e+00, 4.8820457066666672e+00, 4.9553796266666668e+00, 5.0287088533333337e+00, 5.1020427733333342e+00, 5.1753755200000002e+00, 5.2502169904761908e+00, 5.3264074666666668e+00, 5.4025979428571436e+00, 5.4787847619047625e+00, 5.5549752380952384e+00, 5.6335312941176472e+00, 5.7182371764705886e+00, 5.8029430588235300e+00, 5.8876489411764705e+00, 5.9725229090909098e+00, 6.0634269090909090e+00, 6.1543359999999998e+00, 6.2481976369230772e+00, 6.3497304123076930e+00, 6.4512745600000008e+00, 6.5531384216216226e+00, 6.6666519351351363e+00, 6.7818653538461549e+00, 6.9049422769230784e+00, 7.0308618105263161e+00, 7.1716484000000005e+00, 7.3142758956521750e+00, 7.4573813333333341e+00, 7.6035485714285720e+00, 7.7321138285714301e+00, 7.8826903272727300e+00, 8.3409513513513822e+00, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01};
 
-	if (mpi_rank_ == 0) std::cout << "WARNING: hardcoding Qel_ computation!" << std::endl;
+	// if (mpi_rank_ == 0) std::cout << "WARNING: hardcoding Qel_ computation with no xi (NO GOOD for tests)!" << std::endl;
 	
 	// fill field 
 	space_grid_->parallel_for([&](int i, int j, int k) {
@@ -542,23 +541,14 @@ void RT_problem::read_3D(const char* filename){
 		// hardcoding xi
 		xi_->ref(i,j,k) = 0; // with conversion to cm/s
 		
-		// compute Qel FIXME		
-<<<<<<< HEAD
-		const Real Dw_RH = Eu_ * std::sqrt(2 * k_B_ * T_->ref(i,j,k) / mass_real_RH);			
-		Qel_->ref(i,j,k) = a_->ref(i,j,k) * (4 * PI * Dw_RH) - Aul_RH;
-
-		// compute Qel
-		// const Real xi = 1e5 * xi_vec[k_reverse];; // with conversion to cm/s
-		// const Real Dw_RH = Eu_ * std::sqrt(xi * xi + 2 * k_B_ * T_->ref(i,j,k) / mass_real_RH);			
-=======
-		const double Dw_RH = Eu_ * std::sqrt(2 * k_B_ * T_->ref(i,j,k) / mass_real_RH);			
-		Qel_->ref(i,j,k) = a_->ref(i,j,k) * (4 * PI * Dw_RH) - Aul_RH;
-
-		// compute Qel
-		// const double xi = 1e5 * xi_vec[k_reverse];; // with conversion to cm/s
-		// const double Dw_RH = Eu_ * std::sqrt(xi * xi + 2 * k_B_ * T_->ref(i,j,k) / mass_real_RH);			
->>>>>>> 152bc86b2d6787f4483565942795021c2c48ff76
+		// // compute Qel FIXME		
+		// const double Dw_RH = Eu_ * std::sqrt(2 * k_B_ * T_->ref(i,j,k) / mass_real_RH);			
 		// Qel_->ref(i,j,k) = a_->ref(i,j,k) * (4 * PI * Dw_RH) - Aul_RH;
+
+		// compute Qel
+		const Real xi = 1e5 * xi_vec[k_reverse]; // with conversion to cm/s
+		const Real Dw_RH = Eu_ * std::sqrt(xi * xi + 2 * k_B_ * T_->ref(i,j,k) / mass_real_RH);			
+		Qel_->ref(i,j,k) = a_->ref(i,j,k) * (4 * PI * Dw_RH) - Aul_RH;
 
 		// compute thermalization param 
       // epsilon_->ref(i,j,k) = Cul_->ref(i,j,k)/(Cul_->ref(i,j,k) + Aul_RH);
@@ -657,10 +647,10 @@ void RT_problem::read_3D(const char* filename){
 
 
 // read single node from Tanausu
-std::vector<Real> RT_problem::read_single_node(MPI_File fh, const int i, const int j, const int k){
+std::vector<double> RT_problem::read_single_node(MPI_File fh, const int i, const int j, const int k){
 
     // Output
-    std::vector<Real> output;
+    std::vector<double> output;
 
     // Could be global
 	const int L_LIMIT = (Jl2_+1)*(Jl2_+1);
@@ -668,7 +658,7 @@ std::vector<Real> RT_problem::read_single_node(MPI_File fh, const int i, const i
 	const int NJKQ = 9;
 
 	// some temporary variables
-	Real entry, atomic_density, rho00l, Nl, Cul;
+	double entry, atomic_density, rho00l, Nl, Cul;
 
 	 // Compute jump
 	 const int jump = header_size_ + node_size_ * (N_x_ * (N_y_ * k + j) + i);
@@ -1009,8 +999,8 @@ void RT_problem::read_magnetic_field_1D(input_string filename){
 
 		if (B_etero)
 		{
-			const Real x = 2.0 * PI * i_global / (N_x_ - 1.0);
-			const Real y = 2.0 * PI * j_global / (N_y_ - 1.0);		
+			const double x = 2.0 * PI * i_global / (N_x_ - 1.0);
+			const double y = 2.0 * PI * j_global / (N_y_ - 1.0);		
 
 			const Real B_max = 30.0;	
 
@@ -1226,7 +1216,7 @@ void RT_problem::read_depth(input_string filename){
 	while(getline(myFile, line))
 	{
 		std::istringstream lineStream(line);
-		Real entry;
+		double entry;
 		std::string entry_label;
 
 		if (first_line) // skip first line 
@@ -1269,7 +1259,7 @@ void RT_problem::read_frequency(input_string filename, const bool use_wavelength
 	while(getline(myFile, line))
 	{
 		std::istringstream lineStream(line);
-		Real entry;
+		double entry;
 		std::string entry_label;
 
 		if (not first_line) // skip first line 
@@ -1552,7 +1542,7 @@ void RT_problem::set_theta_chi_grids(const int N_theta, const int N_chi, const b
     if (N_chi % 2 != 0) std::cout << "WARNING: chi grid is not even!" << std::endl;
     if (N_chi % 4 != 0) std::cout << "WARNING: chi grid is not the same for each quadrant!" << std::endl;
     
-    const Real delta_chi = 2.0 * PI / N_chi;    
+    const double delta_chi = 2.0 * PI / N_chi;    
 
     for (int i = 0; i < N_chi; ++i)
     {
@@ -1563,29 +1553,29 @@ void RT_problem::set_theta_chi_grids(const int N_theta, const int N_chi, const b
 }
 
 
-std::vector<std::complex<Real> > RT_problem::compute_T_KQ(const int stokes_i, const Real theta, const Real chi){
+std::vector<std::complex<double> > RT_problem::compute_T_KQ(const int stokes_i, const double theta, const double chi){
 
 	// using standard ordering from tables: T_KQ = [T_00 T_10 T_11 T_20 T_21 T_22] 
 	// for Q negative T_K-Q = (-1)^Q * bar(T_KQ)
 
 	// output
-	std::vector<std::complex<Real> > T_KQ(6, 0.0);
+	std::vector<std::complex<double> > T_KQ(6, 0.0);
 
-	std::complex<Real> eix  = std::polar((Real)1.0, chi);        // exp(i * chi)
-	std::complex<Real> e2ix = std::polar((Real)1.0, (Real)2.0 * chi);  // exp(2 * i * chi)
+	std::complex<double> eix  = std::polar((double)1.0, chi);        // exp(i * chi)
+	std::complex<double> e2ix = std::polar((double)1.0, (double)2.0 * chi);  // exp(2 * i * chi)
 
 	// various coeffs
- 	std::complex<Real> fa, fb;
+ 	std::complex<double> fa, fb;
 
-	Real c2g = std::cos(2.0 * gamma_);
-    Real ct  = std::cos(theta);
-    Real ct2 = std::cos(theta) * std::cos(theta);
-    Real st  = std::sin(theta);    
-    Real s2g = std::sin(2.0 * gamma_);
-    Real st2 = std::sin(theta) * std::sin(theta);
+	double c2g = std::cos(2.0 * gamma_);
+    double ct  = std::cos(theta);
+    double ct2 = std::cos(theta) * std::cos(theta);
+    double st  = std::sin(theta);    
+    double s2g = std::sin(2.0 * gamma_);
+    double st2 = std::sin(theta) * std::sin(theta);
 
-    Real k  = 1.0 / (2.0 * std::sqrt(2.0));
-    Real k2 = 0.5 * std::sqrt(3.0);
+    double k  = 1.0 / (2.0 * std::sqrt(2.0));
+    double k2 = 0.5 * std::sqrt(3.0);
 
 	if (stokes_i == 0)
 	{
@@ -1638,7 +1628,7 @@ std::vector<std::complex<Real> > RT_problem::compute_T_KQ(const int stokes_i, co
 }
 
 
-std::complex<Real> RT_problem::get_TKQi(const int i_stokes, const int K, const int Q, const int j, const int k){
+std::complex<double> RT_problem::get_TKQi(const int i_stokes, const int K, const int Q, const int j, const int k){
 
 	// checks 	
 	if ( i_stokes >= 4) std::cerr  << "\nERROR: i_stokes is too large" << std::endl; 					
@@ -1649,7 +1639,7 @@ std::complex<Real> RT_problem::get_TKQi(const int i_stokes, const int K, const i
 
 	int index = i_stokes * N_theta_ * N_chi_ + j * N_chi_ + k;
 
-	std::complex<Real> T_KQ;
+	std::complex<double> T_KQ;
 
 	if (K == 0)
 	{
@@ -1705,13 +1695,13 @@ std::complex<Real> RT_problem::get_TKQi(const int i_stokes, const int K, const i
 
 
 // for data structure with a single direction
-std::complex<Real> RT_problem::get_TKQi(const std::vector<std::complex<Real>> T_KQ_i, const int K, const int Q)
+std::complex<double> RT_problem::get_TKQi(const std::vector<std::complex<double>> T_KQ_i, const int K, const int Q)
 {
 	// checks 		
 	if (K > 2) std::cerr           << "\nERROR: K is too large"        << std::endl; 			
 	if (std::abs(Q) > K) std::cerr << "\nERROR: Q is too large"        << std::endl; 		
 
-	std::complex<Real> T_KQ;
+	std::complex<double> T_KQ;
 
 	if (K == 0)
 	{
@@ -1779,16 +1769,16 @@ void RT_problem::set_eta_and_rhos(){
 		auto *v_b = v_b_->block(i, j, k);                        
 		               
 		// assign some variables for readability
-		Real theta_v_b = v_b[1];
-		Real chi_v_b   = v_b[2];
+		double theta_v_b = v_b[1];
+		double chi_v_b   = v_b[2];
 
-		Real nu_L    = B[0];
-		Real theta_B = B[1];
-		Real chi_B   = B[2];
+		double nu_L    = B[0];
+		double theta_B = B[1];
+		double chi_B   = B[2];
 
-		Real Doppler_width = Doppler_width_->ref(i,j,k); 
-		Real k_L           = k_L_->ref(i,j,k);
-		Real a             = a_->ref(i,j,k);
+		double Doppler_width = Doppler_width_->ref(i,j,k); 
+		double k_L           = k_L_->ref(i,j,k);
+		double a             = a_->ref(i,j,k);
 
 		// init rotation matrix
 		Rotation_matrix R(0.0, -theta_B, -chi_B);
@@ -1805,23 +1795,23 @@ void RT_problem::set_eta_and_rhos(){
 	     	k_chi   = local_idx[1];
 	     	n_nu    = local_idx[2];
 
-	     	const Real theta = theta_grid_[j_theta];
-			const Real chi   = chi_grid_[k_chi];	
+	     	const double theta = theta_grid_[j_theta];
+			const double chi   = chi_grid_[k_chi];	
 
-			const Real coeff  =  k_L / (std::sqrt(PI) * Doppler_width);
-			const Real coeff2 = nu_L / Doppler_width; 
+			const double coeff  =  k_L / (std::sqrt(PI) * Doppler_width);
+			const double coeff2 = nu_L / Doppler_width; 
 
-			const std::complex<Real> a_damp(0.0, a);
+			const std::complex<double> a_damp(0.0, a);
 
 			// for reduced frequency
-			const Real v_dot_Omega = v_b[0] * ( cos(theta_v_b) * cos(theta) + sin(theta_v_b) * sin(theta) * cos(chi - chi_v_b));
-			const Real u_b = nu_0_ * v_dot_Omega / (c_ * Doppler_width);
+			const double v_dot_Omega = v_b[0] * ( cos(theta_v_b) * cos(theta) + sin(theta_v_b) * sin(theta) * cos(chi - chi_v_b));
+			const double u_b = nu_0_ * v_dot_Omega / (c_ * Doppler_width);
 
-			const Real u_red = u[n_nu] + u_b;			
+			const double u_red = u[n_nu] + u_b;			
 			
 			for (int K = 0; K < 3; ++K)
 			{
-				const Real coeff_K = coeff * std::sqrt(3.0 * (2.0 * Real(K) + 1.0));
+				const double coeff_K = coeff * std::sqrt(3.0 * (2.0 * double(K) + 1.0));
 
 				for (int Mu2 = - Ju2_; Mu2 < Ju2_ + 1; Mu2 += 2)
 				{
@@ -1831,17 +1821,17 @@ void RT_problem::set_eta_and_rhos(){
 						{
 							const int q2 = Ml2 - Mu2;
 
-				      	const Real W3J1 = W3JS(Ju2_, Jl2_, 2,-Mu2, Ml2, -q2);  
-				      	const Real W3J2 = W3JS(2, 2, 2 * K, q2, -q2, 0); 
+				      	const double W3J1 = W3JS(Ju2_, Jl2_, 2,-Mu2, Ml2, -q2);  
+				      	const double W3J2 = W3JS(2, 2, 2 * K, q2, -q2, 0); 
 
-							const Real fact = coeff_K * std::pow(-1.0, Real(q2) / 2.0 + 1.0) * std::pow(W3J1, 2) * W3J2;								   
+							const double fact = coeff_K * std::pow(-1.0, double(q2) / 2.0 + 1.0) * std::pow(W3J1, 2) * W3J2;								   
 							
-		      			const Real um = coeff2 * (gu_ * (Real(Mu2) / 2.0) - gl_ * (Real(Ml2) / 2.0)) + u_red;
+		      			const double um = coeff2 * (gu_ * (double(Mu2) / 2.0) - gl_ * (double(Ml2) / 2.0)) + u_red;
 					
 							for (int Q = -K; Q < K + 1; ++Q)
 							{			
-								const std::complex<Real> faddeva = std::complex<Real>(Faddeeva::w(um + a_damp));
-				        		const std::complex<Real> D_KQQ   = std::complex<Real>(std::conj(R(K, 0, Q)));
+								const std::complex<double> faddeva = std::complex<double>(Faddeeva::w(um + a_damp));
+				        		const std::complex<double> D_KQQ   = std::complex<double>(std::conj(R(K, 0, Q)));
 
 				        		const auto fact_re = fact * std::real(faddeva) * D_KQQ;
 				        		const auto fact_im = fact * std::imag(faddeva) * D_KQQ;						        		
@@ -1921,20 +1911,20 @@ void RT_problem::set_eta_and_rhos_two_terms(){
 		auto *v_b = v_b_->block(i, j, k);                        
 		               
 		// assign some variables for readability
-		Real theta_v_b = v_b[1];
-		Real chi_v_b   = v_b[2];
+		double theta_v_b = v_b[1];
+		double chi_v_b   = v_b[2];
 
-		Real B_G     = B[0]/1399600.0; // Scale from Larmor freq. to Gauss
-		Real theta_B = B[1];
-		Real chi_B   = B[2];
+		double B_G     = B[0]/1399600.0; // Scale from Larmor freq. to Gauss
+		double theta_B = B[1];
+		double chi_B   = B[2];
 
-		Real Doppler_width = Doppler_width_->ref(i,j,k); 
-		Real k_L           = k_L_->ref(i,j,k);
-		Real a             = a_->ref(i,j,k);
+		double Doppler_width = Doppler_width_->ref(i,j,k); 
+		double k_L           = k_L_->ref(i,j,k);
+		double a             = a_->ref(i,j,k);
 
 		// common ceofficient
-		const Real coeff = k_L * (3.0 / (S2_ + 1)) / (std::sqrt(PI) * Doppler_width);
-		const std::complex<Real> a_damp(0.0, a);
+		const double coeff = k_L * (3.0 / (S2_ + 1)) / (std::sqrt(PI) * Doppler_width);
+		const std::complex<double> a_damp(0.0, a);
 
 		// init rotation matrix
 		Rotation_matrix R(0.0, -theta_B, -chi_B);
@@ -1962,27 +1952,27 @@ void RT_problem::set_eta_and_rhos_two_terms(){
 	     	k_chi   = local_idx[1];
 	     	n_nu    = local_idx[2];
 
-	     	const Real theta = theta_grid_[j_theta];
-			const Real chi   = chi_grid_[k_chi];				
+	     	const double theta = theta_grid_[j_theta];
+			const double chi   = chi_grid_[k_chi];				
 			
 			// for reduced frequency
-			const Real v_dot_Omega = v_b[0] * ( cos(theta_v_b) * cos(theta) + sin(theta_v_b) * sin(theta) * cos(chi - chi_v_b));
-			const Real u_b = nu_0_ * v_dot_Omega / (c_ * Doppler_width);
+			const double v_dot_Omega = v_b[0] * ( cos(theta_v_b) * cos(theta) + sin(theta_v_b) * sin(theta) * cos(chi - chi_v_b));
+			const double u_b = nu_0_ * v_dot_Omega / (c_ * Doppler_width);
 
-			const Real u_red = u[n_nu] + u_b;			
+			const double u_red = u[n_nu] + u_b;			
 			
 			for (int K = 0; K < 3; ++K)
 			{
-				const Real coeff_K = coeff * std::sqrt((2.0 * Real(K) + 1.0)/3.0);
+				const double coeff_K = coeff * std::sqrt((2.0 * double(K) + 1.0)/3.0);
 
-				std::complex<Real> TK0 = 0.0; 
-				std::complex<Real> TK1 = 0.0;
-				std::complex<Real> TK2 = 0.0;
-				std::complex<Real> TK3 = 0.0;
+				std::complex<double> TK0 = 0.0; 
+				std::complex<double> TK1 = 0.0;
+				std::complex<double> TK2 = 0.0;
+				std::complex<double> TK3 = 0.0;
 
 				for (int Q = -K; Q <= K; ++Q)
 				{				
-					const std::complex<Real> D_KQQ = std::complex<Real>(std::conj(R(K, 0, Q)));
+					const std::complex<double> D_KQQ = std::complex<double>(std::conj(R(K, 0, Q)));
 					
 					TK0 += D_KQQ * get_TKQi(0, K, Q, j_theta, k_chi); 
 					TK1 += D_KQQ * get_TKQi(1, K, Q, j_theta, k_chi); 
@@ -1990,10 +1980,10 @@ void RT_problem::set_eta_and_rhos_two_terms(){
 					TK3 += D_KQQ * get_TKQi(3, K, Q, j_theta, k_chi); 
 				}		
 
-				Real sum_eta_jM_K = 0;					
-				Real sum_rho_jM_K = 0;					
+				double sum_eta_jM_K = 0;					
+				double sum_rho_jM_K = 0;					
 
-				Real B_juMu_jlMl;
+				double B_juMu_jlMl;
 
 				for (const auto [Mu2, ju2, Ml2, jl2, id_tt] : *mqn_map_tt_k_sh_ptr)
 				{					
@@ -2006,35 +1996,35 @@ void RT_problem::set_eta_and_rhos_two_terms(){
 
 					for (int Ju2 = std::abs(Ju2_ - S2_); Ju2 <= Ju2_ + S2_; Ju2 = Ju2 + 2)
 					{
-						const Real C_ju_Ju_Mu  = C_u(id_Cu1, id_Cu2, id_C_D3(Ju2));
+						const double C_ju_Ju_Mu  = C_u(id_Cu1, id_Cu2, id_C_D3(Ju2));
 
 						for (int Ju2t = std::abs(Ju2_ - S2_); Ju2t <= Ju2_ + S2_; Ju2t = Ju2t + 2)
 						{
-							const Real C_ju_Jut_Mu = C_u(id_Cu1, id_Cu2, id_C_D3(Ju2t));          
+							const double C_ju_Jut_Mu = C_u(id_Cu1, id_Cu2, id_C_D3(Ju2t));          
 
 							for (int Jl2 = std::abs(Jl2_ - S2_); Jl2 <= Jl2_ + S2_; Jl2 = Jl2 + 2)
 							{
-								const Real C_jl_Jl_Ml = C_l(id_Cl1, id_Cl2, id_C_D3(Jl2));  
+								const double C_jl_Jl_Ml = C_l(id_Cl1, id_Cl2, id_C_D3(Jl2));  
 
 								for (int Jl2t = std::abs(Jl2_ - S2_); Jl2t <= Jl2_ + S2_; Jl2t = Jl2t + 2)
 								{
-									const Real C_jl_Jlt_Ml = C_l(id_Cl1, id_Cl2, id_C_D3(Jl2t));  
+									const double C_jl_Jlt_Ml = C_l(id_Cl1, id_Cl2, id_C_D3(Jl2t));  
 
-									const Real sqrt_coeff = std::sqrt((Ju2 + 1.0) * (Ju2t + 1.0) * (Jl2 + 1.0) * (Jl2t + 1.0));
+									const double sqrt_coeff = std::sqrt((Ju2 + 1.0) * (Ju2t + 1.0) * (Jl2 + 1.0) * (Jl2t + 1.0));
 
-									const Real W6_1 = rii_algorithm::W6JS(Ju2, Jl2 , 2.0, Jl2_, Ju2_, S2_);
-									const Real W6_2 = rii_algorithm::W6JS(Ju2t,Jl2t, 2.0, Jl2_, Ju2_, S2_);
+									const double W6_1 = rii_algorithm::W6JS(Ju2, Jl2 , 2.0, Jl2_, Ju2_, S2_);
+									const double W6_2 = rii_algorithm::W6JS(Ju2t,Jl2t, 2.0, Jl2_, Ju2_, S2_);
 
-									const Real C = W6_1 * W6_2 * sqrt_coeff * C_ju_Ju_Mu * C_ju_Jut_Mu * C_jl_Jl_Ml * C_jl_Jlt_Ml;
+									const double C = W6_1 * W6_2 * sqrt_coeff * C_ju_Ju_Mu * C_ju_Jut_Mu * C_jl_Jl_Ml * C_jl_Jlt_Ml;
 									
 									const int q2 = Ml2 - Mu2;			
 																	
 									if (std::abs(q2) <= 2)															
 									{																	
 
-										const Real W3_1 = W3JS(2, 2, 2 * K, q2, -q2, 0); 
-										const Real W3_2 = W3JS(Ju2, Jl2,   2, -Mu2, Ml2, -q2); 
-										const Real W3_3 = W3JS(Ju2t, Jl2t, 2, -Mu2, Ml2, -q2); 
+										const double W3_1 = W3JS(2, 2, 2 * K, q2, -q2, 0); 
+										const double W3_2 = W3JS(Ju2, Jl2,   2, -Mu2, Ml2, -q2); 
+										const double W3_3 = W3JS(Ju2t, Jl2t, 2, -Mu2, Ml2, -q2); 
 
 										const int sign = ((q2 / 2) % 2 == 0) ? -1 : 1;										
 										B_juMu_jlMl += C * sign * W3_1 * W3_2 * W3_3;																														
@@ -2045,13 +2035,13 @@ void RT_problem::set_eta_and_rhos_two_terms(){
 					}					
 
 					// energies 
-					const Real E_juMu = Eig_u(id_Eig_D1(Mu2, Ju2_, S2_), id_Eig_D2(ju2));
-					const Real E_jlMl = Eig_l(id_Eig_D1(Ml2, Jl2_, S2_), id_Eig_D2(jl2));
+					const double E_juMu = Eig_u(id_Eig_D1(Mu2, Ju2_, S2_), id_Eig_D2(ju2));
+					const double E_jlMl = Eig_l(id_Eig_D1(Ml2, Jl2_, S2_), id_Eig_D2(jl2));
 
 					// reduced frequencies + correction
-		      	const Real um = u_red + ((E_juMu - E_jlMl) * c_ - nu_0_ ) / Doppler_width;
+		      	const double um = u_red + ((E_juMu - E_jlMl) * c_ - nu_0_ ) / Doppler_width;
 		      	
-					const std::complex<Real> faddeva = std::complex<Real>(Faddeeva::w(um + a_damp));
+					const std::complex<double> faddeva = std::complex<double>(Faddeeva::w(um + a_damp));
 					
 					sum_eta_jM_K += B_juMu_jlMl * std::real(faddeva);
 					sum_rho_jM_K += B_juMu_jlMl * std::imag(faddeva);
@@ -2093,10 +2083,10 @@ void RT_problem::set_eta_and_rhos_two_terms(){
 }
 
 
-void RT_problem::set_eta_and_rhos_Omega(const Real theta, const Real chi){	
+void RT_problem::set_eta_and_rhos_Omega(const double theta, const double chi){	
 
 	// vector with KQ components for each stokes profile
-	std::vector< std::vector<std::complex<Real> > > T_KQ(4);
+	std::vector< std::vector<std::complex<double> > > T_KQ(4);
 
 	for (int i_stokes = 0; i_stokes < 4; ++i_stokes) {
 		T_KQ[i_stokes] = compute_T_KQ(i_stokes, theta, chi);		
@@ -2113,16 +2103,16 @@ void RT_problem::set_eta_and_rhos_Omega(const Real theta, const Real chi){
         auto v_b = v_b_->block(i, j, k);           
                         
         // assign some variables for readability
-        Real theta_v_b = v_b[1];
-        Real chi_v_b   = v_b[2];
+        double theta_v_b = v_b[1];
+        double chi_v_b   = v_b[2];
 
-        Real nu_L    = B[0];
-        Real theta_B = B[1];
-        Real chi_B   = B[2];
+        double nu_L    = B[0];
+        double theta_B = B[1];
+        double chi_B   = B[2];
 
-        Real Doppler_width = Doppler_width_->ref(i,j,k);
-    	Real k_L           = k_L_->ref(i,j,k);
-		Real a             = a_->ref(i,j,k);
+        double Doppler_width = Doppler_width_->ref(i,j,k);
+    	double k_L           = k_L_->ref(i,j,k);
+		double a             = a_->ref(i,j,k);
 
 		// init rotation matrix
         Rotation_matrix R(0.0, -theta_B, -chi_B);
@@ -2142,20 +2132,20 @@ void RT_problem::set_eta_and_rhos_Omega(const Real theta, const Real chi){
 				block_rho[b + i_stokes] = 0;								
 			}
 
-			const Real coeff  =  k_L / (std::sqrt(PI) * Doppler_width);
-			const Real coeff2 = nu_L / Doppler_width; 
+			const double coeff  =  k_L / (std::sqrt(PI) * Doppler_width);
+			const double coeff2 = nu_L / Doppler_width; 
 
-			const std::complex<Real> a_damp(0.0, a);
+			const std::complex<double> a_damp(0.0, a);
 
 			// for reduced frequency
-			const Real v_dot_Omega = v_b[0] * ( cos(theta_v_b) * cos(theta) + sin(theta_v_b) * sin(theta) * cos(chi - chi_v_b));
-			const Real u_b = nu_0_ * v_dot_Omega / (c_ * Doppler_width);
+			const double v_dot_Omega = v_b[0] * ( cos(theta_v_b) * cos(theta) + sin(theta_v_b) * sin(theta) * cos(chi - chi_v_b));
+			const double u_b = nu_0_ * v_dot_Omega / (c_ * Doppler_width);
 
-			const Real u_red = u[n_nu] + u_b;
+			const double u_red = u[n_nu] + u_b;
 
 			for (int K = 0; K < 3; ++K)
 			{				
-				const Real coeff_K = coeff * std::sqrt(3.0 * (2.0 * Real(K) + 1.0));
+				const double coeff_K = coeff * std::sqrt(3.0 * (2.0 * double(K) + 1.0));
 					
 				for (int Mu2 = - Ju2_; Mu2 < Ju2_ + 1; Mu2 += 2)
 				{
@@ -2165,17 +2155,17 @@ void RT_problem::set_eta_and_rhos_Omega(const Real theta, const Real chi){
 						{
 							const int q2 = Ml2 - Mu2;
 
-				      		const Real W3J1 = W3JS(Ju2_, Jl2_, 2,-Mu2, Ml2, -q2);  
-				      		const Real W3J2 = W3JS(2, 2, 2 * K, q2, -q2, 0); 
+				      		const double W3J1 = W3JS(Ju2_, Jl2_, 2,-Mu2, Ml2, -q2);  
+				      		const double W3J2 = W3JS(2, 2, 2 * K, q2, -q2, 0); 
 
-							const Real fact = coeff_K * std::pow(-1.0, Real(q2) / 2.0 + 1.0) * std::pow(W3J1, 2) * W3J2;								   
+							const double fact = coeff_K * std::pow(-1.0, double(q2) / 2.0 + 1.0) * std::pow(W3J1, 2) * W3J2;								   
 							
-		      				const Real um = coeff2 * (gu_ * (Real(Mu2) / 2.0) - gl_ * (Real(Ml2) / 2.0)) + u_red;		      											      					      			
+		      				const double um = coeff2 * (gu_ * (double(Mu2) / 2.0) - gl_ * (double(Ml2) / 2.0)) + u_red;		      											      					      			
 
 							for (int Q = -K; Q < K + 1; ++Q)
 							{			
-								const std::complex<Real> faddeva = std::complex<Real>(Faddeeva::w(um + a_damp));
-				        		const std::complex<Real> D_KQQ   = std::complex<Real>(std::conj(R(K, 0, Q)));
+								const std::complex<double> faddeva = std::complex<double>(Faddeeva::w(um + a_damp));
+				        		const std::complex<double> D_KQQ   = std::complex<double>(std::conj(R(K, 0, Q)));
 
 				        		const auto fact_re = fact * std::real(faddeva) * D_KQQ;
 				        		const auto fact_im = fact * std::imag(faddeva) * D_KQQ;	
@@ -2282,8 +2272,9 @@ std::vector<Real> RT_problem::extract_plane_k(const Field_ptr_t field, const int
 	      }
 	   }
 	}
-	
-   MPI_CHECK(MPI_Allreduce(local_slice.data(), field_ij.data(),Nxy,MPI_DOUBLE,MPI_SUM, MPI_COMM_WORLD));
+			
+	MPI_CHECK(MPI_Allreduce(local_slice.data(), field_ij.data(),Nxy,mpi_type<Real>(),MPI_SUM, MPI_COMM_WORLD));
+   // MPI_CHECK(MPI_Allreduce(local_slice.data(), field_ij.data(),Nxy,MPI_DOUBLE,MPI_SUM, MPI_COMM_WORLD));
 
    // every rank has a full (i,j) plane with ordering j_global * N_y_ + i_global]
 
@@ -2296,10 +2287,10 @@ void RT_problem::set_up(){
    if (mpi_rank_ == 0 and verbose_) std::cout << "\nPrecomputing quantities...";				
 
    // temporary constants
-   Real tmp_const, tmp_const2, tmp_const3;
+   double tmp_const, tmp_const2, tmp_const3;
     
 	// compute line-center frequency
-	const Real dE = Eu_ - El_;
+	const double dE = Eu_ - El_;
 	nu_0_ = dE * c_;
 
 	// compute coefficients depending on the spatial point 
@@ -2313,7 +2304,7 @@ void RT_problem::set_up(){
 	// const for D1
 	tmp_const3 = (Ju2_ * Ju2_ + 2 * Ju2_ - 3) / ( 3 * (Ju2_ * Ju2_ + 2 * Ju2_ - 7));
 
-	const Real mass_real = mass_ * 1.6605e-24;
+	const double mass_real = mass_ * 1.6605e-24;
 
 	// compute atmospheric quantities 
 	space_grid_->parallel_for([&](int i, int j, int k) 
@@ -2321,9 +2312,9 @@ void RT_problem::set_up(){
     	auto *u = u_->block(i, j, k);
 
     	// assign some variables for readability
-    	Real T   =   T_->ref(i,j,k);    	    	
-    	Real xi  =   xi_->ref(i,j,k);
-    	Real Cul =   Cul_->ref(i,j,k);
+    	double T   =   T_->ref(i,j,k);    	    	
+    	double xi  =   xi_->ref(i,j,k);
+    	double Cul =   Cul_->ref(i,j,k);
         
 		// precompute quantities depening only on position
 		if (not use_PORTA_input_) 
