@@ -15,15 +15,4 @@ MPI_Datatype mpi_type() {
         return MPI_BYTE; 
     }
 
-// template<typename T>
-// MPI_Datatype mpi_scalar_type();
-
-// template<>
-// inline MPI_Datatype mpi_scalar_type<float>() { return MPI_FLOAT; }
-
-// template<>
-// inline MPI_Datatype mpi_scalar_type<double>() { return MPI_DOUBLE; }
-
-// get the class from grid 3D
-
 #endif // RT_types_hpp
