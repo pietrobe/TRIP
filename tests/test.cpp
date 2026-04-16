@@ -253,8 +253,6 @@ int main(int argc, char *argv[])
 				{
 					std::string test_file      = test_out_path + "_" + std::to_string(i) + "_" + std::to_string(j) + ".csv";
 					std::string reference_file = (cfg.reference_sol_directory).string() + "profiles_" + std::to_string(i) + "_" + std::to_string(j) + ".csv";        
-                    std::cout << "TEST: " << test_file << "\n";
-                    std::cout << "REF : " << reference_file << "\n";
                     bool equal;
                     CSVMaxDiff report = compare_csv_report(test_file, reference_file, equal, verbose);
                     file_summaries.push_back(report);
@@ -262,15 +260,15 @@ int main(int argc, char *argv[])
 				}
 			}
 		}	
-        
-        if (failed > 0) {
-            std::cout << RED << "\n==== ERROR: " << failed << "/" << N_x * N_y << " TESTS NOT PASSED ====\n" << RESET;
-        } else {
-            std::cout << GREEN << "\n==== TEST PASSED ====\n" << RESET;
-        }
-
 
         if (mpi_rank == 0) {
+             if (failed > 0) {
+                std::cout << RED << "\n==== ERROR: " << failed
+                        << "/" << N_x * N_y << " TESTS NOT PASSED ====\n" << RESET;
+            } else {
+                std::cout << GREEN << "\n==== TEST PASSED ====\n" << RESET;
+            }
+
             // Compute maximum over all files
             CSVMaxDiff global_max{};
             for (const auto& d : file_summaries) {
@@ -281,7 +279,7 @@ int main(int argc, char *argv[])
             }
     
             // Print summary table
-            std::cout << "\n** Maximum Differences Across All Files **\n";
+            std::cout << "** Maximum Differences Across All Files **\n";
             const char* labels[4] = {"I", "Q/I[%]", "U/I[%]", "V/I[%]"};
             // Header
             std::cout << std::left  << std::setw(12) << "Variable"
