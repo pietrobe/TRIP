@@ -654,7 +654,7 @@ class RT_problem
 
 	// auxiliary_fields for single direction Omega outside theta and chi grids
 	void allocate_fields_Omega(); 
-	void set_eta_and_rhos_Omega(const Real theta, const Real chi);	
+	void set_eta_and_rhos_Omega(const double theta, const double chi);	
 
 	// allocate reduced data structeres
 	void allocate_unpolarized_fields();	
@@ -722,21 +722,6 @@ class RT_problem
 	std::vector<double> Eu_vec_;
 	mdm::md_matrix<double, 1> El0_;
    mdm::md_matrix<double, 1> Eu0_;    
-   
-
-	// 2-terms atom constants (Jl2_ and Ju2_ are used for 2Lu and 2Ll from Luca notes atm)
-	int S2_;
-	std::vector<int> Jl2_vec_; 
-	std::vector<int> Ju2_vec_; 
-	std::vector<double> gl_vec_;
-	std::vector<double> gu_vec_;
-
-	// energy vectors in different formats
-	std::vector<double> El_vec_;
-	std::vector<double> Eu_vec_;
-	mdm::md_matrix<double, 1> El0_;
-   mdm::md_matrix<double, 1> Eu0_;    
-   
 
 	// reference frame
 	const double gamma_ = 0.5 * M_PI;
@@ -753,7 +738,7 @@ class RT_problem
 	Field_ptr_t D2_;
 
 	// quantities depending on direction
-	std::vector<std::vector<std::complex<Real>>> T_KQ_; // polarization tensor // TODO use double?
+	std::vector<std::vector<std::complex<double>>> T_KQ_; // polarization tensor // TODO use double?
 
 	// allocate grid fields
 	void
@@ -810,25 +795,25 @@ class RT_problem
 	read_3D(const char *filename_pmd, const char *filename_cul, const char *filename_qel, const char *filename_llp,
 			const char *filename_back);
 
-	std::vector<Real>
+	std::vector<double>
 	read_single_node(MPI_File fh, const int i, const int j, const int k);
 
-	Real
+	double
 	read_single_node_single_field(MPI_File fh, const int i, const int j, const int k);
 
 	void
-	read_single_node_triple_field(MPI_File input_file, const int i, const int j, const int k, Real &kappa, Real &sigma,
-								  Real &epsilon);
+	read_single_node_triple_field(MPI_File input_file, const int i, const int j, const int k, double &kappa, double &sigma,
+								  double &epsilon);
 
 	// compute polarization tensors (vector of six components)
-	std::vector<std::complex<Real>>
-	compute_T_KQ(const int stokes_i, const Real theta, const Real chi);
+	std::vector<std::complex<double>>
+	compute_T_KQ(const int stokes_i, const double theta, const double chi);
 
-	std::complex<Real>
+	std::complex<double>
 	get_TKQi(const int i_stokes, const int K, const int Q, const int j, const int k);
 
-	std::complex<Real>
-	get_TKQi(const std::vector<std::complex<Real>> T_KQ_i, const int K, const int Q);
+	std::complex<double>
+	get_TKQi(const std::vector<std::complex<double>> T_KQ_i, const int K, const int Q);
 
 	void
 	set_TKQ_tensor();

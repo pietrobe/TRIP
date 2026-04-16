@@ -5,4 +5,25 @@
 
 typedef PetscScalar Real; // TODO: remove and use simply PetscScalar everywhere?
 
+template<class T>
+MPI_Datatype mpi_type() {
+        if (std::is_same<T, double>::value)   return MPI_DOUBLE;
+        if (std::is_same<T, float>::value)    return MPI_FLOAT;
+        if (std::is_same<T, int>::value)      return MPI_INT;
+        if (std::is_same<T, long>::value)     return MPI_LONG;
+        if (std::is_same<T, PetscInt>::value) return MPIU_INT;
+        return MPI_BYTE; 
+    }
+
+// template<typename T>
+// MPI_Datatype mpi_scalar_type();
+
+// template<>
+// inline MPI_Datatype mpi_scalar_type<float>() { return MPI_FLOAT; }
+
+// template<>
+// inline MPI_Datatype mpi_scalar_type<double>() { return MPI_DOUBLE; }
+
+// get the class from grid 3D
+
 #endif // RT_types_hpp

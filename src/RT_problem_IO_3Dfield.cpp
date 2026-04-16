@@ -380,13 +380,9 @@ write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 
 			Real *stokes_IQUI = rt_problem.I_field_->block(0, 0, local_k);
 
-<<<<<<< HEAD
 			auto stokes_IQUI_tmp = to_double(stokes_IQUI, rt_problem.block_size_);		
 
-			write_3d_field_block_mpi(output_file.c_str(),		 //
-=======
-			write_3d_field_block_mpi(write_file_id,				 //
->>>>>>> 152bc86b2d6787f4483565942795021c2c48ff76
+			write_3d_field_block_mpi(write_file_id,		 //
 									 write_communicator,		 //
 									 normalized_output,			 // If true the output will be normalized.
 									 N_x,						 // Global sizes of the field in x y z directions
