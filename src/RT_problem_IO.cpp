@@ -27,10 +27,10 @@ write_emergent_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 	// const int N_x = rt_problem.N_x_;
 	// const int N_y = rt_problem.N_y_;
 
-	std::vector<double> surface_data_I;
-	std::vector<double> surface_data_Q;
-	std::vector<double> surface_data_U;
-	std::vector<double> surface_data_V;
+	std::vector<Real> surface_data_I;
+	std::vector<Real> surface_data_Q;
+	std::vector<Real> surface_data_U;
+	std::vector<Real> surface_data_V;
 
 	// const int N_nu	  = rt_problem.N_nu_;
 	// const int N_theta = rt_problem.N_theta_;
@@ -142,9 +142,11 @@ RT_problem::write_angular_frequency_grids_hdf5(const std::string &output_file) /
 //////////////////////////////////////////////////////////////////////////
 int
 RT_problem::write_emergent_field_hdf5(const std::string &output_file, MPI_Comm write_comm,
-									  std::vector<double> &surface_data_I, std::vector<double> &surface_data_Q,
-									  std::vector<double> &surface_data_U, std::vector<double> &surface_data_V)
+									  std::vector<Real> &surface_data_I, std::vector<Real> &surface_data_Q,
+									  std::vector<Real> &surface_data_U, std::vector<Real> &surface_data_V)
 {
+	constexpr THDF_float_type_t out_float_type = std::is_same_v<Real, float> ? HDF_OUT_FLOAT32 : HDF_OUT_FLOAT64;
+
 	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
 
 	if (space_grid_->local_to_global_coordinate(2, k_start) != 0) return EXIT_SUCCESS;
@@ -164,9 +166,10 @@ RT_problem::write_emergent_field_hdf5(const std::string &output_file, MPI_Comm w
 
 	hid_t file_id = THDF_open_file_MPI(output_file.c_str(), write_comm);
 
-	THDF_field_handler_t *output_dset_handler = THDF_create_field_handler_mpi(file_id,						//
-																			  N_x_, N_y_,					//
-																			  N_theta_ / 2, N_chi_, N_nu_); //
+	THDF_field_handler_t *output_dset_handler = THDF_create_field_handler_mpi(file_id,					   //
+																			  N_x_, N_y_,				   //
+																			  N_theta_ / 2, N_chi_, N_nu_, //
+																			  out_float_type);			   //
 
 	if (output_dset_handler == NULL)
 	{
@@ -179,6 +182,7 @@ RT_problem::write_emergent_field_hdf5(const std::string &output_file, MPI_Comm w
 	output_field.index_j	   = j_start;
 	output_field.index_incl	   = 0;
 	output_field.index_azimuth = 0;
+	output_field.float_type	   = out_float_type;
 
 	// assign data pointers
 	output_field.stokes_I  = surface_data_I.data();
@@ -206,8 +210,8 @@ RT_problem::write_emergent_field_hdf5(const std::string &output_file, MPI_Comm w
 // accumulate_surface_data
 //////////////////////////////////////////////////////////////////////////
 int
-RT_problem::accumulate_surface_domain_data(std::vector<double> &surface_data_I, std::vector<double> &surface_data_Q,
-										   std::vector<double> &surface_data_U, std::vector<double> &surface_data_V)
+RT_problem::accumulate_surface_domain_data(std::vector<Real> &surface_data_I, std::vector<Real> &surface_data_Q,
+										   std::vector<Real> &surface_data_U, std::vector<Real> &surface_data_V)
 {
 	// indeces
 	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
@@ -253,10 +257,10 @@ RT_problem::accumulate_surface_domain_data(std::vector<double> &surface_data_I, 
 
 					for (int b = 0; b < 4 * N_nu_; b = b + 4)
 					{
-						const double I = I_field_->block(i, j, k_start)[b_start + b + 0];
-						const double Q = I_field_->block(i, j, k_start)[b_start + b + 1];
-						const double U = I_field_->block(i, j, k_start)[b_start + b + 2];
-						const double V = I_field_->block(i, j, k_start)[b_start + b + 3];
+						const Real I = I_field_->block(i, j, k_start)[b_start + b + 0];
+						const Real Q = I_field_->block(i, j, k_start)[b_start + b + 1];
+						const Real U = I_field_->block(i, j, k_start)[b_start + b + 2];
+						const Real V = I_field_->block(i, j, k_start)[b_start + b + 3];
 
 						surface_data_I.push_back(I);
 						surface_data_Q.push_back(Q / I * 100.0);

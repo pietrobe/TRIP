@@ -4,6 +4,10 @@
  * Shared utility functions for HDF5 output operations.
  */
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 #ifndef OUTPUT_UTILS_H
 #define OUTPUT_UTILS_H
 
@@ -52,5 +56,9 @@ ensure_directory_exists(const char *dir);
  */
 void
 build_output_filepath(char *buf, size_t sz, const char *file_name);
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif /* OUTPUT_UTILS_H */

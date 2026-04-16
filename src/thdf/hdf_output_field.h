@@ -25,6 +25,10 @@ typedef enum { HDF_OUT_NORM_NONE, HDF_OUT_NORM_FLOAT32, HDF_OUT_NORM_FLOAT64 } T
 /**
  * @brief Structure to hold the Stokes parameters field data at a given spatial location and viewing angle
  * that will be written to or read from HDF5 files.
+ *
+ * The stokes_* pointers are untyped (void *) to support both float32 and float64 in-memory layouts.
+ * The float_type field indicates the actual precision of the allocated buffers.
+ * Use THDF_FIELD_AS_F64() / THDF_FIELD_AS_F32() macros for typed access.
  */
 typedef struct {
   int index_i;        // horizontal x index
@@ -32,12 +36,14 @@ typedef struct {
   int index_incl;     // viewing angle index
   int index_azimuth;  // azimuthal angle index
 
+  THDF_float_type_t float_type;  // precision of the stokes arrays (HDF_OUT_FLOAT32 or HDF_OUT_FLOAT64)
+
   // The data must be stored in a ROW MAJOR 5D contiguous array:
   // with memory layout match data layout: [x, y, incl, azimuth, frequencies]
-  THDF_float_t *stokes_I;   //
-  THDF_float_t *stokes_QI;  //
-  THDF_float_t *stokes_UI;  //
-  THDF_float_t *stokes_VI;  //
+  void *stokes_I;   //
+  void *stokes_QI;  //
+  void *stokes_UI;  //
+  void *stokes_VI;  //
 
   THDF_n_float_t *norm_multiplier_I;   // TODO: or to evaluate later
   THDF_n_float_t *norm_multiplier_QI;  // Normalization multipliers for each Stokes parameter
@@ -50,29 +56,32 @@ typedef struct {
  * @brief Structure to hold the frequencies grid information for output fields.
  */
 typedef struct {
-  int     N_frequencies;
-  double *frequencies;  // in Hz a vector of size N_frequencies
+  int               N_frequencies;
+  double           *frequencies;  // in Hz a vector of size N_frequencies
+  THDF_float_type_t float_type;   // on-disk precision (HDF_OUT_FLOAT32 or HDF_OUT_FLOAT64)
 } THDF_frequencies_grid_t;
 
 /**
  * @brief Structure to hold the angular grid information for output fields.
  */
 typedef struct {
-  int     N_directions;
-  int     N_inclination_angles;
-  int     N_azimuthal_angles;
-  double *inclination_angles;  // in radians, size N_directions
-  double *azimuthal_angles;    // in radians, size N_directions
-  int    *inclinations_indices;
-  int    *azimuthal_indices;
+  int               N_directions;
+  int               N_inclination_angles;
+  int               N_azimuthal_angles;
+  double           *inclination_angles;  // in radians, size N_directions
+  double           *azimuthal_angles;    // in radians, size N_directions
+  int              *inclinations_indices;
+  int              *azimuthal_indices;
+  THDF_float_type_t float_type;          // on-disk precision (HDF_OUT_FLOAT32 or HDF_OUT_FLOAT64)
 } THDF_angular_grid_t;
 
 typedef struct {
-  int     N_x;
-  int     N_y;
-  int     N_z;
-  double *heights;
-  double  delta;
+  int               N_x;
+  int               N_y;
+  int               N_z;
+  double           *heights;
+  double            delta;
+  THDF_float_type_t float_type;  // on-disk precision (HDF_OUT_FLOAT32 or HDF_OUT_FLOAT64)
 } THDF_geometry_3D_t;
 
 /**
@@ -92,13 +101,14 @@ typedef struct {
   hid_t dataspace_id_U;
   hid_t dataspace_id_V;
 
-  hid_t datatype_id;
-  int   N_x;
-  int   N_y;
-  int   N_incl;
-  int   N_azimuth;
-  int   N_frequencies;
-  bool  is_open;
+  hid_t             datatype_id;
+  THDF_float_type_t float_type;  // on-disk precision of the datasets
+  int               N_x;
+  int               N_y;
+  int               N_incl;
+  int               N_azimuth;
+  int               N_frequencies;
+  bool              is_open;
 } THDF_field_handler_t;
 
 /**
@@ -152,7 +162,8 @@ THDF_get_hdf_n_float_datatype(void);
  * @return Pointer to the initialized THDF_field_handler_t structure, or NULL on failure.
  */
 THDF_field_handler_t *
-THDF_create_field_handler_mpi(hid_t file, int N_x, int N_y, int N_incl, int N_azimuth, int N_frequencies);
+THDF_create_field_handler_mpi(hid_t file, int N_x, int N_y, int N_incl, int N_azimuth, int N_frequencies,
+                              THDF_float_type_t float_type);
 
 /**
  * @brief Close and free resources associated with an HDF5 field handler (MPI version).
@@ -346,6 +357,16 @@ THDF_clear_angular_grid(THDF_angular_grid_t *angular_grid);
 
 void
 THDF_clear_frequencies_grid(THDF_frequencies_grid_t *frequencies_grid);
+
+// Typed accessors for void* stokes arrays in THDF_field_t
+// Usage: THDF_FIELD_AS_F64(field, stokes_I)[idx] = value;
+//        THDF_FIELD_AS_F32(field, stokes_I)[idx] = value;
+#define THDF_FIELD_AS_F64(field, member) ((double *)(field).member)
+#define THDF_FIELD_AS_F32(field, member) ((float *)(field).member)
+
+// Same via pointer to field:
+#define THDF_PFIELD_AS_F64(pfield, member) ((double *)(pfield)->member)
+#define THDF_PFIELD_AS_F32(pfield, member) ((float *)(pfield)->member)
 
 // Macro for HDF5 write error handling
 #define HDF5_CHECK_WRITE(status, param_name, memspace)                                \

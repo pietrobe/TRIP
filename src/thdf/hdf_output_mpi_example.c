@@ -2,6 +2,7 @@
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "hdf_output_domain_decomposition_3D.h"
 #include "hdf_output_example_3D.h"
 #include "hdf_output_example_zslice_3D.h"
@@ -13,33 +14,44 @@
 /// make_example_output_field_surface
 /////////////////////////////////////////////////////////////
 THDF_field_t
-make_example_output_field_surface(int N_frequencies, const int N_incl, const int N_azimuth) {
+make_example_output_field_surface(int N_frequencies, const int N_incl, const int N_azimuth,
+                                  THDF_float_type_t float_type) {
   // Create output field for a single (x, y) position with all inclinations and azimuths
   // The Stokes arrays must be contiguous: size = N_incl * N_azimuth * N_frequencies
-  const int angular_size = N_incl * N_azimuth;
+  const int    angular_size = N_incl * N_azimuth;
+  const size_t elem_size    = (float_type == HDF_OUT_FLOAT32) ? sizeof(float) : sizeof(double);
 
   THDF_field_t output_field;
   output_field.index_i       = 0;
   output_field.index_j       = 0;
   output_field.index_incl    = 0;
   output_field.index_azimuth = 0;
+  output_field.float_type    = float_type;
 
   // Allocate contiguous arrays for all angular directions and frequencies
-  output_field.stokes_I  = (THDF_float_t *)malloc(angular_size * N_frequencies * sizeof(THDF_float_t));
-  output_field.stokes_QI = (THDF_float_t *)malloc(angular_size * N_frequencies * sizeof(THDF_float_t));
-  output_field.stokes_UI = (THDF_float_t *)malloc(angular_size * N_frequencies * sizeof(THDF_float_t));
-  output_field.stokes_VI = (THDF_float_t *)malloc(angular_size * N_frequencies * sizeof(THDF_float_t));
+  const size_t n_elems       = (size_t)angular_size * (size_t)N_frequencies;
+  output_field.stokes_I  = malloc(n_elems * elem_size);
+  output_field.stokes_QI = malloc(n_elems * elem_size);
+  output_field.stokes_UI = malloc(n_elems * elem_size);
+  output_field.stokes_VI = malloc(n_elems * elem_size);
 
   // Fill with example data: layout is [incl][azimuth][frequencies]
   for (int incl = 0; incl < N_incl; incl++) {
     for (int azim = 0; azim < N_azimuth; azim++) {
       int angular_idx = incl * N_azimuth + azim;
       for (int f = 0; f < N_frequencies; f++) {
-        int idx                     = angular_idx * N_frequencies + f;
-        output_field.stokes_I[idx]  = 1.0 * (f + 1) * (incl + 1) * (azim + 1) * 0.01;
-        output_field.stokes_QI[idx] = 2.0 * (f + 1) * (incl + 1) * (azim + 1) * 0.01;
-        output_field.stokes_UI[idx] = 3.0 * (f + 1) * (incl + 1) * (azim + 1) * 0.01;
-        output_field.stokes_VI[idx] = 4.0 * (f + 1) * (incl + 1) * (azim + 1) * 0.01;
+        int idx = angular_idx * N_frequencies + f;
+        if (float_type == HDF_OUT_FLOAT32) {
+          THDF_FIELD_AS_F32(output_field, stokes_I)[idx]  = (float)(1.0 * (f + 1) * (incl + 1) * (azim + 1) * 0.01);
+          THDF_FIELD_AS_F32(output_field, stokes_QI)[idx] = (float)(2.0 * (f + 1) * (incl + 1) * (azim + 1) * 0.01);
+          THDF_FIELD_AS_F32(output_field, stokes_UI)[idx] = (float)(3.0 * (f + 1) * (incl + 1) * (azim + 1) * 0.01);
+          THDF_FIELD_AS_F32(output_field, stokes_VI)[idx] = (float)(4.0 * (f + 1) * (incl + 1) * (azim + 1) * 0.01);
+        } else {
+          THDF_FIELD_AS_F64(output_field, stokes_I)[idx]  = 1.0 * (f + 1) * (incl + 1) * (azim + 1) * 0.01;
+          THDF_FIELD_AS_F64(output_field, stokes_QI)[idx] = 2.0 * (f + 1) * (incl + 1) * (azim + 1) * 0.01;
+          THDF_FIELD_AS_F64(output_field, stokes_UI)[idx] = 3.0 * (f + 1) * (incl + 1) * (azim + 1) * 0.01;
+          THDF_FIELD_AS_F64(output_field, stokes_VI)[idx] = 4.0 * (f + 1) * (incl + 1) * (azim + 1) * 0.01;
+        }
       }
     }
   }
@@ -52,35 +64,45 @@ make_example_output_field_surface(int N_frequencies, const int N_incl, const int
 /////////////////////////////////////////////////////////////
 THDF_field_t
 make_example_output_field_surface_sd(int N_frequencies, const int N_incl, const int N_azimuth, const int N_x,
-                                     const int N_y) {
+                                     const int N_y, THDF_float_type_t float_type) {
   // Create output field for a single (x, y) position with all inclinations and azimuths
   // The Stokes arrays must be contiguous: size = N_incl * N_azimuth * N_frequencies
-  const int angular_size = N_incl * N_azimuth;
+  const int    angular_size = N_incl * N_azimuth;
+  const size_t elem_size    = (float_type == HDF_OUT_FLOAT32) ? sizeof(float) : sizeof(double);
 
   THDF_field_t output_field;
   output_field.index_i       = 0;
   output_field.index_j       = 0;
   output_field.index_incl    = 0;
   output_field.index_azimuth = 0;
+  output_field.float_type    = float_type;
 
   // Allocate contiguous arrays for all angular directions and frequencies
-  output_field.stokes_I  = (THDF_float_t *)malloc(angular_size * N_frequencies * N_x * N_y * sizeof(THDF_float_t));
-  output_field.stokes_QI = (THDF_float_t *)malloc(angular_size * N_frequencies * N_x * N_y * sizeof(THDF_float_t));
-  output_field.stokes_UI = (THDF_float_t *)malloc(angular_size * N_frequencies * N_x * N_y * sizeof(THDF_float_t));
-  output_field.stokes_VI = (THDF_float_t *)malloc(angular_size * N_frequencies * N_x * N_y * sizeof(THDF_float_t));
+  const size_t n_elems       = (size_t)angular_size * (size_t)N_frequencies * (size_t)N_x * (size_t)N_y;
+  output_field.stokes_I  = malloc(n_elems * elem_size);
+  output_field.stokes_QI = malloc(n_elems * elem_size);
+  output_field.stokes_UI = malloc(n_elems * elem_size);
+  output_field.stokes_VI = malloc(n_elems * elem_size);
 
-  // Fill with example data: layout is [incl][azimuth][frequencies]
+  // Fill with example data: layout is [x][y][incl][azimuth][frequencies]
   for (int x = 0; x < N_x; x++) {
     for (int y = 0; y < N_y; y++) {
       for (int incl = 0; incl < N_incl; incl++) {
         for (int azim = 0; azim < N_azimuth; azim++) {
           int angular_idx = incl * N_azimuth + azim;
           for (int f = 0; f < N_frequencies; f++) {
-            int idx                     = ((x * N_y + y) * angular_size + angular_idx) * N_frequencies + f;
-            output_field.stokes_I[idx]  = sin(1.0 * (f + 1) * (incl + 1) * (azim + 1) * 0.5 * (x + 1) * (y + 1));
-            output_field.stokes_QI[idx] = sin(2.0 * (f + 1) * (incl + 1) * (azim + 1) * 0.01 * (x + 1) * (y + 1));
-            output_field.stokes_UI[idx] = cos(3.0 * (f + 1) * (incl + 1) * (azim + 1) * 0.01 * (x + 1) * (y + 1));
-            output_field.stokes_VI[idx] = cos(1.0 * (f + 1) * (incl + 1) * (azim + 1) * -0.05 * (x + 1) * (y + 1));
+            int idx = ((x * N_y + y) * angular_size + angular_idx) * N_frequencies + f;
+            if (float_type == HDF_OUT_FLOAT32) {
+              THDF_FIELD_AS_F32(output_field, stokes_I)[idx]  = (float)sin(1.0 * (f + 1) * (incl + 1) * (azim + 1) * 0.5 * (x + 1) * (y + 1));
+              THDF_FIELD_AS_F32(output_field, stokes_QI)[idx] = (float)sin(2.0 * (f + 1) * (incl + 1) * (azim + 1) * 0.01 * (x + 1) * (y + 1));
+              THDF_FIELD_AS_F32(output_field, stokes_UI)[idx] = (float)cos(3.0 * (f + 1) * (incl + 1) * (azim + 1) * 0.01 * (x + 1) * (y + 1));
+              THDF_FIELD_AS_F32(output_field, stokes_VI)[idx] = (float)cos(1.0 * (f + 1) * (incl + 1) * (azim + 1) * -0.05 * (x + 1) * (y + 1));
+            } else {
+              THDF_FIELD_AS_F64(output_field, stokes_I)[idx]  = sin(1.0 * (f + 1) * (incl + 1) * (azim + 1) * 0.5 * (x + 1) * (y + 1));
+              THDF_FIELD_AS_F64(output_field, stokes_QI)[idx] = sin(2.0 * (f + 1) * (incl + 1) * (azim + 1) * 0.01 * (x + 1) * (y + 1));
+              THDF_FIELD_AS_F64(output_field, stokes_UI)[idx] = cos(3.0 * (f + 1) * (incl + 1) * (azim + 1) * 0.01 * (x + 1) * (y + 1));
+              THDF_FIELD_AS_F64(output_field, stokes_VI)[idx] = cos(1.0 * (f + 1) * (incl + 1) * (azim + 1) * -0.05 * (x + 1) * (y + 1));
+            }
           }
         }
       }
@@ -129,12 +151,12 @@ main_default(int argc, char **argv) {
   const char *env;
 
   /* defaults */
-  N_x = 3;
+  N_x = 16;
   env = getenv("HDF5_N_X");
   if (env)
     N_x = atoi(env);
 
-  N_y = 3;
+  N_y = 16;
   env = getenv("HDF5_N_Y");
   if (env)
     N_y = atoi(env);
@@ -167,8 +189,14 @@ main_default(int argc, char **argv) {
   int mpi_index_z = (mpi_rank / (N_x * N_y)) % N_z;
   //   int mpi_surface_size = N_x * N_y;
 
+  // Choose float precision: set HDF5_FLOAT_TYPE=float32 for single precision, default is float64
+  THDF_float_type_t float_type = HDF_OUT_FLOAT32;
+  env                          = getenv("HDF5_FLOAT_TYPE");
+  if (env && strcmp(env, "float32") == 0)
+    float_type = HDF_OUT_FLOAT32;
+
   // Each rank creates its own local output field with contiguous Stokes arrays
-  THDF_field_t output_field = make_example_output_field_surface(N_frequencies, N_theta, N_chi);
+  THDF_field_t output_field = make_example_output_field_surface(N_frequencies, N_theta, N_chi, float_type);
 
   for (int rank = 0; rank < mpi_size; rank++) {
     MPI_Barrier(MPI_COMM_WORLD);
@@ -215,6 +243,7 @@ main_default(int argc, char **argv) {
     THDF_frequencies_grid_t freq_grid;
     freq_grid.N_frequencies = N_frequencies;
     freq_grid.frequencies   = frequencies;
+    freq_grid.float_type    = float_type;
     if (THDF_write_frequencies_grid_to_hdf5(file_id, &freq_grid) != 0) {
       fprintf(stderr, "Error writing frequencies grid to HDF5 file\n");
       MPI_Abort(MPI_COMM_WORLD, -1);
@@ -228,6 +257,7 @@ main_default(int argc, char **argv) {
     angular_grid.azimuthal_angles     = chi;
     angular_grid.inclinations_indices = inclinations_indices;
     angular_grid.azimuthal_indices    = azimuthal_indices;
+    angular_grid.float_type           = float_type;
 
     if (THDF_write_angular_grid_to_hdf5(file_id, &angular_grid) != 0) {
       fprintf(stderr, "Error writing emergent angular grid to HDF5 file\n");
@@ -258,7 +288,7 @@ main_default(int argc, char **argv) {
     H5Pclose(plist_id);
 
     THDF_field_handler_t *output_dset_handler =
-        THDF_create_field_handler_mpi(file_id, N_x, N_y, N_theta, N_chi, N_frequencies);
+        THDF_create_field_handler_mpi(file_id, N_x, N_y, N_theta, N_chi, N_frequencies, float_type);
 
     if (output_dset_handler == NULL) {
       fprintf(stderr, "Rank %d: Error creating MPI output field dataset\n", mpi_rank);
@@ -407,6 +437,12 @@ main_JKQ_domain_dec(int argc, char **argv) {
   if (env)
     N_frequencies = atoi(env);
 
+  // Choose float precision: set HDF5_FLOAT_TYPE=float32 for single precision, default is float64
+  THDF_float_type_t float_type = HDF_OUT_FLOAT64;
+  env                          = getenv("HDF5_FLOAT_TYPE");
+  if (env && strcmp(env, "float32") == 0)
+    float_type = HDF_OUT_FLOAT32;
+
   double *frequencies                = NULL;
   int    *KQ_values                  = NULL;
   int    *KQ_values_commpressed_real = NULL;
@@ -493,6 +529,7 @@ main_JKQ_domain_dec(int argc, char **argv) {
     THDF_frequencies_grid_t freq_grid;
     freq_grid.N_frequencies = N_frequencies;
     freq_grid.frequencies   = frequencies;
+    freq_grid.float_type    = float_type;
     if (THDF_write_frequencies_grid_to_hdf5(file_id, &freq_grid) != 0) {
       fprintf(stderr, "Error writing frequencies grid to HDF5 file\n");
       MPI_Abort(MPI_COMM_WORLD, -1);
@@ -622,6 +659,12 @@ main_domain_dec(int argc, char **argv) {
     N_frequencies = atoi(env);
   double *frequencies = NULL;
 
+  // Choose float precision: set HDF5_FLOAT_TYPE=float32 for single precision, default is float64
+  THDF_float_type_t float_type = HDF_OUT_FLOAT64;
+  env                          = getenv("HDF5_FLOAT_TYPE");
+  if (env && strcmp(env, "float32") == 0)
+    float_type = HDF_OUT_FLOAT32;
+
   const char filename[100] = "output_field_mpi.h5";
 
   // const int mpi_surface_size = N_x * N_y;
@@ -686,6 +729,7 @@ main_domain_dec(int argc, char **argv) {
     THDF_frequencies_grid_t freq_grid;
     freq_grid.N_frequencies = N_frequencies;
     freq_grid.frequencies   = frequencies;
+    freq_grid.float_type    = float_type;
     if (THDF_write_frequencies_grid_to_hdf5(file_id, &freq_grid) != 0) {
       fprintf(stderr, "Error writing frequencies grid to HDF5 file\n");
       MPI_Abort(MPI_COMM_WORLD, -1);
@@ -699,6 +743,7 @@ main_domain_dec(int argc, char **argv) {
     angular_grid.azimuthal_angles     = chi;
     angular_grid.inclinations_indices = inclinations_indices;
     angular_grid.azimuthal_indices    = azimuthal_indices;
+    angular_grid.float_type           = float_type;
 
     if (THDF_write_angular_grid_to_hdf5(file_id, &angular_grid) != 0) {
       fprintf(stderr, "Error writing emergent angular grid to HDF5 file\n");
@@ -727,14 +772,15 @@ main_domain_dec(int argc, char **argv) {
     H5Pclose(plist_id);
 
     THDF_field_handler_t *output_dset_handler =
-        THDF_create_field_handler_mpi(file_id, N_x, N_y, N_theta, N_chi, N_frequencies);
+        THDF_create_field_handler_mpi(file_id, N_x, N_y, N_theta, N_chi, N_frequencies, float_type);
     if (output_dset_handler == NULL) {
       fprintf(stderr, "Rank %d: Error creating MPI output field dataset\n", mpi_rank);
       MPI_Abort(MPI_COMM_WORLD, -1);
     }
 
     // Each rank creates its own local output field with contiguous Stokes arrays
-    THDF_field_t output_field = make_example_output_field_surface_sd(N_frequencies, N_theta, N_chi, local_N_x, local_N_y);
+    THDF_field_t output_field =
+        make_example_output_field_surface_sd(N_frequencies, N_theta, N_chi, local_N_x, local_N_y, float_type);
     // Write local output field surface data
     THDF_write_field_dataset_to_hdf5(output_dset_handler,                                         //
                                      &output_field,                                               //
@@ -993,11 +1039,11 @@ main(int argc, char **argv) {
   // return main_default(argc, argv);              // Simple MPI example
   // return main_domain_dec(argc, argv);  // Domain decomposition for regular fields
   // return main_example_ar_domain_dec(argc, argv);  // Domain decomposition for ARD fields
-  // return main_JKQ_domain_dec(argc, argv);  // Domain decomposition for JKQ fields
+  return main_JKQ_domain_dec(argc, argv);  // Domain decomposition for JKQ fields
   // return main_3d_example_v2(argc, argv);
   // return main_3d_example_zslice(argc, argv);
   // return main_3d_example_multi_zslice(argc, argv);
-  return main_3d_example_single_file(argc, argv);
+  // return main_3d_example_single_file(argc, argv);
 
   MPI_Init(&argc, &argv);
   int mpi_rank, mpi_size;

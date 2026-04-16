@@ -176,17 +176,17 @@ main_3d_example_multi_zslice(int argc, char **argv) {
         }
 
         /* Frequencies and angles: same for every slab */
-        THDF_frequencies_grid_t fg = {N_frequencies, frequencies};
+        THDF_frequencies_grid_t fg = {N_frequencies, frequencies, HDF_OUT_FLOAT64};
         THDF_write_frequencies_grid_to_hdf5(fs, &fg);
 
-        THDF_angular_grid_t ag = {N_incl * N_azimuth, N_incl, N_azimuth, theta, chi, inclinations_idx, azimuthal_idx};
+        THDF_angular_grid_t ag = {N_incl * N_azimuth, N_incl, N_azimuth, theta, chi, inclinations_idx, azimuthal_idx, HDF_OUT_FLOAT64};
         THDF_write_angular_grid_to_hdf5(fs, &ag);
 
         /*
          * Geometry: N_z = N_local_z (slab thickness).
          * heights[] points into the global array at the slab's z start.
          */
-        THDF_geometry_3D_t g3 = {N_x, N_y, current_nz, heights + global_start_z, 100.0};
+        THDF_geometry_3D_t g3 = {N_x, N_y, current_nz, heights + global_start_z, 100.0, HDF_OUT_FLOAT64};
         THDF_write_geometry_3D_to_hdf5(fs, &g3);
 
         H5Fflush(fs, H5F_SCOPE_GLOBAL);

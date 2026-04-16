@@ -1,6 +1,10 @@
 #ifndef HDF_OUTPUT_ZSLICE_3D_H
 #define HDF_OUTPUT_ZSLICE_3D_H
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 #include <hdf5.h>
 #include <mpi.h>
 #include <stdbool.h>
@@ -61,5 +65,9 @@ THDF_write_zslab_block(THDF_zslab_handler_t *h, const THDF_3D_field_t *field, in
 void
 create_zslab_vds_master(const char *dir, const char *master_name, int n_slabs, int N_x, int N_y, int N_z, int N_incl,
                         int N_azimuth, int N_freq, bool normalized_output, const int *slab_z_start, const int *slab_nz);
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif

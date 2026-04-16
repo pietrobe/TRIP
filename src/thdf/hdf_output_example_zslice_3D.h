@@ -1,16 +1,9 @@
-/**
- * hdf_output_example_zslice_3D.h
- *
- * Header file for z-slab strategy parallel HDF5 writer.
- *
- * This module implements a scalable HDF5 output strategy where:
- * - Each z-slab is written to a separate file
- * - All ranks with the same z range write collectively
- * - A virtual dataset (VDS) master file provides unified access
- */
-
 #ifndef HDF_OUTPUT_EXAMPLE_ZSLICE_3D_H
 #define HDF_OUTPUT_EXAMPLE_ZSLICE_3D_H
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
 #include "hdf_output_zslice_3D.h"
 
@@ -58,5 +51,9 @@ main_3d_example_multi_zslice(int argc, char **argv);
 
 int
 main_3d_example_single_file(int argc, char **argv);
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif /* HDF_OUTPUT_EXAMPLE_ZSLICE_3D_H */

@@ -54,6 +54,135 @@ namespace
 
 		THDF_write_geometry_3D_to_hdf5(file_id, &geometry_3D);
 	}
+
+	static inline int
+	get_input_index(const int i,					 //
+					const int j,					 //
+					const int k,					 //
+					const int incl,					 //
+					const int az,					 //
+					const int f,					 //
+					const int stokes_offset,		 //
+					const int N0_in_local_x,		 //
+					const int N0_in_local_y,		 //
+					const int N0_in_local_z,		 //
+					const int stride_in_x,			 //
+					const int stride_in_y,			 //
+					const int stride_in_z,			 //
+					const int stride_in_incl,		 //
+					const int stride_in_azimuth,	 //
+					const int stride_in_frequencies, //
+					const int stride_in_stokes)
+	{ //
+		return (i + N0_in_local_x) * stride_in_x + (j + N0_in_local_y) * stride_in_y + (k + N0_in_local_z) * stride_in_z
+			   + incl * stride_in_incl + az * stride_in_azimuth + f * stride_in_frequencies
+			   + stokes_offset * stride_in_stokes;
+	}
+
+	template <typename IN_REAL>
+	void
+	copy_3D_block_field(THDF_3D_field_t &field,					//
+						const bool		 normalized_output,		//
+						const IN_REAL	*stokes_IQUI,			//
+						THDF_float32_t	*stokes_out_I,			//
+						THDF_float32_t	*stokes_out_QI,			//
+						THDF_float32_t	*stokes_out_UI,			//
+						THDF_float32_t	*stokes_out_VI,			//
+						const int		 N0_in_local_x,			//
+						const int		 N0_in_local_y,			//
+						const int		 N0_in_local_z,			//
+						const int		 N_local_x,				//
+						const int		 N_local_y,				//
+						const int		 N_local_z,				//
+						const int		 N_incl,				//
+						const int		 N_azimuth,				//
+						const int		 N_frequencies,			//
+						const int		 stride_in_x,			//
+						const int		 stride_in_y,			//
+						const int		 stride_in_z,			//
+						const int		 stride_in_incl,		//
+						const int		 stride_in_azimuth,		//
+						const int		 stride_in_frequencies, //
+						const int		 stride_in_stokes)
+	{
+		(void)normalized_output; // currently not used, as the output is always normalized by the local Stokes I value
+
+		field.norm_multiplier_I	 = nullptr;
+		field.norm_multiplier_QI = nullptr;
+		field.norm_multiplier_UI = nullptr;
+		field.norm_multiplier_VI = nullptr;
+
+		field.stokes_I	= stokes_out_I;
+		field.stokes_QI = stokes_out_QI;
+		field.stokes_UI = stokes_out_UI;
+		field.stokes_VI = stokes_out_VI;
+
+		auto get_idx = [&](int i, int j, int k, int incl, int az, int f, int s)
+		{
+			return get_input_index(i, j, k, incl, az, f, s, N0_in_local_x, N0_in_local_y, N0_in_local_z, stride_in_x,
+								   stride_in_y, stride_in_z, stride_in_incl, stride_in_azimuth, stride_in_frequencies,
+								   stride_in_stokes);
+		};
+
+		auto get_output_index = [&](const int i,	//
+									const int j,	//
+									const int k,	//
+									const int incl, //
+									const int az,	//
+									const int f)	//
+		{
+			return ((((i * N_local_y + j) //
+						  * N_local_z
+					  + k)
+						 * N_incl
+					 + incl)
+						* N_azimuth
+					+ az)
+					   * N_frequencies
+				   + f;
+		};
+
+		for (int i = 0; i < N_local_x; ++i)
+		{
+			for (int j = 0; j < N_local_y; ++j)
+			{
+				for (int k = 0; k < N_local_z; ++k)
+				{
+					for (int incl = 0; incl < N_incl; ++incl)
+					{
+						for (int az = 0; az < N_azimuth; ++az)
+						{
+							for (int f = 0; f < N_frequencies; ++f)
+							{
+								const int out_idx = get_output_index(i, j, k, incl, az, f);
+
+								const int in_I	= get_idx(i, j, k, incl, az, f, 0);
+								const int in_QI = get_idx(i, j, k, incl, az, f, 1);
+								const int in_UI = get_idx(i, j, k, incl, az, f, 2);
+								const int in_VI = get_idx(i, j, k, incl, az, f, 3);
+
+								const THDF_float_t stokes_I_val = stokes_IQUI[in_I];
+								const THDF_float_t inv_pc_stokes_I_value =
+									(stokes_I_val != 0.0) ? 100.0 / stokes_I_val : 0.0;
+
+								field.stokes_I[out_idx] = static_cast<THDF_float32_t>(stokes_I_val);
+
+								field.stokes_QI[out_idx] = static_cast<THDF_float32_t>(stokes_IQUI[in_QI]		 //
+																					   * inv_pc_stokes_I_value); //
+
+								field.stokes_UI[out_idx] = static_cast<THDF_float32_t>(stokes_IQUI[in_UI]		 //
+																					   * inv_pc_stokes_I_value); //
+
+								field.stokes_VI[out_idx] = static_cast<THDF_float32_t>(stokes_IQUI[in_VI]		 //
+																					   * inv_pc_stokes_I_value); //
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 } // namespace
 
 ////////////////////////////////////////////////////////////////////////
@@ -188,27 +317,23 @@ write_3D_whole_field_falp_hdf5(RT_problem &rt_problem, const std::string &output
 			{
 				// TODO rewrite this function in order to have a better control over the data layout.
 				// And the I (Q/I U/I V/I) * 100
-				THDF_copy_3D_block_field(&field,						   //
-										 normalized_output,				   //
-										 stokes_IQUV,					   // Input data in float 64 bits
-										 stokes_I_buffer.data(),		   //
-										 stokes_Q_buffer.data(),		   //
-										 stokes_U_buffer.data(),		   //
-										 stokes_V_buffer.data(),		   //
-										 nullptr,						   //
-										 nullptr,						   //
-										 nullptr,						   //
-										 nullptr,						   //
-										 0, 0, 0,						   //
-										 size_i, size_j, current_nz,	   //
-										 N_incl, N_azimuth, N_frequencies, //
-										 stride_x,						   //
-										 stride_y,						   //
-										 stride_z,						   //
-										 stride_incl,					   //
-										 stride_azimuth,				   //
-										 stride_frequencies,			   //
-										 stride_stokes);				   //
+				copy_3D_block_field<Real>(field,							//
+										  normalized_output,				//
+										  stokes_IQUV,						// Input data in float 64 bits
+										  stokes_I_buffer.data(),			//
+										  stokes_Q_buffer.data(),			//
+										  stokes_U_buffer.data(),			//
+										  stokes_V_buffer.data(),			//
+										  0, 0, 0,							//
+										  size_i, size_j, current_nz,		//
+										  N_incl, N_azimuth, N_frequencies, //
+										  stride_x,							//
+										  stride_y,							//
+										  stride_z,							//
+										  stride_incl,						//
+										  stride_azimuth,					//
+										  stride_frequencies,				//
+										  stride_stokes);					//
 			}
 
 			double tw0 = MPI_Wtime();

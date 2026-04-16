@@ -27,6 +27,7 @@ export HDF_N_AZIMUTH=8
 export HDF_N_STOKES=4
 export HDF_NORMALIZE_OUTPUT=0
 
+# FIX 1: HDF_Z_SLICE_WIDTH is the correct env var name.
 # HDF_STEP_Z controls the write buffer size per iteration — different parameter.
 # Both must be set. For single-file mode also set HDF_CHUNK_Z=HDF_STEP_Z.
 export HDF_Z_SLICE_WIDTH=4
@@ -38,7 +39,7 @@ export HDF_CHUNK_Z=4           # must equal HDF_STEP_Z for single-file mode
 # =============================================================================
 export HDF_FS_TYPE=lustre
 
-# HDF_ALIGNMENT_THRESHOLD=1 causes ~10 GB unaccounted space per file
+# FIX 2: HDF_ALIGNMENT_THRESHOLD=1 causes ~10 GB unaccounted space per file
 # (every object including tiny metadata headers is padded to 4 MB).
 # Set threshold to 0 to disable alignment on Lustre with chunked HDF5 —
 # ROMIO collective buffering already handles alignment internally.
@@ -46,7 +47,7 @@ export HDF_ALIGNMENT_THRESHOLD=0      # was 1 → caused 13x file size inflation
 export HDF_ALIGNMENT_VALUE=4194304    # 4 MB stripe unit (kept for reference)
 export HDF_META_BLOCK_SIZE=4194304    # 4 MB metadata buffer — keep on Lustre
 
-# HDF_COLL_METADATA_OPS=1 causes deadlock on subcommunicators
+# FIX 3: HDF_COLL_METADATA_OPS=1 causes deadlock on subcommunicators
 # with Cray MPICH on Alps when slab_comm != MPI_COMM_WORLD.
 export HDF_COLL_METADATA_OPS=0        # was 1 → deadlock with slab_comm
 export HDF_COLL_METADATA_WRITE=0      # was 1 → idem
@@ -76,7 +77,7 @@ export HDF_GPFS_ACCESS_STYLE=write_once
 export MPICH_OFI_STARTUP_CONNECT=1
 export MPICH_OFI_NIC_POLICY=BLOCK     # NUMA removed: requires per-NUMA confinement
 
-# UCX_TLS is irrelevant on Alps — Cray MPICH uses OFI/CXI directly,
+# FIX 4: UCX_TLS is irrelevant on Alps — Cray MPICH uses OFI/CXI directly,
 # not UCX. These variables are silently ignored but can cause confusion.
 # Remove UCX_TLS, UCX_RC_TIMEOUT, UCX_UD_TIMEOUT.
 # Use MPICH_OFI_* variables instead for timeout tuning.
