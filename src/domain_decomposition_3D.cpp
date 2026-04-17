@@ -486,7 +486,7 @@ namespace domain_decomposition_3D
 		analyze_decomposition(d, mpi_size);
 
 		auto best_infos = dd.best_infos(mpi_rank);
-		auto selection	= select_best_decomposition(best_infos, true);
+		auto selection	= select_best_decomposition(best_infos, false);
 
 		analyze_decomposition(selection.best_info, mpi_size);
 

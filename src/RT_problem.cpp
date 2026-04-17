@@ -6,8 +6,6 @@
 #define TWOLEVEL_HEADER1    4
 #define TWOLEVEL_HEADER2    32 
 
-#define GAUSS_TO_LARMOR_FREQUENCY(BB__) ((BB__) * (1399600.0)) // [Gauss] -> [Hz]
-
 // read atom and grid quantities 
 void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, const char* filename_qel, const char* filename_llp, const char* filename_back)
 {
