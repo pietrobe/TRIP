@@ -9,17 +9,17 @@
 ###  16384 -> w_64x64x128.pmd *
 ###  32768 -> w_128x128x64.pmd 
 
-#SBATCH --ntasks=2048
+#SBATCH --ntasks=512
 
 ## to be defined !!!!!!!!! 
-#SBATCH --time=00:27:43
+#SBATCH --time=00:29:59
 
 #SBATCH --job-name="TRIP_PRD_3D"
 
 #SBATCH --exclusive
 #SBATCH --cpus-per-task=1
 #SBATCH --account=c40
-#SBATCH --partition=normal
+#SBATCH --partition=debug
 #SBATCH --ntasks-per-socket=46
 #SBATCH --exclusive
 
@@ -83,7 +83,7 @@ export TRIP_REMAP_TIMING=1
 
 # Define arguments as a bash array
 ARGS=(
-    "--yaml_config" "$HOME/git/TRIP/bin/config_scal_acc_alps.yml"
+    "--yaml_config" "$HOME/git/TRIP/bin/config_acc_alps.yml"
     "--slurm_job_id" "$SLURM_JOB_ID"
     "-ksp_monitor"
     "-ksp_view"

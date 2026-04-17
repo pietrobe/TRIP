@@ -2735,7 +2735,7 @@ RT_problem::set_3D_decomposition_BLC(const int mpi_rank, const int mpi_size,cons
 		ddc::DomainDecomposition dd(mpi_rank, mpi_size, N_x, N_y, N_z);
 
 		auto best_infos = dd.best_infos(mpi_rank);
-		auto selection	= ddc::select_best_decomposition(best_infos, true);
+		auto selection	= ddc::select_best_decomposition(best_infos, false, 0.01);
 
 		d_info = selection.best_info;
 

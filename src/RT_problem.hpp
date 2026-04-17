@@ -141,7 +141,7 @@ class RT_problem
 
 				if (hdf_atmos_cpp::is_valid_hdf5_file(input_file_path))
 				{
-					this->read_3D_h5(input_file_path.string());
+					this->read_3D_h5(input_file_path.string(), true);
 				}
 				else
 				{

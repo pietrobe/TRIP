@@ -57,11 +57,9 @@ RT_problem::read_3D_h5(const std::string filename, const bool verbose)
 	}
 
 	this->L_ *= 1e-5; // Convert from cm to km
+	std::reverse(this->depth_grid_.begin(), this->depth_grid_.end());
 
-	for (size_t i = 0; i < depth_grid_.size(); ++i)
-	{
-		depth_grid_[i] *= 1e-5; // Convert from cm to km
-	}
+	for (size_t i = 0; i < depth_grid_.size(); ++i) depth_grid_[i] *= 1e-5; // Convert from cm to km
 
 	if (mpi_rank_ == 0 and verbose)
 	{
@@ -73,9 +71,8 @@ RT_problem::read_3D_h5(const std::string filename, const bool verbose)
 	}
 
 	/////////////////// set sizes
-	this->N_nu_		  = this->nu_grid_.size();
-	this->block_size_ = (PetscInt)(4 * this->N_nu_ * this->N_theta_ * this->N_chi_);
-	this->tot_size_	  = (PetscInt)(this->N_s_ * this->block_size_);
+	this->set_theta_chi_grids(cfg_.N_theta, cfg_.N_chi);
+	this->set_sizes();
 
 	// create space grid
 	this->set_grid_partition();
@@ -91,57 +88,67 @@ RT_problem::read_3D_h5(const std::string filename, const bool verbose)
 	// init atmospheric quantities
 	this->allocate_atmosphere();
 
-	const int i_start = this->space_grid_->getGlobalStartX();
-	const int j_start = this->space_grid_->getGlobalStartY();
-	const int k_start = this->space_grid_->getGlobalStartZ();
+	// const int i_start = this->space_grid_->getGlobalStartX();
+	// const int j_start = this->space_grid_->getGlobalStartY();
+	// const int k_start = this->space_grid_->getGlobalStartZ();
 
-	const int size_i = this->space_grid_->getLocalSizeX();
-	const int size_j = this->space_grid_->getLocalSizeY();
-	const int size_k = this->space_grid_->getLocalSizeZ();
+	// const int size_i = this->space_grid_->getLocalSizeX();
+	// const int size_j = this->space_grid_->getLocalSizeY();
+	// const int size_k = this->space_grid_->getLocalSizeZ();
 
-	const int k_reverse_start = N_z_ - k_start - size_k;
+	// const int k_reverse_start = N_z_ - k_start - size_k;
 
-	std::vector<THDF_atmos_t> atmos_data;
+	// const int read_success = hdf_atmos_cpp::read_atmos_3D_partial_data(file_id, atmos_data,				  //
+	// 																   i_start, j_start, k_reverse_start, //
+	// 																   size_i, size_j, size_k);			  //
 
-	const int read_success = hdf_atmos_cpp::read_atmos_3D_partial_data(file_id, atmos_data,				  //
-																	   i_start, j_start, k_reverse_start, //
-																	   size_i, size_j, size_k);			  //
-
-	if (read_success < 0)
-	{
-		H5Fclose(file_id);
-		throw std::runtime_error("Error reading atmospheric data");
-	}
-
-	const int stride_i = size_j * size_k;
-	const int stride_j = size_k;
-	const int stride_k = 1;
+	// const int stride_i = size_j * size_k;
+	// const int stride_j = size_k;
+	// const int stride_k = 1;
 
 	this->space_grid_ //
 		->parallel_for(
 			[&](int i, int j, int k)
 			{
-				const int dk		 = size_k - 1 - k; // = size_k-1-(k-k_start), descending
-				const int data_index = i * stride_i + j * stride_j + dk;
+				// const int dk		 = size_k - 1 - k; // = size_k-1-(k-k_start), descending
+				// const int data_index = i * stride_i + j * stride_j + dk;
 
-				const THDF_atmos_t &data = atmos_data[data_index];
+				const int i_global = space_grid_->local_to_global_coordinate(0, i);
+				const int j_global = space_grid_->local_to_global_coordinate(1, j);
+				const int k_global = space_grid_->local_to_global_coordinate(2, k);
 
-				// get global indeces form local ones
-				// space_grid_->getGlobalStartX() + i - space_grid_->getGhostMarginX();
-				const int i_global = this->space_grid_						 //
-										 ->local_to_global_coordinate(0, i); //
+				const int k_reverse = (N_z_ - k_global - 1);
 
-				// space_grid_->getGlobalStartY() + j - space_grid_->getGhostMarginY();
-				const int j_global = this->space_grid_						 //
-										 ->local_to_global_coordinate(1, j); //
+				std::vector<THDF_atmos_t> atmos_data;
 
-				// space_grid_->getGlobalStartZ() + k - space_grid_->getGhostMarginZ();
-				const int k_global = this->space_grid_						 //
-										 ->local_to_global_coordinate(2, k); //
+				const int read_success = hdf_atmos_cpp::read_atmos_3D_partial_data(file_id, atmos_data,			  //
+																				   i_global, j_global, k_reverse, //
+																				   1, 1, 1);					  //
 
-				if (data.index_i != i_global				//
-					|| data.index_j != j_global				//
-					|| data.index_k != N_z_ - 1 - k_global) // reversed z is stored in descending order in z
+				if (read_success < 0)
+				{
+					H5Fclose(file_id);
+					throw std::runtime_error("Error reading atmospheric data");
+				}
+
+				const THDF_atmos_t &data = atmos_data[0];
+
+				// // get global indeces form local ones
+				// // space_grid_->getGlobalStartX() + i - space_grid_->getGhostMarginX();
+				// const int i_global = this->space_grid_						 //
+				// 						 ->local_to_global_coordinate(0, i); //
+
+				// // space_grid_->getGlobalStartY() + j - space_grid_->getGhostMarginY();
+				// const int j_global = this->space_grid_						 //
+				// 						 ->local_to_global_coordinate(1, j); //
+
+				// // space_grid_->getGlobalStartZ() + k - space_grid_->getGhostMarginZ();
+				// const int k_global = this->space_grid_						 //
+				// 						 ->local_to_global_coordinate(2, k); //
+
+				if (data.index_i != i_global	  //
+					|| data.index_j != j_global	  //
+					|| data.index_k != k_reverse) // reversed z is stored in descending order in z
 
 				{
 					std::string error_message =
