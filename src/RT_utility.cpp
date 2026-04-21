@@ -15,33 +15,31 @@ toKSPType(const std::string &name)
 	throw std::runtime_error("Unknown KSPType: " + name);
 }
 
-
 inline std::string
 KSPTypeToString(KSPType type)
 {
-    PetscBool match;
+	PetscBool match;
 
-    PetscStrcmp(type, KSPGMRES, &match);
-    if (match) return "KSPGMRES";
+	PetscStrcmp(type, KSPGMRES, &match);
+	if (match) return "KSPGMRES";
 
-    PetscStrcmp(type, KSPFGMRES, &match);
-    if (match) return "KSPFGMRES";
+	PetscStrcmp(type, KSPFGMRES, &match);
+	if (match) return "KSPFGMRES";
 
-    PetscStrcmp(type, KSPPGMRES, &match);
-    if (match) return "KSPPGMRES";
+	PetscStrcmp(type, KSPPGMRES, &match);
+	if (match) return "KSPPGMRES";
 
-    PetscStrcmp(type, KSPBCGS, &match);
-    if (match) return "KSPBCGS";
+	PetscStrcmp(type, KSPBCGS, &match);
+	if (match) return "KSPBCGS";
 
-    PetscStrcmp(type, KSPPREONLY, &match);
-    if (match) return "KSPPREONLY";
+	PetscStrcmp(type, KSPPREONLY, &match);
+	if (match) return "KSPPREONLY";
 
-    PetscStrcmp(type, KSPRICHARDSON, &match);
-    if (match) return "KSPRICHARDSON";
+	PetscStrcmp(type, KSPRICHARDSON, &match);
+	if (match) return "KSPRICHARDSON";
 
-    return "UNKNOWN";
+	return "UNKNOWN";
 }
-
 
 inline std::string
 validateFormalSolver(const std::string &s)
@@ -226,9 +224,9 @@ loadConfig(const std::string &filename)
 		auto p = config["prec"];
 
 		if (p["pc_solver_type"]) cfg.prec.pc_solver_type = toKSPType(p["pc_solver_type"].as<std::string>());
-		if (p["pc_rtol"])        cfg.prec.pc_rtol        = p["pc_rtol"].as<double>();
-		if (p["pc_max_it"])      cfg.prec.pc_max_it      = p["pc_max_it"].as<int>();
-		if (p["pc_use_J_KQ"])    cfg.prec.pc_use_J_KQ    = p["pc_use_J_KQ"].as<bool>();
+		if (p["pc_rtol"]) cfg.prec.pc_rtol = p["pc_rtol"].as<double>();
+		if (p["pc_max_it"]) cfg.prec.pc_max_it = p["pc_max_it"].as<int>();
+		if (p["pc_use_J_KQ"]) cfg.prec.pc_use_J_KQ = p["pc_use_J_KQ"].as<bool>();
 	}
 
 	// Arbitrary beams section
@@ -491,3 +489,23 @@ acc_devices_print_info(const int mpi_rank, const int mpi_size, std::ostream &os)
 	return 0;
 #endif
 }
+
+namespace TRIP_Comms
+{
+	std::shared_ptr<MPI_TRIP_Communicators> TRIP_comms_shared_ptr = nullptr;
+
+	inline void
+	initialize_MPI_TRIP_Communicators()
+	{
+		if (!TRIP_comms_shared_ptr)
+		{
+			TRIP_comms_shared_ptr = MPI_TRIP_Communicators::make_shared();
+		}
+	}
+
+	inline void
+	finalize_MPI_TRIP_Communicators()
+	{
+		TRIP_comms_shared_ptr.reset();
+	}
+} // namespace TRIP_Comms
