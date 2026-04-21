@@ -34,9 +34,17 @@ enum class emissivity_model_t
 namespace TRIP_Comms
 {
 
+	/**
+	 * Minimal owner/registry for MPI communicators and their MPI_Info objects.
+	 *
+	 * This class owns the communicators added or duplicated into it and frees them
+	 * at destruction time.
+	 */
 	class MPI_TRIP_Communicators : public std::enable_shared_from_this<MPI_TRIP_Communicators>
 	{
 	   public:
+		using MPI_TRIP_Communicators_shared_ptr_t = std::shared_ptr<MPI_TRIP_Communicators>;
+
 		auto static make_shared()
 		{
 			return std::shared_ptr<MPI_TRIP_Communicators>(new MPI_TRIP_Communicators());
@@ -62,8 +70,9 @@ namespace TRIP_Comms
 			other.communicators_info.clear();
 		}
 
+		/** Duplicate a communicator and store it under the provided name. */
 		inline void
-		duplicateCommunicator(const std::string &name, MPI_Comm comm)
+		duplicateCommunicator(const std::string name, MPI_Comm comm)
 		{
 			auto it = communicators.find(name);
 			if (it != communicators.end() && it->second != MPI_COMM_NULL)
@@ -81,8 +90,21 @@ namespace TRIP_Comms
 		 * is destroyed.
 		 */
 		inline void
-		addCommunicator(const std::string &name, MPI_Comm comm)
+		addCommunicator(const std::string name, MPI_Comm comm)
 		{
+			if (comm == MPI_COMM_NULL)
+			{
+				throw std::runtime_error("MPI_COMM_NULL cannot be owned by MPI_TRIP_Communicators.");
+			}
+
+			if (isDefaultCommunicator(comm))
+			{
+				throw std::runtime_error(
+					"Default MPI communicators (MPI_COMM_WORLD, MPI_COMM_SELF) cannot be owned by "
+					"MPI_TRIP_Communicators. Use duplicateCommunicator instead."
+					"MPI_COMM_NULL cannot be owned by MPI_TRIP_Communicators.");
+			}
+
 			if (communicators.find(name) != communicators.end())
 			{
 				throw std::runtime_error("Communicator already exists: " + name);
@@ -90,6 +112,32 @@ namespace TRIP_Comms
 			communicators[name] = comm;
 		}
 
+		/** Check if a communicator with the given name exists. */
+		inline bool
+		hasCommunicator(const std::string name) const
+		{
+			return communicators.find(name) != communicators.end();
+		}
+
+		/** Return true if the given MPI communicator handle is already stored. */
+		inline bool
+		hasCommunicator(MPI_Comm comm) const
+		{
+			if (comm == MPI_COMM_NULL) return false;
+
+			for (const auto &pair : communicators)
+			{
+				if (pair.second == MPI_COMM_NULL) continue;
+
+				int cmp_result = MPI_UNEQUAL;
+				checkMPI(MPI_Comm_compare(pair.second, comm, &cmp_result), "MPI_Comm_compare");
+				if (cmp_result == MPI_IDENT) return true;
+			}
+
+			return false;
+		}
+
+		/** Free all owned communicators and clear the communicator registry. */
 		inline void
 		freeCommunicators()
 		{
@@ -103,6 +151,7 @@ namespace TRIP_Comms
 			communicators.clear();
 		}
 
+		/** Free all MPI_Info objects and clear the communicator-info registry. */
 		inline void
 		freeInfo()
 		{
@@ -116,8 +165,9 @@ namespace TRIP_Comms
 			communicators_info.clear();
 		}
 
+		/** Set one MPI_Info key/value pair on a registered communicator. */
 		inline void
-		setCommunicatorInfo(const std::string &name, const std::string &key, const std::string &value)
+		setCommunicatorInfo(const std::string name, const std::string key, const std::string value)
 		{
 			auto comm_it = communicators.find(name);
 			if (comm_it == communicators.end())
@@ -139,8 +189,9 @@ namespace TRIP_Comms
 			communicators_info[name] = info;
 		}
 
+		/** Fetch a communicator by name. Throws if the name is not registered. */
 		inline void
-		getCommunicator(const std::string &name, MPI_Comm &comm) const
+		getCommunicator(const std::string name, MPI_Comm &comm) const
 		{
 			auto it = communicators.find(name);
 			if (it == communicators.end())
@@ -150,8 +201,9 @@ namespace TRIP_Comms
 			comm = it->second;
 		}
 
+		/** Fetch communicator info by name. Throws if no info is available. */
 		inline void
-		getCommunicatorInfo(const std::string &name, MPI_Info &info) const
+		getCommunicatorInfo(const std::string name, MPI_Info &info) const
 		{
 			auto it = communicators_info.find(name);
 			if (it == communicators_info.end())
@@ -162,6 +214,20 @@ namespace TRIP_Comms
 		}
 
 	   protected:
+		static inline bool
+		isDefaultCommunicator(MPI_Comm comm)
+		{
+			int cmp_result = MPI_UNEQUAL;
+			checkMPI(MPI_Comm_compare(comm, MPI_COMM_WORLD, &cmp_result), "MPI_Comm_compare");
+			if (cmp_result == MPI_IDENT) return true;
+
+			checkMPI(MPI_Comm_compare(comm, MPI_COMM_NULL, &cmp_result), "MPI_Comm_compare");
+			if (cmp_result == MPI_IDENT) return true;
+
+			checkMPI(MPI_Comm_compare(comm, MPI_COMM_SELF, &cmp_result), "MPI_Comm_compare");
+			return cmp_result == MPI_IDENT;
+		}
+
 		static inline void
 		checkMPI(const int err, const char *where)
 		{
@@ -177,11 +243,14 @@ namespace TRIP_Comms
 		std::map<std::string, MPI_Info> communicators_info;
 	};
 
-	inline void
+	void
 	initialize_MPI_TRIP_Communicators();
 
-	inline void
+	void
 	finalize_MPI_TRIP_Communicators();
+
+	MPI_TRIP_Communicators::MPI_TRIP_Communicators_shared_ptr_t
+	getTRIPCommunicators();
 
 } // namespace TRIP_Comms
 

@@ -494,7 +494,7 @@ namespace TRIP_Comms
 {
 	std::shared_ptr<MPI_TRIP_Communicators> TRIP_comms_shared_ptr = nullptr;
 
-	inline void
+	void
 	initialize_MPI_TRIP_Communicators()
 	{
 		if (!TRIP_comms_shared_ptr)
@@ -503,9 +503,15 @@ namespace TRIP_Comms
 		}
 	}
 
-	inline void
+	void
 	finalize_MPI_TRIP_Communicators()
 	{
 		TRIP_comms_shared_ptr.reset();
+	}
+
+	MPI_TRIP_Communicators::MPI_TRIP_Communicators_shared_ptr_t
+	getTRIPCommunicators()
+	{
+		return TRIP_comms_shared_ptr;
 	}
 } // namespace TRIP_Comms

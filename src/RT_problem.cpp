@@ -2751,7 +2751,10 @@ RT_problem::set_3D_decomposition_BLC(const int mpi_rank, const int mpi_size,cons
 				  << std::endl;
 	}
 
-	MPI_Bcast((void *)&d_info, sizeof(ddc::DomainInfo), MPI_BYTE, 0, MPI_COMM_WORLD);
+	MPI_Comm MPI_Comm_Bcast; 
+	TRIP_Comms::getTRIPCommunicators()->getCommunicator("bcast_decomposition", MPI_Comm_Bcast);
+
+	MPI_Bcast((void *)&d_info, sizeof(ddc::DomainInfo), MPI_BYTE, 0, MPI_Comm_Bcast);
 
 	this->mpi_decomposition_ = d_info;
 	this->mpi_decomposition_.set_rank(mpi_rank);
@@ -2777,6 +2780,7 @@ void RT_problem::set_grid_partition()
 	}
 	else // full 3D
 	{		
+		TRIP_Comms::getTRIPCommunicators()->duplicateCommunicator(std::string("bcast_decomposition"), MPI_COMM_WORLD);
 		set_3D_decomposition_BLC(mpi_rank_, mpi_size_, N_x_, N_y_, N_z_);
 	}
 }
