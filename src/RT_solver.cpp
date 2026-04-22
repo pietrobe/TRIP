@@ -319,7 +319,7 @@ void MF_context::find_intersection(double theta, double chi, const double Z_down
     // sanity checks
     for (int i = 0; i < 4; ++i)
     {
-    	if (T->w[i] < -1e-15 or T->w[i] > 1)
+    	if (T->w[i] < -1e-15 or T->w[i] > (1.0 + 1e-14))        
     	{
     		std::cout << "WARNING in find_intersection(): w has a problem!" << std::endl;         	
     		std::cout << "theta = " << theta << std::endl;         	

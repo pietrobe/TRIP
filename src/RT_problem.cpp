@@ -6,8 +6,6 @@
 #define TWOLEVEL_HEADER1    4
 #define TWOLEVEL_HEADER2    32 
 
-#define GAUSS_TO_LARMOR_FREQUENCY(BB__) ((BB__) * (1399600.0)) // [Gauss] -> [Hz]
-
 // read atom and grid quantities 
 void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, const char* filename_qel, const char* filename_llp, const char* filename_back)
 {
@@ -2729,7 +2727,7 @@ RT_problem::set_3D_decomposition_BLC(const int mpi_rank, const int mpi_size,cons
 		ddc::DomainDecomposition dd(mpi_rank, mpi_size, N_x, N_y, N_z);
 
 		auto best_infos = dd.best_infos(mpi_rank);
-		auto selection	= ddc::select_best_decomposition(best_infos, false);
+		auto selection	 = ddc::select_best_decomposition(best_infos, false);
 
 		d_info = selection.best_info;
 
@@ -2745,7 +2743,10 @@ RT_problem::set_3D_decomposition_BLC(const int mpi_rank, const int mpi_size,cons
 		// 		  << std::endl;
 	}
 
-	MPI_Bcast((void *)&d_info, sizeof(ddc::DomainInfo), MPI_BYTE, 0, MPI_COMM_WORLD);
+	MPI_Comm MPI_Comm_Bcast; 
+	TRIP_Comms::getTRIPCommunicators()->getCommunicator("bcast_decomposition", MPI_Comm_Bcast);
+
+	MPI_Bcast((void *)&d_info, sizeof(ddc::DomainInfo), MPI_BYTE, 0, MPI_Comm_Bcast);
 
 	this->mpi_decomposition_ = d_info;
 	this->mpi_decomposition_.set_rank(mpi_rank);
@@ -2771,6 +2772,7 @@ void RT_problem::set_grid_partition()
 	}
 	else // full 3D
 	{		
+		TRIP_Comms::getTRIPCommunicators()->duplicateCommunicator(std::string("bcast_decomposition"), MPI_COMM_WORLD);
 		set_3D_decomposition_BLC(mpi_rank_, mpi_size_, N_x_, N_y_, N_z_);
 	}
 }

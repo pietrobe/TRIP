@@ -7,7 +7,7 @@ frequency_file:  frequency/96F/frequency.dat
 
 output: true
 output_overwrite_prevention: true
-output_directory: /gpfs/scratch/ehpc238/PORTA/file_tests/t2
+output_directory: /gpfs/scratch/ehpc238/PORTA/file_tests/h5_1
 
 write_whole_3D_field_hdf5: true
 write_text_output: false
@@ -31,30 +31,30 @@ input_back_string: ""
 use_prec: false
 
 solver:
-  ksp_solver_type: KSPGMRES
+  ksp_solver_type: KSPFGMRES
   ksp_rtol: 1e-7
   ksp_max_it: 5
 
 prec:
-  pc_solver_type: KSPGMRES
+  pc_solver_type: KSPFGMRES
   pc_rtol: 1e-6
   pc_max_it: 30
 
 default_chi: &default_chi 0.0
 
-# arbitrary_beams: 
-#  - mu: 0.1
-#    chi: *default_chi
+arbitrary_beams: 
+ - mu: 0.1
+   chi: *default_chi
 
-#  - mu: 0.3
-#    chi: *default_chi
+ - mu: 0.3
+   chi: *default_chi
     
-#  - mu: 0.7
-#    chi: *default_chi
+ - mu: 0.7
+   chi: *default_chi
 
-#  - mu: 1.0
-#    chi: *default_chi
+ - mu: 1.0
+   chi: *default_chi
 
-#  - mu:  3.30009478207572e-01
-#    chi: 1.96349540849362e-01
+ - mu:  3.30009478207572e-01
+   chi: 1.96349540849362e-01
 

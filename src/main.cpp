@@ -21,6 +21,8 @@ main(int argc, char *argv[])
 	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 
+	TRIP_Comms::initialize_MPI_TRIP_Communicators();
+
 	// print help if requested by the user
 	if (getOptionFlag(argc, argv, "--help") && mpi_rank == 0)
 	{
@@ -28,7 +30,7 @@ main(int argc, char *argv[])
 		return 0;
 	}
 
-	const char* slurm_job_id = std::getenv("SLURM_JOB_ID");
+	const char *slurm_job_id = std::getenv("SLURM_JOB_ID");
 	std::string slurm_JOB_ID = slurm_job_id ? slurm_job_id : "";
 	if (!slurm_JOB_ID.empty() && mpi_rank == 0)
 	{
@@ -96,7 +98,7 @@ main(int argc, char *argv[])
 
 #endif // ACC_SOLAR_3D
 
-	if (mpi_rank == 0) writeConfigResume(cfg, ss_b);	
+	if (mpi_rank == 0) writeConfigResume(cfg, ss_b);
 
 	{ // start scope for RT_problem and RT_solver
 
@@ -341,6 +343,8 @@ main(int argc, char *argv[])
 
 	MPI_Barrier(MPI_COMM_WORLD);
 	if (mpi_rank == 0) std::cout << "TRIP ended successfully at: " << getCurrentDateTime() << std::endl;
+
+	TRIP_Comms::finalize_MPI_TRIP_Communicators();
 
 	MPI_CHECK(MPI_Finalize());
 

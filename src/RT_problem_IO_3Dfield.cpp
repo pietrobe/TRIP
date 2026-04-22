@@ -5,6 +5,9 @@
 
 namespace
 {
+	//////////////////////////////////////////////////////////////////////////////
+	// write_shared_hdf5_metadata
+	//////////////////////////////////////////////////////////////////////////////
 	void
 	write_shared_hdf5_metadata(const hid_t file_id, RT_problem &rt_problem, const int N_x, const int N_y, const int N_z,
 							   const int N_incl, const int N_azimuth, const int N_frequencies)
@@ -79,11 +82,69 @@ namespace
 			   + stokes_offset * stride_in_stokes;
 	}
 
+	/////////////////////////////////////////////////////////////////////////////
+	// write_3d_field_block_mpi_conditional
+	/////////////////////////////////////////////////////////////////////////////
+	template <typename IN_REAL>
+	void
+	write_3d_field_block_mpi_conditional(hid_t			 file_id,			 //
+										 MPI_Comm		 comm,				 //
+										 bool			 normalized_output,	 //
+										 int			 N_x,				 //
+										 int			 N_y,				 //
+										 int			 N_z,				 //
+										 int			 N_incl,			 //
+										 int			 N_azimuth,			 //
+										 int			 N_frequencies,		 //
+										 int			 N_stokes,			 //
+										 int			 N_local_x,			 //
+										 int			 N_local_y,			 //
+										 int			 N_local_z,			 //
+										 int			 local_start_x,		 //
+										 int			 local_start_y,		 //
+										 int			 local_start_z,		 //
+										 IN_REAL		*stokes_IQUI,		 //
+										 THDF_float32_t *stokes_I,			 //
+										 THDF_float32_t *stokes_QI,			 //
+										 THDF_float32_t *stokes_UI,			 //
+										 THDF_float32_t *stokes_VI,			 //
+										 THDF_float_t	*norm_multiplier_I,	 //
+										 THDF_float_t	*norm_multiplier_QI, //
+										 THDF_float_t	*norm_multiplier_UI, //
+										 THDF_float_t	*norm_multiplier_VI, //
+										 int			 stride_x,			 //
+										 int			 stride_y,			 //
+										 int			 stride_z,			 //
+										 int			 stride_incl,		 //
+										 int			 stride_azimuth,	 //
+										 int			 stride_frequencies, //
+										 int			 stride_stokes)
+	{
+		if constexpr (sizeof(IN_REAL) == sizeof(THDF_float32_t))
+		{
+			write_3d_field_block_mpi_f32(
+				file_id, comm, normalized_output, N_x, N_y, N_z, N_incl, N_azimuth, N_frequencies, N_stokes, N_local_x,
+				N_local_y, N_local_z, local_start_x, local_start_y, local_start_z, stokes_IQUI, stokes_I, stokes_QI,
+				stokes_UI, stokes_VI, norm_multiplier_I, norm_multiplier_QI, norm_multiplier_UI, norm_multiplier_VI,
+				stride_x, stride_y, stride_z, stride_incl, stride_azimuth, stride_frequencies, stride_stokes);
+		}
+		else
+		{
+			write_3d_field_block_mpi(
+				file_id, comm, normalized_output, N_x, N_y, N_z, N_incl, N_azimuth, N_frequencies, N_stokes, N_local_x,
+				N_local_y, N_local_z, local_start_x, local_start_y, local_start_z, stokes_IQUI, stokes_I, stokes_QI,
+				stokes_UI, stokes_VI, norm_multiplier_I, norm_multiplier_QI, norm_multiplier_UI, norm_multiplier_VI,
+				stride_x, stride_y, stride_z, stride_incl, stride_azimuth, stride_frequencies, stride_stokes);
+		}
+	}
+
+	//////////////////////////////////////////////////////////////////////////////
+	// copy_3D_block_field
+	//////////////////////////////////////////////////////////////////////////////
 	template <typename IN_REAL>
 	void
 	copy_3D_block_field(THDF_3D_field_t &field,					//
-						const bool		 normalized_output,		//
-						const IN_REAL	*stokes_IQUI,			//
+						const IN_REAL	*stokes_IQUV,			//
 						THDF_float32_t	*stokes_out_I,			//
 						THDF_float32_t	*stokes_out_QI,			//
 						THDF_float32_t	*stokes_out_UI,			//
@@ -105,8 +166,6 @@ namespace
 						const int		 stride_in_frequencies, //
 						const int		 stride_in_stokes)
 	{
-		(void)normalized_output; // currently not used, as the output is always normalized by the local Stokes I value
-
 		field.norm_multiplier_I	 = nullptr;
 		field.norm_multiplier_QI = nullptr;
 		field.norm_multiplier_UI = nullptr;
@@ -161,19 +220,19 @@ namespace
 								const int in_UI = get_idx(i, j, k, incl, az, f, 2);
 								const int in_VI = get_idx(i, j, k, incl, az, f, 3);
 
-								const THDF_float_t stokes_I_val = stokes_IQUI[in_I];
+								const THDF_float_t stokes_I_val = stokes_IQUV[in_I];
 								const THDF_float_t inv_pc_stokes_I_value =
 									(stokes_I_val != 0.0) ? 100.0 / stokes_I_val : 0.0;
 
 								field.stokes_I[out_idx] = static_cast<THDF_float32_t>(stokes_I_val);
 
-								field.stokes_QI[out_idx] = static_cast<THDF_float32_t>(stokes_IQUI[in_QI]		 //
+								field.stokes_QI[out_idx] = static_cast<THDF_float32_t>(stokes_IQUV[in_QI]		 //
 																					   * inv_pc_stokes_I_value); //
 
-								field.stokes_UI[out_idx] = static_cast<THDF_float32_t>(stokes_IQUI[in_UI]		 //
+								field.stokes_UI[out_idx] = static_cast<THDF_float32_t>(stokes_IQUV[in_UI]		 //
 																					   * inv_pc_stokes_I_value); //
 
-								field.stokes_VI[out_idx] = static_cast<THDF_float32_t>(stokes_IQUI[in_VI]		 //
+								field.stokes_VI[out_idx] = static_cast<THDF_float32_t>(stokes_IQUV[in_VI]		 //
 																					   * inv_pc_stokes_I_value); //
 							}
 						}
@@ -198,6 +257,19 @@ write_3D_whole_field_falp_hdf5(RT_problem &rt_problem, const std::string &output
 
 	const int mpi_rank = rt_problem.mpi_rank_;
 
+	{
+		// void *_p = malloc(1);
+		// if (_p) free(_p);
+		// fprintf(stderr, "[HEAP PROBE r%d] write_3D ENTRY\n", mpi_rank);
+		// fflush(stderr);
+	}
+	MPI_Barrier(MPI_COMM_WORLD);
+	if (mpi_rank == 0)
+	{
+		fprintf(stderr, "[HEAP PROBE r0] write_3D ENTRY barrier passed\n");
+		fflush(stderr);
+	}
+
 	const auto [i_start, j_start, k_start] = rt_problem.space_grid_->getGhostMargins();
 
 	const int size_i = rt_problem.space_grid_->getLocalSizeX();
@@ -217,24 +289,58 @@ write_3D_whole_field_falp_hdf5(RT_problem &rt_problem, const std::string &output
 	const int N_azimuth		= rt_problem.N_chi_;
 	const int N_incl		= rt_problem.N_theta_;
 
-	const int stride_stokes		 = 1;
-	const int stride_frequencies = N_stokes;
-	const int stride_azimuth	 = N_stokes * N_frequencies;
-	const int stride_incl		 = N_stokes * N_frequencies * N_azimuth;
-	const int stride_z			 = N_stokes * N_frequencies * N_azimuth * N_incl;
-	const int stride_y			 = N_stokes * N_frequencies * N_azimuth * N_incl * size_k;
-	const int stride_x			 = N_stokes * N_frequencies * N_azimuth * N_incl * size_k * size_j;
+	// const int stride_stokes		 = 1;
+	// const int stride_frequencies = N_stokes;
+	// const int stride_azimuth	 = N_stokes * N_frequencies;
+	// const int stride_incl		 = N_stokes * N_frequencies * N_azimuth;
+	// const int stride_z			 = N_stokes * N_frequencies * N_azimuth * N_incl;
+	// const int stride_y			 = N_stokes * N_frequencies * N_azimuth * N_incl * size_k;
+	// const int stride_x			 = N_stokes * N_frequencies * N_azimuth * N_incl * size_k * size_j;
 
 	int max_size_k;
 	int min_size_k;
+
+	// Diagnostic: all ranks report their layout before any allocation.
+	// This confirms the function is entered and prints stride info that would reveal a mismatch.
+	{
+		const int block_sz	= N_stokes * N_incl * N_azimuth * N_frequencies;
+		const int stride_z_ = block_sz;
+		const int stride_y_ = block_sz * size_k;
+		const int stride_x_ = block_sz * size_k * size_j;
+		// fprintf(stderr,
+		// 		"[DIAG r%d] write_3D ENTER: domain=(%d,%d,%d) gstart=(%d,%d,%d) "
+		// 		"N=(stokes=%d freq=%d az=%d incl=%d) block_sz=%d "
+		// 		"stride_z=%d stride_y=%d stride_x=%d\n",
+		// 		mpi_rank, size_i, size_j, size_k, local_start_x, local_start_y, local_start_z, N_stokes, N_frequencies,
+		// 		N_azimuth, N_incl, block_sz, stride_z_, stride_y_, stride_x_);
+		fflush(stderr);
+	}
+	MPI_Barrier(MPI_COMM_WORLD);
+	if (mpi_rank == 0)
+	{
+		fprintf(stderr, "[DIAG r0] write_3D: all ranks passed ENTER barrier\n");
+		fflush(stderr);
+	}
 
 	const double total_size = (double)(N_x * N_y * N_z) * (double)(N_incl * N_azimuth * N_frequencies * N_stokes);
 
 	MPI_Allreduce(&size_k, &max_size_k, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
 	MPI_Allreduce(&size_k, &min_size_k, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
 
+	if (mpi_rank == 0)
+	{
+		fprintf(stderr, "[DIAG r0] write_3D: max_size_k=%d min_size_k=%d\n", max_size_k, min_size_k);
+		fflush(stderr);
+	}
+
 	{ // Collective file creation:
 		double t0 = MPI_Wtime();
+
+		if (mpi_rank == 0)
+		{
+			fprintf(stderr, "[DIAG r0] write_3D: calling THDF_create_zslab_file_single\n");
+			fflush(stderr);
+		}
 
 		const int flag_create_file = THDF_create_zslab_file_single(MPI_COMM_WORLD, output_file.c_str(), normalized_output,
 																   N_x, N_y, N_z, N_incl, N_azimuth, N_frequencies);
@@ -245,11 +351,20 @@ write_3D_whole_field_falp_hdf5(RT_problem &rt_problem, const std::string &output
 			MPI_Abort(MPI_COMM_WORLD, -1);
 		}
 		MPI_Barrier(MPI_COMM_WORLD);
-		if (mpi_rank == 0) printf("[t] create: %.3f s\n", MPI_Wtime() - t0);
+		if (mpi_rank == 0)
+		{
+			printf("[t] create: %.3f s\n", MPI_Wtime() - t0);
+			fflush(stdout);
+			fprintf(stderr, "[DIAG r0] write_3D: THDF_create_zslab_file_single OK\n");
+			fflush(stderr);
+		}
 	}
 
 	if (mpi_rank == 0)
 	{
+		fprintf(stderr, "[DIAG r0] write_3D: serial metadata write start\n");
+		fflush(stderr);
+
 		hid_t file_id = H5Fopen(output_file.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
 		if (file_id < 0)
 		{
@@ -264,20 +379,33 @@ write_3D_whole_field_falp_hdf5(RT_problem &rt_problem, const std::string &output
 		H5Fflush(file_id, H5F_SCOPE_GLOBAL);
 		H5Fclose(file_id);
 
-		// printf("[t] metadata written\n");
+		fprintf(stderr, "[DIAG r0] write_3D: serial metadata write done\n");
+		fflush(stderr);
 	}
 
 	MPI_Barrier(MPI_COMM_WORLD);
+	if (mpi_rank == 0)
+	{
+		fprintf(stderr, "[DIAG r0] write_3D: entering parallel open+write section\n");
+		fflush(stderr);
+	}
 
 	{
 		const double t0		 = MPI_Wtime();
 		hid_t		 fapl	 = build_fapl_from_env(MPI_COMM_WORLD);
 		hid_t		 file_id = H5Fopen(output_file.c_str(), H5F_ACC_RDWR, fapl);
-		H5Pclose(fapl);
+		H5Pclose(fapl); // fapl is copied into file_id by H5Fopen, safe to close
 		if (file_id < 0)
 		{
 			fprintf(stderr, "Rank %d: H5Fopen failed\n", mpi_rank);
+			fflush(stderr);
 			MPI_Abort(MPI_COMM_WORLD, -1);
+		}
+
+		if (mpi_rank == 0)
+		{
+			fprintf(stderr, "[DIAG r0] write_3D: H5Fopen OK, opening zslab handler\n");
+			fflush(stderr);
 		}
 
 		THDF_zslab_handler_t *handler = THDF_open_zslab_handler_single(file_id,							  //
@@ -287,10 +415,17 @@ write_3D_whole_field_falp_hdf5(RT_problem &rt_problem, const std::string &output
 		if (!handler)
 		{
 			fprintf(stderr, "Rank %d: open_handler failed\n", mpi_rank);
+			fflush(stderr);
 			MPI_Abort(MPI_COMM_WORLD, -1);
 		}
 		MPI_Barrier(MPI_COMM_WORLD);
-		if (mpi_rank == 0) printf("[write 3D] open handler: %.3f s\n", MPI_Wtime() - t0);
+		if (mpi_rank == 0)
+		{
+			printf("[write 3D] open handler: %.3f s\n", MPI_Wtime() - t0);
+			fflush(stdout);
+			fprintf(stderr, "[DIAG r0] write_3D: zslab handler open OK\n");
+			fflush(stderr);
+		}
 
 		// Prepare data buffer for writing slices
 		std::vector<THDF_float32_t> stokes_I_buffer(size_i * size_j * step_z * N_incl * N_azimuth * N_frequencies);
@@ -310,39 +445,68 @@ write_3D_whole_field_falp_hdf5(RT_problem &rt_problem, const std::string &output
 			const int current_nz = is_writer ? ((local_zi + step_z <= N_local_z) ? step_z : (N_local_z - local_zi)) : 0;
 			const int global_start_z = local_start_z + local_zi;
 
-			Real *stokes_IQUV = rt_problem.I_field_->block(0, 0, local_zi);
-
 			THDF_3D_field_t field;
 			if (is_writer)
 			{
-				// TODO rewrite this function in order to have a better control over the data layout.
-				// And the I (Q/I U/I V/I) * 100
-				copy_3D_block_field<Real>(field,							//
-										  normalized_output,				//
-										  stokes_IQUV,						// Input data in float 64 bits
-										  stokes_I_buffer.data(),			//
-										  stokes_Q_buffer.data(),			//
-										  stokes_U_buffer.data(),			//
-										  stokes_V_buffer.data(),			//
-										  0, 0, 0,							//
-										  size_i, size_j, current_nz,		//
-										  N_incl, N_azimuth, N_frequencies, //
-										  stride_x,							//
-										  stride_y,							//
-										  stride_z,							//
-										  stride_incl,						//
-										  stride_azimuth,					//
-										  stride_frequencies,				//
-										  stride_stokes);					//
+				const int stride_stokes		 = 1;
+				const int stride_frequencies = N_stokes;
+				const int stride_azimuth	 = N_stokes * N_frequencies;
+				const int stride_incl		 = N_stokes * N_frequencies * N_azimuth;
+				const int stride_z			 = N_stokes * N_frequencies * N_azimuth * N_incl;
+				// stride_y/x must span the FULL local z/y extent (size_k, size_j), not just
+				// the current slab height — Field::block() lays out as [x][y][z_full][block].
+				const int stride_y = N_stokes * N_frequencies * N_azimuth * N_incl * size_k;
+				const int stride_x = N_stokes * N_frequencies * N_azimuth * N_incl * size_k * size_j;
+
+				fprintf(stderr,
+						"[DIAG r%d] copy slab local_zi=%d current_nz=%d "
+						"strides: z=%d y=%d x=%d buf_cap=%d\n",
+						mpi_rank, local_zi, current_nz, stride_z, stride_y, stride_x,
+						size_i * size_j * step_z * N_incl * N_azimuth * N_frequencies);
+				fflush(stderr);
+
+				Real *stokes_IQUV = rt_problem.I_field_->block(0, 0, local_zi);
+				copy_3D_block_field<Real>(field,				  //
+										  stokes_IQUV,			  // Input data in float 64 bits
+										  stokes_I_buffer.data(), //
+										  stokes_Q_buffer.data(), //
+										  stokes_U_buffer.data(), //
+										  stokes_V_buffer.data(), //
+										  0,					  //
+										  0,					  //
+										  0,					  //
+										  size_i,				  //
+										  size_j,				  //
+										  current_nz,			  //
+										  N_incl,				  //
+										  N_azimuth,			  //
+										  N_frequencies,		  //
+										  stride_x,				  //
+										  stride_y,				  //
+										  stride_z,				  //
+										  stride_incl,			  //
+										  stride_azimuth,		  //
+										  stride_frequencies,	  //
+										  stride_stokes);		  //
+
+				fprintf(stderr, "[DIAG r%d] copy slab local_zi=%d DONE\n", mpi_rank, local_zi);
+				fflush(stderr);
 			}
 
 			double tw0 = MPI_Wtime();
+
+			fprintf(stderr, "[DIAG r%d] THDF_write_zslab_block_single local_zi=%d current_nz=%d\n", mpi_rank, local_zi,
+					current_nz);
+			fflush(stderr);
 
 			/* ALL ranks call this — non-writers pass current_nz=0 */
 			THDF_write_zslab_block_single(handler,										//
 										  is_writer ? &field : nullptr,					//
 										  local_start_x, local_start_y, global_start_z, /* GLOBAL z offset */
 										  N_local_x, N_local_y, current_nz, N_incl, N_azimuth, N_frequencies);
+
+			fprintf(stderr, "[DIAG r%d] THDF_write_zslab_block_single local_zi=%d DONE\n", mpi_rank, local_zi);
+			fflush(stderr);
 
 			MPI_Barrier(MPI_COMM_WORLD);
 			if (mpi_rank == 0)
@@ -352,6 +516,7 @@ write_3D_whole_field_falp_hdf5(RT_problem &rt_problem, const std::string &output
 										  * sizeof(THDF_float32_t) / (1024.0 * 1024.0 * 1024.0);
 				printf("[write 3D] local written: %.3f GB  approx. peak-bandwidth: %.3f GB/s\n", gb_written,
 					   gb_written / (MPI_Wtime() - tw0));
+				fflush(stdout);
 			}
 		} // End of loop over z-slices
 
@@ -363,18 +528,44 @@ write_3D_whole_field_falp_hdf5(RT_problem &rt_problem, const std::string &output
 			double gb_written = (double)total_size * sizeof(THDF_float32_t) / (1024.0 * 1024.0 * 1024.0);
 			printf("[write 3D] total written: %.1f GB  effective loop-bandwidth: %.1f GB/s\n", gb_written,
 				   gb_written / (MPI_Wtime() - wt0));
+			fflush(stdout);
+			fprintf(stderr, "[DIAG r0] write_3D: write loop DONE\n");
+			fflush(stderr);
 		}
 
 		{
 			double t0 = MPI_Wtime();
+			if (mpi_rank == 0)
+			{
+				fprintf(stderr, "[DIAG r0] THDF_close_zslab_handler_single\n");
+				fflush(stderr);
+			}
 			THDF_close_zslab_handler_single(handler);
+			if (mpi_rank == 0)
+			{
+				fprintf(stderr, "[DIAG r0] H5Fflush\n");
+				fflush(stderr);
+			}
 			H5Fflush(file_id, H5F_SCOPE_GLOBAL);
 			MPI_Barrier(MPI_COMM_WORLD);
-			if (mpi_rank == 0) printf("[write 3D] H5Fflush: %.3f s\n", MPI_Wtime() - t0);
+			if (mpi_rank == 0)
+			{
+				printf("[write 3D] H5Fflush: %.3f s\n", MPI_Wtime() - t0);
+				fflush(stdout);
+			}
 			t0 = MPI_Wtime();
+			if (mpi_rank == 0)
+			{
+				fprintf(stderr, "[DIAG r0] H5Fclose\n");
+				fflush(stderr);
+			}
 			H5Fclose(file_id);
 			MPI_Barrier(MPI_COMM_WORLD);
-			if (mpi_rank == 0) printf("[write 3D] H5Fclose: %.3f s\n", MPI_Wtime() - t0);
+			if (mpi_rank == 0)
+			{
+				printf("[write 3D] H5Fclose: %.3f s\n", MPI_Wtime() - t0);
+				fflush(stdout);
+			}
 		}
 	}
 
@@ -505,6 +696,7 @@ write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 
 			Real *stokes_IQUI = rt_problem.I_field_->block(0, 0, local_k);
 
+			// for mixed precision 
 			auto stokes_IQUI_tmp = to_double(stokes_IQUI, rt_problem.block_size_);		
 
 			write_3d_field_block_mpi(write_file_id,		 //
