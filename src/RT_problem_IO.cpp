@@ -702,13 +702,6 @@ RT_problem::write_JKQ_field_hdf5(const std::string &output_file)
 
 	THDF_close_file(file_id);
 
-	{
-		void *_p = malloc(1);
-		if (_p) free(_p);
-		fprintf(stderr, "[HEAP PROBE r%d] after THDF_close_file (JKQ)\n", mpi_rank_);
-		fflush(stderr);
-	}
-
 	MPI_Barrier(MPI_COMM_WORLD);
 	if (mpi_rank_ == 0)
 	{

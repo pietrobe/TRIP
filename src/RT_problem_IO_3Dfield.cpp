@@ -300,21 +300,6 @@ write_3D_whole_field_falp_hdf5(RT_problem &rt_problem, const std::string &output
 	int max_size_k;
 	int min_size_k;
 
-	// Diagnostic: all ranks report their layout before any allocation.
-	// This confirms the function is entered and prints stride info that would reveal a mismatch.
-	{
-		const int block_sz	= N_stokes * N_incl * N_azimuth * N_frequencies;
-		const int stride_z_ = block_sz;
-		const int stride_y_ = block_sz * size_k;
-		const int stride_x_ = block_sz * size_k * size_j;
-		// fprintf(stderr,
-		// 		"[DIAG r%d] write_3D ENTER: domain=(%d,%d,%d) gstart=(%d,%d,%d) "
-		// 		"N=(stokes=%d freq=%d az=%d incl=%d) block_sz=%d "
-		// 		"stride_z=%d stride_y=%d stride_x=%d\n",
-		// 		mpi_rank, size_i, size_j, size_k, local_start_x, local_start_y, local_start_z, N_stokes, N_frequencies,
-		// 		N_azimuth, N_incl, block_sz, stride_z_, stride_y_, stride_x_);
-		fflush(stderr);
-	}
 	MPI_Barrier(MPI_COMM_WORLD);
 	if (mpi_rank == 0)
 	{
@@ -458,13 +443,6 @@ write_3D_whole_field_falp_hdf5(RT_problem &rt_problem, const std::string &output
 				const int stride_y = N_stokes * N_frequencies * N_azimuth * N_incl * size_k;
 				const int stride_x = N_stokes * N_frequencies * N_azimuth * N_incl * size_k * size_j;
 
-				fprintf(stderr,
-						"[DIAG r%d] copy slab local_zi=%d current_nz=%d "
-						"strides: z=%d y=%d x=%d buf_cap=%d\n",
-						mpi_rank, local_zi, current_nz, stride_z, stride_y, stride_x,
-						size_i * size_j * step_z * N_incl * N_azimuth * N_frequencies);
-				fflush(stderr);
-
 				Real *stokes_IQUV = rt_problem.I_field_->block(0, 0, local_zi);
 				copy_3D_block_field<Real>(field,				  //
 										  stokes_IQUV,			  // Input data in float 64 bits
@@ -489,24 +467,15 @@ write_3D_whole_field_falp_hdf5(RT_problem &rt_problem, const std::string &output
 										  stride_frequencies,	  //
 										  stride_stokes);		  //
 
-				fprintf(stderr, "[DIAG r%d] copy slab local_zi=%d DONE\n", mpi_rank, local_zi);
-				fflush(stderr);
 			}
 
 			double tw0 = MPI_Wtime();
-
-			fprintf(stderr, "[DIAG r%d] THDF_write_zslab_block_single local_zi=%d current_nz=%d\n", mpi_rank, local_zi,
-					current_nz);
-			fflush(stderr);
 
 			/* ALL ranks call this — non-writers pass current_nz=0 */
 			THDF_write_zslab_block_single(handler,										//
 										  is_writer ? &field : nullptr,					//
 										  local_start_x, local_start_y, global_start_z, /* GLOBAL z offset */
 										  N_local_x, N_local_y, current_nz, N_incl, N_azimuth, N_frequencies);
-
-			fprintf(stderr, "[DIAG r%d] THDF_write_zslab_block_single local_zi=%d DONE\n", mpi_rank, local_zi);
-			fflush(stderr);
 
 			MPI_Barrier(MPI_COMM_WORLD);
 			if (mpi_rank == 0)
