@@ -8,21 +8,14 @@ reference_sol_directory: ../tests/reference_5x5_CRD_B0/
 use_B: true
 enable_continuum: true
 formal_solver: BESSER
-use_1_5D_approx: false
 
 emissivity_model: CRD_limit
 
-verbose: false
-
-use_prec: true
+verbose:  false
+use_prec: false
 
 solver:
   ksp_solver_type: KSPFGMRES
   ksp_rtol: 1e-7
   ksp_max_it: 1000
-  # gmres_restart: 20
-
-prec:
-  pc_solver_type: KSPGMRES
-  pc_rtol: 1e-6
-  pc_max_it: 1000
+  ksp_use_J_KQ: false

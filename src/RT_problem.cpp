@@ -482,7 +482,7 @@ void RT_problem::read_3D(const char* filename){
     
   	// some irrelevant data Real temp[ny][nx];    matrix of ground (iz=0) for Planckian boundary
 	skip_size = (N_x_ * N_y_) * sizeof(double);
-	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));	
+	MPI_CHECK(MPI_File_seek(fh, skip_size, MPI_SEEK_CUR));
 
 	// set angualr grids and sizes and print
 	set_theta_chi_grids(N_theta_, N_chi_);
@@ -495,6 +495,7 @@ void RT_problem::read_3D(const char* filename){
 	
 	// create space grid
 	set_grid_partition();
+
 	space_grid_ = std::make_shared<Grid3D>(
 		MPI_COMM_WORLD, 
 		N_x_, N_y_, N_z_, 
@@ -515,7 +516,7 @@ void RT_problem::read_3D(const char* filename){
 	// hardcoded xi
 	std::array<double, 134> xi_vec = { 2.0, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 2.0000000000000000e+00, 1.9886373912499999e+00, 1.9773626719999999e+00, 1.9419696239999999e+00, 1.8600738539999999e+00, 1.7778424079999999e+00, 1.6824751599999999e+00, 1.5795074739999999e+00, 1.4744281220000000e+00, 1.3537171600000000e+00, 1.2327272599999999e+00, 1.1129887319999998e+00, 9.9467995799999975e-01, 8.7645056999999993e-01, 7.8089990399999998e-01, 6.8735903999999992e-01, 6.0959461199999998e-01, 5.6051231999999995e-01, 5.1142826399999997e-01, 4.9363330559999996e-01, 4.8427622399999998e-01, 4.7908703999999996e-01, 4.8846167039999999e-01, 4.9785317760000003e-01, 5.1861966000000015e-01, 5.4516093000000010e-01, 5.8094278171428582e-01, 6.2224760000000012e-01, 6.7522791428571438e-01, 7.3142138000000012e-01, 8.0070458000000022e-01, 8.7089629200000007e-01, 9.5220700000000047e-01, 1.0332738400000001e+00, 1.1213362909090909e+00, 1.2152569890909093e+00, 1.3094004363636367e+00, 1.4048512000000004e+00, 1.5007467520000004e+00, 1.5978336000000002e+00, 1.6978324000000005e+00, 1.7978304000000003e+00, 1.8947160320000005e+00, 1.9907144960000005e+00, 2.0867125760000005e+00, 2.1827118080000001e+00, 2.2787102720000001e+00, 2.3705575253333340e+00, 2.4612234666666670e+00, 2.5518886826666671e+00, 2.6425844611764711e+00, 2.7343480658823536e+00, 2.8261127717647065e+00, 2.9178771105882353e+00, 3.0096418164705878e+00, 3.0936051408695651e+00, 3.1753403478260873e+00, 3.2570791513043482e+00, 3.3388189356521742e+00, 3.4205534886956523e+00, 3.5020644897959188e+00, 3.5755338775510208e+00, 3.6489997387755104e+00, 3.7224691265306125e+00, 3.7959382204081633e+00, 3.8687040000000006e+00, 3.9367072639999998e+00, 4.0047040000000003e+00, 4.0727037280000005e+00, 4.1407040000000004e+00, 4.2084453608247427e+00, 4.2744210474226803e+00, 4.3404041237113411e+00, 4.4063803381443298e+00, 4.4723597195876286e+00, 4.5390595657142860e+00, 4.6076277028571422e+00, 4.6761985828571433e+00, 4.7447738514285716e+00, 4.8133414400000003e+00, 4.8820457066666672e+00, 4.9553796266666668e+00, 5.0287088533333337e+00, 5.1020427733333342e+00, 5.1753755200000002e+00, 5.2502169904761908e+00, 5.3264074666666668e+00, 5.4025979428571436e+00, 5.4787847619047625e+00, 5.5549752380952384e+00, 5.6335312941176472e+00, 5.7182371764705886e+00, 5.8029430588235300e+00, 5.8876489411764705e+00, 5.9725229090909098e+00, 6.0634269090909090e+00, 6.1543359999999998e+00, 6.2481976369230772e+00, 6.3497304123076930e+00, 6.4512745600000008e+00, 6.5531384216216226e+00, 6.6666519351351363e+00, 6.7818653538461549e+00, 6.9049422769230784e+00, 7.0308618105263161e+00, 7.1716484000000005e+00, 7.3142758956521750e+00, 7.4573813333333341e+00, 7.6035485714285720e+00, 7.7321138285714301e+00, 7.8826903272727300e+00, 8.3409513513513822e+00, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01, 1.1900000000000000e+01};
 
-	if (mpi_rank_ == 0) std::cout << "WARNING: hardcoding Qel_ computation with no xi (NOT GOOD for tests)!" << std::endl;
+	// if (mpi_rank_ == 0) std::cout << "WARNING: hardcoding Qel_ computation with no xi (NOT GOOD for tests)!" << std::endl;
 	
 	// fill field 
 	space_grid_->parallel_for([&](int i, int j, int k) {
@@ -540,13 +541,13 @@ void RT_problem::read_3D(const char* filename){
 		xi_->ref(i,j,k) = 0; // with conversion to cm/s
 		
 		// compute Qel FIXME		
-		const double Dw_RH = Eu_ * std::sqrt(2 * k_B_ * T_->ref(i,j,k) / mass_real_RH);			
-		Qel_->ref(i,j,k) = a_->ref(i,j,k) * (4 * PI * Dw_RH) - Aul_RH;
-
-		// // compute Qel
-		// const Real xi = 1e5 * xi_vec[k_reverse]; // with conversion to cm/s
-		// const Real Dw_RH = Eu_ * std::sqrt(xi * xi + 2 * k_B_ * T_->ref(i,j,k) / mass_real_RH);			
+		// const double Dw_RH = Eu_ * std::sqrt(2 * k_B_ * T_->ref(i,j,k) / mass_real_RH);			
 		// Qel_->ref(i,j,k) = a_->ref(i,j,k) * (4 * PI * Dw_RH) - Aul_RH;
+
+		// compute Qel
+		const Real xi = 1e5 * xi_vec[k_reverse]; // with conversion to cm/s
+		const Real Dw_RH = Eu_ * std::sqrt(xi * xi + 2 * k_B_ * T_->ref(i,j,k) / mass_real_RH);			
+		Qel_->ref(i,j,k) = a_->ref(i,j,k) * (4 * PI * Dw_RH) - Aul_RH;
 
 		// compute thermalization param 
       // epsilon_->ref(i,j,k) = Cul_->ref(i,j,k)/(Cul_->ref(i,j,k) + Aul_RH);
@@ -2709,7 +2710,7 @@ RT_problem::set_3D_decomposition_BLC(const int mpi_rank, const int mpi_size,cons
 
 	if (mpi_rank == 0)
 	{
-		std::cout << "Starting domain decomposition for MPI size = " << mpi_size << " and grid size N_x=" << N_x << ", N_y=" << N_y
+		if (verbose_ == 0) std::cout << "Starting domain decomposition for MPI size = " << mpi_size << " and grid size N_x=" << N_x << ", N_y=" << N_y
 				  << ", N_z=" << N_z << std::endl;
 		const auto primes	 = ddc::prime_factors(mpi_size);
 		const int  max_prime = primes.empty() ? 1 : std::max(0, primes.back());
@@ -2743,10 +2744,10 @@ RT_problem::set_3D_decomposition_BLC(const int mpi_rank, const int mpi_size,cons
 		// 		  << std::endl;
 	}
 
-	MPI_Comm MPI_Comm_Bcast; 
-	TRIP_Comms::getTRIPCommunicators()->getCommunicator("bcast_decomposition", MPI_Comm_Bcast);
+	// MPI_Comm MPI_Comm_Bcast; 
+	// TRIP_Comms::getTRIPCommunicators()->getCommunicator("bcast_decomposition", MPI_Comm_Bcast);
 
-	MPI_Bcast((void *)&d_info, sizeof(ddc::DomainInfo), MPI_BYTE, 0, MPI_Comm_Bcast);
+	MPI_Bcast((void *)&d_info, sizeof(ddc::DomainInfo), MPI_BYTE, 0, MPI_COMM_WORLD);
 
 	this->mpi_decomposition_ = d_info;
 	this->mpi_decomposition_.set_rank(mpi_rank);
@@ -2771,8 +2772,8 @@ void RT_problem::set_grid_partition()
 		set_3D_decomposition(N_x_, N_y_, 1);
 	}
 	else // full 3D
-	{		
-		TRIP_Comms::getTRIPCommunicators()->duplicateCommunicator(std::string("bcast_decomposition"), MPI_COMM_WORLD);
+	{			
+		// TRIP_Comms::getTRIPCommunicators()->duplicateCommunicator(std::string("bcast_decomposition"), MPI_COMM_WORLD);
 		set_3D_decomposition_BLC(mpi_rank_, mpi_size_, N_x_, N_y_, N_z_);
 	}
 }

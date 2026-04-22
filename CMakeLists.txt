@@ -305,17 +305,14 @@ else()
 endif()
 
 target_link_libraries(solar_3D_tests PUBLIC GridManager)
-# Build thdf/libhdf_output.a using its Makefile
-# Ensure solar_3D depends on the static library
-# add_dependencies(solar_3D_tests hdf_output_lib)
+target_link_libraries(solar_3D_tests PRIVATE hdf_atmos)
 
 # Include thdf headers
 target_include_directories(solar_3D_tests PUBLIC src/thdf/)
+target_include_directories(solar_3D_tests PUBLIC src/atmos_input_TRIP)
 
 # Link the static library
-target_link_libraries(solar_3D_tests
-	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a
-)
+target_link_libraries(solar_3D_tests PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a)
 
 # make does not build test
 set_target_properties(solar_3D_tests PROPERTIES EXCLUDE_FROM_ALL TRUE)

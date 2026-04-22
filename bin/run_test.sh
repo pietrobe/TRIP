@@ -10,28 +10,22 @@
 
 export APP_PATH=${HOME}/git/TRIP/build
 export TESTS_DIR=${HOME}/git/TRIP/tests
-# export BIN_DIR=${HOME}/git/TRIP/bin
 
 echo -e "\n\033[1;34m========== Running Test 1 (CRD with B = 0) ==========\033[0m"
 srun ${APP_PATH}/solar_3D_tests --yaml_config ${TESTS_DIR}/config_test_5x5_CRD_B0.yml 
 rm ${TESTS_DIR}/test_output/test_profiles*.csv
-# rm test_profiles*.csv
-# cd ${BIN_DIR}
 
 echo -e "\n\033[1;34m========== Running Test 2 (CRD with uniform B) ==========\033[0m"
 srun ${APP_PATH}/solar_3D_tests --yaml_config ${TESTS_DIR}/config_test_5x5_CRD_B.yml
 rm ${TESTS_DIR}/test_output/test_profiles*.csv
-# rm test_profiles*.csv
-# cd ${BIN_DIR}
 
 echo -e "\n\033[1;34m========== Running Test 3 (CRD-JKQ with uniform B and no eps_csc) ==========\033[0m"
 srun ${APP_PATH}/solar_3D_tests --yaml_config ${TESTS_DIR}/config_test_5x5_CRD_B_JKQ.yml
 rm ${TESTS_DIR}/test_output/test_profiles*.csv
-# rm test_profiles*.csv
-# cd ${BIN_DIR}
 
 echo -e "\n\033[1;34m========== Running Test 4 (PRD with uniform B) ==========\033[0m"
+if [ "$PETSC_PRECISION" = "single" ]; then
+    echo -e "\033[1;33mWARNING: ksp_rtol might be too strict for single precision. PETSc precision: $PETSC_PRECISION\033[0m"
+fi
 srun ${APP_PATH}/solar_3D_tests --yaml_config ${TESTS_DIR}/config_test_5x5_PRD_B.yml
 rm ${TESTS_DIR}/test_output/test_profiles*.csv
-# rm test_profiles*.csv
-# cd ${BIN_DIR}
