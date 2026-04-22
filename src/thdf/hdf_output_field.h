@@ -10,14 +10,14 @@
 #include <hdf5_hl.h>
 #include <mpi.h>
 
-// #include "../RT_types.hpp"
+#include <petscsys.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef float THDF_float_t; // TODO // FIXME USING TEST FLOAT TODO
-typedef float THDF_n_float_t;
+typedef PetscScalar THDF_float_t; 
+typedef PetscScalar THDF_n_float_t;
 
 typedef float THDF_float32_t;
 

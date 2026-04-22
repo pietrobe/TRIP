@@ -174,8 +174,18 @@ endif()
 ### PETSC DEPENDENCY
 message(STATUS "Search Petsc")
 set(PETSC_TEST_RUNS TRUE)
-##set(ENV{PKG_CONFIG_PATH} $ENV{PETSC_DIR}/lib/pkgconfig)
-set(ENV{PKG_CONFIG_PATH} $ENV{PETSC_DIR}/$ENV{PETSC_ARCH}/lib/pkgconfig)
+
+# Check if PETSC_DIR equals $HOME/petsc
+if("$ENV{PETSC_DIR}" STREQUAL "$ENV{HOME}/petsc") # home build in single precision
+
+    set(ENV{PKG_CONFIG_PATH} $ENV{PETSC_DIR}/$ENV{PETSC_ARCH}/lib/pkgconfig)
+
+else() # module build in double precision
+
+    set(ENV{PKG_CONFIG_PATH} $ENV{PETSC_DIR}/lib/pkgconfig)
+
+endif()
+
 pkg_check_modules(PETSC REQUIRED IMPORTED_TARGET PETSc)
 message(STATUS "Check Petsc done")
 
@@ -217,8 +227,8 @@ target_include_directories(${EXECUTABLE_NAME} PUBLIC
 )
 target_include_directories(${EXECUTABLE_NAME} SYSTEM PUBLIC ${PETSC_INCLUDE_DIRS})
 target_link_libraries(${EXECUTABLE_NAME} PUBLIC PkgConfig::PETSC)
-#target_link_libraries(${EXECUTABLE_NAME} PUBLIC ${PETSC_LIBRARIES})
 target_compile_definitions(${EXECUTABLE_NAME} PUBLIC ${PETSC_DEFINITIONS})
+#target_link_libraries(${EXECUTABLE_NAME} PUBLIC ${PETSC_LIBRARIES})
 
 message(STATUS "PETSC_INCLUDES = ${PETSC_INCLUDE_DIRS}")
 
@@ -294,14 +304,18 @@ target_include_directories(solar_3D_tests PUBLIC
     ${CMAKE_CURRENT_BINARY_DIR}  # Add binary dir for configure.h
 )
 target_include_directories(solar_3D_tests PUBLIC ${HDF5_INCLUDE_DIRS})
-target_include_directories(solar_3D_tests SYSTEM PUBLIC ${PETSC_INCLUDES})
+
+
+target_include_directories(solar_3D_tests SYSTEM PUBLIC ${PETSC_INCLUDE_DIRS})
 target_link_libraries(solar_3D_tests PUBLIC PkgConfig::PETSC)
+target_compile_definitions(solar_3D_tests PUBLIC ${PETSC_DEFINITIONS})
+
 if(NOT yaml-cpp_FOUND)
     target_link_libraries(solar_3D_tests PUBLIC yaml-cpp::yaml-cpp)
 else()
     target_link_libraries(solar_3D_tests PUBLIC yaml-cpp)
 endif()
-target_compile_definitions(solar_3D_tests PUBLIC ${PETSC_DEFINITIONS})
+
 target_link_libraries(solar_3D_tests PUBLIC GridManager)
 # Build thdf/libhdf_output.a using its Makefile
 # Ensure solar_3D depends on the static library

@@ -1165,7 +1165,7 @@ std::vector<double> MF_context::single_long_ray_step(const std::vector<t_interse
 void MF_context::formal_solve_ray(const double theta, const double chi)
 {       
     // timers
-    const bool timing_debug = false;
+    const bool timing_debug = true;
     if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
     const double start_total = MPI_Wtime(); 
 
@@ -1235,7 +1235,6 @@ void MF_context::formal_solve_ray(const double theta, const double chi)
     double comm_timer     = 0;
     double one_step_timer = 0;    
 
-    if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);    
     double start_comm  = MPI_Wtime();                                 
     ///////////// data movement ////////////////////
     // write eta and rhos to the serial grid
@@ -1350,8 +1349,7 @@ void MF_context::formal_solve_ray(const double theta, const double chi)
 
                         // loop over block (frequencies)
                         for (int b = 0; b < local_block_size_; b = b + 4)
-                        {                
-                            if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);                                                                                                                 
+                        {                                            
                             double start_one = MPI_Wtime();                                               
                             
                             // solve ODE
@@ -1504,8 +1502,7 @@ void MF_context::formal_solve_ray(const double theta, const double chi)
             }               
         }      
     }
-                  
-    if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
+                      
     start_comm = MPI_Wtime();    
     
     Omega_remap.from_block_to_space_distributed(
@@ -1532,11 +1529,13 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
 {
     const bool verbose = RT_problem_->verbose_;
 
-	if (mpi_rank_ == 0 and verbose) std::cout << "\nStart global formal solution..." << std::endl;
+    // set to true for more precise communication timers, butl slower in term of perf.
+    const bool timing_debug = false; 
+
+    if (mpi_rank_ == 0 && verbose) std::cout << (timing_debug ? "\nStart global formal solution..." : "\nStart global formal solution (approximate timings)...") << std::endl;
 
     // timers
-    const bool timing_debug = false;
-    if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
     const double start_total = MPI_Wtime();                                    
     
 	// init some quantities 	    
@@ -1619,14 +1618,15 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
         
         const bool idle_proc = (block_start > block_size - 1);
                          
-        // communication	                
-        if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
+        // communication	     
+        if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);                   
         double start_comm = MPI_Wtime();                                    
         
         // write S to the serial grid and I to get initial condition              
         Pol_remap.from_space_to_block_distributed(S_field, S_field_serial_, tile_number);                        
         // Pol_remap.from_space_to_block_distributed(*I_field, *I_field_serial_, tile_number); // TODO: this is a bit redundant, only one xy plane is needed                                     
-        comm_timer1 += MPI_Wtime() - start_comm;      
+        comm_timer1 += MPI_Wtime() - start_comm; 
+        // MPI_Barrier(MPI_COMM_WORLD);     
 
         if (not idle_proc)
         {      
@@ -1752,12 +1752,11 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
                                         }                                                           
                                     }                                                                 
                                     
-    								// loop on freqs
-                                    for (int n = n_nu_start; n < n_nu_end; ++n)
-    								{			     
-                                        if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);                                                                                                                 
-                                        double start_one = MPI_Wtime();                                               
+    								// loop on freqs                                    
+                                    double start_one = MPI_Wtime();
 
+                                    for (int n = n_nu_start; n < n_nu_end; ++n)
+    								{			                                                                                                                             
     									// block index (corrected for tile size)                                    
     									b_start = RT_problem_->local_to_block(j_theta, k_chi, n) % tile_size_;                                   
 
@@ -1923,10 +1922,10 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     									for (int i_stokes = 0; i_stokes < 4; ++i_stokes)
     									{							
     										I_dev->block(i_aux,j_aux,k_aux)[b_start + i_stokes] = I2[i_stokes];										
-    									}       
+    									}                                               
+    								}			
 
-                                        one_step_timer += MPI_Wtime() - start_one;
-    								}						
+                                    one_step_timer += MPI_Wtime() - start_one;			
     							}
     						}
     					}
@@ -1934,27 +1933,32 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     			}	            
     		}      
         }      
-          
+                  
         if (timing_debug) MPI_Barrier(MPI_COMM_WORLD);
         start_comm = MPI_Wtime();
         Pol_remap.from_block_to_space_distributed(I_field_serial_, I_field, tile_number);
         comm_timer2 += MPI_Wtime() - start_comm; 
     }                
-    
+
     // print timers
     const double total_timer = MPI_Wtime() - start_total;
-    double comm_timer_max1, comm_timer_max2, one_step_timer_max, total_timer_max;
-    MPI_Reduce(&comm_timer1,    &comm_timer_max1,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    MPI_Reduce(&comm_timer2,    &comm_timer_max2,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    MPI_Reduce(&one_step_timer, &one_step_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    MPI_Reduce(&total_timer,    &total_timer_max,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     
-    if (mpi_rank_ == 0 and verbose)
+    if (verbose)
     {
-        printf("Comm. time (S):\t\t%g seconds\n", comm_timer_max1);
-        printf("Comm. time (I):\t\t%g seconds\n", comm_timer_max2);
-        printf("ODE step time:\t\t%g seconds\n",  one_step_timer_max);                        
-        printf("Total time:\t\t%g seconds\n",     total_timer_max);                        
+        double comm_timer_max1, comm_timer_max2, one_step_timer_max, total_timer_max;        
+
+        MPI_Reduce(&comm_timer1,    &comm_timer_max1,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&comm_timer2,    &comm_timer_max2,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&one_step_timer, &one_step_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&total_timer,    &total_timer_max,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+        if (mpi_rank_ == 0)
+        {                            
+            printf("Comm. time (S):\t\t%g seconds\n", comm_timer_max1);
+            printf("Comm. time (I):\t\t%g seconds\n", comm_timer_max2);
+            printf("ODE step time:\t\t%g seconds\n",  one_step_timer_max);                        
+            printf("Total time:\t\t%g seconds\n",     total_timer_max);          
+        }        
     }           
 }
 
@@ -3273,9 +3277,9 @@ void MF_context::update_emission_J_KQ(const Vec &J_KQ_vec){
 
     const int block_size = RT_problem_->block_size_;     
     
-    std::vector<Real>    input(J_KQ_size_);        
-    std::vector<double>  input_tmp(J_KQ_size_);       
-    std::vector<Real> output(block_size); 
+    std::vector<Real>   input(J_KQ_size_);        
+    std::vector<double> input_tmp(J_KQ_size_);       
+    std::vector<Real>   output(block_size); 
 
     //PetscInt ix[block_size];
     PetscInt *ix;
@@ -3313,8 +3317,8 @@ void MF_context::update_emission_J_KQ(const Vec &J_KQ_vec){
         if (j >= j_end) std::cout << "ERROR with counters in update_emission(), j = " << j << std::endl;
         if (k >= k_end) std::cout << "ERROR with counters in update_emission(), k = " << k << std::endl;
 
-        // convert to double (just copy if Real = double)
-        to_double(input,input_tmp);
+        // convert to double (just copy if Real == double)
+        convert_vector<Real,double>(input,input_tmp);
         
         J_KQ_ijk->build_from_array(input_tmp.data());        
         
@@ -3371,8 +3375,8 @@ void MF_context::I_vec_to_J_KQ_vec(const Vec &I_vec, Vec &J_KQ_vec){
 
     const int block_size = RT_problem_->block_size_;   
     
-    std::vector<Real> input(block_size);        
-    std::vector<Real> J_KQ_ijk_vec(J_KQ_size_);        
+    std::vector<Real>   input(block_size);        
+    std::vector<Real>   J_KQ_ijk_vec(J_KQ_size_);        
     std::vector<double> J_KQ_ijk_vec_tmp(J_KQ_size_);
 
     // PetscInt ix[block_size];
@@ -3421,11 +3425,11 @@ void MF_context::I_vec_to_J_KQ_vec(const Vec &I_vec, Vec &J_KQ_vec){
         // get the J_KQ object
         const auto J_KQ_ijk = compute_JKQ_values_(i,j,k);
 
-        // reduntant for Real = double
-        to_double(J_KQ_ijk_vec,J_KQ_ijk_vec_tmp);
-
         // transform the J_KQ object to a standard vector 
         J_KQ_ijk->fill_array(J_KQ_ijk_vec_tmp.data());     
+
+        // reduntant for Real = double
+        convert_vector<double, Real>(J_KQ_ijk_vec_tmp,J_KQ_ijk_vec);
 
         // set J_KQ_vec        
         ierr = VecSetValues(J_KQ_vec, J_KQ_size_, ix_J_KQ, J_KQ_ijk_vec.data(), INSERT_VALUES);CHKERRV(ierr); 
@@ -4249,7 +4253,7 @@ PetscErrorCode UserMult_JKQ(Mat mat, Vec x, Vec y){
     if (RT_problem->mpi_rank_ == 0 and RT_problem->verbose_) printf("update_emission:\t\t%g seconds\n", emission_timer_max);                  
         
     // fill rhs_ from formal solve with zero bc     
-    mf_ctx_->formal_solve(RT_problem->I_field_, RT_problem->S_field_, 0.0);
+    mf_ctx_->formal_solve(RT_problem->I_field_, RT_problem->S_field_, 0.0); // WHY Comm. time (S) so slow???
   
     // copy intensity into petscvec format (as JKQ)
     mf_ctx_->I_field_to_J_KQ_vec(RT_problem->I_field_, y);        
@@ -4400,11 +4404,7 @@ PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y){
     else
     {
         ierr = KSPSolve(mf_ctx->pc_solver_, x, y);CHKERRQ(ierr);
-    }
-	
-    // print preconditioner ConvergedReason
-    KSPConvergedReason reason;
-    ierr = KSPGetConvergedReason(mf_ctx->pc_solver_, &reason);CHKERRQ(ierr);
-    
+    }    
+
 	return ierr;
 }

@@ -226,7 +226,7 @@ namespace domain_decomposition_3D
 	/// load imbalance, aspect ratio, score, and grid ratio (max/min processor count).
 	/// If verbose is true, prints evaluation details for each candidate.
 	DecompositionSelection
-	select_best_decomposition(const std::deque<DomainInfo> &candidates, bool verbose = true, //
+	select_best_decomposition(const std::deque<DomainInfo> &candidates, bool verbose = false, //
 							  const double li_rel_tol = 0.01);
 
 	void

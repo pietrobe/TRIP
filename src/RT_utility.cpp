@@ -182,15 +182,15 @@ loadConfig(const std::string &filename)
 
 	// Integers
 	if (config["N_theta"]) cfg.N_theta = config["N_theta"].as<int>();
-	if (config["N_chi"]) cfg.N_chi = config["N_chi"].as<int>();
-	if (config["N_x"]) cfg.N_x = config["N_x"].as<int>();
-	if (config["N_y"]) cfg.N_y = config["N_y"].as<int>();
-	if (config["L"]) cfg.L = config["L"].as<double>();
+	if (config["N_chi"])   cfg.N_chi   = config["N_chi"].as<int>();
+	if (config["N_x"])     cfg.N_x     = config["N_x"].as<int>();
+	if (config["N_y"])     cfg.N_y     = config["N_y"].as<int>();
+	if (config["L"])       cfg.L       = config["L"].as<double>();
 
 	// Optional strings (converted to filesystem::path)
-	if (config["input_cul"]) cfg.input_cul = std::filesystem::path(config["input_cul"].as<std::string>());
-	if (config["input_qel"]) cfg.input_qel = std::filesystem::path(config["input_qel"].as<std::string>());
-	if (config["input_llp"]) cfg.input_llp = std::filesystem::path(config["input_llp"].as<std::string>());
+	if (config["input_cul"])  cfg.input_cul  = std::filesystem::path(config["input_cul"].as<std::string>());
+	if (config["input_qel"])  cfg.input_qel  = std::filesystem::path(config["input_qel"].as<std::string>());
+	if (config["input_llp"])  cfg.input_llp  = std::filesystem::path(config["input_llp"].as<std::string>());
 	if (config["input_back"]) cfg.input_back = std::filesystem::path(config["input_back"].as<std::string>());
 
 	// use_prec (default is true)
@@ -214,10 +214,10 @@ loadConfig(const std::string &filename)
 		auto s = config["solver"];
 
 		if (s["ksp_solver_type"]) cfg.solver.ksp_solver_type = toKSPType(s["ksp_solver_type"].as<std::string>());
-		if (s["ksp_rtol"]) cfg.solver.ksp_rtol = s["ksp_rtol"].as<double>();
-		if (s["ksp_max_it"]) cfg.solver.ksp_max_it = s["ksp_max_it"].as<int>();
-		if (s["gmres_restart"]) cfg.solver.gmres_restart = s["gmres_restart"].as<int>();
-		if (s["ksp_use_J_KQ"]) cfg.solver.ksp_use_J_KQ = s["ksp_use_J_KQ"].as<bool>();
+		if (s["ksp_rtol"])        cfg.solver.ksp_rtol      = s["ksp_rtol"].as<double>();
+		if (s["ksp_max_it"])      cfg.solver.ksp_max_it    = s["ksp_max_it"].as<int>();
+		if (s["gmres_restart"])   cfg.solver.gmres_restart = s["gmres_restart"].as<int>();
+		if (s["ksp_use_J_KQ"])    cfg.solver.ksp_use_J_KQ  = s["ksp_use_J_KQ"].as<bool>();
 	}
 
 	// Preconditioner section
@@ -237,7 +237,7 @@ loadConfig(const std::string &filename)
 		for (const auto &beam : config["arbitrary_beams"])
 		{
 			BeamDirection bd;
-			if (beam["mu"]) bd.mu = beam["mu"].as<double>();
+			if (beam["mu"])  bd.mu  = beam["mu"].as<double>();
 			if (beam["chi"]) bd.chi = beam["chi"].as<double>();
 			cfg.arbitrary_beams.push_back(bd);
 		}

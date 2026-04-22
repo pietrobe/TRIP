@@ -100,8 +100,6 @@ main(int argc, char *argv[])
 
 	{ // start scope for RT_problem and RT_solver
 
-	if (mpi_rank == 0) std::cout << "WARNING: testing single precision, THDF types are hardocded to float!" << std::endl << std::endl;
-
 		//////////////////////////////////////////////////////////////////////////
 		// Prepare output directory
 		// If the output directory does not exist, create it. If it exists, abort !

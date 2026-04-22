@@ -27,44 +27,6 @@
 #include "tools.h"
 #include "mqn_map_two_term.h"
 
-// used for type casting
-inline std::vector<double> to_double(const float* x, int n)
-{
-    std::vector<double> y(n);
-    for (int i = 0; i < n; ++i)
-        y[i] = static_cast<double>(x[i]);
-    return y;
-}
-
-// double → double (direct copy)
-inline std::vector<double> to_double(const double* x, int n)
-{
-    return std::vector<double>(x, x + n);
-}
-
-
-// float → double (conversion needed)
-inline void to_double(const std::vector<float>& x, std::vector<double>& y)
-{
-    y.resize(x.size());
-    for (size_t i = 0; i < x.size(); ++i)
-        y[i] = static_cast<double>(x[i]);
-}
-
-// double → double (just copy)
-inline void to_double(const std::vector<double>& x, std::vector<double>& y)
-{
-    y = x;  // efficient copy
-}
-
-// // use for type casting 
-// inline void to_double(const Real* x, int n, double* y)
-// {
-//     for (int i = 0; i < n; ++i)
-//         y[i] = static_cast<double>(x[i]);
-// }
-
-
 // emissivty models
 enum class emissivity_model_t
 {

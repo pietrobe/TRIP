@@ -234,8 +234,7 @@ public:
     		const int n_tiles = 1; 
 	    	mf_ctx_.init_serial_fields(n_tiles);	
     	}
-    	
-    	
+    	    	
     	// init unpolarized formal solver and data structures
     	if (mf_ctx_.pc_use_J_KQ_ or mf_ctx_.ksp_use_J_KQ_)    	
     	{    		
@@ -341,13 +340,17 @@ public:
 			ierr = PCShellSetContext(pc_, &mf_ctx_);CHKERRV(ierr);		
 			ierr = PCShellSetApply(pc_,MF_pc_Apply);CHKERRV(ierr);				
 			ierr = PCShellSetDestroy(pc_,MF_pc_Destroy);CHKERRV(ierr);	
+
+			// adding some options for verbosity
+	    	ierr = PetscOptionsSetValue(NULL, "-ksp_converged_reason", "");CHKERRV(ierr);
+    		ierr = KSPSetFromOptions(mf_ctx_.pc_solver_);CHKERRV(ierr);    
     	}
     	else
     	{
     		ierr = PCSetType(pc_,PCNONE);CHKERRV(ierr);
     	}
 
-    	// adding some options for verbosity
+
 		if (RT_problem_->verbose_)  {
 			ierr = PetscOptionsSetValue(NULL, "-ksp_monitor", "");CHKERRV(ierr);
 			// ierr = PetscOptionsSetValue(NULL, "-ksp_monitor_true_residual", "");CHKERRV(ierr);    // WARNING: this costs 
@@ -355,7 +358,6 @@ public:
 		}		
 
 		ierr = PetscOptionsSetValue(NULL, "-ksp_converged_reason", "");CHKERRV(ierr);
-
 
 		PetscBool ksp_true_res_flg;
   		PetscOptionsHasName(NULL,NULL,"-ksp_monitor_true_residual",&ksp_true_res_flg);

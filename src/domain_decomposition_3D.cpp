@@ -243,11 +243,11 @@ namespace domain_decomposition_3D
 		// 2. Find the best (Px, Py, Pz) factorisation of mpi_size
 		factorize_procs(mpi_size, N_x, N_y, N_z, info_.Px, info_.Py, info_.Pz);
 
-		if (mpi_rank == 0)
-		{
-			std::printf("[DomainDecomposition] grid: %d x %d x %d procs over %d x %d x %d domain\n", info_.Px, info_.Py,
-						info_.Pz, N_x, N_y, N_z);
-		}
+		// if (mpi_rank == 0)
+		// {
+		// 	std::printf("[DomainDecomposition] grid: %d x %d x %d procs over %d x %d x %d domain\n", info_.Px, info_.Py,
+		// 				info_.Pz, N_x, N_y, N_z);
+		// }
 
 		// 3. Compute local info for this rank via the generic helper.
 		info_ = info_for_rank(mpi_rank);
@@ -326,26 +326,25 @@ namespace domain_decomposition_3D
 		}
 
 		average_cells /= mpi_size;
-		std::printf("  Cells: min = %d, max = %d, average = %d, total = %d\n", num_cells_min, num_cells_max,
-					average_cells, total_cells);
+		// std::printf("  Cells: min = %d, max = %d, average = %d, total = %d\n", num_cells_min, num_cells_max,
+		// 			average_cells, total_cells);
 
-		const double imbalance = static_cast<double>(num_cells_max) / average_cells;
-		std::printf("  Load imbalance (max/average): %.3f\n", imbalance);
+		// const double imbalance = static_cast<double>(num_cells_max) / average_cells;
+		// std::printf("  Load imbalance (max/average): %.3f\n", imbalance);
 
 		const int total_local_domains = static_cast<int>(all_info.size());
-		if (total_local_domains == mpi_size)
-			std::printf("  Local-domain count check: OK - %d local domains for %d MPI ranks.\n", total_local_domains,
-						mpi_size);
-		else
-			std::printf("  Local-domain count check: FAILED - %d local domains for %d MPI ranks.\n", total_local_domains,
-						mpi_size);
-
-		const long long expected_total_cells = 1LL * info.N_x * info.N_y * info.N_z;
-		if (static_cast<long long>(total_cells) == expected_total_cells)
-			std::printf("  Cell-sum check: OK - sum(local cells) = %d matches global cells = %lld.\n", total_cells,
-						expected_total_cells);
-		else
+		
+		if (total_local_domains != mpi_size)	
 		{
+				std::printf("  Local-domain count check: FAILED - %d local domains for %d MPI ranks.\n", total_local_domains,
+						mpi_size);
+		}		
+		
+		const long long expected_total_cells = 1LL * info.N_x * info.N_y * info.N_z;
+		
+		if (static_cast<long long>(total_cells) != expected_total_cells)
+		{
+			
 			std::printf("  Cell-sum check: FAILED - sum(local cells) = %d, expected global cells = %lld.\n", total_cells,
 						expected_total_cells);
 			return false;
@@ -378,10 +377,8 @@ namespace domain_decomposition_3D
 			}
 		}
 
-		if (overlap_count == 0)
-			std::printf("  Overlap check: OK - no overlapping subdomains.\n");
-		else
-		{
+		if (overlap_count != 0)
+		{		
 			std::printf("  Overlap check: FAILED - %d overlapping pair(s) found.\n", overlap_count);
 			return false;
 		}
@@ -486,7 +483,7 @@ namespace domain_decomposition_3D
 		analyze_decomposition(d, mpi_size);
 
 		auto best_infos = dd.best_infos(mpi_rank);
-		auto selection	= select_best_decomposition(best_infos, true);
+		auto selection	= select_best_decomposition(best_infos, false);
 
 		analyze_decomposition(selection.best_info, mpi_size);
 
