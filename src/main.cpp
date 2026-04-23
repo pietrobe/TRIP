@@ -62,20 +62,13 @@ main(int argc, char *argv[])
 		for (int i = 0; i < argc; ++i) ss_a << argv[i] << " ";
 		ss_a << std::endl;
 
-		ss_a << "PetscInt size: " << sizeof(PetscInt) << " bytes; " << (sizeof(PetscInt) * 8) << " bits." << std::endl;		
+		ss_a << "PetscInt size:    " << sizeof(PetscInt) << " bytes; " << (sizeof(PetscInt) * 8) << " bits." << std::endl;
+		ss_a << "PetscScalar type: " << TRIP_PETSC_SCALAR_TYPE_NAME << std::endl << std::endl;
 
-		if (sizeof(Real) == sizeof(float))
-    		ss_a << "Real = float (single precision)" << std::endl << std::endl;
-		else if (sizeof(Real) == sizeof(double))
-    		ss_a << "Real = double (double precision)" << std::endl << std::endl;
-		else
-    		ss_a << "Real = unknown type" << std::endl << std::endl;
-
-    	std::cout << ss_a.str();
+		std::cout << ss_a.str();
 	}
 
 	PetscInitialize(&argc, &argv, (char *)0, NULL);
-	// Kokkos::initialize(argc, argv);
 
 #if ACC_SOLAR_3D == _ON_
 
@@ -118,7 +111,6 @@ main(int argc, char *argv[])
 
 		// create solver object
 		RT_solver rt_solver(rt_problem_ptr);
-
 
 		if (mpi_rank == 0)
 		{

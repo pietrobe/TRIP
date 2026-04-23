@@ -118,24 +118,91 @@ namespace
 										 int			 stride_incl,		 //
 										 int			 stride_azimuth,	 //
 										 int			 stride_frequencies, //
-										 int			 stride_stokes)
+										 int			 stride_stokes);
+
+	template <>
+	void
+	write_3d_field_block_mpi_conditional<float>(hid_t			file_id,			//
+												MPI_Comm		comm,				//
+												bool			normalized_output,	//
+												int				N_x,				//
+												int				N_y,				//
+												int				N_z,				//
+												int				N_incl,				//
+												int				N_azimuth,			//
+												int				N_frequencies,		//
+												int				N_stokes,			//
+												int				N_local_x,			//
+												int				N_local_y,			//
+												int				N_local_z,			//
+												int				local_start_x,		//
+												int				local_start_y,		//
+												int				local_start_z,		//
+												float		   *stokes_IQUI,		//
+												THDF_float32_t *stokes_I,			//
+												THDF_float32_t *stokes_QI,			//
+												THDF_float32_t *stokes_UI,			//
+												THDF_float32_t *stokes_VI,			//
+												THDF_float_t   *norm_multiplier_I,	//
+												THDF_float_t   *norm_multiplier_QI, //
+												THDF_float_t   *norm_multiplier_UI, //
+												THDF_float_t   *norm_multiplier_VI, //
+												int				stride_x,			//
+												int				stride_y,			//
+												int				stride_z,			//
+												int				stride_incl,		//
+												int				stride_azimuth,		//
+												int				stride_frequencies, //
+												int				stride_stokes)
+
 	{
-		if constexpr (sizeof(IN_REAL) == sizeof(THDF_float32_t))
-		{
-			write_3d_field_block_mpi_f32(
-				file_id, comm, normalized_output, N_x, N_y, N_z, N_incl, N_azimuth, N_frequencies, N_stokes, N_local_x,
-				N_local_y, N_local_z, local_start_x, local_start_y, local_start_z, stokes_IQUI, stokes_I, stokes_QI,
-				stokes_UI, stokes_VI, norm_multiplier_I, norm_multiplier_QI, norm_multiplier_UI, norm_multiplier_VI,
-				stride_x, stride_y, stride_z, stride_incl, stride_azimuth, stride_frequencies, stride_stokes);
-		}
-		else
-		{
-			write_3d_field_block_mpi(
-				file_id, comm, normalized_output, N_x, N_y, N_z, N_incl, N_azimuth, N_frequencies, N_stokes, N_local_x,
-				N_local_y, N_local_z, local_start_x, local_start_y, local_start_z, stokes_IQUI, stokes_I, stokes_QI,
-				stokes_UI, stokes_VI, norm_multiplier_I, norm_multiplier_QI, norm_multiplier_UI, norm_multiplier_VI,
-				stride_x, stride_y, stride_z, stride_incl, stride_azimuth, stride_frequencies, stride_stokes);
-		}
+		write_3d_field_block_mpi_f32(
+			file_id, comm, normalized_output, N_x, N_y, N_z, N_incl, N_azimuth, N_frequencies, N_stokes, N_local_x,
+			N_local_y, N_local_z, local_start_x, local_start_y, local_start_z, stokes_IQUI, stokes_I, stokes_QI,
+			stokes_UI, stokes_VI, norm_multiplier_I, norm_multiplier_QI, norm_multiplier_UI, norm_multiplier_VI, stride_x,
+			stride_y, stride_z, stride_incl, stride_azimuth, stride_frequencies, stride_stokes);
+	}
+
+	template <>
+	void
+	write_3d_field_block_mpi_conditional<double>(hid_t			 file_id,			 //
+												 MPI_Comm		 comm,				 //
+												 bool			 normalized_output,	 //
+												 int			 N_x,				 //
+												 int			 N_y,				 //
+												 int			 N_z,				 //
+												 int			 N_incl,			 //
+												 int			 N_azimuth,			 //
+												 int			 N_frequencies,		 //
+												 int			 N_stokes,			 //
+												 int			 N_local_x,			 //
+												 int			 N_local_y,			 //
+												 int			 N_local_z,			 //
+												 int			 local_start_x,		 //
+												 int			 local_start_y,		 //
+												 int			 local_start_z,		 //
+												 double			*stokes_IQUI,		 //
+												 THDF_float32_t *stokes_I,			 //
+												 THDF_float32_t *stokes_QI,			 //
+												 THDF_float32_t *stokes_UI,			 //
+												 THDF_float32_t *stokes_VI,			 //
+												 THDF_float_t	*norm_multiplier_I,	 //
+												 THDF_float_t	*norm_multiplier_QI, //
+												 THDF_float_t	*norm_multiplier_UI, //
+												 THDF_float_t	*norm_multiplier_VI, //
+												 int			 stride_x,			 //
+												 int			 stride_y,			 //
+												 int			 stride_z,			 //
+												 int			 stride_incl,		 //
+												 int			 stride_azimuth,	 //
+												 int			 stride_frequencies, //
+												 int			 stride_stokes)
+	{
+		write_3d_field_block_mpi(file_id, comm, normalized_output, N_x, N_y, N_z, N_incl, N_azimuth, N_frequencies,
+								 N_stokes, N_local_x, N_local_y, N_local_z, local_start_x, local_start_y, local_start_z,
+								 stokes_IQUI, stokes_I, stokes_QI, stokes_UI, stokes_VI, norm_multiplier_I,
+								 norm_multiplier_QI, norm_multiplier_UI, norm_multiplier_VI, stride_x, stride_y, stride_z,
+								 stride_incl, stride_azimuth, stride_frequencies, stride_stokes);
 	}
 
 	//////////////////////////////////////////////////////////////////////////////
@@ -466,7 +533,6 @@ write_3D_whole_field_falp_hdf5(RT_problem &rt_problem, const std::string &output
 										  stride_azimuth,		  //
 										  stride_frequencies,	  //
 										  stride_stokes);		  //
-
 			}
 
 			double tw0 = MPI_Wtime();
@@ -598,10 +664,10 @@ write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 	const int stride_x			 = N_stokes * N_frequencies * N_azimuth * N_incl * size_k * size_j;
 
 	int max_size_k;
-	int min_size_k;
+	// int min_size_k;
 
 	MPI_Allreduce(&size_k, &max_size_k, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-	MPI_Allreduce(&size_k, &min_size_k, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+	// MPI_Allreduce(&size_k, &min_size_k, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
 
 	if (mpi_rank == 0)
 	{
@@ -663,43 +729,40 @@ write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 			hid_t write_file_id = H5Fopen(output_file.c_str(), H5F_ACC_RDWR, w_fapl);
 			H5Pclose(w_fapl);
 
-			Real *stokes_IQUI = rt_problem.I_field_->block(0, 0, local_k);
+			Real *stokes_IQUV = rt_problem.I_field_->block(0, 0, local_k);
 
-			// for mixed precision 
-			auto stokes_IQUI_tmp = to_double(stokes_IQUI, rt_problem.block_size_);		
-
-			write_3d_field_block_mpi(write_file_id,		 //
-									 write_communicator,		 //
-									 normalized_output,			 // If true the output will be normalized.
-									 N_x,						 // Global sizes of the field in x y z directions
-									 N_y,						 // and in inclination, azimuth, frequencies
-									 N_z,						 //
-									 N_incl,					 //
-									 N_azimuth,					 //
-									 N_frequencies,				 //
-									 N_stokes,					 // ... and number of Stokes parameters (4)
-									 size_i,					 // Size of the slice
-									 size_j,					 // in x y z directions
-									 size_slice_k,				 // size of the current slice in z direction
-									 local_start_x,				 // Global start coordinates of the slice
-									 local_start_y,				 // in x y z directions
-									 id_z,						 // Global start coordinate of the slice in z direction
-									 stokes_IQUI_tmp.data(),				 // Pointer to the slice data in memory
-									 slice_data_I_buffer.data(), //
-									 slice_data_Q_buffer.data(), //
-									 slice_data_U_buffer.data(), //
-									 slice_data_V_buffer.data(), //
-									 nullptr,					 // Pointers to normalization multipliers
-									 nullptr,					 // (set to nullptr if not needed)
-									 nullptr,					 //
-									 nullptr,					 //
-									 stride_x,					 // Strides in memory for each dimension
-									 stride_y,					 // (x, y, z, incl, azimuth, frequencies, stokes)
-									 stride_z,					 //
-									 stride_incl,				 //
-									 stride_azimuth,			 //
-									 stride_frequencies,		 //
-									 stride_stokes);			 //
+			write_3d_field_block_mpi_conditional(write_file_id,		 //
+												 write_communicator, //
+												 normalized_output,	 // If true the output will be normalized.
+												 N_x,				 // Global sizes of the field in x y z directions
+												 N_y,				 // and in inclination, azimuth, frequencies
+												 N_z,				 //
+												 N_incl,			 //
+												 N_azimuth,			 //
+												 N_frequencies,		 //
+												 N_stokes,			 // ... and number of Stokes parameters (4)
+												 size_i,			 // Size of the slice
+												 size_j,			 // in x y z directions
+												 size_slice_k,		 // size of the current slice in z direction
+												 local_start_x,		 // Global start coordinates of the slice
+												 local_start_y,		 // in x y z directions
+												 id_z, // Global start coordinate of the slice in z direction
+												 stokes_IQUV,	 // Pointer to the local slab data in memory
+												 slice_data_I_buffer.data(), //
+												 slice_data_Q_buffer.data(), //
+												 slice_data_U_buffer.data(), //
+												 slice_data_V_buffer.data(), //
+												 nullptr,					 // Pointers to normalization multipliers
+												 nullptr,					 // (set to nullptr if not needed)
+												 nullptr,					 //
+												 nullptr,					 //
+												 stride_x,					 // Strides in memory for each dimension
+												 stride_y,			 // (x, y, z, incl, azimuth, frequencies, stokes)
+												 stride_z,			 //
+												 stride_incl,		 //
+												 stride_azimuth,	 //
+												 stride_frequencies, //
+												 stride_stokes);	 //
 
 			H5Fclose(write_file_id);
 			MPI_Barrier(write_communicator); // Ensure all writers have finished before we free the communicator
