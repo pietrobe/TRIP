@@ -95,6 +95,24 @@ If this preventive preparation of the output direcory is not made the writing me
 
 * In the gpfs filesystem on the in the MareNostrum 5 (ACC|GPP) stripes are set by default in the system, so that, preventive preparation is not required.
 
+## R_II Angle Averaged MAPV
+
+In order to accelerate the RII Angle Averaged method that is used by the emissivity model `PRD_AA` or `PRD_AA_MAPV`, it is possible to save the MAPV (map of values) on the local scratch drive.
+To enable this feature you must set
+`emissivity_model: PRD_AA_MAPV` in the yaml config file, and in the slurm script it is necessary to set up the environment variables:
+```bash
+export RII_AA_SCRATCH_DIR=$PATH_TO_THE_LOCAL_SCRATCH
+export RII_AA_JOB_PATTERN="TRIP_job_$SLURM_JOB_ID"
+```
+On **Mare Nostrum 5** it is:
+```bash
+export RII_AA_SCRATCH_DIR=$TMPDIR
+export RII_AA_JOB_PATTERN="TRIP_job_$SLURM_JOB_ID"
+```
+On **Alps CSCS** the local scratch is not available, and we do not recommend using the global scratch.
+If these two environment variables are not set, the MAPV is stored in RAM, increasing the risk of OOM.
+
+
 ## Testing
 ```bash
 cd ${TRIP_MAIN_DIR}/build/;

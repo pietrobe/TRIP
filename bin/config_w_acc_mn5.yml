@@ -1,23 +1,26 @@
 # I/O
-input_directory: /gpfs/projects/ehpc238/PORTA/weak
+input_directory: /gpfs/projects/ehpc597/model128
 # input_file: cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_32x32x133.pmd
 # input_file:      AR_385_Cut_128x128x48_V0-B0_V0_fix_conv_KQ_MC.pmd
-input_file:        AR_385_Cut_64x64x128_mirrorxy-CRD_I_V0-B0_fix_conv_KQ_MC.pmd
+# input_file:        GPP_SCALING_test_64x64x128.pmd
+input_file:     small_ssd_from15D_8x8x143.h5
 frequency_file:  frequency/96F/frequency.dat
 
 output: true
 output_overwrite_prevention: true
-output_directory: /gpfs/scratch/ehpc238/PORTA/file_tests/h5_1
+output_directory: /gpfs/scratch/ehpc597/tests/AA/t_scratch_test_real_2
 
 write_whole_3D_field_hdf5: true
 write_text_output: false
 
-use_B: true
+use_B: false
+use_Vb: false
 use_continuum: false
 formal_solver: BESSER
 
 # emissivity_model: PRD
-emissivity_model: CRD_limit 
+emissivity_model: PRD_AA_MAPV
+# iemissivity_model: CRD_limit 
 
 # used only for FAL-C input
 N_theta: 8
@@ -28,33 +31,33 @@ input_qel_string:  ""
 input_llp_string:  ""
 input_back_string: ""
 
-use_prec: false
+use_prec: true
 
 solver:
   ksp_solver_type: KSPFGMRES
   ksp_rtol: 1e-7
-  ksp_max_it: 5
+  ksp_max_it: 25
 
 prec:
   pc_solver_type: KSPFGMRES
-  pc_rtol: 1e-6
-  pc_max_it: 30
+  pc_rtol: 5e-3
+  pc_max_it: 20
 
 default_chi: &default_chi 0.0
 
-arbitrary_beams: 
- - mu: 0.1
-   chi: *default_chi
+# arbitrary_beams: 
+#  - mu: 0.1
+#    chi: *default_chi
 
- - mu: 0.3
-   chi: *default_chi
+#  - mu: 0.3
+#    chi: *default_chi
     
- - mu: 0.7
-   chi: *default_chi
+#  - mu: 0.7
+#    chi: *default_chi
 
- - mu: 1.0
-   chi: *default_chi
+#  - mu: 1.0
+#    chi: *default_chi
 
- - mu:  3.30009478207572e-01
-   chi: 1.96349540849362e-01
+#  - mu:  3.30009478207572e-01
+#    chi: 1.96349540849362e-01
 
