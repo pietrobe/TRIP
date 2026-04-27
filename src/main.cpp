@@ -1,5 +1,6 @@
 #include "RT_arbitrary_beam.hpp"
 #include "RT_solver.hpp"
+#include "tools.h"
 
 #include <random>
 
@@ -20,6 +21,8 @@ main(int argc, char *argv[])
 	int mpi_rank, mpi_size;
 	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+
+	rii_utils::set_process_id(mpi_rank); // Comunicate the MPI rank to RII.
 
 	TRIP_Comms::initialize_MPI_TRIP_Communicators();
 
