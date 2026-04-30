@@ -222,9 +222,9 @@ RT_problem::read_3D_h5(const std::string filename, const bool verbose)
 				// continuum
 				for (int n = 0; n < N_nu_; ++n)
 				{
-					// hardcoded to 0.0 as in PORTA
+					// hardcoded to 0.0 as in PORTA  // Rename K_c.
 					this->sigma_->block(i, j, k)[n]	   = data.c_scat_opacity_sigma_c;
-					this->k_c_->block(i, j, k)[n]	   = data.c_tot_opacity_K_c;
+					this->k_c_->block(i, j, k)[n]	   = data.c_tot_opacity_K_c + data.c_scat_opacity_sigma_c;
 					this->eps_c_th_->block(i, j, k)[n] = data.c_therm_emissivity_epsilon_c;
 				}
 			});
