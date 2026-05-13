@@ -70,3 +70,4 @@ prove_cpp/a.out
 prove_cpp/readbin.cpp
 src/configure.h
 src/thdf/libhdf_output.a
+._*
