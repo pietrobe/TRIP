@@ -5,43 +5,7 @@ import time
 import itertools
 from pathlib import Path
 import matplotlib.pyplot as plt
-
-####################################################################
-
-
-def speed_of_light():
-    return 2.99792458e10
-
-####################################################################
-
-
-def cm_to_angstrom(cm):
-    return cm * 1e8
-
-####################################################################
-
-
-def angstrom_to_cm(cm):
-    return cm * 1e-8
-
-####################################################################
-
-
-def freq_to_angstrom(freq):
-    return cm_to_angstrom(speed_of_light() / freq)
-
-
-####################################################################
-def vacuum_to_air(wave, to_air_limit=200.0):
-    """
-    https://github.com/ITA-Solar/rh/blob/master/idl/vacuumtoair.pro
-    """
-    wave2 = wave * wave
-
-    fact = 1.0 + 2.735182e-4 + (1.314182e0 + 2.76249e+4 / wave2) / wave2
-    fact = fact * (wave > to_air_limit) + 1.0 * (wave < to_air_limit)
-
-    return wave / fact
+from wavelength_utils import freq_to_angstrom, vacuum_to_air
 
 
 new_naming = True
@@ -193,7 +157,7 @@ def THDF_read_ar_field_directions_grid_from_hdf5(h5file, i, j, mu, chi):
     }
 
 
-def plot_field_data_multi_direction(directions_field_data, frequencies, i, j):
+def plot_field_data_multi_direction(directions_field_data, frequencies, i, j, marker=None):
     freqs = np.asarray(frequencies['frequencies'], dtype=np.float64)
     wavelengths_vacuum = freq_to_angstrom(freqs)
     wavelengths_air = vacuum_to_air(wavelengths_vacuum)
@@ -204,6 +168,7 @@ def plot_field_data_multi_direction(directions_field_data, frequencies, i, j):
     axs = axes.flatten()
 
     cmap = plt.get_cmap('tab10')
+    line_fmt = '-' if marker is None else f'-{marker}'
     for k, direction_data in enumerate(directions_field_data):
         color = cmap(k % 10)
         direction_label = (
@@ -216,10 +181,11 @@ def plot_field_data_multi_direction(directions_field_data, frequencies, i, j):
         U = np.asarray(direction_data['field_data']['UI_pc'])[sort_idx]
         V = np.asarray(direction_data['field_data']['VI_pc'])[sort_idx]
 
-        axs[0].plot(wavelengths_air, I, '-o', color=color, label=direction_label)
-        axs[1].plot(wavelengths_air, Q, '-o', color=color)
-        axs[2].plot(wavelengths_air, U, '-o', color=color)
-        axs[3].plot(wavelengths_air, V, '-o', color=color)
+        axs[0].plot(wavelengths_air, I, line_fmt,
+                    color=color, label=direction_label)
+        axs[1].plot(wavelengths_air, Q, line_fmt, color=color)
+        axs[2].plot(wavelengths_air, U, line_fmt, color=color)
+        axs[3].plot(wavelengths_air, V, line_fmt, color=color)
 
     # axs[0].set_title('I')
     axs[0].set_ylabel('I')
@@ -317,7 +283,7 @@ def read_compare_csv_data(csv_path):
     }
 
 
-def plot_compare_field_data(h5_data, csv_data, i, j, dir_index, mu, chi, csv_path):
+def plot_compare_field_data(h5_data, csv_data, i, j, dir_index, mu, chi, csv_path, marker=None):
     components = [
         ("I", "I"),
         ("Q/I %", "QI_pc"),
@@ -327,6 +293,9 @@ def plot_compare_field_data(h5_data, csv_data, i, j, dir_index, mu, chi, csv_pat
 
     fig, axes = plt.subplots(2, 2, figsize=(11, 8), constrained_layout=True)
     axs = axes.flatten()
+
+    h5_fmt = '-' if marker is None else f'-{marker}'
+    csv_fmt = '-' if marker is None else f'-{marker}'
 
     for ax, (title, key) in zip(axs, components):
         h5_values = np.asarray(h5_data[key], dtype=np.float64)
@@ -338,8 +307,8 @@ def plot_compare_field_data(h5_data, csv_data, i, j, dir_index, mu, chi, csv_pat
             )
 
         sample_idx = np.arange(h5_values.size)
-        ax.plot(sample_idx, h5_values, "-", label="HDF5", marker="o")
-        ax.plot(sample_idx, csv_values, "-", label="CSV", marker="x")
+        ax.plot(sample_idx, h5_values, h5_fmt, label="HDF5")
+        ax.plot(sample_idx, csv_values, csv_fmt, label="CSV")
         ax.set_title(title)
         ax.set_xlabel("Sample")
         ax.set_ylabel(title)
@@ -353,7 +322,7 @@ def plot_compare_field_data(h5_data, csv_data, i, j, dir_index, mu, chi, csv_pat
     plt.show()
 
 
-def compare_field_data(input_path, i, j, dir_index):
+def compare_field_data(input_path, i, j, dir_index, marker=None):
     h5_path = resolve_h5_input_path(input_path)
     directions = THDF_read_ar_directions_from_hdf5(str(h5_path))
 
@@ -377,7 +346,7 @@ def compare_field_data(input_path, i, j, dir_index):
     print(f"Loaded comparison CSV: {csv_path}")
 
     plot_compare_field_data(h5_data, csv_data, i, j,
-                            dir_index, mu, chi, csv_path)
+                            dir_index, mu, chi, csv_path, marker=marker)
 
 
 def read_map_data(h5file, mu, chi, freq_idx):
@@ -410,12 +379,17 @@ def read_map_data(h5file, mu, chi, freq_idx):
         )
 
     n_frequencies = ds_I.shape[2]
-    if freq_idx < 0 or freq_idx >= n_frequencies:
+    if freq_idx is not None and (freq_idx < 0 or freq_idx >= n_frequencies):
         if close_when_done:
             f.close()
         raise IndexError(
             f"freq_idx={freq_idx} out of range [0, {n_frequencies - 1}]"
         )
+
+    if freq_idx is None:
+        freq_idx = slice(None)
+    else:
+        freq_idx = int(freq_idx)
 
     map_data = {
         "I": np.array(ds_I[:, :, freq_idx], dtype=np.float64),
@@ -490,9 +464,10 @@ def print_directions_table(directions, selected_indices=None):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Read AR beam directions and frequencies from HDF5 file."
+        description="Read AR beam directions and frequencies from HDF5 file.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("h5file", type=str,
+    parser.add_argument("h5file", type=str, nargs="?", default=None,
                         help="Path to the HDF5 file or to a directory containing it.")
     parser.add_argument("-i", "--icoord", type=int, default=3,
                         help="Spatial grid index i (default: 3).")
@@ -505,12 +480,18 @@ def main():
                         help="Read and plot 2D maps for one direction index and one frequency index.")
     parser.add_argument("--compare", type=int, nargs=3, metavar=("I", "J", "DIR_INDEX"),
                         help="Compare HDF5 data with CSV for coordinates i, j and one direction index.")
+    parser.add_argument("--marker", type=str, default=None,
+                        help="Marker style for plots (default: no marker).")
     args = parser.parse_args()
+
+    if args.h5file is None:
+        parser.print_help()
+        raise SystemExit(0)
 
     if args.compare is not None:
         compare_i, compare_j, compare_dir_index = args.compare
         compare_field_data(args.h5file, compare_i,
-                           compare_j, compare_dir_index)
+                           compare_j, compare_dir_index, marker=args.marker)
         raise SystemExit(0)
 
     h5_path = resolve_h5_input_path(args.h5file)
@@ -578,7 +559,7 @@ def main():
         })
 
     plot_field_data_multi_direction(
-        directions_field_data, frequencies, isv, jsv)
+        directions_field_data, frequencies, isv, jsv, marker=args.marker)
 
 
 if __name__ == "__main__":

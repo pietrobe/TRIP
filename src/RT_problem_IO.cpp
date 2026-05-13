@@ -645,13 +645,13 @@ RT_problem::write_JKQ_field_hdf5(const std::string &output_file)
 								JKQ_real_norm_mult,		   //
 								JKQ_imag_norm_mult);	   //
 
-	{
-		void *_p = malloc(1);
-		if (_p) free(_p);
-		fprintf(stderr, "[HEAP PROBE r%d] after accumulate_JKQ_values re=%zu im=%zu\n",
-				mpi_rank_, JKQ_real.size(), JKQ_imag.size());
-		fflush(stderr);
-	}
+	// {
+	// 	void *_p = malloc(1);
+	// 	if (_p) free(_p);
+	// 	fprintf(stderr, "[HEAP PROBE r%d] after accumulate_JKQ_values re=%zu im=%zu\n",
+	// 			mpi_rank_, JKQ_real.size(), JKQ_imag.size());
+	// 	fflush(stderr);
+	// }
 
 	hid_t file_id = THDF_open_file_MPI(output_file.c_str(), MPI_COMM_WORLD);
 
@@ -684,21 +684,21 @@ RT_problem::write_JKQ_field_hdf5(const std::string &output_file)
 								 i_start_global, j_start_global, k_start_global, //
 								 size_i, size_j, size_k);						 //
 
-	{
-		void *_p = malloc(1);
-		if (_p) free(_p);
-		fprintf(stderr, "[HEAP PROBE r%d] after THDF_write_JKQ_field_to_hdf5\n", mpi_rank_);
-		fflush(stderr);
-	}
+	// {
+	// 	void *_p = malloc(1);
+	// 	if (_p) free(_p);
+	// 	fprintf(stderr, "[HEAP PROBE r%d] after THDF_write_JKQ_field_to_hdf5\n", mpi_rank_);
+	// 	fflush(stderr);
+	// }
 
 	THDF_close_JKQ_field_handler_mpi(JKQ_handler);
 
-	{
-		void *_p = malloc(1);
-		if (_p) free(_p);
-		fprintf(stderr, "[HEAP PROBE r%d] after THDF_close_JKQ_field_handler_mpi\n", mpi_rank_);
-		fflush(stderr);
-	}
+	// {
+	// 	void *_p = malloc(1);
+	// 	if (_p) free(_p);
+	// 	fprintf(stderr, "[HEAP PROBE r%d] after THDF_close_JKQ_field_handler_mpi\n", mpi_rank_);
+	// 	fflush(stderr);
+	// }
 
 	THDF_close_file(file_id);
 

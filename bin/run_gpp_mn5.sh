@@ -1,13 +1,13 @@
 #!/bin/bash -l
 
-#SBATCH --ntasks=12288
-#### #SBATCH --ntasks=512
+#### #SBATCH --ntasks=16384
+#SBATCH --ntasks=1024
 
 ## to be defined !!!!!!!!! 
-#SBATCH --time=03:30:00
+#SBATCH --time=02:30:00
 
 #SBATCH --cpus-per-task=1
-#SBATCH --account=ehpc238
+#SBATCH --account=ehpc597
 #SBATCH --job-name="TRIP_PRD_3D"
 #SBATCH --qos=gp_ehpc
 
@@ -37,7 +37,7 @@ printf "%-30s %s\n" "SLURM_OUTPUT_LOG:" "slurm-${SLURM_JOB_ID}.out"
 echo "=========================================="
 echo ""
 
-export APP_PATH=${HOME}/git/TRIP/build_cpu
+export APP_PATH=${HOME}/git/TRIP/build
 export SCRIPT_DIR=${HOME}/git/TRIP/bin
 
 echo ""
@@ -54,6 +54,13 @@ echo "Starting TRIP ...... "
 echo ""
 
 source ${SCRIPT_DIR}/pfs_evn/gpfs_mn5.sh
+
+export RII_AA_SCRATCH_DIR=$TMPDIR
+export RII_AA_JOB_PATTERN="TRIP_job_$SLURM_JOB_ID"
+
+echo "RII_AA_SCRATCH_DIR: $RII_AA_SCRATCH_DIR"
+echo "RII_AA_JOB_PATTERN: $RII_AA_JOB_PATTERN"
+echo ""
 
 # Define arguments as a bash array
 ARGS=(
