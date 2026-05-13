@@ -11,12 +11,12 @@
 // hdf_atmos_functions.c -lhdf5 -lhdf5_hl
 
 void
-make_data_for_continuum(int N_frequencies, const int index_i, const int index_j, const int index_k,  //
-                        double *sigma_c, double *epsilon_c, double *K_c) {                           //
+make_data_for_continuum(int N_frequencies, const int index_i, const int index_j, const int index_k,    //
+                        double *sigma_c, double *epsilon_c, double *c_therm_emissivity_epsilon_c) {  //
   for (int i = 0; i < N_frequencies; i++) {
-    sigma_c[i]   = sin(0.1 * i + index_i + index_j + index_k) + 1.0;         //
-    epsilon_c[i] = cos(0.05 * i + index_j + index_k) + 1.0;                  //
-    K_c[i]       = sin(0.07 * i + index_k) + cos(0.03 * i + index_i) + 1.0;  //
+    sigma_c[i]                        = sin(0.1 * i + index_i + index_j + index_k) + 1.0;         //
+    epsilon_c[i]                      = cos(0.05 * i + index_j + index_k) + 1.0;                  //
+    c_therm_emissivity_epsilon_c[i] = sin(0.07 * i + index_k) + cos(0.03 * i + index_i) + 1.0;  //
   }
 }
 
@@ -65,11 +65,12 @@ read_main_demo_cont() {
   printf("\n");
 
   THDF_continuum_t cont;
-  double          *sigma_c   = (double *)malloc(N_frequencies * sizeof(double));
-  double          *epsilon_c = (double *)malloc(N_frequencies * sizeof(double));
-  double          *K_c       = (double *)malloc(N_frequencies * sizeof(double));
+  double          *sigma_c                        = (double *)malloc(N_frequencies * sizeof(double));
+  double          *epsilon_c                      = (double *)malloc(N_frequencies * sizeof(double));
+  double          *c_therm_emissivity_epsilon_c = (double *)malloc(N_frequencies * sizeof(double));
 
-  if (read_continuum_from_hdf5(file, N_frequencies, 4, 4, 4, 1, 1, 1, &cont, sigma_c, epsilon_c, K_c) < 0) {
+  if (read_continuum_from_hdf5(file, N_frequencies, 4, 4, 4, 1, 1, 1, &cont, sigma_c, epsilon_c,
+                               c_therm_emissivity_epsilon_c) < 0) {
     fprintf(stderr, "Error reading continuum data\n");
     exit_code = EXIT_FAILURE;
     goto free_sigma_c;
@@ -77,7 +78,8 @@ read_main_demo_cont() {
 
   printf("Read continuum data for grid point (0,0,0):\n");
   for (int i = 0; i < N_frequencies; i++) {
-    printf("  freq=%e Hz, sigma_c=%e, epsilon_c=%e, K_c=%e\n", frequencies[i], sigma_c[i], epsilon_c[i], K_c[i]);
+    printf("  freq=%e Hz, sigma_c=%e, epsilon_c=%e, c_therm_emissivity_epsilon_c=%e\n", frequencies[i], sigma_c[i],
+           epsilon_c[i], c_therm_emissivity_epsilon_c[i]);
   }
 
   THDF_atmos_t atmos_data;
@@ -92,8 +94,8 @@ free_sigma_c:
   if (epsilon_c) {
     free(epsilon_c);
   }
-  if (K_c) {
-    free(K_c);
+  if (c_therm_emissivity_epsilon_c) {
+    free(c_therm_emissivity_epsilon_c);
   }
 
 free_heights:
@@ -183,6 +185,21 @@ main(int argc, char **argv) {
   H5Fclose(file);
   MPI_Barrier(MPI_COMM_WORLD);
 
+  // Example atom data (all processes need this)
+  THDF_atom_two_levels_t atom = {
+      .atomic_number = 1,
+      .atomic_mass   = 1.0,
+      .E_lower       = 10.0,
+      .E_upper       = 20.0,
+      .g_lower       = 2.0,
+      .g_upper       = 4.0,
+      .jl2           = 1,
+      .ju2           = 2,
+      .Aul           = 6.3e8,
+      .a_coef_D2     = 1.0e-9,
+      .b_coef_D2     = 0.4,
+  };
+
   // Only rank 0 writes metadata using serial HDF5
   if (mpi_rank == 0) {
     file = H5Fopen("atmosphere_mpi.h5", H5F_ACC_RDWR, H5P_DEFAULT);
@@ -195,18 +212,6 @@ main(int argc, char **argv) {
       fprintf(stderr, "Error writing frequency grid data\n");
     }
 
-    // Example atom data
-    THDF_atom_two_levels_t atom = {
-        .atomic_number = 1,
-        .atomic_mass   = 1.0,
-        .E_lower       = 10.0,
-        .E_upper       = 20.0,
-        .g_lower       = 2.0,
-        .g_upper       = 4.0,
-        .jl2           = 1,
-        .ju2           = 2,
-        .Aul           = 6.3e8,
-    };
     if (write_atom_to_hdf5(file, &atom) < 0) {
       fprintf(stderr, "Error writing atom data\n");
     }
@@ -270,32 +275,33 @@ main(int argc, char **argv) {
   // in this example the domain in subdivided of vertical slices along the x-axis.
   u_int16_t *norm_sigma_c   = (uint16_t *)malloc(N_frequencies * local_N_x * N_y * N_z * sizeof(uint16_t));
   u_int16_t *norm_epsilon_c = (uint16_t *)malloc(N_frequencies * local_N_x * N_y * N_z * sizeof(uint16_t));
-  u_int16_t *norm_K_c       = (uint16_t *)malloc(N_frequencies * local_N_x * N_y * N_z * sizeof(uint16_t));
+  u_int16_t *norm_c_therm_emissivity_epsilon_c =
+      (uint16_t *)malloc(N_frequencies * local_N_x * N_y * N_z * sizeof(uint16_t));
 
   // Input continuum dataset.
-  double           *sigma_c   = (double *)malloc(N_frequencies * sizeof(double));
-  double           *epsilon_c = (double *)malloc(N_frequencies * sizeof(double));
-  double           *K_c       = (double *)malloc(N_frequencies * sizeof(double));
-  THDF_continuum_t *cont      = (THDF_continuum_t *)malloc(local_N_x * N_y * N_z * sizeof(THDF_continuum_t));
+  double           *sigma_c                        = (double *)malloc(N_frequencies * sizeof(double));
+  double           *epsilon_c                      = (double *)malloc(N_frequencies * sizeof(double));
+  double           *c_therm_emissivity_epsilon_c = (double *)malloc(N_frequencies * sizeof(double));
+  THDF_continuum_t *cont = (THDF_continuum_t *)malloc(local_N_x * N_y * N_z * sizeof(THDF_continuum_t));
 
   // Fill local data with MPI-aware atmospheric data
   for (int i = 0; i < local_N_x; i++) {
     for (int j = 0; j < N_y; j++) {
       for (int k = 0; k < N_z; k++) {
 
-        // Generate a fake data set and writes it in sigma_c, epsilon_c, K_c
-        make_data_for_continuum(N_frequencies, start_i + i, j, k, sigma_c, epsilon_c, K_c);
+        // Generate a fake data set and writes it in sigma_c, epsilon_c, c_therm_emissivity_epsilon_c
+        make_data_for_continuum(N_frequencies, start_i + i, j, k, sigma_c, epsilon_c, c_therm_emissivity_epsilon_c);
 
         const int offset_cont = (i * N_y * N_z + j * N_z + k) * N_frequencies;
 
         int local_idx   = i * N_y * N_z + j * N_z + k;
-        cont[local_idx] = normalize_continuum_data(sigma_c,                       //
-                                                   epsilon_c,                     //
-                                                   K_c,                           //
-                                                   N_frequencies,                 //
-                                                   &norm_sigma_c[offset_cont],    //
-                                                   &norm_epsilon_c[offset_cont],  //
-                                                   &norm_K_c[offset_cont]);       //
+        cont[local_idx] = normalize_continuum_data(sigma_c,                                             //
+                                                   epsilon_c,                                           //
+                                                   c_therm_emissivity_epsilon_c,                      //
+                                                   N_frequencies,                                       //
+                                                   &norm_sigma_c[offset_cont],                          //
+                                                   &norm_epsilon_c[offset_cont],                        //
+                                                   &norm_c_therm_emissivity_epsilon_c[offset_cont]);  //
 
         // Set the current absolute index in the cont-struct
         int global_i = start_i + i;
@@ -306,7 +312,7 @@ main(int argc, char **argv) {
 
         // genertae a fake THDF_atmos_t data for this point.
         // And copy it in the output placeholder.
-        local_atmos_data[local_idx] = create_atmos_data_point_mpi(global_i, j, k, mpi_rank);
+        local_atmos_data[local_idx] = create_atmos_data_point_mpi(global_i, j, k, mpi_rank, &atom);
       }
     }
   }
@@ -323,10 +329,11 @@ main(int argc, char **argv) {
                                                     local_N_x, N_y, N_z, plist_id);  //
 
   // Write the continuum
-  int result_cont = write_normalized_continuum_to_hdf5(file, N_frequencies,                            //
-                                                       start_i, 0, 0,                                  //
-                                                       local_N_x, N_y, N_z,                            //
-                                                       cont, norm_sigma_c, norm_epsilon_c, norm_K_c);  //
+  int result_cont =
+      write_normalized_continuum_to_hdf5(file, N_frequencies,                                                       //
+                                         start_i, 0, 0,                                                             //
+                                         local_N_x, N_y, N_z,                                                       //
+                                         cont, norm_sigma_c, norm_epsilon_c, norm_c_therm_emissivity_epsilon_c);  //
 
   if (result < 0) {
     fprintf(stderr, "Rank %d: Error writing local atmosphere data\n", mpi_rank);
@@ -365,10 +372,10 @@ main(int argc, char **argv) {
   free(frequencies);
   free(sigma_c);
   free(epsilon_c);
-  free(K_c);
+  free(c_therm_emissivity_epsilon_c);
   free(norm_sigma_c);
   free(norm_epsilon_c);
-  free(norm_K_c);
+  free(norm_c_therm_emissivity_epsilon_c);
   free(cont);
 
   if (mpi_rank == 0) {

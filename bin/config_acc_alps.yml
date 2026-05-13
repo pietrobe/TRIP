@@ -1,8 +1,8 @@
 # I/O
-input_directory: /capstor/scratch/cscs/sriva/PORTA/
+input_directory: /capstor/scratch/cscs/sriva/model128/
 # input_file: AR_385_Cut_64x64x128_mirrorxy-CRD_I_V0-B0_fix_conv_KQ_MC.pmd
 # input_file:      cai_0Bx_0By_0Bz_0Vx_0Vy_0Vz_GT4_5x5x133_it100.pmd
-input_file:      Model_QuietSun_8x8x128_extract.h5
+input_file:      small_ssd_from3D_8x8x143.h5
 ### input_file:     FALC93_70_v0_B20
 # frequency_file:  frequency/fal-c_299/frequency.dat
 frequency_file: frequency/96F/frequency.dat
@@ -21,7 +21,7 @@ output_overwrite_prevention: true
 write_whole_3D_field_hdf5: true
 write_text_output: false
 
-output_directory: /capstor/scratch/cscs/sriva/PORTA_OUT/h5_3
+output_directory: /capstor/scratch/cscs/sriva/model128_OUT/new_h5_test/v2
 
 use_B: true
 use_Vb: true
@@ -29,12 +29,15 @@ use_Vb: true
 pc_use_J_KQ: true
 
 use_continuum: false
-formal_solver: BESSER
+formal_solver: DELO_linear
 
-set_uniform_B: true
+set_uniform_B: false
 B_field: [5.0, 1.0, 1.0]
 
+use_D2_from_input: true
+
 emissivity_model: PRD  
+# emissivity_model: CRD_limit 
 
 # used only for FAL-C input
 N_theta: 8
@@ -43,15 +46,16 @@ input_cul_string:  ""
 
 use_prec: true
 
+
 solver:
-  ksp_solver_type: KSPGMRES
+  ksp_solver_type: KSPFGMRES
   ksp_rtol: 1e-7
-  ksp_max_it: 25
+  ksp_max_it: 15
 
 prec:
-  pc_solver_type: KSPGMRES
-  pc_rtol: 1e-6
-  pc_max_it: 30
+  pc_solver_type: KSPFGMRES
+  pc_rtol: 5e-4
+  pc_max_it: 17
 
 default_chi: &default_chi 0.0
 

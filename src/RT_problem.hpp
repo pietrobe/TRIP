@@ -111,18 +111,18 @@ class RT_problem
 		// set flags
 		use_PORTA_input_	= not(cfg_.input_directory.string().find("FAL-C") != std::string::npos);
 		use_magnetic_field_ = cfg_.use_B;
-		emissivity_model_	  = cfg_.emissivity_model;
-		enable_continuum_	  = cfg_.enable_continuum;
-		use_1_5D_approx_	  = cfg_.use_1_5D_approx;
-		use_bulk_velocity_  = cfg_.use_Vb;
-		verbose_			     = cfg_.verbose;
+		emissivity_model_	= cfg_.emissivity_model;
+		enable_continuum_	= cfg_.enable_continuum;
+		use_1_5D_approx_	= cfg_.use_1_5D_approx;
+		use_bulk_velocity_	= cfg_.use_Vb;
+		verbose_			= cfg_.verbose;
 
 		use_uniform_magnetic_field_ = cfg_.set_uniform_B;
 		if (use_uniform_magnetic_field_)
 		{
 			uniform_magnetic_field_value_ = cfg_.B_field[0];
 			uniform_magnetic_field_theta_ = cfg_.B_field[1];
-			uniform_magnetic_field_chi_	= cfg_.B_field[2];
+			uniform_magnetic_field_chi_	  = cfg_.B_field[2];
 		}
 
 		// set input files
@@ -141,7 +141,7 @@ class RT_problem
 
 				if (hdf_atmos_cpp::is_valid_hdf5_file(input_file_path))
 				{
-					this->read_3D_h5(input_file_path.string(), true);
+					this->read_3D_h5(input_file_path.string(), this->cfg_, true);
 				}
 				else
 				{
@@ -528,23 +528,23 @@ class RT_problem
 							  std::vector<Real> &surface_data_V);
 
 	int
-	accumulate_surface_profiles_Omega_domain_data(std::vector<Real> &surface_data_I,	//
-												             std::vector<Real> &surface_data_Q,	//
-												             std::vector<Real> &surface_data_U,	//
-												             std::vector<Real> &surface_data_V); //
+	accumulate_surface_profiles_Omega_domain_data(std::vector<Real> &surface_data_I,	   //
+												  std::vector<Real> &surface_data_Q,	   //
+												  std::vector<Real> &surface_data_U,	   //
+												  std::vector<Real> &surface_data_V);	   //
 	int																					   //
 	write_beams_frequency_grids_Omega_hdf5(const std::vector<BeamDirection> &beams,		   //
 										   const std::string				&output_file); //
 
 	int
-	write_emergent_field_Omega_hdf5(const std::string				 &output_file,	  //
-									MPI_Comm						  write_comm,	  //
-									const std::vector<BeamDirection> &beams,		  //
-									const int						  beam_index,	  //
-									std::vector<Real>				 &surface_data_I, //
-									std::vector<Real>				 &surface_data_Q, //
-									std::vector<Real>				 &surface_data_U, //
-									std::vector<Real>				 &surface_data_V);			  //
+	write_emergent_field_Omega_hdf5(const std::string				 &output_file,	   //
+									MPI_Comm						  write_comm,	   //
+									const std::vector<BeamDirection> &beams,		   //
+									const int						  beam_index,	   //
+									std::vector<Real>				 &surface_data_I,  //
+									std::vector<Real>				 &surface_data_Q,  //
+									std::vector<Real>				 &surface_data_U,  //
+									std::vector<Real>				 &surface_data_V); //
 	// MPI varables
 	int mpi_rank_;
 	int mpi_size_;
@@ -631,6 +631,7 @@ class RT_problem
 	// Field_ptr_t Nu_;   // upper level populations
 	Field_ptr_t Nl_;  // lower level populations
 	Field_ptr_t T_;	  // temperature
+	Field_ptr_t nH_;  // hydrogen number density
 	Field_ptr_t xi_;  // microturbulent velocity (a.k.a. non-thermal microscopic velocity)
 	Field_ptr_t Cul_; // rate of inelastic de-exciting collisions
 	Field_ptr_t Qel_; // rate of elastic collisions // TODO: for memory, maybe this could be removed, leaving only D2_?
@@ -660,41 +661,49 @@ class RT_problem
 	{
 		return mass_;
 	}
+
 	inline double
 	atomic_El() const
 	{
 		return El_;
 	}
+
 	inline double
 	atomic_Eu() const
 	{
 		return Eu_;
 	}
+
 	inline int
 	atomic_Jl2() const
 	{
 		return Jl2_;
 	}
+
 	inline int
 	atomic_Ju2() const
 	{
 		return Ju2_;
 	}
+
 	inline double
 	atomic_gl() const
 	{
 		return gl_;
 	}
+
 	inline double
 	atomic_gu() const
 	{
 		return gu_;
 	}
+
 	inline double
 	atomic_Aul() const
 	{
 		return Aul_;
 	}
+
 	inline Field_ptr_t
 	get_D2() const
 	{
@@ -705,8 +714,11 @@ class RT_problem
 	field_is_zero(const Field_ptr_t field);
 
 	// auxiliary_fields for single direction Omega outside theta and chi grids
-	void allocate_fields_Omega(); 
-	void set_eta_and_rhos_Omega(const double theta, const double chi);	
+	void
+	allocate_fields_Omega();
+
+	void
+	set_eta_and_rhos_Omega(const double theta, const double chi);
 
 	// allocate reduced data structeres
 	void
@@ -735,16 +747,16 @@ class RT_problem
 	}
 
    private:
-	const bool use_ghost_layers_   = false;
+	const bool use_ghost_layers_ = false;
 
-	bool	     use_PORTA_input_	 = false;
-	bool	     use_magnetic_field_ = false;
-	bool       use_bulk_velocity_  = false;
-	
-	bool     use_uniform_magnetic_field_   = false;
-	Real     uniform_magnetic_field_value_ = 0.0; // Gauss
-	Real     uniform_magnetic_field_theta_ = 0.0; // rad
-	Real     uniform_magnetic_field_chi_   = 0.0; // rad
+	bool use_PORTA_input_	 = false;
+	bool use_magnetic_field_ = false;
+	bool use_bulk_velocity_	 = false;
+
+	bool use_uniform_magnetic_field_   = false;
+	Real uniform_magnetic_field_value_ = 0.0; // Gauss
+	Real uniform_magnetic_field_theta_ = 0.0; // rad
+	Real uniform_magnetic_field_chi_   = 0.0; // rad
 
 	// physical constants
 	const double c_	  = 2.99792458e+10;
@@ -759,8 +771,10 @@ class RT_problem
 	double gu_;
 	double Aul_;   // Einstein coefficients for spontaneous emission
 	double T_ref_; // Reference temperature
-	int  Jl2_;
-	int  Ju2_;
+	int	   Jl2_;
+	int	   Ju2_;
+	double a_coef_D2_;
+	double b_coef_D2_;
 
 	// 2-terms atom constants (Jl2_ and Ju2_ are used for 2Lu and 2Ll from Luca notes atm)
 	int					S2_;
@@ -773,7 +787,7 @@ class RT_problem
 	std::vector<double>		  El_vec_;
 	std::vector<double>		  Eu_vec_;
 	mdm::md_matrix<double, 1> El0_;
-   mdm::md_matrix<double, 1> Eu0_;    	
+	mdm::md_matrix<double, 1> Eu0_;
 
 	// reference frame
 	const double gamma_ = 0.5 * M_PI;
@@ -848,7 +862,7 @@ class RT_problem
 
 	// read 3D input from pmd file
 	void
-	read_3D_h5(const std::string filename, const bool verbose = false);
+	read_3D_h5(const std::string filename, const AppConfig &cfg, const bool verbose = false);
 
 	void
 	read_3D(const char *filename_pmd, const char *filename_cul, const char *filename_qel, const char *filename_llp,
@@ -861,8 +875,8 @@ class RT_problem
 	read_single_node_single_field(MPI_File fh, const int i, const int j, const int k);
 
 	void
-	read_single_node_triple_field(MPI_File input_file, const int i, const int j, const int k, double &kappa, double &sigma,
-								  double &epsilon);
+	read_single_node_triple_field(MPI_File input_file, const int i, const int j, const int k, double &kappa,
+								  double &sigma, double &epsilon);
 
 	// compute polarization tensors (vector of six components)
 	std::vector<std::complex<double>>

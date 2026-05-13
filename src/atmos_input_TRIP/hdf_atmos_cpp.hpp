@@ -148,12 +148,7 @@ namespace hdf_atmos_cpp
 			return -1;
 		}
 
-		frequencies.resize(N_frequencies);
-		if (H5LTread_dataset_double(group, "frequency", frequencies.data()) < 0)
-		{
-			H5Gclose(group);
-			return -1;
-		}
+		frequencies.clear();
 
 		H5Gclose(group);
 		return 0;
@@ -306,10 +301,17 @@ namespace hdf_atmos_cpp
 		}
 
 		printf("Frequency grid: N_frequencies=%d\n", N_frequencies);
-		printf("Frequencies:\n");
-		for (int i = 0; i < N_frequencies; i++)
+		if (!frequencies.empty())
 		{
-			printf("  frequency[%d] = %e Hz\n", i, frequencies[i]);
+			printf("Frequencies:\n");
+			for (int i = 0; i < N_frequencies; i++)
+			{
+				printf("  frequency[%d] = %e Hz\n", i, frequencies[i]);
+			}
+		}
+		else
+		{
+			printf("(No frequency data in file)\n");
 		}
 
 		printf("Atom data:\n");
@@ -344,11 +346,13 @@ namespace hdf_atmos_cpp
 		const THDF_atmos_t &point = atmos_data[33];
 		printf("  temperature = %f\n", point.temperature);
 		printf("  vmicro = %f\n", point.vmicro);
+		printf("  Doppler_width = %f\n", point.Doppler_width);
 		printf("  damping = %f\n", point.damping);
 		printf("  pop_lower_level = %f\n", point.pop_lower_level);
 		printf("  pop_upper_level = %f\n", point.pop_upper_level);
 		printf("  Cul = %f\n", point.Cul);
 		printf("  Qel = %f\n", point.Qel);
+		printf("  nH = %f\n", point.nH);
 		printf("  magnetic_field_x = %f\n", point.magnetic_field_x);
 		printf("  magnetic_field_y = %f\n", point.magnetic_field_y);
 		printf("  magnetic_field_z = %f\n", point.magnetic_field_z);
@@ -356,8 +360,8 @@ namespace hdf_atmos_cpp
 		printf("  bulk_velocity_y = %f\n", point.bulk_velocity_y);
 		printf("  bulk_velocity_z = %f\n", point.bulk_velocity_z);
 		printf("  c_scat_opacity_sigma_c = %f\n", point.c_scat_opacity_sigma_c);
-		printf("  c_therm_emissivity_epsilon_c = %f\n", point.c_therm_emissivity_epsilon_c);
-		printf("  c_tot_opacity_K_c = %f\n", point.c_tot_opacity_K_c);
+		printf("  c_therm_opacity_k_c = %f\n", point.c_therm_opacity_k_c);
+		printf("  c_therm_emissivity_epsilon_cth = %f\n", point.c_therm_emissivity_epsilon_c);
 
 		printf("\nFile validation successful!\n");
 	}

@@ -396,9 +396,10 @@ struct AppConfig
 	emissivity_model_t emissivity_model;
 
 	// Physical switches
-	bool use_B			  = true;
-	bool use_Vb			  = true;
-	bool enable_continuum = true;
+	bool use_B			   = true;
+	bool use_Vb			   = true;
+	bool enable_continuum  = true;
+	bool use_D2_from_input = true; // if false, D2 is calculated from the a and b coefficients.
 
 	// Set constant magnetic field
 	bool				  set_uniform_B = false;
@@ -465,5 +466,26 @@ write_3D_whole_field_hdf5(RT_problem &rt_problem, const std::string &output_file
 int
 write_3D_whole_field_falp_hdf5(RT_problem &rt_problem, const std::string &output_file, //
 							   const int step_z_ = 2, bool normalized_output = false); //
+
+/**
+ * @brief Compute the collisional depolarization rate D2.
+ *
+ * Reference: Collisional Depolarization of the Solar Ca, Mg, and Ba Levels,
+ * M. Derouich (2019), DOI: 10.3847/1538-4357/ab26b4, 
+ * From Eq. (6).
+ *
+ * In the paper, T_ref is set to 5000 K with a = 1.24e-8 and b = 0.37.
+ * In this implementation, a and b are provided in the h5 input file.
+ * D2 is calculated as D2 = a * nH * (T / T_ref)^b, where nH is the neutral hydrogen density and T is the local temperature.
+ *
+ * @param a Empirical coefficient from input data.
+ * @param b Empirical exponent from input data.
+ * @param nH Neutral hydrogen density.
+ * @param T Local temperature.
+ * @param T_ref Reference temperature (default: 5000.0 K).
+ * @return Collisional depolarization coefficient D2.
+ */
+double
+calculate_D2(const double a, const double b, const double nH, const double T, const double T_ref = 5000.0); //
 
 #endif

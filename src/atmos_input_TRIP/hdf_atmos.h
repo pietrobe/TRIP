@@ -18,13 +18,15 @@ typedef struct {
   int16_t index_k;  // height index   // These must be unique for each grid point
 
   float  temperature;      // Temperature in K
+  double nH;               // Hydrogen atoms density
   double vmicro;           // Microturbulent velocity in cm/s (set to 0)
   double Doppler_width;    // Doppler W Hz
   double damping;          // Damping parameter (dimensionless)
   double pop_lower_level;  // Population of lower energy level (in cm^-3)
-  double pop_upper_level;  // Population of upper energy level (in cm^-3) (lasciare anche se non lo si usa)
-  double Cul;  // Rate of inelastic collisions (in s^-1)
-  double Qel;  // Rate of elastic collisions with neutral perturber (in s^-1)
+  double pop_upper_level;  // Population of upper energy level (in cm^-3)
+  double Cul;              // Rate of inelastic collisions (in s^-1)
+  double Qel;              // Rate of elastic collisions with neutral perturber (in s^-1)
+  double D2;  // D^2 Depolarization Rate: From: Derouich (2019) - The Astrophysical Journal, 880:10 (6pp), 2019 July 20
 
   float magnetic_field_x;  // in Gauss
   float magnetic_field_y;  // in Gauss
@@ -38,54 +40,29 @@ typedef struct {
   // In case of blends or more accurate calculations,
   // these quantities must be provided at each frequency point
   // with array of size N_frequencies
-  double c_scat_opacity_sigma_c;        // sigma_c
-  double c_therm_emissivity_epsilon_c;  // epsilon_c
-  double c_tot_opacity_K_c;             // K_c
+
+  // ATTENTION !!!!!!!!!!!!!!!!!!!!!!!
+  // the user must calculate /////////
+  // Kc = c_therm_opacity_k_c + c_scat_opacity_sigma_c
+  double c_scat_opacity_sigma_c;          // sigma_c
+  double c_therm_opacity_k_c;             // k_c (new) / Corresponds to k_c (old) - sigma_c
+  double c_therm_emissivity_epsilon_c;  // epsilon_cth
+
 } THDF_atmos_t;
-
-// typedef struct {
-
-//   int16_t index_i;  // horizontal x index
-//   int16_t index_j;  // horizontal y index
-//   int16_t index_k;  // height index   // These must be unique for each grid point
-
-//   float  temperature;      // Temperature in K
-//   double vmicro;           // Microturbulent velocity in cm/s (set to 0)
-//   double Doppler_width;    // Doppler Width s^-1
-//   double damping;          // Damping parameter (dimensionless)
-//   double pop_lower_level;  // Population of lower energy level (in cm^-3)
-//   double pop_upper_level;  // Population of upper energy level (in cm^-3) (lasciare anche se non lo si usa)
-//   double Gamma_I;          // Rate of inelastic collisions (in s^-1) Gamma_I (rename)
-//   double Gamma_E;          // Rate of elastic collisions with neutral perturber (in s^-1) Gamma_E
-
-//   float magnetic_field_x;  // in Gauss
-//   float magnetic_field_y;  // in Gauss
-//   float magnetic_field_z;  // in Gauss
-
-//   float bulk_velocity_x;  // in cm/s
-//   float bulk_velocity_y;  // in cm/s
-//   float bulk_velocity_z;  // in cm/s
-
-//   // Continuum at central line frequency
-//   // In case of blends or more accurate calculations,
-//   // these quantities must be provided at each frequency point
-//   // with array of size N_frequencies
-//   double *c_scat_opacity_sigma_c;        // sigma_c
-//   double *c_therm_emissivity_epsilon_c;  // epsilon_c
-//   double *c_tot_opacity_K_c;             // K_c
-
-// } THDF_atmos_SOA_t;
 
 typedef struct {
   int    atomic_number;  // Atomic number
-  double atomic_mass;
-  double E_lower;  // in cm^-1
-  double E_upper;  // in cm^-1
-  double g_lower;
-  double g_upper;
-  int    jl2;  // Multiplied by 2
-  int    ju2;
-  double Aul;
+  double atomic_mass;    // Relative atomic mass in amu
+  double E_lower;        // in cm^-1
+  double E_upper;        // in cm^-1
+  double g_lower;        //
+  double g_upper;        //
+  int    jl2;            // Multiplied by 2
+  int    ju2;            //
+  double Aul;            //
+
+  double a_coef_D2;  // D^2 = a * nH * (T/5000)^b // Depolarization Rate.
+  double b_coef_D2;  // From: Derouich (2019) - The Astrophysical Journal, 880:10 (6pp), 2019 July 20
 } THDF_atom_two_levels_t;
 
 typedef struct {
@@ -114,16 +91,16 @@ typedef struct {
   double min_c_scat_opacity_sigma_c;     // min sigma_c
   double max_Vm_c_scat_opacity_sigma_c;  // max Vm sigma_c
 
-  double min_c_therm_emissivity_epsilon_c;     // min epsilon_c
-  double max_Vm_c_therm_emissivity_epsilon_c;  // max Vm epsilon_c
+  double min_c_therm_opacity_k_c;     // min epsilon_c
+  double max_Vm_c_therm_opacity_k_c;  // max Vm epsilon_c
 
-  double min_c_tot_opacity_K_c;     // min K_c
-  double max_Vm_c_tot_opacity_K_c;  // max Vm K_c
+  double min_c_therm_emissivity_epsilon_c;     // min eta_thermal (old: K_c)
+  double max_Vm_c_therm_emissivity_epsilon_c;  // max Vm eta_thermal (old: K_c)
 
   // // arrays storing the continuum data (N_freq)
   // uint16_t *c_scat_opacity_sigma_c;        // sigma_c
-  // uint16_t *c_therm_emissivity_epsilon_c;  // epsilon_c
-  // uint16_t *c_tot_opacity_K_c;             // K_c
+  // uint16_t *c_therm_opacity_k_c;  // epsilon_c
+  // uint16_t *c_therm_emissivity_epsilon_c;                 // eta_thermal (old: K_c)
 } THDF_continuum_t;
 
 typedef struct {
@@ -308,8 +285,8 @@ create_atom_compound_type(void);
  * - magnetic_field_x, magnetic_field_y, magnetic_field_z: In Gauss (float)
  * - bulk_velocity_x, bulk_velocity_y, bulk_velocity_z: In cm/s (float)
  * - c_scat_opacity_sigma_c: Continuum scattering opacity (double)
- * - c_therm_emissivity_epsilon_c: Continuum thermal emissivity (double)
- * - c_tot_opacity_K_c: Continuum total opacity (double)
+ * - c_therm_opacity_k_c: Continuum thermal emissivity (double)
+ * - c_therm_emissivity_epsilon_c: Continuum thermal opacity (double) (old: K_c)
  *
  * @return HDF5 datatype handle (hid_t) on success, negative value on error.
  *         Caller is responsible for closing the type with H5Tclose().
@@ -403,9 +380,10 @@ create_hdf_atmos_compound_type(void);
  * @return Populated hdf_atmos structure
  */
 THDF_atmos_t
-create_atmos_data_point(int i,  //
-                        int j,  //
-                        int k);
+create_atmos_data_point(int                           i,  //
+                        int                           j,  //
+                        int                           k,  //
+                        const THDF_atom_two_levels_t *atom);
 
 /**
  * @brief Print all fields of an atmosphere data point
@@ -496,10 +474,11 @@ create_hdf_atmos_compound_type_mpi(void);
  * @return Populated hdf_atmos structure
  */
 THDF_atmos_t
-create_atmos_data_point_mpi(int i,  //
-                            int j,  //
-                            int k,  //
-                            int mpi_rank);
+create_atmos_data_point_mpi(int                           i,         //
+                            int                           j,         //
+                            int                           k,         //
+                            int                           mpi_rank,  //
+                            const THDF_atom_two_levels_t *atom);
 
 //============================================================================
 // Demo/test functions

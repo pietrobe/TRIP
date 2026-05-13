@@ -136,6 +136,8 @@ loadConfig(const std::string &filename)
 	if (config["enable_continuum"]) cfg.enable_continuum = config["enable_continuum"].as<bool>();
 	if (config["use_Vb"]) cfg.use_Vb = config["use_Vb"].as<bool>();
 
+	if (config["use_D2_from_input"]) cfg.use_D2_from_input = config["use_D2_from_input"].as<bool>();
+
 	// Formal solver
 	if (config["formal_solver"])
 	{
@@ -180,15 +182,15 @@ loadConfig(const std::string &filename)
 
 	// Integers
 	if (config["N_theta"]) cfg.N_theta = config["N_theta"].as<int>();
-	if (config["N_chi"])   cfg.N_chi   = config["N_chi"].as<int>();
-	if (config["N_x"])     cfg.N_x     = config["N_x"].as<int>();
-	if (config["N_y"])     cfg.N_y     = config["N_y"].as<int>();
-	if (config["L"])       cfg.L       = config["L"].as<double>();
+	if (config["N_chi"]) cfg.N_chi = config["N_chi"].as<int>();
+	if (config["N_x"]) cfg.N_x = config["N_x"].as<int>();
+	if (config["N_y"]) cfg.N_y = config["N_y"].as<int>();
+	if (config["L"]) cfg.L = config["L"].as<double>();
 
 	// Optional strings (converted to filesystem::path)
-	if (config["input_cul"])  cfg.input_cul  = std::filesystem::path(config["input_cul"].as<std::string>());
-	if (config["input_qel"])  cfg.input_qel  = std::filesystem::path(config["input_qel"].as<std::string>());
-	if (config["input_llp"])  cfg.input_llp  = std::filesystem::path(config["input_llp"].as<std::string>());
+	if (config["input_cul"]) cfg.input_cul = std::filesystem::path(config["input_cul"].as<std::string>());
+	if (config["input_qel"]) cfg.input_qel = std::filesystem::path(config["input_qel"].as<std::string>());
+	if (config["input_llp"]) cfg.input_llp = std::filesystem::path(config["input_llp"].as<std::string>());
 	if (config["input_back"]) cfg.input_back = std::filesystem::path(config["input_back"].as<std::string>());
 
 	// use_prec (default is true)
@@ -212,10 +214,10 @@ loadConfig(const std::string &filename)
 		auto s = config["solver"];
 
 		if (s["ksp_solver_type"]) cfg.solver.ksp_solver_type = toKSPType(s["ksp_solver_type"].as<std::string>());
-		if (s["ksp_rtol"])        cfg.solver.ksp_rtol      = s["ksp_rtol"].as<double>();
-		if (s["ksp_max_it"])      cfg.solver.ksp_max_it    = s["ksp_max_it"].as<int>();
-		if (s["gmres_restart"])   cfg.solver.gmres_restart = s["gmres_restart"].as<int>();
-		if (s["ksp_use_J_KQ"])    cfg.solver.ksp_use_J_KQ  = s["ksp_use_J_KQ"].as<bool>();
+		if (s["ksp_rtol"]) cfg.solver.ksp_rtol = s["ksp_rtol"].as<double>();
+		if (s["ksp_max_it"]) cfg.solver.ksp_max_it = s["ksp_max_it"].as<int>();
+		if (s["gmres_restart"]) cfg.solver.gmres_restart = s["gmres_restart"].as<int>();
+		if (s["ksp_use_J_KQ"]) cfg.solver.ksp_use_J_KQ = s["ksp_use_J_KQ"].as<bool>();
 	}
 
 	// Preconditioner section
@@ -235,7 +237,7 @@ loadConfig(const std::string &filename)
 		for (const auto &beam : config["arbitrary_beams"])
 		{
 			BeamDirection bd;
-			if (beam["mu"])  bd.mu  = beam["mu"].as<double>();
+			if (beam["mu"]) bd.mu = beam["mu"].as<double>();
 			if (beam["chi"]) bd.chi = beam["chi"].as<double>();
 			cfg.arbitrary_beams.push_back(bd);
 		}
@@ -272,6 +274,7 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 	print("Emissivity Model", emissivity_model_to_string_long(cfg.emissivity_model));
 	print("Use Magnetic Field", (cfg.use_B ? "Yes" : "No"));
 	print("Use Bulk Velocity", (cfg.use_Vb ? "Yes" : "No"));
+	print("Use D2 from Input", (cfg.use_D2_from_input ? "Yes" : "No"));
 	print("Enable Continuum", (cfg.enable_continuum ? "Yes" : "No"));
 	print("Use 1.5D Approximation", (cfg.use_1_5D_approx ? "Yes" : "No"));
 	print("Formal Solver", cfg.formal_solver);
@@ -288,17 +291,17 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 	print("Set Uniform Magnetic Field", (cfg.set_uniform_B ? "Yes" : "No"));
 	if (cfg.set_uniform_B)
 	{
-		print("├─ Uniform Magnetic Field Value (Gauss)", std::to_string(cfg.B_field[0]));
-		print("├─ Uniform Magnetic Field Theta (rad)", std::to_string(cfg.B_field[1]));
-		print("└─ Uniform Magnetic Field Chi (rad)", std::to_string(cfg.B_field[2]));
+		print("* Uniform Magnetic Field Value (Gauss)", std::to_string(cfg.B_field[0]));
+		print("* Uniform Magnetic Field Theta (rad)", std::to_string(cfg.B_field[1]));
+		print("* Uniform Magnetic Field Chi (rad)", std::to_string(cfg.B_field[2]));
 	}
 
 	print("Set Uniform Bulk Velocity", (cfg.set_uniform_Vb ? "Yes" : "No"));
 	if (cfg.set_uniform_Vb)
 	{
-		print("├─ Uniform Bulk Velocity Vx (cm/s)", std::to_string(cfg.Vb_field[0]));
-		print("├─ Uniform Bulk Velocity Vy (cm/s)", std::to_string(cfg.Vb_field[1]));
-		print("└─ Uniform Bulk Velocity Vz (cm/s)", std::to_string(cfg.Vb_field[2]));
+		print("* Uniform Bulk Velocity Vx (cm/s)", std::to_string(cfg.Vb_field[0]));
+		print("* Uniform Bulk Velocity Vy (cm/s)", std::to_string(cfg.Vb_field[1]));
+		print("* Uniform Bulk Velocity Vz (cm/s)", std::to_string(cfg.Vb_field[2]));
 	}
 
 	print("Arbitrary Beams Count", std::to_string(cfg.arbitrary_beams.size()));
@@ -306,10 +309,10 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 	{
 		const auto		 &beam		   = cfg.arbitrary_beams[i];
 		const bool		  is_last_beam = (i + 1 == cfg.arbitrary_beams.size());
-		const std::string beam_prefix  = is_last_beam ? "└─" : "├─";
-		print(beam_prefix + " Beam", std::to_string(i));
-		print("   ├─ mu", std::to_string(beam.mu));
-		print("   └─ chi (rad)", std::to_string(beam.chi));
+		const std::string beam_prefix  = is_last_beam ? "" : "";
+		print(beam_prefix + "* Beam", std::to_string(i));
+		print("   > mu", std::to_string(beam.mu));
+		print("   > chi (rad)", std::to_string(beam.chi));
 	}
 
 	os << std::endl << "Solver Configuration:" << std::endl;
@@ -515,3 +518,18 @@ namespace TRIP_Comms
 		return TRIP_comms_shared_ptr;
 	}
 } // namespace TRIP_Comms
+
+double
+calculate_D2(const double a, const double b, const double nH, const double T, const double T_ref)
+{
+	// From: Collisional Depolarization of the Solar Ca, Mg, and Ba Levels. M. Derouich 2019. DOI 10.3847/1538-4357/ab26b4
+	// eq. 6 in the paper.
+	// In the paper, T_ref is set to 5000 K
+	// a = 1.24 * 10^-8
+	// b = 0.37
+	// In our method a and b are given in the h5 input file.
+
+	double D2 = a * nH * std::pow(T / T_ref, b);
+
+	return D2;
+}

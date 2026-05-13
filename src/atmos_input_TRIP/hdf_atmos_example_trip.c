@@ -207,7 +207,7 @@ write_main_demo_TRIP(int argc, char **argv) {
       for (int k = 0; k < N_z; k++) {
 
         int idx         = idx_base + k;
-        atmos_data[idx] = create_atmos_data_point(i, j, k);
+        atmos_data[idx] = create_atmos_data_point(i, j, k, &atom);
       }
       THDF_write_atmosphere_data_to_dataset(atmos_dset,             //
                                             &atmos_data[idx_base],  // Pointer to the first point of the block (i, j, 0)

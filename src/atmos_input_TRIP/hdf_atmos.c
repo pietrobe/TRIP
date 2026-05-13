@@ -80,7 +80,19 @@ write_main_demo(int argc, char **argv) {
   }
 
   // Example atom data
-  THDF_atom_two_levels_t atom = {1, 1.0, 10.0, 20.0, 2.0, 4.0, 1, 2, 6.3e8};
+  THDF_atom_two_levels_t atom = {
+      .atomic_number = 1,
+      .atomic_mass   = 1.0,
+      .E_lower       = 10.0,
+      .E_upper       = 20.0,
+      .g_lower       = 2.0,
+      .g_upper       = 4.0,
+      .jl2           = 1,
+      .ju2           = 2,
+      .Aul           = 6.3e8,
+      .a_coef_D2     = 1.0e-9,
+      .b_coef_D2     = 0.4,
+  };
   if (write_atom_to_hdf5(file, &atom) < 0) {
     fprintf(stderr, "Error writing atom data\n");
     H5Fclose(file);
@@ -104,7 +116,7 @@ write_main_demo(int argc, char **argv) {
       for (int k = 0; k < N_z; k++) {
 
         int idx         = idx_base + k;
-        atmos_data[idx] = create_atmos_data_point(i, j, k);
+        atmos_data[idx] = create_atmos_data_point(i, j, k, &atom);
       }
       THDF_write_atmosphere_data_to_dataset(atmos_dset, &atmos_data[idx_base], i, j, 0, 1, 1, N_z);
     }

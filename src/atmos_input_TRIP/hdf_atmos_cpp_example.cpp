@@ -8,7 +8,7 @@
 #ifndef HDF_ATMOS_BUILD_LIBRARY
 int
 main(int argc, char *argv[]) {
-  std::string filename = "atmosphere_mpi.h5";
+  std::string filename = "/home/simone/cscs_scratch/PORTA/Model_QuietSun_8x8x128_extract.h5";
 
   if (argc > 1) {
     filename = argv[1];
@@ -41,9 +41,11 @@ main(int argc, char *argv[]) {
       std::cout << "  heights[" << i << "] = " << heights[i] << " cm" << std::endl;
     }
 
-    std::cout << "\nFirst 5 frequencies (using std::vector):" << std::endl;
-    for (size_t i = 0; i < std::min(size_t(5), frequencies.size()); ++i) {
-      std::cout << "  frequencies[" << i << "] = " << frequencies[i] << " Hz" << std::endl;
+    if (!frequencies.empty()) {
+      std::cout << "\nFirst 5 frequencies (using std::vector):" << std::endl;
+      for (size_t i = 0; i < std::min(size_t(5), frequencies.size()); ++i) {
+        std::cout << "  frequencies[" << i << "] = " << frequencies[i] << " Hz" << std::endl;
+      }
     }
 
     // Access atmosphere data
