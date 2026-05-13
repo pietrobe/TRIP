@@ -11,6 +11,13 @@ extern PetscErrorCode UserMult_JKQ(Mat mat,Vec x,Vec y);
 extern PetscErrorCode MF_pc_Destroy(PC pc);
 extern PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y);
 
+static PetscErrorCode PrecMonitor(KSP, PetscInt n, PetscReal rnorm, void*)
+{
+    PetscFunctionBegin;
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%3" PetscInt_FMT " PREC Residual norm %14.12e\n", n, (double)rnorm));
+    PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 unsigned int get_RII_contrib_block_size();
 
 void set_RII_contrib_block_size(const unsigned int block_size);
@@ -318,8 +325,9 @@ public:
 
 			ierr = MatShellSetOperation(MF_operator_approx_,MATOP_MULT,(void(*)(void))UserMult_approx);CHKERRV(ierr);		
 
-			// set PC solver 
+			// set PC solver
 			ierr = KSPCreate(PETSC_COMM_WORLD,&mf_ctx_.pc_solver_);CHKERRV(ierr);
+			ierr = KSPSetOptionsPrefix(mf_ctx_.pc_solver_, "pc_");CHKERRV(ierr);
     		ierr = KSPSetOperators(mf_ctx_.pc_solver_,MF_operator_approx_,MF_operator_approx_);CHKERRV(ierr);
 
     		ierr = KSPSetType(mf_ctx_.pc_solver_,pc_ksp_type_);CHKERRV(ierr); 
@@ -353,9 +361,12 @@ public:
 
 		if (RT_problem_->verbose_)  {
 			ierr = PetscOptionsSetValue(NULL, "-ksp_monitor", "");CHKERRV(ierr);
-			// ierr = PetscOptionsSetValue(NULL, "-ksp_monitor_true_residual", "");CHKERRV(ierr);    // WARNING: this costs 
-			ierr = PetscOptionsSetValue(NULL, "-ksp_view", "");CHKERRV(ierr);		
-		}		
+			// ierr = PetscOptionsSetValue(NULL, "-ksp_monitor_true_residual", "");CHKERRV(ierr);    // WARNING: this costs
+			ierr = PetscOptionsSetValue(NULL, "-ksp_view", "");CHKERRV(ierr);
+			if (using_prec_) {
+				ierr = KSPMonitorSet(mf_ctx_.pc_solver_, PrecMonitor, NULL, NULL);CHKERRV(ierr);
+			}
+		}
 
 		ierr = PetscOptionsSetValue(NULL, "-ksp_converged_reason", "");CHKERRV(ierr);
 
