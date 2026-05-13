@@ -2774,7 +2774,15 @@ void RT_problem::set_grid_partition()
 	else // full 3D
 	{			
 		// TRIP_Comms::getTRIPCommunicators()->duplicateCommunicator(std::string("bcast_decomposition"), MPI_COMM_WORLD);
-		set_3D_decomposition_BLC(mpi_rank_, mpi_size_, N_x_, N_y_, N_z_);
+
+		if (N_x_ == 1 and N_y_ == 1)
+		{
+			set_3D_decomposition(N_x_, N_y_, N_z_);
+		}
+		else
+		{
+			set_3D_decomposition_BLC(mpi_rank_, mpi_size_, N_x_, N_y_, N_z_);		
+		}		
 	}
 }
 

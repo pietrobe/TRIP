@@ -2979,7 +2979,7 @@ void MF_context::set_up_emission_module(){
         // , emission_coefficient_components::epsilon_R_II_AA_PRECOND
         // , emission_coefficient_components::epsilon_R_III
         // , emission_coefficient_components::epsilon_R_II_CONTRIB_EXTREME_FAST
-        // , emission_coefficient_components::epsilon_csc ------------> ? TEST remove eps csc ------------------------------------------------
+        // , emission_coefficient_components::epsilon_csc
     };       
     
     epsilon_fun_approx_ = ecc_sh_ptr_->make_computation_function(components_approx);

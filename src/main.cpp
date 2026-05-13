@@ -178,9 +178,8 @@ main(int argc, char *argv[])
 		}
 
 		///////////////////////////////////////////////////
-		// solve //////////////////////////////////////////
-		rt_solver.solve();
-		// rt_solver.apply_formal_solver();
+		// solve //////////////////////////////////////////		
+		rt_solver.solve();				
 
 		clocks.solve_end_time = MPI_Wtime();
 

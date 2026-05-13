@@ -61,7 +61,7 @@ struct MF_context {
 	const int J_KQ_size_ = 18;
 
 	// reduced models flags for preconditioner
-	const bool unpolarized_prec_ = false;
+	const bool unpolarized_prec_ = false; // TEST
 	bool pc_use_J_KQ_; 
 	
 	// formal solution in arbitrary direction
@@ -377,10 +377,9 @@ public:
 	}
 
 	// solve linear system
-	//TODO
 	inline void solve()
 	{	
-		double start = MPI_Wtime();	
+		const double start = MPI_Wtime();	
 		
 		if (mpi_rank_ == 0) std::cout << "\nStart linear solve..." << std::endl;		
 
@@ -390,18 +389,18 @@ public:
 		}	
 		else
 		{			
-			PetscErrorCode ierr;
+			PetscErrorCode ierr;			
 			ierr = KSPSolve(ksp_solver_, rhs_, RT_problem_->I_vec_);CHKERRV(ierr);
 		}
 
-		MPI_Barrier(MPI_COMM_WORLD); double end = MPI_Wtime();
-		if (mpi_rank_ == 0) std::cout << "Solve time (s) = " << end - start << std::endl;	
+		MPI_Barrier(MPI_COMM_WORLD); 
+		if (mpi_rank_ == 0) std::cout << "Solve time (s) = " << MPI_Wtime() - start << std::endl;	
 
 		// update I_field for later use
 		mf_ctx_.vec_to_field(RT_problem_->I_field_, RT_problem_->I_vec_);	//TODO	remove
 	}
 
-	// To be properly tested // TODO
+	// To be properly tested 
 	inline void solve_with_J_KQ()
 	{				
 		if (mpi_rank_ == 0) std::cout << "\nStart J_KQ solution: WARNING at the moment this has no eps_csc." << std::endl;			
@@ -425,6 +424,117 @@ public:
 
         VecAXPY(RT_problem_->I_vec_, 1.0, rhs_);        
 	}
+
+	// TEST (test also rhs as initial guess)
+	inline void solve_LSA()
+	{	
+		double start = MPI_Wtime();	
+
+		PetscErrorCode ierr;
+
+		if (mpi_rank_ == 0) std::cout << "\nTesting Last Scattering Approximation..." << std::endl;				
+		if (mpi_rank_ == 0) std::cout << "\nStart linear solve..." << std::endl;		
+			
+		ierr = KSPSolve(ksp_solver_, rhs_, RT_problem_->I_vec_);CHKERRV(ierr);		
+
+		MPI_Barrier(MPI_COMM_WORLD);
+		if (mpi_rank_ == 0) std::cout << "Solve time (s) = " << MPI_Wtime() - start << std::endl;	
+		
+		// remove polarization
+		if (mpi_rank_ == 0) std::cout << "\nRemoving polarization..." << std::endl;	
+		set_zero_polarization(RT_problem_->I_vec_);		
+
+		ierr = KSPReset(ksp_solver_);CHKERRV(ierr);    	
+
+		if (mpi_rank_ == 0) std::cout << "Set LSA KSP" << std::endl;
+		ierr = KSPCreate(PETSC_COMM_WORLD,&ksp_solver_);CHKERRV(ierr);
+    	ierr = KSPSetOperators(ksp_solver_,MF_operator_,MF_operator_);CHKERRV(ierr);	    		    	   
+    	ierr = KSPSetType(ksp_solver_,KSPGMRES);CHKERRV(ierr);     	
+    	ierr = KSPSetTolerances(ksp_solver_, 1e-6,PETSC_DEFAULT,PETSC_DEFAULT, 3);CHKERRV(ierr);
+    	ierr = KSPSetNormType(ksp_solver_, KSP_NORM_UNPRECONDITIONED);CHKERRV(ierr);    	    	
+    	ierr = KSPSetInitialGuessNonzero(ksp_solver_, PETSC_TRUE);CHKERRV(ierr); 
+
+	ierr = PetscOptionsSetValue(NULL, "-ksp_monitor", "");CHKERRV(ierr);
+        ierr = KSPSetFromOptions(ksp_solver_);CHKERRV(ierr);
+
+		if (mpi_rank_ == 0) std::cout << "Remove prec" << std::endl;	
+		ierr = KSPGetPC(ksp_solver_,&pc_);CHKERRV(ierr);    	
+		ierr = PCSetType(pc_,PCNONE);CHKERRV(ierr);
+
+		if (mpi_rank_ == 0) std::cout << "Start final Lambdas:" << std::endl;	
+
+		start = MPI_Wtime();	
+		ierr = KSPSolve(ksp_solver_, rhs_, RT_problem_->I_vec_);CHKERRV(ierr);
+
+		MPI_Barrier(MPI_COMM_WORLD);
+		if (mpi_rank_ == 0) std::cout << "Solve time LSA (s) = " << MPI_Wtime() - start << std::endl;	
+
+		// update I_field for later use
+		mf_ctx_.vec_to_field(RT_problem_->I_field_, RT_problem_->I_vec_);	//TODO	remove?
+	}
+
+
+	// solve linear system with aproxximate emissivity (can be used ofr initial guess)
+	inline void solve_approx()
+	{	
+
+		// TODO better, with no need for switch... 
+
+		// emissivity for initial guess
+		using emission_coefficient_components = rii_include::emission_coefficient_computation::emission_coefficient_components;
+
+	    std::list<emission_coefficient_components> components_approx_IG{    
+            emission_coefficient_components::epsilon_R_II_AA_FAST
+          , emission_coefficient_components::epsilon_R_III_GL
+          , emission_coefficient_components::epsilon_csc
+    	};           	
+    
+    	mf_ctx_.epsilon_fun_approx_ = mf_ctx_.ecc_sh_ptr_->make_computation_function(components_approx_IG);
+
+
+		const double start = MPI_Wtime();	
+		
+		if (mpi_rank_ == 0) std::cout << "\nStart approximate linear solve..." << std::endl;		
+
+		PetscErrorCode ierr;			
+		ierr = KSPSolve(mf_ctx_.pc_solver_, rhs_, RT_problem_->I_vec_);CHKERRV(ierr);		
+		
+		MPI_Barrier(MPI_COMM_WORLD); 
+		if (mpi_rank_ == 0) std::cout << "Solve time (s) = " << MPI_Wtime() - start << std::endl;			
+
+		// TEST
+		// remove polarization
+		// if (mpi_rank_ == 0) std::cout << "\nRemoving polarization..." << std::endl;	
+		// set_zero_polarization(RT_problem_->I_vec_);		
+		ierr = KSPSetInitialGuessNonzero(ksp_solver_, PETSC_TRUE);CHKERRV(ierr); 
+
+		// emissivity for preconidtioner 
+	    std::list<emission_coefficient_components> components_approx{emission_coefficient_components::epsilon_pCRD_limit};       
+    
+    	mf_ctx_.epsilon_fun_approx_ = mf_ctx_.ecc_sh_ptr_->make_computation_function(components_approx);
+	}
+
+	
+	inline void set_zero_polarization(Vec& I_vec)
+	{
+    	PetscErrorCode ierr;
+    	PetscScalar* a;
+    	PetscInt n_local;
+
+    	ierr = VecGetLocalSize(I_vec, &n_local); CHKERRV(ierr);
+    	ierr = VecGetArray(I_vec, &a); CHKERRV(ierr);
+
+    	// Zero Q, U, V in each (I,Q,U,V) block
+    	for (PetscInt i = 0; i < n_local; i += 4)
+    	{
+        	if (i + 1 < n_local) a[i + 1] = 0.0; // Q
+        	if (i + 2 < n_local) a[i + 2] = 0.0; // U
+        	if (i + 3 < n_local) a[i + 3] = 0.0; // V
+    	}
+
+	    ierr = VecRestoreArray(I_vec, &a); CHKERRV(ierr);
+	}
+
 
 	inline void solve_checkpoint(const std::string output_path, const int checkpoint_interval)
 	{

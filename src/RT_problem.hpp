@@ -111,18 +111,18 @@ class RT_problem
 		// set flags
 		use_PORTA_input_	= not(cfg_.input_directory.string().find("FAL-C") != std::string::npos);
 		use_magnetic_field_ = cfg_.use_B;
-		emissivity_model_	= cfg_.emissivity_model;
-		enable_continuum_	= cfg_.enable_continuum;
-		use_1_5D_approx_	= cfg_.use_1_5D_approx;
-		use_bulk_velocity_	= cfg_.use_Vb;
-		verbose_			= cfg_.verbose;
+		emissivity_model_	  = cfg_.emissivity_model;
+		enable_continuum_	  = cfg_.enable_continuum;
+		use_1_5D_approx_	  = cfg_.use_1_5D_approx;
+		use_bulk_velocity_  = cfg_.use_Vb;
+		verbose_			     = cfg_.verbose;
 
 		use_uniform_magnetic_field_ = cfg_.set_uniform_B;
 		if (use_uniform_magnetic_field_)
 		{
 			uniform_magnetic_field_value_ = cfg_.B_field[0];
 			uniform_magnetic_field_theta_ = cfg_.B_field[1];
-			uniform_magnetic_field_chi_	  = cfg_.B_field[2];
+			uniform_magnetic_field_chi_	= cfg_.B_field[2];
 		}
 
 		// set input files
