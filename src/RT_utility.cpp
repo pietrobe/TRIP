@@ -93,17 +93,39 @@ loadConfig(const std::string &filename)
 {
 	YAML::Node config = YAML::LoadFile(filename);
 	AppConfig  cfg;
+	
+	cfg.input_directory = std::filesystem::path(requiredField<std::string>(config, "input_directory"));
+	cfg.input_file		= std::filesystem::path(requiredField<std::string>(config, "input_file"));
+	cfg.frequency_file	= std::filesystem::path(requiredField<std::string>(config, "frequency_file"));
 
-	// Required strings
-	auto requiredString = [&](const std::string &key)
+	int mpi_rank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+
+	// load atom quantities
+	if (config["atom_file"])
+	{		
+		YAML::Node atom_config = YAML::LoadFile(config["atom_file"].as<std::string>());
+
+		if (mpi_rank == 0) std::cout << "Loading atom data from file: " << config["atom_file"] << std::endl;
+
+		cfg.atom.mass = requiredField<double>(atom_config, "mass");
+		cfg.atom.Aul  = requiredField<double>(atom_config, "Aul");
+		
+		cfg.atom.S2   = requiredField<int>(atom_config, "S2");
+
+		cfg.atom.Ll2  = requiredField<int>(atom_config, "Ll2");
+		cfg.atom.Lu2  = requiredField<int>(atom_config, "Lu2");		
+
+		cfg.atom.El_vec = readDoubleVec(atom_config["El"]);
+		cfg.atom.Eu_vec = readDoubleVec(atom_config["Eu"]);
+		
+		if (atom_config["gl"]) cfg.atom.gl_vec = readDoubleVec(atom_config["gl"]);
+		if (atom_config["gu"]) cfg.atom.gu_vec = readDoubleVec(atom_config["gu"]);
+	}
+	else
 	{
-		if (!config[key]) throw std::runtime_error("Missing required key: " + key);
-		return config[key].as<std::string>();
-	};
-
-	cfg.input_directory = std::filesystem::path(requiredString("input_directory"));
-	cfg.input_file		= std::filesystem::path(requiredString("input_file"));
-	cfg.frequency_file	= std::filesystem::path(requiredString("frequency_file"));
+		if (mpi_rank == 0) std::cout << "Using default atom model (two-level CaI)" << std::endl;
+	}
 
 	// Optional booleans with defaults
 	if (config["output"]) cfg.output = config["output"].as<bool>();
@@ -131,10 +153,10 @@ loadConfig(const std::string &filename)
 	cfg.emissivity_model = config["emissivity_model"].as<emissivity_model_t>();
 
 	// Flags
-	if (config["use_B"]) cfg.use_B = config["use_B"].as<bool>();
-	if (config["use_1_5D_approx"]) cfg.use_1_5D_approx = config["use_1_5D_approx"].as<bool>();
+	if (config["use_B"])            cfg.use_B            = config["use_B"].as<bool>();
+	if (config["use_1_5D_approx"])  cfg.use_1_5D_approx  = config["use_1_5D_approx"].as<bool>();
 	if (config["enable_continuum"]) cfg.enable_continuum = config["enable_continuum"].as<bool>();
-	if (config["use_Vb"]) cfg.use_Vb = config["use_Vb"].as<bool>();
+	if (config["use_Vb"])           cfg.use_Vb           = config["use_Vb"].as<bool>();
 
 	// Formal solver
 	if (config["formal_solver"])

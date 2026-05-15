@@ -8,45 +8,55 @@ input_file:      cai_0Bx_0By_0Bz_1Vx_1Vy_1Vz_GT4_5x5x133_it100.pmd
 frequency_file:  frequency/96F/frequency.dat
 
 # input_directory: ../input/FAL-C/
-# input_file:      1_B0_V0_12T_8C_64F_64
-# frequency_file:  64F/frequency.dat
+# input_file:      1_B0_V0_12T_8C_99F
+# frequency_file:  99F/frequency.dat
 
-output: false
+# input_directory: ../input/PORTA
+# input_file:      small_ssd.pmd
+# frequency_file:  frequency/64F/frequency.dat
+
+atom_file: ../input/atom_CaI.yml
+
+output: true
 output_overwrite_prevention: false
 output_directory: ../../output
+write_text_output: true
 
-use_B: false
+use_B: true
 enable_continuum: true
-formal_solver: BESSER
+formal_solver: DELO_linear
 use_1_5D_approx: false
 
 set_uniform_B: true
 B_field: [12.0, 0.78, 0.78]
 
-emissivity_model: PRD
+# set_uniform_Vb: true
+# Vb_field: [10.0, 0.78, 0.78]  
+
+emissivity_model: CRD_limit
 
 # used only for FAL-C input
-N_theta: 8
+N_theta: 12
 N_chi: 16
-N_x: 5
-N_y: 5
+N_x: 1
+N_y: 1
 
-#input_cul:  "AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.cul"
-#input_qel:  "AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.qel"
-#input_llp:  "AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix_conv_KQ_MC.llp"
-#input_back: "AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.back"
+# input_cul:  "AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.cul"
+# input_qel:  "AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.qel"
+# input_llp:  "AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix_conv_KQ_MC.llp"
+# input_back: "AR_385_Cut_64x64_mirrorxy-CRD_I_V0_fix.back"
 
 use_prec: true
 
 solver:
   ksp_solver_type: KSPFGMRES
   ksp_rtol: 1e-6
-  ksp_max_it: 300
+  ksp_max_it: 1000
   ksp_use_J_KQ: false
   # gmres_restart: 20
 
 prec:
   pc_solver_type: KSPGMRES
-  pc_rtol: 1e-5
+  pc_rtol: 1e-4
   pc_max_it: 1000
   pc_use_J_KQ: false

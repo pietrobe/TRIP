@@ -27,8 +27,8 @@ RT_problem::read_3D_h5(const std::string filename, const bool verbose)
 	this->gu_	 = atom.g_upper;
 	this->El_	 = atom.E_lower;
 	this->Eu_	 = atom.E_upper;
-	this->Jl2_	 = atom.jl2;
-	this->Ju2_	 = atom.ju2;
+	this->Ll2_	 = atom.jl2; // TODO change input format
+	this->Lu2_	 = atom.ju2; // TODO change input format
 	this->mass_	 = atom.atomic_mass;
 	this->Aul_	 = atom.Aul;
 	this->T_ref_ = 5000.0; // reference temperature (never used).
@@ -42,8 +42,8 @@ RT_problem::read_3D_h5(const std::string filename, const bool verbose)
 		std::cout << "  E_upper =     " << Eu_ << std::endl;
 		std::cout << "  g_lower =     " << gl_ << std::endl;
 		std::cout << "  g_upper =     " << gu_ << std::endl;
-		std::cout << "  jl2 =         " << Jl2_ << std::endl;
-		std::cout << "  ju2 =         " << Ju2_ << std::endl;
+		std::cout << "  Ll2 =         " << Ll2_ << std::endl;
+		std::cout << "  Lu2 =         " << Lu2_ << std::endl;
 		std::cout << "  Aul =         " << Aul_ << std::endl;
 	}
 

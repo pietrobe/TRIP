@@ -756,15 +756,15 @@ copy_3D_block_field_impl(THDF_3D_field_t *field,			 //
 								stride_in_y, stride_in_z, stride_in_incl, stride_in_azimuth, stride_in_frequencies,
 								stride_in_stokes); // Stokes V/I is at offset 3 in the stokes dimension
 
-							const double I = read_stokes_input_value(stokes_IQUI, input_is_float32, in_index_I);
+							const double II = read_stokes_input_value(stokes_IQUI, input_is_float32, in_index_I);
 							const double QI =
-								read_stokes_input_value(stokes_IQUI, input_is_float32, in_index_QI) / I * 100.0;
+								read_stokes_input_value(stokes_IQUI, input_is_float32, in_index_QI) / II * 100.0;
 							const double UI =
-								read_stokes_input_value(stokes_IQUI, input_is_float32, in_index_UI) / I * 100.0;
+								read_stokes_input_value(stokes_IQUI, input_is_float32, in_index_UI) / II * 100.0;
 							const double VI =
-								read_stokes_input_value(stokes_IQUI, input_is_float32, in_index_VI) / I * 100.0;
+								read_stokes_input_value(stokes_IQUI, input_is_float32, in_index_VI) / II * 100.0;
 
-							field->stokes_I[idx]  = (THDF_float32_t)I;
+							field->stokes_I[idx]  = (THDF_float32_t)II;
 							field->stokes_QI[idx] = (THDF_float32_t)QI;
 							field->stokes_UI[idx] = (THDF_float32_t)UI;
 							field->stokes_VI[idx] = (THDF_float32_t)VI;

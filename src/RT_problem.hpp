@@ -117,6 +117,18 @@ class RT_problem
 		use_bulk_velocity_  = cfg_.use_Vb;
 		verbose_			     = cfg_.verbose;
 
+		// atom quantities
+		mass_ = cfg.atom.mass;
+		Aul_  = cfg.atom.Aul;
+		S2_   = cfg.atom.S2;
+		Ll2_  = cfg.atom.Ll2; // we use Ju and Jl (instead of Lu and Ll) for both two terms and two levels // TODO (check with rii compatibility)
+		Lu2_  = cfg.atom.Lu2; 
+		
+		Eu_vec_ = cfg.atom.Eu_vec;
+		El_vec_ = cfg.atom.El_vec;
+		gu_vec_ = cfg.atom.gu_vec;
+		gl_vec_ = cfg.atom.gl_vec;
+		
 		use_uniform_magnetic_field_ = cfg_.set_uniform_B;
 		if (use_uniform_magnetic_field_)
 		{
@@ -126,7 +138,7 @@ class RT_problem
 		}
 
 		// set input files
-		const auto input_file_path		  = cfg_.input_directory / cfg_.input_file;
+		const auto input_file_path		    = cfg_.input_directory / cfg_.input_file;
 		const auto frequencies_input_path = cfg_.input_directory / cfg_.frequency_file;
 
 		// read input frequencies from separate file
@@ -173,13 +185,16 @@ class RT_problem
 		if (mpi_rank_ == 0 and verbose_) printf("Reading input time:\t\t%g (seconds)\n", MPI_Wtime() - start);
 		start = MPI_Wtime();
 
+		// set up atomic quantities
+		set_up_atom();
+
 		// precompute
 		set_up();
 
+		if (mpi_rank_ == 0 and verbose_) printf("Set up time:\t\t%g (seconds)\n", MPI_Wtime() - start);
+
 		// print info
 		if (verbose_) print_info();
-
-		if (mpi_rank_ == 0 and verbose_) printf("Set up time:\t\t%g (seconds)\n", MPI_Wtime() - start);
 	}
 
 	// DEPRECATED CONSTRUCTORS
@@ -655,52 +670,26 @@ class RT_problem
 	Field_ptr_t eps_c_th_;
 
 	// Access to the atomic model parameters
-	inline double
-	atomic_mass() const
-	{
-		return mass_;
-	}
-	inline double
-	atomic_El() const
-	{
-		return El_;
-	}
-	inline double
-	atomic_Eu() const
-	{
-		return Eu_;
-	}
-	inline int
-	atomic_Jl2() const
-	{
-		return Jl2_;
-	}
-	inline int
-	atomic_Ju2() const
-	{
-		return Ju2_;
-	}
-	inline double
-	atomic_gl() const
-	{
-		return gl_;
-	}
-	inline double
-	atomic_gu() const
-	{
-		return gu_;
-	}
-	inline double
-	atomic_Aul() const
-	{
-		return Aul_;
-	}
-	inline Field_ptr_t
-	get_D2() const
-	{
-		return D2_;
-	}
+	inline double atomic_mass() const { return mass_; }
+	inline double atomic_El()   const { return El_;   }
+	inline double atomic_Eu()   const { return Eu_;   }
+	inline int    atomic_Jl2()  const {	return Ll2_;  }
+	inline int    atomic_Ju2()  const {	return Lu2_;  }
+	inline double atomic_gl()   const { return gl_;   } // TODO use gl_vec_
+	inline double atomic_gu()   const { return gu_;   } // TODO use gu_vec_
+	inline double atomic_Aul()  const { return Aul_;  }
+	
+	inline Field_ptr_t get_D2() const { return D2_;   }
 
+	inline bool is_two_level() const { return S2_ == 0; }
+	inline int get_S2()        const { return S2_; }
+
+	inline std::vector<double>	get_El_ve() const	{return El_vec_;}
+	inline std::vector<double>	get_Eu_ve() const	{return Eu_vec_;}
+	
+	inline mdm::md_matrix<double, 1> get_El_ve() const	{return El0_;}
+	inline mdm::md_matrix<double, 1> get_Eu_ve() const	{return Eu0_;}
+	
 	bool
 	field_is_zero(const Field_ptr_t field);
 
@@ -747,9 +736,9 @@ class RT_problem
 	Real     uniform_magnetic_field_chi_   = 0.0; // rad
 
 	// physical constants
-	const double c_	  = 2.99792458e+10;
+	const double c_	= 2.99792458e+10;
 	const double k_B_ = 1.38065e-16;
-	const double h_	  = 6.62607e-27;
+	const double h_	= 6.62607e-27;
 
 	// 2-level atom constants
 	double mass_;
@@ -759,11 +748,12 @@ class RT_problem
 	double gu_;
 	double Aul_;   // Einstein coefficients for spontaneous emission
 	double T_ref_; // Reference temperature
-	int  Jl2_;
-	int  Ju2_;
+	// int  Jl2_;
+	// int  Ju2_;
+	int Ll2_;
+	int Lu2_;
+	int S2_;
 
-	// 2-terms atom constants (Jl2_ and Ju2_ are used for 2Lu and 2Ll from Luca notes atm)
-	int					S2_;
 	std::vector<int>	Jl2_vec_;
 	std::vector<int>	Ju2_vec_;
 	std::vector<double> gl_vec_;
@@ -790,7 +780,7 @@ class RT_problem
 	Field_ptr_t D2_;
 
 	// quantities depending on direction
-	std::vector<std::vector<std::complex<double>>> T_KQ_; // polarization tensor // TODO use double?
+	std::vector<std::vector<std::complex<double>>> T_KQ_; // polarization tensor 
 
 	// allocate grid fields
 	void
@@ -822,7 +812,7 @@ class RT_problem
 
 	// TODO
 	void
-	read_atom_two_terms();
+	set_up_atom();
 
 	void
 	read_depth(input_string filename);
@@ -880,9 +870,6 @@ class RT_problem
 	// compute elements of the propagation matrix K
 	void
 	set_eta_and_rhos();
-
-	void
-	set_eta_and_rhos_two_terms();
 
 	// precompute quantities
 	void

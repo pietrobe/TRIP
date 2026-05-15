@@ -106,8 +106,8 @@ void RT_problem::read_3D(const char* filename_pmd, const char* filename_cul, con
 	MPI_CHECK(MPI_File_read_all(fh, &mass_,  1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 	MPI_CHECK(MPI_File_read_all(fh, &Aul_,   1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 	MPI_CHECK(MPI_File_read_all(fh, &Eu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-	MPI_CHECK(MPI_File_read_all(fh, &Jl2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
-	MPI_CHECK(MPI_File_read_all(fh, &Ju2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &Ll2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &Lu2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
 	MPI_CHECK(MPI_File_read_all(fh, &gl_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 	MPI_CHECK(MPI_File_read_all(fh, &gu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 	MPI_CHECK(MPI_File_read_all(fh, &T_ref_, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
@@ -463,8 +463,8 @@ void RT_problem::read_3D(const char* filename){
 	// MPI_CHECK(MPI_File_read_all(fh, &mass_,  1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 	// MPI_CHECK(MPI_File_read_all(fh, &Aul_,   1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 	// MPI_CHECK(MPI_File_read_all(fh, &Eu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
-	MPI_CHECK(MPI_File_read_all(fh, &Jl2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
-	MPI_CHECK(MPI_File_read_all(fh, &Ju2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &Ll2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
+	MPI_CHECK(MPI_File_read_all(fh, &Lu2_,   1, MPI_INT,    MPI_STATUS_IGNORE));
 	// MPI_CHECK(MPI_File_read_all(fh, &gl_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 	// MPI_CHECK(MPI_File_read_all(fh, &gu_,    1, MPI_DOUBLE, MPI_STATUS_IGNORE));
 	// MPI_CHECK(MPI_File_read_all(fh, &T_ref_, 1, MPI_DOUBLE, MPI_STATUS_IGNORE));
@@ -652,8 +652,8 @@ std::vector<double> RT_problem::read_single_node(MPI_File fh, const int i, const
     std::vector<double> output;
 
     // Could be global
-	const int L_LIMIT = (Jl2_+1)*(Jl2_+1);
-	const int U_LIMIT = (Ju2_+1)*(Ju2_+1);
+	const int L_LIMIT = (Ll2_+1)*(Ll2_+1);
+	const int U_LIMIT = (Lu2_+1)*(Lu2_+1);
 	const int NJKQ = 9;
 
 	// some temporary variables
@@ -710,7 +710,7 @@ std::vector<double> RT_problem::read_single_node(MPI_File fh, const int i, const
 	 
 	 // recover populations 
 	 // 9
-	 Nl = atomic_density * sqrt(Jl2_ + 1) * rho00l;
+	 Nl = atomic_density * sqrt(Ll2_ + 1) * rho00l;
 	 output.push_back(Nl);	
 		
 	 // density matrix components of the upper level:
@@ -767,14 +767,14 @@ void RT_problem::read_atom(input_string filename){
             	break;      
     		
     		case 1 : lineStream >> El_;
-    				 lineStream >> Jl2_;
+    				 lineStream >> Ll2_;
     				 lineStream >> gl_;
     				 lineStream >> line_entry;
     				 // if (line_entry.compare("!El[cm-1]") != 0) std::cout << "WARNING: " << line_entry << " is not !El[cm-1]" << '\n';
              	break;
             
             case 2 : lineStream >> Eu_;
-    				 lineStream >> Ju2_;
+    				 lineStream >> Lu2_;
     				 lineStream >> gu_;
     				 lineStream >> line_entry;
     				 // if (line_entry.compare("!Eu[cm-1]") != 0) std::cout << "WARNING: " << line_entry << " is not !Eu[cm-1]" << '\n';
@@ -791,47 +791,42 @@ void RT_problem::read_atom(input_string filename){
 }
 
 
-void RT_problem::read_atom_two_terms(){
+void RT_problem::set_up_atom(){
 
-	if (mpi_rank_ == 0) std::cout << "Hardcoded MgII h&k" << std::endl;
+	if (mpi_rank_ == 0 and S2_ == 0) std::cout << "Setting up atomic quantities: two-levels case" << std::endl;
+	if (mpi_rank_ == 0 and S2_ != 0) std::cout << "Setting up atomic quantities: two-terms case"  << std::endl;
 
-	// TODO now hardcoded MG h&k
-	Jl2_ = 0;
-	Ju2_ = 2;
-	S2_  = 1;
-
-	mass_ = 24.305;  
-	Aul_  = 2.59e+08;
-	 
 	// lower term
-	Jl2_vec_.push_back(1);
-	// gl_vec_.push_back(2.00);
-	El_vec_.push_back(0.0);
+	for (int i = std::abs(Ll2_ - S2_); i < Ll2_ + S2_ + 1; i = i + 2)
+	{
+		Jl2_vec_.push_back(i);
+	}
 
-	// upper term
-	Ju2_vec_.push_back(1);
-	Ju2_vec_.push_back(3);
+	for (int i = std::abs(Lu2_ - S2_); i < Lu2_ + S2_ + 1; i = i + 2)
+	{
+		Ju2_vec_.push_back(i);
+	}
+
+	// sanity checks
+	if (Jl2_vec_.size() != El_vec_.size()) throw std::runtime_error("Size mismatch: Jl2_vec_ has " + std::to_string(Jl2_vec_.size()) + " elements but El_vec_ has " + std::to_string(El_vec_.size()));
+	if (Ju2_vec_.size() != Eu_vec_.size()) throw std::runtime_error("Size mismatch: Ju2_vec_ has " + std::to_string(Ju2_vec_.size()) + " elements but Eu_vec_ has " + std::to_string(Eu_vec_.size()));
 	
-	// gu_vec_.push_back(0.67);
-	// gu_vec_.push_back(1.32);
-
-	Eu_vec_.push_back(35669.31);
-	Eu_vec_.push_back(35760.88);
-
 	// needed for Paschen_Back (repetition)
 	El0_.resize_md({4}, true);
    Eu0_.resize_md({4}, true);
+
+   // usinf Simone convention:
+   if (S2_ == 0) // two-level
+   {   	
+   	Eu0_[2] = Eu_vec_[0];
+   	Eu0_[3] = Eu_vec_[0];
+   }
+   else // two-terms
+   {   
+	   Eu0_[1] = Eu_vec_[0];   
+   	Eu0_[3] = Eu_vec_[1];
+   }
    
-   El0_[0] = 0.0;
-   El0_[1] = 0.0;
-   El0_[2] = 0.0;
-   El0_[3] = 0.0;
-
-   Eu0_[0] = 0.0;
-   Eu0_[1] = 35669.31;
-   Eu0_[2] = 0.0;
-   Eu0_[3] = 35760.88;
-
 	// compute energies
 	El_ = 0; 
 	Eu_ = 0;
@@ -842,7 +837,7 @@ void RT_problem::read_atom_two_terms(){
 		El_ += (Jl2_vec_[i] + 1.0) * El_vec_[i];
 	}
 
-	El_ /= (Jl2_ + 1) * (S2_ + 1);
+	El_ /= (Ll2_ + 1) * (S2_ + 1);
 
 	// upper
 	for (int i = 0; i < Ju2_vec_.size(); ++i)
@@ -850,9 +845,8 @@ void RT_problem::read_atom_two_terms(){
 		Eu_ += (Ju2_vec_[i] + 1.0) * Eu_vec_[i];
 	}
 
-	Eu_ /= (Ju2_ + 1) * (S2_ + 1);
+	Eu_ /= (Lu2_ + 1) * (S2_ + 1);	
 }
-
 
 
 void RT_problem::read_continumm_1D(input_string filename_sigma, input_string filename_k_c, input_string filename_eps_c_th){
@@ -1336,11 +1330,12 @@ void RT_problem::print_info() const{
 		std::cout << "Mass = " << mass_ << std::endl;
 		std::cout << "El = "   << El_   << std::endl;
 		std::cout << "Eu = "   << Eu_   << std::endl;		
-		std::cout << "2Jl = "  << Jl2_   << std::endl;
-		std::cout << "2Ju = "  << Ju2_   << std::endl;
+		std::cout << "2Ll = "  << Ll2_   << std::endl;
+		std::cout << "2Lu = "  << Lu2_   << std::endl;
 		std::cout << "gl = "   << gl_   << std::endl;		
 		std::cout << "gu = "   << gu_   << std::endl;
 		std::cout << "Aul = "  << Aul_  << std::endl;
+		std::cout << "2S = "   << S2_  << std::endl;
 		
 		std::cout << "\n=========== Grids parameters ===========\n" << std::endl;	
 		std::cout << "N_x = "     << N_x_     << std::endl;	
@@ -1746,142 +1741,161 @@ std::complex<double> RT_problem::get_TKQi(const std::vector<std::complex<double>
 }
 
 
-void RT_problem::set_eta_and_rhos(){
-    space_grid_->parallel_for(
-		[&](int i, int j, int k) 
-    {         
-		auto *block_eta = eta_field_->block(i, j, k);
-		auto *block_rho = rho_field_->block(i, j, k);
+// OLD
+// void RT_problem::set_eta_and_rhos(){
+//     space_grid_->parallel_for(
+// 		[&](int i, int j, int k) 
+//     {         
+// 		auto *block_eta = eta_field_->block(i, j, k);
+// 		auto *block_rho = rho_field_->block(i, j, k);
 
-		auto *u   =   u_->block(i, j, k);	
-		auto *k_c = k_c_->block(i, j, k);		
-		auto *B   =   B_->block(i, j, k);       
-		auto *v_b = v_b_->block(i, j, k);                        
+// 		auto *u   =   u_->block(i, j, k);	
+// 		auto *k_c = k_c_->block(i, j, k);		
+// 		auto *B   =   B_->block(i, j, k);       
+// 		auto *v_b = v_b_->block(i, j, k);                        
 		               
-		// assign some variables for readability
-		double theta_v_b = v_b[1];
-		double chi_v_b   = v_b[2];
+// 		// assign some variables for readability
+// 		double theta_v_b = v_b[1];
+// 		double chi_v_b   = v_b[2];
 
-		double nu_L    = B[0];
-		double theta_B = B[1];
-		double chi_B   = B[2];
+// 		double nu_L    = B[0];
+// 		double theta_B = B[1];
+// 		double chi_B   = B[2];
 
-		double Doppler_width = Doppler_width_->ref(i,j,k); 
-		double k_L           = k_L_->ref(i,j,k);
-		double a             = a_->ref(i,j,k);
+// 		double Doppler_width = Doppler_width_->ref(i,j,k); 
+// 		double k_L           = k_L_->ref(i,j,k);
+// 		double a             = a_->ref(i,j,k);
 
-		// init rotation matrix
-		Rotation_matrix R(0.0, -theta_B, -chi_B);
+// 		// init rotation matrix
+// 		Rotation_matrix R(0.0, -theta_B, -chi_B);
 		  
-		// indeces
-		std::vector<int> local_idx;
-		int j_theta, k_chi, n_nu;
+// 		// indeces
+// 		std::vector<int> local_idx;
+// 		int j_theta, k_chi, n_nu;
       
-      for (int b = 0; b < block_size_; b = b + 4) 
-      {        	        		     	
-			local_idx = /*eta_field_->*/block_to_local(b);
+//       for (int b = 0; b < block_size_; b = b + 4) 
+//       {        	        		     	
+// 			local_idx = /*eta_field_->*/block_to_local(b);
 
-	     	j_theta = local_idx[0];
-	     	k_chi   = local_idx[1];
-	     	n_nu    = local_idx[2];
+// 	     	j_theta = local_idx[0];
+// 	     	k_chi   = local_idx[1];
+// 	     	n_nu    = local_idx[2];
 
-	     	const double theta = theta_grid_[j_theta];
-			const double chi   = chi_grid_[k_chi];	
+// 	     	const double theta = theta_grid_[j_theta];
+// 			const double chi   = chi_grid_[k_chi];	
 
-			const double coeff  =  k_L / (std::sqrt(PI) * Doppler_width);
-			const double coeff2 = nu_L / Doppler_width; 
+// 			const double coeff  =  k_L / (std::sqrt(PI) * Doppler_width);
+// 			const double coeff2 = nu_L / Doppler_width; 
 
-			const std::complex<double> a_damp(0.0, a);
+// 			const std::complex<double> a_damp(0.0, a);
 
-			// for reduced frequency
-			const double v_dot_Omega = v_b[0] * ( cos(theta_v_b) * cos(theta) + sin(theta_v_b) * sin(theta) * cos(chi - chi_v_b));
-			const double u_b = nu_0_ * v_dot_Omega / (c_ * Doppler_width);
+// 			// for reduced frequency
+// 			const double v_dot_Omega = v_b[0] * ( cos(theta_v_b) * cos(theta) + sin(theta_v_b) * sin(theta) * cos(chi - chi_v_b));
+// 			const double u_b = nu_0_ * v_dot_Omega / (c_ * Doppler_width);
 
-			const double u_red = u[n_nu] + u_b;			
+// 			const double u_red = u[n_nu] + u_b;			
 			
-			for (int K = 0; K < 3; ++K)
-			{
-				const double coeff_K = coeff * std::sqrt(3.0 * (2.0 * double(K) + 1.0));
+// 			for (int K = 0; K < 3; ++K)
+// 			{
+// 				const double coeff_K = coeff * std::sqrt(3.0 * (2.0 * double(K) + 1.0));
 
-				for (int Mu2 = - Ju2_; Mu2 < Ju2_ + 1; Mu2 += 2)
-				{
-					for (int Ml2 = - Jl2_; Ml2 < Jl2_ + 1; Ml2 += 2)
-					{										
-						if (std::abs(Mu2 - Ml2) <= 2) 
-						{
-							const int q2 = Ml2 - Mu2;
+// 				for (int Mu2 = - Ju2_; Mu2 < Ju2_ + 1; Mu2 += 2)
+// 				{
+// 					for (int Ml2 = - Jl2_; Ml2 < Jl2_ + 1; Ml2 += 2)
+// 					{										
+// 						if (std::abs(Mu2 - Ml2) <= 2) 
+// 						{
+// 							const int q2 = Ml2 - Mu2;
 
-				      	const double W3J1 = W3JS(Ju2_, Jl2_, 2,-Mu2, Ml2, -q2);  
-				      	const double W3J2 = W3JS(2, 2, 2 * K, q2, -q2, 0); 
+// 				      	const double W3J1 = W3JS(Ju2_, Jl2_, 2,-Mu2, Ml2, -q2);  
+// 				      	const double W3J2 = W3JS(2, 2, 2 * K, q2, -q2, 0); 
 
-							const double fact = coeff_K * std::pow(-1.0, double(q2) / 2.0 + 1.0) * std::pow(W3J1, 2) * W3J2;								   
+// 							const double fact = coeff_K * std::pow(-1.0, double(q2) / 2.0 + 1.0) * std::pow(W3J1, 2) * W3J2;								   
 							
-		      			const double um = coeff2 * (gu_ * (double(Mu2) / 2.0) - gl_ * (double(Ml2) / 2.0)) + u_red;
+// 		      			const double um = coeff2 * (gu_ * (double(Mu2) / 2.0) - gl_ * (double(Ml2) / 2.0)) + u_red;
 					
-							for (int Q = -K; Q < K + 1; ++Q)
-							{			
-								const std::complex<double> faddeva = std::complex<double>(Faddeeva::w(um + a_damp));
-				        		const std::complex<double> D_KQQ   = std::complex<double>(std::conj(R(K, 0, Q)));
+// 							for (int Q = -K; Q < K + 1; ++Q)
+// 							{			
+// 								const std::complex<double> faddeva = std::complex<double>(Faddeeva::w(um + a_damp));
+// 				        		const std::complex<double> D_KQQ   = std::complex<double>(std::conj(R(K, 0, Q)));
 
-				        		const auto fact_re = fact * std::real(faddeva) * D_KQQ;
-				        		const auto fact_im = fact * std::imag(faddeva) * D_KQQ;						        		
+// 				        		const auto fact_re = fact * std::real(faddeva) * D_KQQ;
+// 				        		const auto fact_im = fact * std::imag(faddeva) * D_KQQ;						        		
 				        		
-								// etas							
-								block_eta[b    ] += std::real(fact_re * get_TKQi(0, K, Q, j_theta, k_chi)); 
-								block_eta[b + 1] += std::real(fact_re * get_TKQi(1, K, Q, j_theta, k_chi));
-								block_eta[b + 2] += std::real(fact_re * get_TKQi(2, K, Q, j_theta, k_chi));
-								block_eta[b + 3] += std::real(fact_re * get_TKQi(3, K, Q, j_theta, k_chi));														
+// 								// etas							
+// 								block_eta[b    ] += std::real(fact_re * get_TKQi(0, K, Q, j_theta, k_chi)); 
+// 								block_eta[b + 1] += std::real(fact_re * get_TKQi(1, K, Q, j_theta, k_chi));
+// 								block_eta[b + 2] += std::real(fact_re * get_TKQi(2, K, Q, j_theta, k_chi));
+// 								block_eta[b + 3] += std::real(fact_re * get_TKQi(3, K, Q, j_theta, k_chi));														
 															
-								// rhos
-								block_rho[b + 1] += std::real(fact_im * get_TKQi(1, K, Q, j_theta, k_chi));
-								block_rho[b + 2] += std::real(fact_im * get_TKQi(2, K, Q, j_theta, k_chi));
-								block_rho[b + 3] += std::real(fact_im * get_TKQi(3, K, Q, j_theta, k_chi));									
+// 								// rhos
+// 								block_rho[b + 1] += std::real(fact_im * get_TKQi(1, K, Q, j_theta, k_chi));
+// 								block_rho[b + 2] += std::real(fact_im * get_TKQi(2, K, Q, j_theta, k_chi));
+// 								block_rho[b + 3] += std::real(fact_im * get_TKQi(3, K, Q, j_theta, k_chi));									
 
-							}
-						}
-					}		
-				}
-	     	}
+// 							}
+// 						}
+// 					}		
+// 				}
+// 	     	}
 
-	     	if (enable_continuum_) block_eta[b] += k_c[n_nu];       
+// 	     	if (enable_continuum_) block_eta[b] += k_c[n_nu];       
 
-        	// if (i == 0 and j == 0 and g_dev.space_grid_->getLocalSizeX();(2, k) == 0 and b >= block_size_ - 4 * N_nu_) 
-        	// {
-        	// 	// std::cout << "k = "     <<   k      << std::endl; 
-        	// 	std::cout <<   block_eta[b]       << std::endl; 
-        	// }	
-			// std::cout << "block_eta[b + 1] = " <<   block_eta[b + 1]   << std::endl; 
-			// std::cout << "block_eta[b + 2] = " <<   block_eta[b + 2]   << std::endl; 
-			// std::cout << "block_eta[b + 3] = " <<   block_eta[b + 3]   << std::endl; 
-	     	// std::cout << "block_rho[b + 1] = " <<   block_rho[b + 1]   << std::endl; 
-	     	// std::cout << "block_rho[b + 2] = " <<   block_rho[b + 2]   << std::endl; 
-	     	// std::cout << "block_rho[b + 3] = " <<   block_rho[b + 3]   << std::endl; 
+//         	// if (i == 0 and j == 0 and g_dev.space_grid_->getLocalSizeX();(2, k) == 0 and b >= block_size_ - 4 * N_nu_) 
+//         	// {
+//         	// 	// std::cout << "k = "     <<   k      << std::endl; 
+//         	// 	std::cout <<   block_eta[b]       << std::endl; 
+//         	// }	
+// 			// std::cout << "block_eta[b + 1] = " <<   block_eta[b + 1]   << std::endl; 
+// 			// std::cout << "block_eta[b + 2] = " <<   block_eta[b + 2]   << std::endl; 
+// 			// std::cout << "block_eta[b + 3] = " <<   block_eta[b + 3]   << std::endl; 
+// 	     	// std::cout << "block_rho[b + 1] = " <<   block_rho[b + 1]   << std::endl; 
+// 	     	// std::cout << "block_rho[b + 2] = " <<   block_rho[b + 2]   << std::endl; 
+// 	     	// std::cout << "block_rho[b + 3] = " <<   block_rho[b + 3]   << std::endl; 
 
-	     	// sanity checks
-	     	if (block_eta[b] == 0) std::cerr << "\nWARNING: zero eta_I!"     << std::endl; 
-	     	if (block_eta[b] < 0)  std::cerr << "\nWARNING: negative eta_I!" << std::endl; 		
-	     	if (block_rho[b] < 0)  std::cerr << "\nWARNING: negative rho_I!" << std::endl; 	      
+// 	     	// sanity checks
+// 	     	if (block_eta[b] == 0) std::cerr << "\nWARNING: zero eta_I!"     << std::endl; 
+// 	     	if (block_eta[b] < 0)  std::cerr << "\nWARNING: negative eta_I!" << std::endl; 		
+// 	     	if (block_rho[b] < 0)  std::cerr << "\nWARNING: negative rho_I!" << std::endl; 	      
 	     	
-	     	/* debug
-	     	if (isnan(block_eta[b    ])) std::cerr << "\nWARNING: eta_I = NaN!" << std::endl; 
-	     	if (isnan(block_eta[b + 1])) std::cerr << "\nWARNING: eta_Q = NaN!" << std::endl; 
-	     	if (isnan(block_eta[b + 2])) std::cerr << "\nWARNING: eta_U = NaN!" << std::endl; 
-	     	if (isnan(block_eta[b + 3])) std::cerr << "\nWARNING: eta_V = NaN!" << std::endl;         	
-	     	if (isnan(block_rho[b + 1])) std::cerr << "\nWARNING: rho_Q = NaN!" << std::endl; 
-	     	if (isnan(block_rho[b + 2])) std::cerr << "\nWARNING: rho_U = NaN!" << std::endl; 
-	     	if (isnan(block_rho[b + 3])) std::cerr << "\nWARNING: rho_V = NaN!" << std::endl;         	      	        	
-	     	*/
-	   } 	
- 	});	
+// 	     	/* debug
+// 	     	if (isnan(block_eta[b    ])) std::cerr << "\nWARNING: eta_I = NaN!" << std::endl; 
+// 	     	if (isnan(block_eta[b + 1])) std::cerr << "\nWARNING: eta_Q = NaN!" << std::endl; 
+// 	     	if (isnan(block_eta[b + 2])) std::cerr << "\nWARNING: eta_U = NaN!" << std::endl; 
+// 	     	if (isnan(block_eta[b + 3])) std::cerr << "\nWARNING: eta_V = NaN!" << std::endl;         	
+// 	     	if (isnan(block_rho[b + 1])) std::cerr << "\nWARNING: rho_Q = NaN!" << std::endl; 
+// 	     	if (isnan(block_rho[b + 2])) std::cerr << "\nWARNING: rho_U = NaN!" << std::endl; 
+// 	     	if (isnan(block_rho[b + 3])) std::cerr << "\nWARNING: rho_V = NaN!" << std::endl;         	      	        	
+// 	     	*/
 
-	// debug			
-	// const Real dichroism_module = std::sqrt(etas_and_rhos[1] * etas_and_rhos[1] + etas_and_rhos[2] * etas_and_rhos[2] + etas_and_rhos[3] * etas_and_rhos[3]);	
-	// if (etas_and_rhos[0] < dichroism_module) dichroism_warning = true;				
-	// if (dichroism_warning) std::cout << "\nWARNING: eta_I < eta! (Eq. (7) Gioele Paganini 2018, Part III)" << std::endl; 		
-}
+// 	     	// // TEST
+// 	     	// if (n_nu == 48)
+// 	     	// {	     		
+// 			//    if (space_grid_->local_to_global_coordinate(0, i) == 2 and 
+// 			//    	 space_grid_->local_to_global_coordinate(1, j) == 2 and
+// 			//    	 space_grid_->local_to_global_coordinate(2, k) == 50)
+// 			//    {	   	
+// 			// 	   std::cout << block_eta[b]  << std::endl; 
+// 			// 	   std::cout << block_eta[b+1] << std::endl; 
+// 			// 	   std::cout << block_eta[b+2] << std::endl; 
+// 			// 	   std::cout << block_eta[b+3] << std::endl; 
+// 			// 	   std::cout << block_rho[b+1] << std::endl; 
+// 			// 	   std::cout << block_rho[b+2] << std::endl; 
+// 			// 	   std::cout << block_rho[b+3] << std::endl; 
+// 			// 	}
+// 	     	// }
+// 	   } 	
+//  	});	
+
+// 	// debug			
+// 	// const Real dichroism_module = std::sqrt(etas_and_rhos[1] * etas_and_rhos[1] + etas_and_rhos[2] * etas_and_rhos[2] + etas_and_rhos[3] * etas_and_rhos[3]);	
+// 	// if (etas_and_rhos[0] < dichroism_module) dichroism_warning = true;				
+// 	// if (dichroism_warning) std::cout << "\nWARNING: eta_I < eta! (Eq. (7) Gioele Paganini 2018, Part III)" << std::endl; 		
+// // }
 
 
-void RT_problem::set_eta_and_rhos_two_terms(){
+// flexible for two-terms
+void RT_problem::set_eta_and_rhos(){
     space_grid_->parallel_for(
 		[&](int i, int j, int k) 
     {         
@@ -1918,22 +1932,22 @@ void RT_problem::set_eta_and_rhos_two_terms(){
 
 		// init rotation matrix
 		Rotation_matrix R(0.0, -theta_B, -chi_B);
-		  
+		 
 		// indeces
 		std::vector<int> local_idx;
 		int j_theta, k_chi, n_nu;
-
+		
 		// get structure for [Mu2, ju2, Ml2, jl2] indeces 
-		const auto mqn_map_tt_k_sh_ptr = rii_algorithm::mqn_map_two_term_K::make_shared_ptr(Jl2_, Ju2_, S2_);
+		const auto mqn_map_tt_k_sh_ptr = rii_algorithm::mqn_map_two_term_K::make_shared_ptr(Ll2_, Lu2_, S2_);
 
 		// data for Paschen_Back
 		mdm::md_matrix<double, 3> C_u, C_l;
 		mdm::md_matrix<double, 2> Eig_u, Eig_l;
 		double E_term_u, E_term_l;
 
-		rii_algorithm::Paschen_Back(Ju2_, S2_, Eu0_, B_G, C_u,  Eig_u, E_term_u);   
-		rii_algorithm::Paschen_Back(Jl2_, S2_, El0_, B_G, C_l,  Eig_l, E_term_l);   
-      
+		rii_algorithm::Paschen_Back(Lu2_, S2_, Eu0_, B_G, C_u,  Eig_u, E_term_u);   
+		rii_algorithm::Paschen_Back(Ll2_, S2_, El0_, B_G, C_l,  Eig_l, E_term_l);   
+		  
       for (int b = 0; b < block_size_; b = b + 4) 
       {        	        		     	
 			local_idx = block_to_local(b);
@@ -1979,31 +1993,31 @@ void RT_problem::set_eta_and_rhos_two_terms(){
 				{					
 					B_juMu_jlMl = 0.0;
 
-					auto id_Cu1 = id_C_D1(Mu2, Ju2_, S2_);
-					auto id_Cl1 = id_C_D1(Ml2, Jl2_, S2_);
+					auto id_Cu1 = id_C_D1(Mu2, Lu2_, S2_);
+					auto id_Cl1 = id_C_D1(Ml2, Ll2_, S2_);
 					auto id_Cu2 = id_C_D2(ju2);
 					auto id_Cl2 = id_C_D2(jl2);
 
-					for (int Ju2 = std::abs(Ju2_ - S2_); Ju2 <= Ju2_ + S2_; Ju2 = Ju2 + 2)
+					for (int Ju2 = std::abs(Lu2_ - S2_); Ju2 <= Lu2_ + S2_; Ju2 = Ju2 + 2)
 					{
 						const double C_ju_Ju_Mu  = C_u(id_Cu1, id_Cu2, id_C_D3(Ju2));
 
-						for (int Ju2t = std::abs(Ju2_ - S2_); Ju2t <= Ju2_ + S2_; Ju2t = Ju2t + 2)
+						for (int Ju2t = std::abs(Lu2_ - S2_); Ju2t <= Lu2_ + S2_; Ju2t = Ju2t + 2)
 						{
 							const double C_ju_Jut_Mu = C_u(id_Cu1, id_Cu2, id_C_D3(Ju2t));          
 
-							for (int Jl2 = std::abs(Jl2_ - S2_); Jl2 <= Jl2_ + S2_; Jl2 = Jl2 + 2)
+							for (int Jl2 = std::abs(Ll2_ - S2_); Jl2 <= Ll2_ + S2_; Jl2 = Jl2 + 2)
 							{
 								const double C_jl_Jl_Ml = C_l(id_Cl1, id_Cl2, id_C_D3(Jl2));  
 
-								for (int Jl2t = std::abs(Jl2_ - S2_); Jl2t <= Jl2_ + S2_; Jl2t = Jl2t + 2)
+								for (int Jl2t = std::abs(Ll2_ - S2_); Jl2t <= Ll2_ + S2_; Jl2t = Jl2t + 2)
 								{
 									const double C_jl_Jlt_Ml = C_l(id_Cl1, id_Cl2, id_C_D3(Jl2t));  
 
 									const double sqrt_coeff = std::sqrt((Ju2 + 1.0) * (Ju2t + 1.0) * (Jl2 + 1.0) * (Jl2t + 1.0));
 
-									const double W6_1 = rii_algorithm::W6JS(Ju2, Jl2 , 2.0, Jl2_, Ju2_, S2_);
-									const double W6_2 = rii_algorithm::W6JS(Ju2t,Jl2t, 2.0, Jl2_, Ju2_, S2_);
+									const double W6_1 = rii_algorithm::W6JS(Ju2, Jl2 , 2.0, Ll2_, Lu2_, S2_);
+									const double W6_2 = rii_algorithm::W6JS(Ju2t,Jl2t, 2.0, Ll2_, Lu2_, S2_);
 
 									const double C = W6_1 * W6_2 * sqrt_coeff * C_ju_Ju_Mu * C_ju_Jut_Mu * C_jl_Jl_Ml * C_jl_Jlt_Ml;
 									
@@ -2025,8 +2039,8 @@ void RT_problem::set_eta_and_rhos_two_terms(){
 					}					
 
 					// energies 
-					const double E_juMu = Eig_u(id_Eig_D1(Mu2, Ju2_, S2_), id_Eig_D2(ju2));
-					const double E_jlMl = Eig_l(id_Eig_D1(Ml2, Jl2_, S2_), id_Eig_D2(jl2));
+					const double E_juMu = Eig_u(id_Eig_D1(Mu2, Lu2_, S2_), id_Eig_D2(ju2));
+					const double E_jlMl = Eig_l(id_Eig_D1(Ml2, Ll2_, S2_), id_Eig_D2(jl2));
 
 					// reduced frequencies + correction
 		      	const double um = u_red + ((E_juMu - E_jlMl) * c_ - nu_0_ ) / Doppler_width;
@@ -2054,7 +2068,7 @@ void RT_problem::set_eta_and_rhos_two_terms(){
 	     	// sanity checks
 	     	if (block_eta[b] == 0) std::cerr << "\nWARNING: zero eta_I!"     << std::endl; 
 	     	if (block_eta[b] < 0)  std::cerr << "\nWARNING: negative eta_I!" << std::endl; 		
-	     	if (block_rho[b] < 0)  std::cerr << "\nWARNING: negative rho_I!" << std::endl; 	      
+	     	if (block_rho[b] < 0)  std::cerr << "\nWARNING: negative rho_I!" << std::endl; 		     	
 
 	     	// if (isnan(block_eta[b    ])) std::cerr << "\nWARNING: eta_I = NaN!" << std::endl; 
 	     	// if (isnan(block_eta[b + 1])) std::cerr << "\nWARNING: eta_Q = NaN!" << std::endl; 
@@ -2062,7 +2076,7 @@ void RT_problem::set_eta_and_rhos_two_terms(){
 	     	// if (isnan(block_eta[b + 3])) std::cerr << "\nWARNING: eta_V = NaN!" << std::endl;         	
 	     	// if (isnan(block_rho[b + 1])) std::cerr << "\nWARNING: rho_Q = NaN!" << std::endl; 
 	     	// if (isnan(block_rho[b + 2])) std::cerr << "\nWARNING: rho_U = NaN!" << std::endl; 
-	     	// if (isnan(block_rho[b + 3])) std::cerr << "\nWARNING: rho_V = NaN!" << std::endl;         	      	        	
+	     	// if (isnan(block_rho[b + 3])) std::cerr << "\nWARNING: rho_V = NaN!" << std::endl;      	     	     
 	   } 	
  	});	
 
@@ -2073,8 +2087,11 @@ void RT_problem::set_eta_and_rhos_two_terms(){
 }
 
 
+
 void RT_problem::set_eta_and_rhos_Omega(const double theta, const double chi){	
 
+	if (S2_ != 0 and mpi_rank_ == 0) std::cerr << "\nWARNING: set_eta_and_rhos_Omega not supported for two-terms!" << std::endl; 
+	
 	// vector with KQ components for each stokes profile
 	std::vector< std::vector<std::complex<double> > > T_KQ(4);
 
@@ -2101,10 +2118,10 @@ void RT_problem::set_eta_and_rhos_Omega(const double theta, const double chi){
         double chi_B   = B[2];
 
         double Doppler_width = Doppler_width_->ref(i,j,k);
-    	double k_L           = k_L_->ref(i,j,k);
-		double a             = a_->ref(i,j,k);
+    	  double k_L           = k_L_->ref(i,j,k);
+		  double a             = a_->ref(i,j,k);
 
-		// init rotation matrix
+		  // init rotation matrix
         Rotation_matrix R(0.0, -theta_B, -chi_B);
         
         // indeces
@@ -2137,18 +2154,18 @@ void RT_problem::set_eta_and_rhos_Omega(const double theta, const double chi){
 			{				
 				const double coeff_K = coeff * std::sqrt(3.0 * (2.0 * double(K) + 1.0));
 					
-				for (int Mu2 = - Ju2_; Mu2 < Ju2_ + 1; Mu2 += 2)
+				for (int Mu2 = - Lu2_; Mu2 < Lu2_ + 1; Mu2 += 2)
 				{
-					for (int Ml2 = - Jl2_; Ml2 < Jl2_ + 1; Ml2 += 2)
+					for (int Ml2 = - Ll2_; Ml2 < Ll2_ + 1; Ml2 += 2)
 					{										
 						if (std::abs(Mu2 - Ml2) <= 2) 
 						{
 							const int q2 = Ml2 - Mu2;
 
-				      		const double W3J1 = W3JS(Ju2_, Jl2_, 2,-Mu2, Ml2, -q2);  
+				      		const double W3J1 = W3JS(Lu2_, Ll2_, 2,-Mu2, Ml2, -q2);  
 				      		const double W3J2 = W3JS(2, 2, 2 * K, q2, -q2, 0); 
 
-							const double fact = coeff_K * std::pow(-1.0, double(q2) / 2.0 + 1.0) * std::pow(W3J1, 2) * W3J2;								   
+								const double fact = coeff_K * std::pow(-1.0, double(q2) / 2.0 + 1.0) * std::pow(W3J1, 2) * W3J2;								   
 							
 		      				const double um = coeff2 * (gu_ * (double(Mu2) / 2.0) - gl_ * (double(Ml2) / 2.0)) + u_red;		      											      					      			
 
@@ -2286,13 +2303,13 @@ void RT_problem::set_up(){
 	// compute coefficients depending on the spatial point 
 	
 	// const for k_L
-	tmp_const = c_ * c_* (Ju2_ + 1) * Aul_ / (8 * PI * nu_0_ * nu_0_ * (Jl2_ + 1));
+	tmp_const = c_ * c_* (Lu2_ + 1) * Aul_ / (8 * PI * nu_0_ * nu_0_ * (Ll2_ + 1));
 
 	// const for Wien 
 	tmp_const2 = 2 * h_ * nu_0_ * nu_0_ * nu_0_ / (c_ * c_);
 	
 	// const for D1
-	tmp_const3 = (Ju2_ * Ju2_ + 2 * Ju2_ - 3) / ( 3 * (Ju2_ * Ju2_ + 2 * Ju2_ - 7));
+	tmp_const3 = (Lu2_ * Lu2_ + 2 * Lu2_ - 3) / ( 3 * (Lu2_ * Lu2_ + 2 * Lu2_ - 7));
 
 	const double mass_real = mass_ * 1.6605e-24;
 
@@ -2341,9 +2358,6 @@ void RT_problem::set_up(){
 	   		
 	// compute etas and rhos
 	set_eta_and_rhos();
-
-	// for two-terms TODO -> call read_atom_two_terms somewhere
-	// set_eta_and_rhos_two_terms();
 	
 	if (mpi_rank_ == 0 and verbose_) std::cout << "done" << std::endl;	
 }

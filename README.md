@@ -64,6 +64,8 @@ where `${PETSC_MAIN_PATH}` is the main installation directory of PETSc.
 Input is provided via a YAML configuration file.
 Example configuration files are available in `bin/` and can be changed as necessary.
 
+CaI 4227 is the defeault atomic model. Arbitrary atomic models (2-levels or 2-terms) can be provided as input, via a dedicated YAML file, e.g. `atomic_model: atom_file.yml`.
+
 The scattering module can be changed via the `emissivity_model` field, between the following options:
 
 | `emissivity_model`  | Description                                                        |

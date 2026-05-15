@@ -87,6 +87,12 @@ else()
     )
 endif()
 
+
+target_include_directories(hdf_output SYSTEM PUBLIC ${PETSC_INCLUDE_DIRS})
+target_link_libraries(hdf_output PUBLIC PkgConfig::PETSC)
+target_compile_definitions(hdf_output PUBLIC ${PETSC_DEFINITIONS})
+
+
 # Set library properties
 set_target_properties(hdf_output PROPERTIES
     VERSION ${PROJECT_VERSION}

@@ -334,6 +334,25 @@ namespace YAML
 
 } // namespace YAML
 
+
+template <typename T>
+T requiredField(const YAML::Node& config, const std::string& key)
+{
+    if (!config[key]) throw std::runtime_error("Missing required key: " + key);
+    return config[key].as<T>();
+}
+
+// function to read vector or scalar
+inline std::vector<double> readDoubleVec(const YAML::Node& node) {
+    if (node.IsSequence()) {
+        return node.as<std::vector<double>>();
+    } else if (node.IsScalar()) {
+        return { node.as<double>() };  // wrap scalar in a vector
+    } else {
+        throw std::runtime_error("Expected a scalar or sequence");
+    }
+}
+
 // Function declarations
 std::string
 getCurrentDateTime();
@@ -375,12 +394,30 @@ struct PrecConfig
 	bool	pc_use_J_KQ	   = false;
 };
 
+struct AtomConfig
+{
+	double mass = 40.078;
+	double Aul  = 2.18e+08;
+
+	int S2 = 0;
+
+	int Ll2 = 0;
+	int Lu2 = 2;
+
+	// vectors in case of two-terms atoms
+	std::vector<double> El_vec = {0.0};
+	std::vector<double> Eu_vec = {23652.304};
+
+	std::vector<double> gl_vec = {0.0};
+	std::vector<double> gu_vec = {1.0};
+};
+
 struct AppConfig
 {
 	// Main I/O
 	std::filesystem::path input_directory;
 	std::filesystem::path input_file;
-	std::filesystem::path frequency_file;
+	std::filesystem::path frequency_file;	
 	std::filesystem::path output_directory;
 
 	// Output settings
@@ -433,6 +470,7 @@ struct AppConfig
 	// Subsections
 	SolverConfig solver;
 	PrecConfig	 prec;
+	AtomConfig   atom;
 
 	// Arbitrary beam directions
 	std::vector<BeamDirection> arbitrary_beams;
