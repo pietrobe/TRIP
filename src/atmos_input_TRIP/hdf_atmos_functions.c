@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -21,11 +22,14 @@ create_hdf_atmos_compound_type(void) {
   H5Tinsert(atmos_type, "index_k", HOFFSET(THDF_atmos_t, index_k), H5T_NATIVE_INT16);
   H5Tinsert(atmos_type, "temperature", HOFFSET(THDF_atmos_t, temperature), H5T_NATIVE_FLOAT);
   H5Tinsert(atmos_type, "vmicro", HOFFSET(THDF_atmos_t, vmicro), H5T_NATIVE_DOUBLE);
+  H5Tinsert(atmos_type, "Doppler_width", HOFFSET(THDF_atmos_t, Doppler_width), H5T_NATIVE_DOUBLE);
   H5Tinsert(atmos_type, "damping", HOFFSET(THDF_atmos_t, damping), H5T_NATIVE_DOUBLE);
   H5Tinsert(atmos_type, "pop_lower_level", HOFFSET(THDF_atmos_t, pop_lower_level), H5T_NATIVE_DOUBLE);
   H5Tinsert(atmos_type, "pop_upper_level", HOFFSET(THDF_atmos_t, pop_upper_level), H5T_NATIVE_DOUBLE);
   H5Tinsert(atmos_type, "Cul", HOFFSET(THDF_atmos_t, Cul), H5T_NATIVE_DOUBLE);
   H5Tinsert(atmos_type, "Qel", HOFFSET(THDF_atmos_t, Qel), H5T_NATIVE_DOUBLE);
+  H5Tinsert(atmos_type, "nH", HOFFSET(THDF_atmos_t, nH), H5T_NATIVE_DOUBLE);
+  H5Tinsert(atmos_type, "D2", HOFFSET(THDF_atmos_t, D2), H5T_NATIVE_DOUBLE);
   H5Tinsert(atmos_type, "magnetic_field_x", HOFFSET(THDF_atmos_t, magnetic_field_x), H5T_NATIVE_FLOAT);
   H5Tinsert(atmos_type, "magnetic_field_y", HOFFSET(THDF_atmos_t, magnetic_field_y), H5T_NATIVE_FLOAT);
   H5Tinsert(atmos_type, "magnetic_field_z", HOFFSET(THDF_atmos_t, magnetic_field_z), H5T_NATIVE_FLOAT);
@@ -33,9 +37,8 @@ create_hdf_atmos_compound_type(void) {
   H5Tinsert(atmos_type, "bulk_velocity_y", HOFFSET(THDF_atmos_t, bulk_velocity_y), H5T_NATIVE_FLOAT);
   H5Tinsert(atmos_type, "bulk_velocity_z", HOFFSET(THDF_atmos_t, bulk_velocity_z), H5T_NATIVE_FLOAT);
   H5Tinsert(atmos_type, "c_scat_opacity_sigma_c", HOFFSET(THDF_atmos_t, c_scat_opacity_sigma_c), H5T_NATIVE_DOUBLE);
-  H5Tinsert(atmos_type, "c_therm_emissivity_epsilon_c", HOFFSET(THDF_atmos_t, c_therm_emissivity_epsilon_c),
-            H5T_NATIVE_DOUBLE);
-  H5Tinsert(atmos_type, "c_tot_opacity_K_c", HOFFSET(THDF_atmos_t, c_tot_opacity_K_c), H5T_NATIVE_DOUBLE);
+  H5Tinsert(atmos_type, "c_therm_opacity_k_c", HOFFSET(THDF_atmos_t, c_therm_opacity_k_c), H5T_NATIVE_DOUBLE);
+  H5Tinsert(atmos_type, "c_therm_emissivity_epsilon_c", HOFFSET(THDF_atmos_t, c_therm_emissivity_epsilon_c), H5T_NATIVE_DOUBLE);
 
   return atmos_type;
 }
@@ -45,28 +48,36 @@ create_hdf_atmos_compound_type(void) {
 //============================================================================
 
 THDF_atmos_t
-create_atmos_data_point(int i, int j, int k) {
+create_atmos_data_point(int i, int j, int k, const THDF_atom_two_levels_t *atom) {
   THDF_atmos_t atmos_point;
 
-  atmos_point.index_i                      = i;
-  atmos_point.index_j                      = j;
-  atmos_point.index_k                      = k;
-  atmos_point.temperature                  = 5000.0 + k * 100.0 + i * 10.0 + j * 5.0;
-  atmos_point.vmicro                       = 2.0 + 0.1 * k;
-  atmos_point.damping                      = 1.0e-4 + 1.0e-6 * k;
-  atmos_point.pop_lower_level              = 1.0e12 - k * 1.0e10;
-  atmos_point.pop_upper_level              = 1.0e10 + k * 1.0e9;
-  atmos_point.Cul                          = 1.0e-8 + 1.0e-10 * k;
-  atmos_point.Qel                          = 1.0e-9 + 1.0e-11 * k;
-  atmos_point.magnetic_field_x             = (float)(100.0 + 10.0 * k);
-  atmos_point.magnetic_field_y             = (float)(45.0 + k);
-  atmos_point.magnetic_field_z             = (float)(90.0 + 2 * k);
-  atmos_point.bulk_velocity_x              = (float)(1.0e5 + 1.0e4 * k);
-  atmos_point.bulk_velocity_y              = (float)(0.0 + k);
-  atmos_point.bulk_velocity_z              = (float)(0.0 + 2 * k);
-  atmos_point.c_scat_opacity_sigma_c       = 1.0e-2 + 1.0e-4 * k;
-  atmos_point.c_therm_emissivity_epsilon_c = 1.0e-3 + 1.0e-5 * k;
-  atmos_point.c_tot_opacity_K_c            = 1.0e-1 + 1.0e-3 * k;
+  atmos_point.index_i                   = i;
+  atmos_point.index_j                   = j;
+  atmos_point.index_k                   = k;
+  atmos_point.temperature               = 5000.0 + k * 100.0 + i * 10.0 + j * 5.0;
+  atmos_point.vmicro                    = 2.0 + 0.1 * k;
+  atmos_point.Doppler_width             = 1.0e8 + 1.0e6 * k;
+  atmos_point.damping                   = 1.0e-4 + 1.0e-6 * k;
+  atmos_point.pop_lower_level           = 1.0e12 - k * 1.0e10;
+  atmos_point.pop_upper_level           = 1.0e10 + k * 1.0e9;
+  atmos_point.Cul                       = 1.0e-8 + 1.0e-10 * k;
+  atmos_point.Qel                       = 1.0e-9 + 1.0e-11 * k;
+  atmos_point.nH                        = 1.0e17 + 1.0e15 * k;
+  atmos_point.magnetic_field_x          = (float)(100.0 + 10.0 * k);
+  atmos_point.magnetic_field_y          = (float)(45.0 + k);
+  atmos_point.magnetic_field_z          = (float)(90.0 + 2 * k);
+  atmos_point.bulk_velocity_x           = (float)(1.0e5 + 1.0e4 * k);
+  atmos_point.bulk_velocity_y           = (float)(0.0 + k);
+  atmos_point.bulk_velocity_z           = (float)(0.0 + 2 * k);
+  atmos_point.c_scat_opacity_sigma_c    = 1.0e-2 + 1.0e-4 * k;
+  atmos_point.c_therm_opacity_k_c = 1.0e-3 + 1.0e-5 * k;
+  atmos_point.c_therm_emissivity_epsilon_c             = 1.0e-1 + 1.0e-3 * k;
+
+  if (atom != NULL) {
+    atmos_point.D2 = atom->a_coef_D2 * atmos_point.nH * pow(atmos_point.temperature / 5000.0, atom->b_coef_D2);
+  } else {
+    atmos_point.D2 = 0.0;
+  }
 
   return atmos_point;
 }
@@ -90,6 +101,7 @@ THDF_print_atmos_point(const THDF_atmos_t *point) {
   printf("  pop_upper_level = %e\n", point->pop_upper_level);
   printf("  Cul = %e\n", point->Cul);
   printf("  Qel = %e\n", point->Qel);
+  printf("  nH = %e\n", point->nH);
   printf("  magnetic_field_x = %f\n", point->magnetic_field_x);
   printf("  magnetic_field_y = %f\n", point->magnetic_field_y);
   printf("  magnetic_field_z = %f\n", point->magnetic_field_z);
@@ -97,8 +109,9 @@ THDF_print_atmos_point(const THDF_atmos_t *point) {
   printf("  bulk_velocity_y = %f\n", point->bulk_velocity_y);
   printf("  bulk_velocity_z = %f\n", point->bulk_velocity_z);
   printf("  c_scat_opacity_sigma_c = %e\n", point->c_scat_opacity_sigma_c);
+  printf("  c_therm_opacity_k_c = %e\n", point->c_therm_opacity_k_c);
   printf("  c_therm_emissivity_epsilon_c = %e\n", point->c_therm_emissivity_epsilon_c);
-  printf("  c_tot_opacity_K_c = %e\n", point->c_tot_opacity_K_c);
+  printf("  D2 = %e\n", point->D2);
   printf("}\n");
 }
 
@@ -135,8 +148,8 @@ create_atmosphere_dataset_mpi(hid_t file, int N_x, int N_y, int N_z, hid_t plist
 
   // Create dataspace and dataset with MPI support (all processes collectively)
   atmos_dset->dataspace_id = H5Screate_simple(3, dims, NULL);
-  atmos_dset->dataset_id   = H5Dcreate2(file, "atmos", atmos_dset->datatype_id,
-                                        atmos_dset->dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  atmos_dset->dataset_id =
+      H5Dcreate2(file, "atmos", atmos_dset->datatype_id, atmos_dset->dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
   if (atmos_dset->dataset_id < 0) {
     fprintf(stderr, "Error creating atmosphere dataset with MPI\n");
@@ -199,7 +212,8 @@ close_atmosphere_dataset_mpi(THDF_atmos_dataset_handler_t *atmos_dset) {
     H5Dclose(atmos_dset->dataset_id);
     H5Sclose(atmos_dset->dataspace_id);
     H5Tclose(atmos_dset->datatype_id);
-    if (atmos_dset->group_id >= 0) H5Gclose(atmos_dset->group_id);
+    if (atmos_dset->group_id >= 0)
+      H5Gclose(atmos_dset->group_id);
     atmos_dset->is_open = 0;
   }
 
@@ -220,7 +234,7 @@ create_hdf_atmos_compound_type_mpi(void) {
 // create_atmos_data_point_mpi
 //============================================================================
 THDF_atmos_t
-create_atmos_data_point_mpi(int i, int j, int k, int mpi_rank) {
+create_atmos_data_point_mpi(int i, int j, int k, int mpi_rank, const THDF_atom_two_levels_t *atom) {
   THDF_atmos_t atmos_point;
 
   atmos_point.index_i = i;
@@ -228,22 +242,30 @@ create_atmos_data_point_mpi(int i, int j, int k, int mpi_rank) {
   atmos_point.index_k = k;
 
   // Add MPI rank dependency to some calculations for variety across processes
-  atmos_point.temperature                  = 5000.0 + k * 100.0 + i * 10.0 + j * 5.0 + mpi_rank * 2.0;
-  atmos_point.vmicro                       = 2.0 + 0.1 * k + mpi_rank * 0.01;
-  atmos_point.damping                      = 1.0e-4 + 1.0e-6 * k + mpi_rank * 1.0e-7;
-  atmos_point.pop_lower_level              = 1.0e12 - k * 1.0e10 + mpi_rank * 1.0e9;
-  atmos_point.pop_upper_level              = 1.0e10 + k * 1.0e9 + mpi_rank * 1.0e8;
-  atmos_point.Cul                          = 1.0 + 2.0 * k + mpi_rank;
-  atmos_point.Qel                          = 1.0 + 3.0 * k + mpi_rank;
-  atmos_point.magnetic_field_x             = (float)(100.0 + 10.0 * k + mpi_rank * 1.0);
-  atmos_point.magnetic_field_y             = (float)(45.0 + k + mpi_rank * 0.5);
-  atmos_point.magnetic_field_z             = (float)(90.0 + 2 * k + mpi_rank * 1.0);
-  atmos_point.bulk_velocity_x              = (float)(1.0e5 + 1.0e4 * k + mpi_rank * 1.0e3);
-  atmos_point.bulk_velocity_y              = (float)(0.0 + k + mpi_rank * 0.1);
-  atmos_point.bulk_velocity_z              = (float)(0.0 + 2 * k + mpi_rank * 0.2);
-  atmos_point.c_scat_opacity_sigma_c       = 1.0e-2 + 1.0e-4 * k + mpi_rank * 1.0e-5;
-  atmos_point.c_therm_emissivity_epsilon_c = 1.0e-3 + 1.0e-5 * k + mpi_rank * 1.0e-6;
-  atmos_point.c_tot_opacity_K_c            = 1.0e-1 + 1.0e-3 * k + mpi_rank * 1.0e-4;
+  atmos_point.temperature               = 5000.0 + k * 100.0 + i * 10.0 + j * 5.0 + mpi_rank * 2.0;
+  atmos_point.vmicro                    = 2.0 + 0.1 * k + mpi_rank * 0.01;
+  atmos_point.Doppler_width             = 1.0e8 + 1.0e6 * k + mpi_rank * 1.0e5;
+  atmos_point.damping                   = 1.0e-4 + 1.0e-6 * k + mpi_rank * 1.0e-7;
+  atmos_point.pop_lower_level           = 1.0e12 - k * 1.0e10 + mpi_rank * 1.0e9;
+  atmos_point.pop_upper_level           = 1.0e10 + k * 1.0e9 + mpi_rank * 1.0e8;
+  atmos_point.Cul                       = 1.0 + 2.0 * k + mpi_rank;
+  atmos_point.Qel                       = 1.0 + 3.0 * k + mpi_rank;
+  atmos_point.nH                        = 1.0e17 + 1.0e15 * k + mpi_rank * 1.0e14;
+  atmos_point.magnetic_field_x          = (float)(100.0 + 10.0 * k + mpi_rank * 1.0);
+  atmos_point.magnetic_field_y          = (float)(45.0 + k + mpi_rank * 0.5);
+  atmos_point.magnetic_field_z          = (float)(90.0 + 2 * k + mpi_rank * 1.0);
+  atmos_point.bulk_velocity_x           = (float)(1.0e5 + 1.0e4 * k + mpi_rank * 1.0e3);
+  atmos_point.bulk_velocity_y           = (float)(0.0 + k + mpi_rank * 0.1);
+  atmos_point.bulk_velocity_z           = (float)(0.0 + 2 * k + mpi_rank * 0.2);
+  atmos_point.c_scat_opacity_sigma_c    = 1.0e-2 + 1.0e-4 * k + mpi_rank * 1.0e-5;
+  atmos_point.c_therm_opacity_k_c = 1.0e-3 + 1.0e-5 * k + mpi_rank * 1.0e-6;
+  atmos_point.c_therm_emissivity_epsilon_c             = 1.0e-1 + 1.0e-3 * k + mpi_rank * 1.0e-4;
+
+  if (atom != NULL) {
+    atmos_point.D2 = atom->a_coef_D2 * atmos_point.nH * pow(atmos_point.temperature / 5000.0, atom->b_coef_D2);
+  } else {
+    atmos_point.D2 = 0.0;
+  }
 
   return atmos_point;
 }
@@ -254,7 +276,7 @@ create_atmos_data_point_mpi(int i, int j, int k, int mpi_rank) {
 int
 write_geometry_to_hdf5(hid_t file, int N_x, int N_y, int N_z, double *heights) {
 
-  THDF_atmos_geometry_t geometry = {N_z, N_x, N_y, NULL, 1.0};
+  THDF_atmos_geometry_t geometry = {N_z, N_x, N_y, NULL, 100000.0};
 
   geometry.height = (double *)malloc(N_z * sizeof(double));
   if (geometry.height == NULL) {
@@ -284,10 +306,9 @@ write_geometry_to_hdf5(hid_t file, int N_x, int N_y, int N_z, double *heights) {
   }
 
   int64_t n_height_i64 = (int64_t)geometry.N_z;
-  hid_t   dset_n_height = H5Dcreate2(geom_group, "N_height", H5T_STD_I64LE, scalar_space, H5P_DEFAULT, H5P_DEFAULT,
-                                     H5P_DEFAULT);
-  if (dset_n_height < 0 || H5Dwrite(dset_n_height, H5T_NATIVE_LLONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, &n_height_i64) <
-                             0) {
+  hid_t   dset_n_height =
+      H5Dcreate2(geom_group, "N_height", H5T_STD_I64LE, scalar_space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (dset_n_height < 0 || H5Dwrite(dset_n_height, H5T_NATIVE_LLONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, &n_height_i64) < 0) {
     fprintf(stderr, "Error writing geometry dataset N_height\n");
     if (dset_n_height >= 0)
       H5Dclose(dset_n_height);
@@ -299,7 +320,7 @@ write_geometry_to_hdf5(hid_t file, int N_x, int N_y, int N_z, double *heights) {
   H5Dclose(dset_n_height);
 
   // Write N_ij as scalar int64.
-  int64_t n_ij_i64 = (int64_t)geometry.N_x;
+  int64_t n_ij_i64  = (int64_t)geometry.N_x;
   hid_t   dset_n_ij = H5Dcreate2(geom_group, "N_ij", H5T_STD_I64LE, scalar_space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   if (dset_n_ij < 0 || H5Dwrite(dset_n_ij, H5T_NATIVE_LLONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, &n_ij_i64) < 0) {
     fprintf(stderr, "Error writing geometry dataset N_ij\n");
@@ -349,7 +370,8 @@ write_geometry_to_hdf5(hid_t file, int N_x, int N_y, int N_z, double *heights) {
     return -1;
   }
 
-  hid_t dset_height = H5Dcreate2(geom_group, "height", H5T_IEEE_F32LE, height_space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  hid_t dset_height =
+      H5Dcreate2(geom_group, "height", H5T_IEEE_F32LE, height_space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   if (dset_height < 0 || H5Dwrite(dset_height, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, height_f32) < 0) {
     fprintf(stderr, "Error writing geometry dataset height\n");
     if (dset_height >= 0)
@@ -464,14 +486,16 @@ hid_t
 create_atom_compound_type(void) {
   hid_t atom_type = H5Tcreate(H5T_COMPOUND, sizeof(THDF_atom_two_levels_t));
   H5Tinsert(atom_type, "atomic_number", HOFFSET(THDF_atom_two_levels_t, atomic_number), H5T_NATIVE_INT);
-  H5Tinsert(atom_type, "atomic_mass",   HOFFSET(THDF_atom_two_levels_t, atomic_mass),   H5T_NATIVE_DOUBLE);
-  H5Tinsert(atom_type, "E_lower",       HOFFSET(THDF_atom_two_levels_t, E_lower),       H5T_NATIVE_DOUBLE);
-  H5Tinsert(atom_type, "E_upper",       HOFFSET(THDF_atom_two_levels_t, E_upper),       H5T_NATIVE_DOUBLE);
-  H5Tinsert(atom_type, "g_lower",       HOFFSET(THDF_atom_two_levels_t, g_lower),       H5T_NATIVE_DOUBLE);
-  H5Tinsert(atom_type, "g_upper",       HOFFSET(THDF_atom_two_levels_t, g_upper),       H5T_NATIVE_DOUBLE);
-  H5Tinsert(atom_type, "jl2",           HOFFSET(THDF_atom_two_levels_t, jl2),           H5T_NATIVE_INT);
-  H5Tinsert(atom_type, "ju2",           HOFFSET(THDF_atom_two_levels_t, ju2),           H5T_NATIVE_INT);
-  H5Tinsert(atom_type, "Aul",           HOFFSET(THDF_atom_two_levels_t, Aul),           H5T_NATIVE_DOUBLE);
+  H5Tinsert(atom_type, "atomic_mass", HOFFSET(THDF_atom_two_levels_t, atomic_mass), H5T_NATIVE_DOUBLE);
+  H5Tinsert(atom_type, "E_lower", HOFFSET(THDF_atom_two_levels_t, E_lower), H5T_NATIVE_DOUBLE);
+  H5Tinsert(atom_type, "E_upper", HOFFSET(THDF_atom_two_levels_t, E_upper), H5T_NATIVE_DOUBLE);
+  H5Tinsert(atom_type, "g_lower", HOFFSET(THDF_atom_two_levels_t, g_lower), H5T_NATIVE_DOUBLE);
+  H5Tinsert(atom_type, "g_upper", HOFFSET(THDF_atom_two_levels_t, g_upper), H5T_NATIVE_DOUBLE);
+  H5Tinsert(atom_type, "jl2", HOFFSET(THDF_atom_two_levels_t, jl2), H5T_NATIVE_INT);
+  H5Tinsert(atom_type, "ju2", HOFFSET(THDF_atom_two_levels_t, ju2), H5T_NATIVE_INT);
+  H5Tinsert(atom_type, "Aul", HOFFSET(THDF_atom_two_levels_t, Aul), H5T_NATIVE_DOUBLE);
+  H5Tinsert(atom_type, "a_coef_D2", HOFFSET(THDF_atom_two_levels_t, a_coef_D2), H5T_NATIVE_DOUBLE);
+  H5Tinsert(atom_type, "b_coef_D2", HOFFSET(THDF_atom_two_levels_t, b_coef_D2), H5T_NATIVE_DOUBLE);
   return atom_type;
 }
 
@@ -692,8 +716,8 @@ THDF_create_atmosphere_dataset(hid_t file, int N_x, int N_y, int N_z) {
 
   // Create dataspace and dataset at root
   atmos_dset->dataspace_id = H5Screate_simple(3, dims, NULL);
-  atmos_dset->dataset_id   = H5Dcreate2(file, "atmos", atmos_dset->datatype_id,
-                                        atmos_dset->dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  atmos_dset->dataset_id =
+      H5Dcreate2(file, "atmos", atmos_dset->datatype_id, atmos_dset->dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
   if (atmos_dset->dataset_id < 0) {
     fprintf(stderr, "Error creating atmosphere dataset\n");
@@ -752,7 +776,8 @@ THDF_close_atmosphere_dataset(THDF_atmos_dataset_handler_t *atmos_dset) {
     H5Dclose(atmos_dset->dataset_id);
     H5Sclose(atmos_dset->dataspace_id);
     H5Tclose(atmos_dset->datatype_id);
-    if (atmos_dset->group_id >= 0) H5Gclose(atmos_dset->group_id);
+    if (atmos_dset->group_id >= 0)
+      H5Gclose(atmos_dset->group_id);
     atmos_dset->is_open = 0;
   }
 

@@ -45,8 +45,8 @@ make_continuum_hdf5_mpi(hid_t file, int N_x, int N_y, int N_z, int N_frequencies
  * Creates (or opens and validates) the following datasets with
  * dimensions [N_x, N_y, N_z, N_frequencies]:
  *   - c_scat_opacity_sigma_c
- *   - c_therm_emissivity_epsilon_c
- *   - c_tot_opacity_K_c
+ *   - c_therm_opacity_k_c
+ *   - c_therm_emissivity_epsilon_c (old: c_tot_opacity_K_c)
  *
  * Also writes N_x, N_y, N_z, N_frequencies as attributes.
  *
@@ -69,16 +69,17 @@ THDF_create_continuum_4D_matrices(hid_t file, int N_x, int N_y, int N_z, int N_f
  *
  * @param sigma_c      Raw scattering opacity array       (size N_frequencies)
  * @param epsilon_c    Raw thermal emissivity array        (size N_frequencies)
- * @param K_c          Raw total opacity array             (size N_frequencies)
+ * @param c_therm_emissivity_epsilon_c Raw thermal opacity array          (size N_frequencies)
  * @param N_frequencies Number of frequency points
- * @param norm_sigma_c   Output uint16 scattering opacity  (size N_frequencies)
- * @param norm_epsilon_c Output uint16 thermal emissivity  (size N_frequencies)
- * @param norm_K_c       Output uint16 total opacity       (size N_frequencies)
+ * @param norm_sigma_c       Output uint16 scattering opacity      (size N_frequencies)
+ * @param norm_epsilon_c     Output uint16 thermal emissivity      (size N_frequencies)
+ * @param norm_c_therm_emissivity_epsilon_c Output uint16 thermal opacity         (size N_frequencies)
  * @return THDF_continuum_t carrying min/range normalization scalars
  */
 THDF_continuum_t
-normalize_continuum_data(const double *sigma_c, const double *epsilon_c, const double *K_c, int N_frequencies,
-                         uint16_t *norm_sigma_c, uint16_t *norm_epsilon_c, uint16_t *norm_K_c);
+normalize_continuum_data(const double *sigma_c, const double *epsilon_c, const double *c_therm_emissivity_epsilon_c,
+                         int N_frequencies, uint16_t *norm_sigma_c, uint16_t *norm_epsilon_c,
+                         uint16_t *norm_c_therm_emissivity_epsilon_c);
 
 /**
  * @brief Reconstruct double-precision spectra from uint16 and normalization scalars
@@ -86,18 +87,19 @@ normalize_continuum_data(const double *sigma_c, const double *epsilon_c, const d
  * Inverts the normalization applied by normalize_continuum_data().
  *
  * @param cont           Normalization scalars from normalize_continuum_data()
- * @param norm_sigma_c   Normalized scattering opacity   (size N_frequencies)
- * @param norm_epsilon_c Normalized thermal emissivity   (size N_frequencies)
- * @param norm_K_c       Normalized total opacity        (size N_frequencies)
+ * @param norm_sigma_c       Normalized scattering opacity       (size N_frequencies)
+ * @param norm_epsilon_c     Normalized thermal emissivity       (size N_frequencies)
+ * @param norm_c_therm_emissivity_epsilon_c Normalized thermal opacity          (size N_frequencies)
  * @param N_frequencies  Number of frequency points
- * @param sigma_c        Output reconstructed scattering opacity  (size N_frequencies)
- * @param epsilon_c      Output reconstructed thermal emissivity  (size N_frequencies)
- * @param K_c            Output reconstructed total opacity       (size N_frequencies)
+ * @param sigma_c            Output reconstructed scattering opacity  (size N_frequencies)
+ * @param epsilon_c          Output reconstructed thermal emissivity  (size N_frequencies)
+ * @param c_therm_emissivity_epsilon_c      Output reconstructed thermal opacity     (size N_frequencies)
  * @return 0 on success, -1 on error
  */
 int
 denormalize_continuum_data(THDF_continuum_t cont, const uint16_t *norm_sigma_c, const uint16_t *norm_epsilon_c,
-                           const uint16_t *norm_K_c, int N_frequencies, double *sigma_c, double *epsilon_c, double *K_c);
+                           const uint16_t *norm_c_therm_emissivity_epsilon_c, int N_frequencies, double *sigma_c,
+                           double *epsilon_c, double *c_therm_emissivity_epsilon_c);
 
 /**
  * @brief Write normalized continuum data for a spatial block to HDF5
@@ -110,23 +112,23 @@ denormalize_continuum_data(THDF_continuum_t cont, const uint16_t *norm_sigma_c, 
  * @param ix, iy, iz      Starting spatial indices
  * @param count_x, count_y, count_z  Block extents in each spatial dimension
  * @param normalized_cont Pointer to normalization scalars for this block
- * @param norm_sigma_c    uint16 scattering opacity  (size N_frequencies)
- * @param norm_epsilon_c  uint16 thermal emissivity  (size N_frequencies)
- * @param norm_K_c        uint16 total opacity       (size N_frequencies)
+ * @param norm_sigma_c       uint16 scattering opacity    (size N_frequencies)
+ * @param norm_epsilon_c     uint16 thermal emissivity    (size N_frequencies)
+ * @param norm_c_therm_emissivity_epsilon_c uint16 thermal opacity       (size N_frequencies)
  * @return 0 on success, -1 on error
  */
 int
 write_normalized_continuum_to_hdf5(hid_t file, int N_frequencies, int ix, int iy, int iz, int count_x, int count_y,
                                    int count_z, const THDF_continuum_t *normalized_cont, uint16_t *norm_sigma_c,
-                                   uint16_t *norm_epsilon_c, uint16_t *norm_K_c);
+                                   uint16_t *norm_epsilon_c, uint16_t *norm_c_therm_emissivity_epsilon_c);
 
 int
-read_continuum_from_hdf5(hid_t     file,                                           //
-                         const int N_frequencies,                                  //
-                         const int ix, const int iy, const int iz,                 //
-                         const int count_x, const int count_y, const int count_z,  //
-                         THDF_continuum_t *cont_to_fill,                           //
-                         double *sigma_c, double *epsilon_c, double *K_c);         //
+read_continuum_from_hdf5(hid_t     file,                                                               //
+                         const int N_frequencies,                                                      //
+                         const int ix, const int iy, const int iz,                                     //
+                         const int count_x, const int count_y, const int count_z,                      //
+                         THDF_continuum_t *cont_to_fill,                                               //
+                         double *sigma_c, double *epsilon_c, double *c_therm_emissivity_epsilon_c);  //
 
 /**
  * @brief Standalone continuum demo

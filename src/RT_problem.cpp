@@ -1443,6 +1443,8 @@ void RT_problem::allocate_atmosphere() {
 	Qel_ = std::make_shared<Field>("Qel",  space_grid_, false);
 	a_   = std::make_shared<Field>("a",    space_grid_, false);
 	W_T_ = std::make_shared<Field>("W_T",  space_grid_, false);
+	nH_  = std::make_shared<Field>("nH",   space_grid_, false);
+
 	// Nu_   = std::make_shared<Field>("Nu",   space_grid_, false);
 
 	// magnetic field 

@@ -1,9 +1,10 @@
 #include "RT_problem.hpp"
+#include "RT_utility.hpp"
 #include "hdf_atmos_cpp.hpp"
 
 // read 3D input from pmd file
 void
-RT_problem::read_3D_h5(const std::string filename, const bool verbose)
+RT_problem::read_3D_h5(const std::string filename, const AppConfig &cfg, const bool verbose)
 {
 	if (mpi_rank_ == 0) std::cout << "Reading HDF5 3D data from " << filename << std::endl;
 
@@ -23,15 +24,17 @@ RT_problem::read_3D_h5(const std::string filename, const bool verbose)
 		throw std::runtime_error("Error reading atom data");
 	}
 
-	this->gl_	 = atom.g_lower;
-	this->gu_	 = atom.g_upper;
-	this->El_	 = atom.E_lower;
-	this->Eu_	 = atom.E_upper;
-	this->Ll2_	 = atom.jl2; // TODO change input format
-	this->Lu2_	 = atom.ju2; // TODO change input format
-	this->mass_	 = atom.atomic_mass;
-	this->Aul_	 = atom.Aul;
-	this->T_ref_ = 5000.0; // reference temperature (never used).
+	this->gl_		 = atom.g_lower;
+	this->gu_		 = atom.g_upper;
+	this->El_		 = atom.E_lower;
+	this->Eu_		 = atom.E_upper;
+	this->Ll2_		 = atom.jl2; // TODO change h5 input naming
+	this->Lu2_		 = atom.ju2; // TODO change h5 input naming
+	this->mass_		 = atom.atomic_mass;
+	this->Aul_		 = atom.Aul;
+	this->a_coef_D2_ = atom.a_coef_D2;
+	this->b_coef_D2_ = atom.b_coef_D2;
+	this->T_ref_	 = 5000.0; // reference temperature (never used).
 
 	// Print Atom data for verification
 	if (mpi_rank_ == 0 and verbose)
@@ -45,6 +48,8 @@ RT_problem::read_3D_h5(const std::string filename, const bool verbose)
 		std::cout << "  Ll2 =         " << Ll2_ << std::endl;
 		std::cout << "  Lu2 =         " << Lu2_ << std::endl;
 		std::cout << "  Aul =         " << Aul_ << std::endl;
+		std::cout << "  a_coef_D2 =   " << a_coef_D2_ << std::endl;
+		std::cout << "  b_coef_D2 =   " << b_coef_D2_ << std::endl;
 	}
 
 	//////////////// read frequency grid ////////////////////////////////
@@ -162,17 +167,21 @@ RT_problem::read_3D_h5(const std::string filename, const bool verbose)
 				}
 
 				this->T_->ref(i, j, k)	 = data.temperature;
+				this->nH_->ref(i, j, k)	 = data.nH;
 				this->Nl_->ref(i, j, k)	 = data.pop_lower_level;
 				this->a_->ref(i, j, k)	 = data.damping;
 				this->Qel_->ref(i, j, k) = data.Qel;
 				this->Cul_->ref(i, j, k) = data.Cul;
 				xi_->ref(i, j, k)		 = data.vmicro;
+				nH_->ref(i, j, k)		 = data.nH;
 
 				this->epsilon_->ref(i, j, k) = this->Cul_->ref(i, j, k) /				//
 											   (this->Cul_->ref(i, j, k) + this->Aul_); //
 
 				// Calculated BUT it should be in the hdf5 file and read directly
-				this->D2_->ref(i, j, k) = 0.5 * this->Qel_->ref(i, j, k);
+				this->D2_->ref(i, j, k) = cfg.use_D2_from_input ? data.D2
+																: calculate_D2(this->a_coef_D2_, this->b_coef_D2_,
+																			   nH_->ref(i, j, k), this->T_->ref(i, j, k));
 
 				if (use_magnetic_field_)
 				{
@@ -224,7 +233,7 @@ RT_problem::read_3D_h5(const std::string filename, const bool verbose)
 				{
 					// hardcoded to 0.0 as in PORTA  // Rename K_c.
 					this->sigma_->block(i, j, k)[n]	   = data.c_scat_opacity_sigma_c;
-					this->k_c_->block(i, j, k)[n]	   = data.c_tot_opacity_K_c + data.c_scat_opacity_sigma_c;
+					this->k_c_->block(i, j, k)[n]	   = data.c_therm_opacity_k_c + data.c_scat_opacity_sigma_c;
 					this->eps_c_th_->block(i, j, k)[n] = data.c_therm_emissivity_epsilon_c;
 				}
 			});
