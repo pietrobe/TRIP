@@ -121,7 +121,7 @@ class RT_problem
 		mass_ = cfg.atom.mass;
 		Aul_  = cfg.atom.Aul;
 		S2_   = cfg.atom.S2;
-		Ll2_  = cfg.atom.Ll2; // we use Ju and Jl (instead of Lu and Ll) for both two terms and two levels // TODO (check with rii compatibility)
+		Ll2_  = cfg.atom.Ll2; 
 		Lu2_  = cfg.atom.Lu2; 
 		
 		Eu_vec_ = cfg.atom.Eu_vec;
@@ -684,11 +684,11 @@ class RT_problem
 	inline bool is_two_level()  const { return S2_ == 0; }
 	inline int get_S2()         const { return S2_;      }
 
-	inline std::vector<double>	get_El_ve() const	{return El_vec_;}
-	inline std::vector<double>	get_Eu_ve() const	{return Eu_vec_;}
+	inline std::vector<double>	get_El_vec() const	{return El_vec_;}
+	inline std::vector<double>	get_Eu_vec() const	{return Eu_vec_;}
 	
-	inline mdm::md_matrix<double, 1> get_El_ve() const	{return El0_;}
-	inline mdm::md_matrix<double, 1> get_Eu_ve() const	{return Eu0_;}
+	inline mdm::md_matrix<double, 1> get_El0() const	{return El0_;}
+	inline mdm::md_matrix<double, 1> get_Eu0() const	{return Eu0_;}
 	
 	bool
 	field_is_zero(const Field_ptr_t field);
@@ -751,18 +751,14 @@ class RT_problem
 	double gu_;
 	double Aul_;   // Einstein coefficients for spontaneous emission
 	double T_ref_; // Reference temperature
-<<<<<<< HEAD
+	double a_coef_D2_;
+	double b_coef_D2_;
+
 	// int  Jl2_;
 	// int  Ju2_;
 	int Ll2_;
 	int Lu2_;
 	int S2_;
-=======
-	int	   Jl2_;
-	int	   Ju2_;
-	double a_coef_D2_;
-	double b_coef_D2_;
->>>>>>> f0712c1c3da192e3b87be9a6612cf323125af7b8
 
 	std::vector<int>	Jl2_vec_;
 	std::vector<int>	Ju2_vec_;
