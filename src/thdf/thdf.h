@@ -4,6 +4,7 @@
 #include "hdf_fapl_from_env.h"
 #include "hdf_output_3D_field.h"
 #include "hdf_output_JKQ.h"
+#include "hdf_output_JKQ_CRD.h"
 #include "hdf_output_ar_field.h"
 #include "hdf_output_domain_decomposition_3D.h"
 #include "hdf_output_example_3D.h"

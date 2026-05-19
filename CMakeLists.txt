@@ -9,6 +9,16 @@ project(par_moonolith_usage VERSION 1.0.0 LANGUAGES C CXX)
 # enable_testing()
 
 ### DEBUG OPTION
+if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+	set(OPENMP_FLAG "-qopenmp")
+	add_compile_options(-Wno-tautological-constant-compare)
+	message(STATUS
+		"IntelLLVM compiler detected: using -qopenmp, disabling -Wtautological-constant-compare"
+	)
+else()
+	set(OPENMP_FLAG "-fopenmp")
+endif()
+
 option(DEBUG "Build with debugging symbols and flags" OFF)
 if(DEBUG)
 	message(STATUS "Configuring Debug build")
@@ -21,7 +31,7 @@ else()
 	message(STATUS "Configuring Release build")
 	# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option")
 	set(CMAKE_CXX_FLAGS
-		"${CMAKE_CXX_FLAGS} -O3 -fopenmp -std=c++17 -Wno-deprecated-declarations "
+		"${CMAKE_CXX_FLAGS} -O3 ${OPENMP_FLAG} -std=c++17 -Wno-deprecated-declarations "
 	)
 	# set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Ofast -fno-signed-zeros -fno-trapping-math -fassociative-math -march=native -mtune=native -mprefer-vector-width=512 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option -pedantic ")
 	set(EXECUTABLE_NAME "solar_3D")
@@ -194,13 +204,16 @@ message(STATUS "Search Petsc")
 set(PETSC_TEST_RUNS TRUE)
 
 # Check if PETSC_DIR equals $HOME/petsc
-if("$ENV{PETSC_DIR}" STREQUAL "$ENV{HOME}/petsc") # home build in single precision
+if("$ENV{PETSC_DIR}"
+	STREQUAL
+	"$ENV{HOME}/petsc"
+) # home build in single precision
 
-    set(ENV{PKG_CONFIG_PATH} $ENV{PETSC_DIR}/$ENV{PETSC_ARCH}/lib/pkgconfig)
+	set(ENV{PKG_CONFIG_PATH} $ENV{PETSC_DIR}/$ENV{PETSC_ARCH}/lib/pkgconfig)
 
 else() # module build in double precision
 
-    set(ENV{PKG_CONFIG_PATH} $ENV{PETSC_DIR}/lib/pkgconfig)
+	set(ENV{PKG_CONFIG_PATH} $ENV{PETSC_DIR}/lib/pkgconfig)
 
 endif()
 
@@ -249,10 +262,12 @@ target_include_directories(${EXECUTABLE_NAME}
 		src
 		${CMAKE_CURRENT_BINARY_DIR} # Add binary dir for configure.h
 )
-target_include_directories(${EXECUTABLE_NAME} SYSTEM PUBLIC ${PETSC_INCLUDE_DIRS})
+target_include_directories(${EXECUTABLE_NAME} SYSTEM
+	PUBLIC ${PETSC_INCLUDE_DIRS}
+)
 target_link_libraries(${EXECUTABLE_NAME} PUBLIC PkgConfig::PETSC)
 target_compile_definitions(${EXECUTABLE_NAME} PUBLIC ${PETSC_DEFINITIONS})
-#target_link_libraries(${EXECUTABLE_NAME} PUBLIC ${PETSC_LIBRARIES})
+# target_link_libraries(${EXECUTABLE_NAME} PUBLIC ${PETSC_LIBRARIES})
 
 message(STATUS "PETSC_INCLUDES = ${PETSC_INCLUDE_DIRS}")
 
@@ -283,8 +298,16 @@ target_link_libraries(solar_3D_tests
 		${Boost_LIBRARIES}
 		${TRIP_MPI_TARGET}
 )
-target_link_libraries(solar_3D_tests PUBLIC ${HDF5_LIBRARIES})
-target_link_libraries(solar_3D_tests PUBLIC ${HDF5_HL_LIBRARIES})
+
+target_link_libraries(solar_3D_tests PRIVATE hdf_output)
+target_include_directories(solar_3D_tests PUBLIC src/thdf/)
+
+target_link_libraries(solar_3D_tests PRIVATE hdf_atmos)
+target_include_directories(solar_3D_tests PUBLIC src/atmos_input_TRIP/)
+
+# target_link_libraries(solar_3D_tests PUBLIC ${HDF5_LIBRARIES})
+# target_link_libraries(solar_3D_tests PUBLIC ${HDF5_HL_LIBRARIES})
+
 target_sources(solar_3D_tests PUBLIC ${SOURCES_FILES})
 target_include_directories(solar_3D_tests
 	PUBLIC
@@ -292,7 +315,6 @@ target_include_directories(solar_3D_tests
 		${CMAKE_CURRENT_BINARY_DIR} # Add binary dir for configure.h
 )
 target_include_directories(solar_3D_tests PUBLIC ${HDF5_INCLUDE_DIRS})
-
 
 target_include_directories(solar_3D_tests SYSTEM PUBLIC ${PETSC_INCLUDE_DIRS})
 target_link_libraries(solar_3D_tests PUBLIC PkgConfig::PETSC)
@@ -312,7 +334,9 @@ target_include_directories(solar_3D_tests PUBLIC src/thdf/)
 target_include_directories(solar_3D_tests PUBLIC src/atmos_input_TRIP)
 
 # Link the static library
-target_link_libraries(solar_3D_tests PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a)
+target_link_libraries(solar_3D_tests
+	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a
+)
 
 # make does not build test
 set_target_properties(solar_3D_tests PROPERTIES EXCLUDE_FROM_ALL TRUE)

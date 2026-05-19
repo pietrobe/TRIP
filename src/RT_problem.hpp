@@ -528,6 +528,16 @@ class RT_problem
 						  std::vector<THDF_JKQ_n_float_t> &JKQ_imag_norm); //
 
 	int
+	accumulate_JKQ_CRD_values(const int						  x_strat,	 //
+							  const int						  y_strat,	 //
+							  const int						  z_strat,	 //
+							  const int						  x_end,	 //
+							  const int						  y_end,	 //
+							  const int						  z_end,	 //
+							  std::vector<THDF_JKQ_double_t> &JKQ_real,	 //
+							  std::vector<THDF_JKQ_double_t> &JKQ_imag); //
+
+	int
 	get_KQ_values(std::vector<int> &KQ_values,					//
 				  std::vector<int> &KQ_values_real_compressed,	//
 				  std::vector<int> &KQ_values_imag_compressed); //
@@ -586,7 +596,7 @@ class RT_problem
 	bool verbose_;
 
 	// emissivity model
-	emissivity_model_t emissivity_model_                     = emissivity_model_t::NONE;
+	emissivity_model_t				  emissivity_model_		 = emissivity_model_t::NONE;
 	preconditioner_emissivity_model_t emissivity_model_prec_ = preconditioner_emissivity_model_t::NONE;
 
 	// spatial grid
