@@ -109,26 +109,27 @@ class RT_problem
 		}
 
 		// set flags
-		use_PORTA_input_	= not(cfg_.input_directory.string().find("FAL-C") != std::string::npos);
-		use_magnetic_field_ = cfg_.use_B;
-		emissivity_model_	= cfg_.emissivity_model;
-		enable_continuum_	= cfg_.enable_continuum;
-		use_1_5D_approx_	= cfg_.use_1_5D_approx;
-		use_bulk_velocity_	= cfg_.use_Vb;
-		verbose_			= cfg_.verbose;
+		use_PORTA_input_	   = not(cfg_.input_directory.string().find("FAL-C") != std::string::npos);
+		use_magnetic_field_	   = cfg_.use_B;
+		emissivity_model_	   = cfg_.emissivity_model;
+		emissivity_model_prec_ = cfg_.preconditioner_emissivity_model;
+		enable_continuum_	   = cfg_.enable_continuum;
+		use_1_5D_approx_	   = cfg_.use_1_5D_approx;
+		use_bulk_velocity_	   = cfg_.use_Vb;
+		verbose_			   = cfg_.verbose;
 
 		// atom quantities
 		mass_ = cfg.atom.mass;
 		Aul_  = cfg.atom.Aul;
-		S2_   = cfg.atom.S2;
-		Ll2_  = cfg.atom.Ll2; 
-		Lu2_  = cfg.atom.Lu2; 
-		
+		S2_	  = cfg.atom.S2;
+		Ll2_  = cfg.atom.Ll2;
+		Lu2_  = cfg.atom.Lu2;
+
 		Eu_vec_ = cfg.atom.Eu_vec;
 		El_vec_ = cfg.atom.El_vec;
 		gu_vec_ = cfg.atom.gu_vec;
 		gl_vec_ = cfg.atom.gl_vec;
-		
+
 		use_uniform_magnetic_field_ = cfg_.set_uniform_B;
 		if (use_uniform_magnetic_field_)
 		{
@@ -138,7 +139,7 @@ class RT_problem
 		}
 
 		// set input files
-		const auto input_file_path		    = cfg_.input_directory / cfg_.input_file;
+		const auto input_file_path		  = cfg_.input_directory / cfg_.input_file;
 		const auto frequencies_input_path = cfg_.input_directory / cfg_.frequency_file;
 
 		// read input frequencies from separate file
@@ -585,7 +586,8 @@ class RT_problem
 	bool verbose_;
 
 	// emissivity model
-	emissivity_model_t emissivity_model_ = emissivity_model_t::NONE;
+	emissivity_model_t emissivity_model_                     = emissivity_model_t::NONE;
+	preconditioner_emissivity_model_t emissivity_model_prec_ = preconditioner_emissivity_model_t::NONE;
 
 	// spatial grid
 	Grid_ptr_t space_grid_;
@@ -671,25 +673,100 @@ class RT_problem
 	Field_ptr_t eps_c_th_;
 
 	// Access to the atomic model parameters
-	inline double atomic_mass() const { return mass_; }
-	inline double atomic_El()   const { return El_;   }
-	inline double atomic_Eu()   const { return Eu_;   }
-	inline int    atomic_Jl2()  const {	return Ll2_;  }
-	inline int    atomic_Ju2()  const {	return Lu2_;  }
-	inline double atomic_gl()   const { return gl_;   } // TODO use gl_vec_
-	inline double atomic_gu()   const { return gu_;   } // TODO use gu_vec_
-	inline double atomic_Aul()  const { return Aul_;  }
-	
-	inline Field_ptr_t get_D2() const { return D2_;      }
-	inline bool is_two_level()  const { return S2_ == 0; }
-	inline int get_S2()         const { return S2_;      }
+	inline double
+	atomic_mass() const
+	{
+		return mass_;
+	}
+	inline double
+	atomic_El() const
+	{
+		return El_;
+	}
+	inline double
+	atomic_Eu() const
+	{
+		return Eu_;
+	}
+	inline int
+	atomic_Jl2() const
+	{
+		return Ll2_;
+	}
+	inline int
+	atomic_Ju2() const
+	{
+		return Lu2_;
+	}
+	inline double
+	atomic_gl() const
+	{
+		return gl_;
+	} // TODO use gl_vec_
+	inline double
+	atomic_gu() const
+	{
+		return gu_;
+	} // TODO use gu_vec_
+	inline double
+	atomic_Aul() const
+	{
+		return Aul_;
+	}
 
-	inline std::vector<double>	get_El_vec() const	{return El_vec_;}
-	inline std::vector<double>	get_Eu_vec() const	{return Eu_vec_;}
-	
-	inline mdm::md_matrix<double, 1> get_El0() const	{return El0_;}
-	inline mdm::md_matrix<double, 1> get_Eu0() const	{return Eu0_;}
-	
+	// Using (also) Two Term notation (for clarity)
+	inline double
+	atomic_Ll2() const
+	{
+		return Ll2_;
+	}
+
+	inline double
+	atomic_Lu2() const
+	{
+		return Lu2_;
+	}
+
+	inline Field_ptr_t
+	get_D2() const
+	{
+		return D2_;
+	}
+
+	inline bool
+	is_two_level() const
+	{
+		return S2_ == 0;
+	}
+
+	inline int
+	get_S2() const
+	{
+		return S2_;
+	}
+
+	inline std::vector<double>
+	get_El_vec() const
+	{
+		return El_vec_;
+	}
+	inline std::vector<double>
+	get_Eu_vec() const
+	{
+		return Eu_vec_;
+	}
+
+	inline mdm::md_matrix<double, 1>
+	get_El0() const
+	{
+		return El0_;
+	}
+	inline mdm::md_matrix<double, 1>
+	get_Eu0() const
+	{
+		return Eu0_;
+	}
+
 	bool
 	field_is_zero(const Field_ptr_t field);
 
@@ -739,9 +816,9 @@ class RT_problem
 	Real uniform_magnetic_field_chi_   = 0.0; // rad
 
 	// physical constants
-	const double c_	= 2.99792458e+10;
+	const double c_	  = 2.99792458e+10;
 	const double k_B_ = 1.38065e-16;
-	const double h_	= 6.62607e-27;
+	const double h_	  = 6.62607e-27;
 
 	// 2-level atom constants
 	double mass_;
@@ -786,7 +863,7 @@ class RT_problem
 	Field_ptr_t D2_;
 
 	// quantities depending on direction
-	std::vector<std::vector<std::complex<double>>> T_KQ_; // polarization tensor 
+	std::vector<std::vector<std::complex<double>>> T_KQ_; // polarization tensor
 
 	// allocate grid fields
 	void

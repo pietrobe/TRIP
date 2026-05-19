@@ -521,9 +521,9 @@ void RT_problem::read_3D(const char* filename){
 	// fill field 
 	space_grid_->parallel_for([&](int i, int j, int k) {
 		// get global indeces form local ones
-		const int i_global  = space_grid_->local_to_global_coordinate(0,i); //space_grid_->getGlobalStartX() + i - space_grid_->getGhostMarginX();
-		const int j_global  = space_grid_->local_to_global_coordinate(1,j);//space_grid_->getGlobalStartY() + j - space_grid_->getGhostMarginY();
-		const int k_global  = space_grid_->local_to_global_coordinate(2,k);//space_grid_->getGlobalStartZ() + k - space_grid_->getGhostMarginZ();
+		const int i_global  = space_grid_->local_to_global_coordinate(0, i); //space_grid_->getGlobalStartX() + i - space_grid_->getGhostMarginX();
+		const int j_global  = space_grid_->local_to_global_coordinate(1, j);//space_grid_->getGlobalStartY() + j - space_grid_->getGhostMarginY();
+		const int k_global  = space_grid_->local_to_global_coordinate(2, k);//space_grid_->getGlobalStartZ() + k - space_grid_->getGhostMarginZ();
 		
 		// reversing z index because of input ordering 
 		const int k_reverse = (N_z_ - k_global - 1);  
