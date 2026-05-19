@@ -559,14 +559,15 @@ RT_problem::accumulate_JKQ_values(const int						   x_strat,		  //
 }
 
 int
-RT_problem::accumulate_JKQ_CRD_values(const int						  x_strat,	//
-									  const int						  y_strat,	//
-									  const int						  z_strat,	//
-									  const int						  x_end,	//
-									  const int						  y_end,	//
-									  const int						  z_end,	//
-									  std::vector<THDF_JKQ_double_t> &JKQ_real, //
-									  std::vector<THDF_JKQ_double_t> &JKQ_imag) //
+RT_problem::accumulate_JKQ_CRD_values(const int						  x_strat,		 //
+									  const int						  y_strat,		 //
+									  const int						  z_strat,		 //
+									  const int						  x_end,		 //
+									  const int						  y_end,		 //
+									  const int						  z_end,		 //
+									  std::vector<THDF_JKQ_double_t> &JKQ_real,		 //
+									  std::vector<THDF_JKQ_double_t> &JKQ_imag,		 //
+									  const bool					  doppler_shift) //
 {
 	std::vector<double> u_vec;
 	u_vec.resize(this->N_nu_);
@@ -593,6 +594,9 @@ RT_problem::accumulate_JKQ_CRD_values(const int						  x_strat,	//
 				auto block_tmp = to_double(block_ptr, block_size_);
 
 				// TODO !!!!!!
+
+				const double ds_mult = doppler_shift ? 1.0 : 0.0;
+
 				auto JKQ_CRD_sh_ptr =														   //
 					rii_include::make_JKQ_CRD_matrix_norm_comp(block_tmp.data(),			   //
 															   u_vec.data(),				   //
@@ -603,9 +607,9 @@ RT_problem::accumulate_JKQ_CRD_values(const int						  x_strat,	//
 															   4 * this->N_chi_ * this->N_nu_, //
 															   4 * this->N_nu_,				   //
 															   1,							   //
-															   0.0 * v_b,					   //
-															   0.0 * v_b_theta,				   //
-															   0.0 * v_b_chi,				   //
+															   ds_mult * v_b,				   //
+															   ds_mult * v_b_theta,			   //
+															   ds_mult * v_b_chi,			   //
 															   T,							   //
 															   this->atomic_mass(),			   //
 															   0.0);						   //
@@ -779,7 +783,7 @@ RT_problem::write_JKQ_field_hdf5(const std::string &output_file)
 }
 
 int
-RT_problem::write_JKQ_CRD_field_hdf5(const std::string &output_file)
+RT_problem::write_JKQ_CRD_field_hdf5(const std::string &output_file, const bool doppler_shift)
 {
 	// indeces
 	auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
@@ -848,7 +852,8 @@ RT_problem::write_JKQ_CRD_field_hdf5(const std::string &output_file)
 	this->accumulate_JKQ_CRD_values(i_start, j_start, k_start, //
 									i_end, j_end, k_end,	   //
 									JKQ_real,				   //
-									JKQ_imag);				   //
+									JKQ_imag,				   //
+									doppler_shift);			   //
 
 	// {
 	// 	void *_p = malloc(1);

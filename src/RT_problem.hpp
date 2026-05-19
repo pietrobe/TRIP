@@ -535,7 +535,8 @@ class RT_problem
 							  const int						  y_end,	 //
 							  const int						  z_end,	 //
 							  std::vector<THDF_JKQ_double_t> &JKQ_real,	 //
-							  std::vector<THDF_JKQ_double_t> &JKQ_imag); //
+							  std::vector<THDF_JKQ_double_t> &JKQ_imag,  //
+							  const bool                      doppler_shift);  //
 
 	int
 	get_KQ_values(std::vector<int> &KQ_values,					//
@@ -546,7 +547,7 @@ class RT_problem
 	write_JKQ_field_hdf5(const std::string &output_file); //
 
 	int
-	write_JKQ_CRD_field_hdf5(const std::string &output_file); //
+	write_JKQ_CRD_field_hdf5(const std::string &output_file, const bool doppler_shift); //
 
 	int																	//
 	write_angular_frequency_grids_hdf5(const std::string &output_file); //

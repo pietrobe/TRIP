@@ -31,6 +31,12 @@ enum class emissivity_model_t
 	ZERO		   //
 }; //
 
+inline bool is_CRD_limit(const emissivity_model_t model)
+{
+	return model == emissivity_model_t::CRD_limit || model == emissivity_model_t::CRD_limit_VHP;
+}
+
+
 enum class preconditioner_emissivity_model_t
 {
 	NONE,			//

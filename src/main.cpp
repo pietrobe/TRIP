@@ -173,8 +173,8 @@ main(int argc, char *argv[])
 		}
 
 		///////////////////////////////////////////////////
-		// solve //////////////////////////////////////////		
-		rt_solver.solve();				
+		// solve //////////////////////////////////////////
+		rt_solver.solve();
 
 		clocks.solve_end_time = MPI_Wtime();
 
@@ -230,7 +230,19 @@ main(int argc, char *argv[])
 			clocks.hdf5_out_time_emergent = MPI_Wtime() - clocks.hdf5_out_time_emergent;
 
 			clocks.hdf5_out_time_JKQ = MPI_Wtime();
-			rt_problem_ptr->write_JKQ_field_hdf5((output_path / "JKQ_field.h5").string()); //
+			if (is_CRD_limit(cfg.emissivity_model))
+			{
+				rt_problem_ptr																		//
+					->write_JKQ_CRD_field_hdf5((output_path / "JKQ_CRD_field.h5").string(), false); //
+
+				rt_problem_ptr																					   //
+					->write_JKQ_CRD_field_hdf5((output_path / "JKQ_CRD_Doppler_shifted_field.h5").string(), true); //
+			}
+			else
+			{
+				rt_problem_ptr														 //
+					->write_JKQ_field_hdf5((output_path / "JKQ_field.h5").string()); //
+			}
 			clocks.hdf5_out_time_JKQ = MPI_Wtime() - clocks.hdf5_out_time_JKQ;
 
 			clocks.hdf5_out_time_whole_3D_field = MPI_Wtime();
