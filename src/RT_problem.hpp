@@ -545,6 +545,9 @@ class RT_problem
 	int
 	write_JKQ_field_hdf5(const std::string &output_file); //
 
+	int
+	write_JKQ_CRD_field_hdf5(const std::string &output_file); //
+
 	int																	//
 	write_angular_frequency_grids_hdf5(const std::string &output_file); //
 
