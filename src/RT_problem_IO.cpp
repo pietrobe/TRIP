@@ -443,7 +443,7 @@ RT_problem::write_emergent_field_Omega_hdf5(const std::string				 &output_file,	
 	output_field.index_k		  = 0;
 	output_field.beam_index		  = beam_index;
 	output_field.N_frequencies	  = this->N_nu_;
-	
+
 	// assign data pointers
 	output_field.stokes_I  = surface_data_I.data();
 	output_field.stokes_QI = surface_data_Q.data();
@@ -496,24 +496,24 @@ RT_problem::accumulate_JKQ_values(const int						   x_strat,		  //
 			for (int k = z_strat; k < z_end; ++k)
 			{
 				const Real *block_ptr = I_field_->block(i, j, k);
-				const Real  dnd		= Doppler_width_->ref(i, j, k);
+				const Real	dnd		  = Doppler_width_->ref(i, j, k);
 
 				for (int ui = 0; ui < this->N_nu_; ++ui)
 				{
 					const Real nu = this->nu_grid_[ui];
-					u_vec[ui]		= (this->nu_0_ - nu) / dnd;
+					u_vec[ui]	  = (this->nu_0_ - nu) / dnd;
 				}
 
-				const Real v_b	     = v_b_->block(i, j, k)[0];
+				const Real v_b		 = v_b_->block(i, j, k)[0];
 				const Real v_b_theta = v_b_->block(i, j, k)[1];
-				const Real v_b_chi   = v_b_->block(i, j, k)[2];
+				const Real v_b_chi	 = v_b_->block(i, j, k)[2];
 				const Real T		 = T_->ref(i, j, k);
 
-				auto block_tmp = to_double(block_ptr, block_size_);				
+				auto block_tmp = to_double(block_ptr, block_size_);
 
 				// This calculate JKQ in the comoving frame
 				auto JKQ_matrix_sh_ptr =												   //
-					rii_include::make_JKQ_matrix_norm_comp(block_tmp.data(),					   //
+					rii_include::make_JKQ_matrix_norm_comp(block_tmp.data(),			   //
 														   u_vec.data(),				   //
 														   this->N_nu_,					   //
 														   this->N_theta_,				   //
@@ -551,6 +551,64 @@ RT_problem::accumulate_JKQ_values(const int						   x_strat,		  //
 						JKQ_imag.push_back(JKQ_matrix_sh_ptr->imag_compressed(idx, ui));
 					}
 				}
+			}
+		}
+	}
+
+	return 0;
+}
+
+int
+RT_problem::accumulate_JKQ_CRD_values(const int						  x_strat,	//
+									  const int						  y_strat,	//
+									  const int						  z_strat,	//
+									  const int						  x_end,	//
+									  const int						  y_end,	//
+									  const int						  z_end,	//
+									  std::vector<THDF_JKQ_double_t> &JKQ_real, //
+									  std::vector<THDF_JKQ_double_t> &JKQ_imag) //
+{
+	std::vector<double> u_vec;
+	u_vec.resize(this->N_nu_);
+	for (int i = x_strat; i < x_end; ++i)
+	{
+		for (int j = y_strat; j < y_end; ++j)
+		{
+			for (int k = z_strat; k < z_end; ++k)
+			{
+				const Real *block_ptr = I_field_->block(i, j, k);
+				const Real	dnd		  = Doppler_width_->ref(i, j, k);
+
+				for (int ui = 0; ui < this->N_nu_; ++ui)
+				{
+					const Real nu = this->nu_grid_[ui];
+					u_vec[ui]	  = (this->nu_0_ - nu) / dnd;
+				}
+
+				const Real v_b		 = v_b_->block(i, j, k)[0];
+				const Real v_b_theta = v_b_->block(i, j, k)[1];
+				const Real v_b_chi	 = v_b_->block(i, j, k)[2];
+				const Real T		 = T_->ref(i, j, k);
+
+				auto block_tmp = to_double(block_ptr, block_size_);
+
+				// TODO !!!!!!
+				auto JKQ_CRD_sh_ptr =														   //
+					rii_include::make_JKQ_CRD_matrix_norm_comp(block_tmp.data(),			   //
+															   u_vec.data(),				   //
+															   this->N_nu_,					   //
+															   this->N_theta_,				   //
+															   this->N_chi_,				   //
+															   4,							   //
+															   4 * this->N_chi_ * this->N_nu_, //
+															   4 * this->N_nu_,				   //
+															   1,							   //
+															   0.0 * v_b,					   //
+															   0.0 * v_b_theta,				   //
+															   0.0 * v_b_chi,				   //
+															   T,							   //
+															   this->atomic_mass(),			   //
+															   0.0);
 			}
 		}
 	}

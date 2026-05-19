@@ -8,6 +8,7 @@ extern "C" {
 #endif
 
 typedef float  THDF_JKQ_float_t;
+typedef double THDF_JKQ_double_t;
 typedef double THDF_JKQ_n_float_t;
 
 /**
@@ -87,12 +88,12 @@ typedef struct {
  * @return Pointer to the initialized JKQ field handler, or NULL on failure.
  */
 THDF_JKQ_handler_t *
-THDF_create_JKQ_field_handler_mpi(hid_t file,          //
-                                  int   N_x,           //
-                                  int   N_y,           //
-                                  int   N_z,           //
-                                  int   N_JKQ_real,    //
-                                  int   N_JKQ_imag,    //
+THDF_create_JKQ_field_handler_mpi(hid_t file,            //
+                                  int   N_x,             //
+                                  int   N_y,             //
+                                  int   N_z,             //
+                                  int   N_JKQ_real,      //
+                                  int   N_JKQ_imag,      //
                                   int   N_frequencies);  //
 
 /**
@@ -122,11 +123,11 @@ THDF_write_JKQ_field_to_hdf5(THDF_JKQ_handler_t *handler,    //
                              hsize_t             start_k,    //
                              hsize_t             count_i,    //
                              hsize_t             count_j,    //
-                             hsize_t             count_k);               //
+                             hsize_t             count_k);   //
 
 int
-THDF_write_KQ_table_to_hdf5(hid_t             file,        //
-                             THDF_KQ_table_t *KQ_table);  //
+THDF_write_KQ_table_to_hdf5(hid_t            file,       //
+                            THDF_KQ_table_t *KQ_table);  //
 
 #ifdef __cplusplus
 }
