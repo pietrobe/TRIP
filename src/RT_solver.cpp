@@ -2953,6 +2953,28 @@ void MF_context::set_up_emission_module(){
 
         break;
 
+    // TEST
+    case emissivity_model_t::PRD_AA_TWOTERM:
+
+        components.push_back(emission_coefficient_components::epsilon_R_II_TwoTerm_AA);
+        components.push_back(emission_coefficient_components::epsilon_R_III_TwoTerm_GL);
+        components.push_back(emission_coefficient_components::epsilon_csc);  
+
+        if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_TWOTERM emission, components:"<< std::endl;
+
+        break;
+
+    // TEST
+    case emissivity_model_t::PRD_AA_TWOTERM_MAPV:
+
+        components.push_back(emission_coefficient_components::epsilon_R_II_TwoTerm_AA_MAPV);
+        components.push_back(emission_coefficient_components::epsilon_R_III_TwoTerm_GL);
+        components.push_back(emission_coefficient_components::epsilon_csc);  
+
+        if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_TWOTERM_MAPV emission, components:"<< std::endl;
+
+        break;
+
     case emissivity_model_t::ZERO:
         
         components.push_back(emission_coefficient_components::epsilon_zero);             
@@ -2978,12 +3000,14 @@ void MF_context::set_up_emission_module(){
 	{
         case preconditioner_emissivity_model_t::PRD_AA_MAPV_GB:
             components_approx.push_back(
-				emission_coefficient_components::epsilon_R_II_TwoTerm_AA_GB);
-        break;
+				emission_coefficient_components::epsilon_R_II_TwoTerm_AA_GB_MAPV);
+            if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_MAPV_GB for preconditioner emissivity" << std::endl;
+            break;
         case preconditioner_emissivity_model_t::PRD_AA_GB:
             components_approx.push_back(    
-				emission_coefficient_components::epsilon_R_II_TwoTerm_AA_GB_MAPV);
-        break;
+				emission_coefficient_components::epsilon_R_II_TwoTerm_AA_GB);
+            if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_GB for preconditioner emissivity" << std::endl;
+            break;
 		case preconditioner_emissivity_model_t::CRD_limit:
 		default:
 			if (mpi_rank_ == 0) std::cout << "\nUsing CRD limit for preconditioner emissivity" << std::endl;
