@@ -525,18 +525,19 @@ class RT_problem
 						  std::vector<THDF_JKQ_float_t>	  &JKQ_real,	   //
 						  std::vector<THDF_JKQ_float_t>	  &JKQ_imag,	   //
 						  std::vector<THDF_JKQ_n_float_t> &JKQ_real_norm,  //
-						  std::vector<THDF_JKQ_n_float_t> &JKQ_imag_norm); //
+						  std::vector<THDF_JKQ_n_float_t> &JKQ_imag_norm,  //
+						  const bool					   doppler_shift); //
 
 	int
-	accumulate_JKQ_CRD_values(const int						  x_strat,	 //
-							  const int						  y_strat,	 //
-							  const int						  z_strat,	 //
-							  const int						  x_end,	 //
-							  const int						  y_end,	 //
-							  const int						  z_end,	 //
-							  std::vector<THDF_JKQ_double_t> &JKQ_real,	 //
-							  std::vector<THDF_JKQ_double_t> &JKQ_imag,  //
-							  const bool                      doppler_shift);  //
+	accumulate_JKQ_CRD_values(const int						  x_strat,		  //
+							  const int						  y_strat,		  //
+							  const int						  z_strat,		  //
+							  const int						  x_end,		  //
+							  const int						  y_end,		  //
+							  const int						  z_end,		  //
+							  std::vector<THDF_JKQ_double_t> &JKQ_real,		  //
+							  std::vector<THDF_JKQ_double_t> &JKQ_imag,		  //
+							  const bool					  doppler_shift); //
 
 	int
 	get_KQ_values(std::vector<int> &KQ_values,					//
@@ -544,7 +545,7 @@ class RT_problem
 				  std::vector<int> &KQ_values_imag_compressed); //
 
 	int
-	write_JKQ_field_hdf5(const std::string &output_file); //
+	write_JKQ_field_hdf5(const std::string &output_file, const bool doppler_shift); //
 
 	int
 	write_JKQ_CRD_field_hdf5(const std::string &output_file, const bool doppler_shift); //
