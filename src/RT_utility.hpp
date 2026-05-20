@@ -392,6 +392,7 @@ struct PrecConfig
 	double	pc_rtol		   = 1e-5;
 	int		pc_max_it	   = 1000;
 	bool	pc_use_J_KQ	   = false;
+	bool	verbose	       = false;
 };
 
 struct AtomConfig

@@ -445,6 +445,22 @@ class RT_problem
 		return N_nu_ * (N_chi_ * j + k) + n;
 	}
 
+
+	// set Q,U,V = 0
+	inline void set_zero_polarization(Field_ptr_t field)
+	{		
+    	space_grid_->parallel_for([&](int i, int j, int k) 
+    	{         	                        
+	        for (int b = 0; b < block_size_; b = b + 4) 
+	        {
+	            field->block(i,j,k)[b + 1] = 0;                
+	            field->block(i,j,k)[b + 2] = 0;                
+	            field->block(i,j,k)[b + 3] = 0;                
+	        }                                                	        
+	    }); 
+	}
+
+
 	// print I_field on surface
 	void
 	print_surface_profile(const Field_ptr_t field, const int i_stoke = 0, const int i_space = 0, const int j_space = 0,
