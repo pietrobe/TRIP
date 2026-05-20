@@ -51,6 +51,7 @@ add_library(hdf_output STATIC
     hdf_output_field.c
     hdf_output_ar_field.c
     hdf_output_JKQ.c
+    hdf_output_JKQ_CRD.c
     hdf_output_3D_field.c
     hdf_output_example_3D.c
     hdf_fapl_from_env.c

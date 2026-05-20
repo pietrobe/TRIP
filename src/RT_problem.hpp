@@ -446,6 +446,22 @@ class RT_problem
 		return N_nu_ * (N_chi_ * j + k) + n;
 	}
 
+
+	// set Q,U,V = 0
+	inline void set_zero_polarization(Field_ptr_t field)
+	{		
+    	space_grid_->parallel_for([&](int i, int j, int k) 
+    	{         	                        
+	        for (int b = 0; b < block_size_; b = b + 4) 
+	        {
+	            field->block(i,j,k)[b + 1] = 0;                
+	            field->block(i,j,k)[b + 2] = 0;                
+	            field->block(i,j,k)[b + 3] = 0;                
+	        }                                                	        
+	    }); 
+	}
+
+
 	// print I_field on surface
 	void
 	print_surface_profile(const Field_ptr_t field, const int i_stoke = 0, const int i_space = 0, const int j_space = 0,
@@ -535,7 +551,8 @@ class RT_problem
 							  const int						  y_end,	 //
 							  const int						  z_end,	 //
 							  std::vector<THDF_JKQ_double_t> &JKQ_real,	 //
-							  std::vector<THDF_JKQ_double_t> &JKQ_imag); //
+							  std::vector<THDF_JKQ_double_t> &JKQ_imag,  //
+							  const bool                      doppler_shift);  //
 
 	int
 	get_KQ_values(std::vector<int> &KQ_values,					//
@@ -544,6 +561,9 @@ class RT_problem
 
 	int
 	write_JKQ_field_hdf5(const std::string &output_file); //
+
+	int
+	write_JKQ_CRD_field_hdf5(const std::string &output_file, const bool doppler_shift); //
 
 	int																	//
 	write_angular_frequency_grids_hdf5(const std::string &output_file); //

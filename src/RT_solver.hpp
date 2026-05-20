@@ -11,13 +11,6 @@ extern PetscErrorCode UserMult_JKQ(Mat mat,Vec x,Vec y);
 extern PetscErrorCode MF_pc_Destroy(PC pc);
 extern PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y);
 
-// static PetscErrorCode PrecMonitor(KSP, PetscInt n, PetscReal rnorm, void*)
-// {
-//     PetscFunctionBegin;
-//     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%3" PetscInt_FMT " PREC Residual norm %14.12e\n", n, (double)rnorm));
-//     PetscFunctionReturn(PETSC_SUCCESS);
-// }
-
 unsigned int get_RII_contrib_block_size();
 
 void set_RII_contrib_block_size(const unsigned int block_size);
@@ -251,7 +244,7 @@ public:
     	{
     		mf_ctx_.RT_problem_->allocate_unpolarized_fields();
     		mf_ctx_.init_unpol_fields();    		
-    		mf_ctx_.formal_solver_unpol_ = Formal_solver("SC_parabolic");	    		
+    		mf_ctx_.formal_solver_unpol_ = Formal_solver("SC_parabolic"); // or SC_parabolic 		
     	}
     	   
     	mf_ctx_.set_up_emission_module();  	      	    	
@@ -327,7 +320,7 @@ public:
 
 			// set PC solver
 			ierr = KSPCreate(PETSC_COMM_WORLD,&mf_ctx_.pc_solver_);CHKERRV(ierr);
-			ierr = KSPSetOptionsPrefix(mf_ctx_.pc_solver_, "pc_");CHKERRV(ierr);
+			// ierr = KSPSetOptionsPrefix(mf_ctx_.pc_solver_, "pc_");CHKERRV(ierr);
     		ierr = KSPSetOperators(mf_ctx_.pc_solver_,MF_operator_approx_,MF_operator_approx_);CHKERRV(ierr);
 
     		ierr = KSPSetType(mf_ctx_.pc_solver_,pc_ksp_type_);CHKERRV(ierr); 
@@ -351,6 +344,7 @@ public:
 
 			// adding some options for verbosity
 	    	ierr = PetscOptionsSetValue(NULL, "-ksp_converged_reason", "");CHKERRV(ierr);
+	    	if (cfg.prec.verbose) ierr = PetscOptionsSetValue(NULL, "-ksp_monitor", "");CHKERRV(ierr);	    	
     		ierr = KSPSetFromOptions(mf_ctx_.pc_solver_);CHKERRV(ierr);    
     	}
     	else
@@ -362,19 +356,15 @@ public:
 		if (RT_problem_->verbose_)  {
 			ierr = PetscOptionsSetValue(NULL, "-ksp_monitor", "");CHKERRV(ierr);
 			// ierr = PetscOptionsSetValue(NULL, "-ksp_monitor_true_residual", "");CHKERRV(ierr);    // WARNING: this costs
-			ierr = PetscOptionsSetValue(NULL, "-ksp_view", "");CHKERRV(ierr);
-			
-			// if (using_prec_) {
-			// 	ierr = KSPMonitorSet(mf_ctx_.pc_solver_, PrecMonitor, NULL, NULL);CHKERRV(ierr);
-			// }
+			ierr = PetscOptionsSetValue(NULL, "-ksp_view", "");CHKERRV(ierr);			
 		}
 
 		ierr = PetscOptionsSetValue(NULL, "-ksp_converged_reason", "");CHKERRV(ierr);
 
+		// print warning if it is case 
 		PetscBool ksp_true_res_flg;
   		PetscOptionsHasName(NULL,NULL,"-ksp_monitor_true_residual",&ksp_true_res_flg);
-                if (ksp_true_res_flg) PetscPrintf(PETSC_COMM_WORLD,"WARNING: -ksp_monitor_true_residual may significantly impact performance.\n\n");
-  
+        if (ksp_true_res_flg) PetscPrintf(PETSC_COMM_WORLD,"WARNING: -ksp_monitor_true_residual may significantly impact performance.\n\n");
 
     	// extra options from command line   	
     	ierr = KSPSetFromOptions(ksp_solver_);CHKERRV(ierr);
@@ -462,11 +452,11 @@ public:
 		ierr = KSPCreate(PETSC_COMM_WORLD,&ksp_solver_);CHKERRV(ierr);
     	ierr = KSPSetOperators(ksp_solver_,MF_operator_,MF_operator_);CHKERRV(ierr);	    		    	   
     	ierr = KSPSetType(ksp_solver_,KSPGMRES);CHKERRV(ierr);     	
-    	ierr = KSPSetTolerances(ksp_solver_, 1e-6,PETSC_DEFAULT,PETSC_DEFAULT, 3);CHKERRV(ierr);
+    	ierr = KSPSetTolerances(ksp_solver_, 1e-6,PETSC_DEFAULT,PETSC_DEFAULT, 10);CHKERRV(ierr);
     	ierr = KSPSetNormType(ksp_solver_, KSP_NORM_UNPRECONDITIONED);CHKERRV(ierr);    	    	
     	ierr = KSPSetInitialGuessNonzero(ksp_solver_, PETSC_TRUE);CHKERRV(ierr); 
 
-	ierr = PetscOptionsSetValue(NULL, "-ksp_monitor", "");CHKERRV(ierr);
+		ierr = PetscOptionsSetValue(NULL, "-ksp_monitor", "");CHKERRV(ierr);
         ierr = KSPSetFromOptions(ksp_solver_);CHKERRV(ierr);
 
 		if (mpi_rank_ == 0) std::cout << "Remove prec" << std::endl;	
@@ -527,6 +517,7 @@ public:
 	}
 
 	
+	// set Q,U,V = 0
 	inline void set_zero_polarization(Vec& I_vec)
 	{
     	PetscErrorCode ierr;
@@ -546,7 +537,6 @@ public:
 
 	    ierr = VecRestoreArray(I_vec, &a); CHKERRV(ierr);
 	}
-
 
 	inline void solve_checkpoint(const std::string output_path, const int checkpoint_interval)
 	{

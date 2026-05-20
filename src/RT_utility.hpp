@@ -33,6 +33,12 @@ enum class emissivity_model_t
 	ZERO		        //
 }; //
 
+inline bool is_CRD_limit(const emissivity_model_t model)
+{
+	return model == emissivity_model_t::CRD_limit || model == emissivity_model_t::CRD_limit_VHP;
+}
+
+
 enum class preconditioner_emissivity_model_t
 {
 	NONE,			//
@@ -471,6 +477,7 @@ struct PrecConfig
 	double	pc_rtol		   = 1e-5;
 	int		pc_max_it	   = 1000;
 	bool	pc_use_J_KQ	   = false;
+	bool	verbose	       = false;
 };
 
 struct AtomConfig

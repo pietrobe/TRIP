@@ -204,8 +204,8 @@ void MF_context::apply_bc(Field_ptr_t I_field, const Real I0, const bool polariz
 // NOTE
 void MF_context::apply_bc_serial(Field_ptr_t I_field, const Real I0, const bool polarized){
     
-    const auto N_y        = RT_problem_->N_y_;     
-    const auto N_z        = RT_problem_->N_z_;
+    const auto N_y = RT_problem_->N_y_;     
+    const auto N_z = RT_problem_->N_z_;
 
     // only intensity in the unpolarized case     
     PetscInt increment, block_size;
@@ -2523,9 +2523,10 @@ double MF_context::long_ray_steps_quadratic_unpolarized(const std::vector<t_inte
 void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0)
 {
     if (mpi_rank_ == 0)        std::cout << "\nStart global unpolarized formal solution..." << std::endl;
-    if (n_tiles_ != 1)         std::cout << "\nWARNING: n_tiles_ not one is not supported here!" << std::endl;
+    if (n_tiles_ != 1)         std::cout << "\nWARNING: n_tiles_ > 1 is not supported here!" << std::endl;
     if (use_single_long_step_) std::cout << "\nERROR: use_single_long_step_ not supported" << std::endl;
 
+    MPI_Barrier(MPI_COMM_WORLD);
     const Real start_total = MPI_Wtime();                                    
     
     // init some quantities         
@@ -2836,9 +2837,7 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
         }      
     }      
     
-    start_comm = MPI_Wtime();    
-    
-    std::cout << "from_block_to_space_distributed I_unpol_field_serial\n" << std::flush;
+    start_comm = MPI_Wtime();            
     Unpol_remap.from_block_to_space_distributed(I_unpol_field_serial_, I_field);
     comm_timer += MPI_Wtime() - start_comm;              
     
@@ -2851,9 +2850,9 @@ void MF_context::formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t
     
     if (mpi_rank_ == 0)
     {
-        printf("comm_timer:\t\t%g seconds\n",     comm_timer_max);
+        printf(    "comm_timer:\t\t%g seconds\n",     comm_timer_max);
         printf("one_step_timer:\t\t%g seconds\n", one_step_timer_max);                        
-        printf("total_timer:\t\t%g seconds\n",    total_timer_max);                        
+        printf(   "total_timer:\t\t%g seconds\n",    total_timer_max);                        
     }           
 }
 
@@ -3068,7 +3067,6 @@ void MF_context::set_up_emission_module(){
     // std::cout << ecc_sh_ptr_->print_atmos_parameters(0,0,1);
     // std::cout << ecc_sh_ptr_->print_atmos_parameters(1,1,65);
 }
-
 
 
 // TODO remove I_vec and use field
@@ -4325,10 +4323,10 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
     }
     else if (mf_ctx_->unpolarized_prec_)
     {                                        
-        ierr = VecZeroEntries(mf_ctx_->x_pol_);CHKERRQ(ierr);     
+        ierr = VecZeroEntries(mf_ctx_->x_pol_);CHKERRQ(ierr);  // needed? not with dedicated module in rii...
 
         mf_ctx_->unpolarized_to_polarized(x, mf_ctx_->x_pol_);
-        mf_ctx_->update_emission(mf_ctx_->x_pol_, true);              
+        mf_ctx_->update_emission(mf_ctx_->x_pol_, true);       // TODO, non serve con il modulo rii unpolarized
 
         RT_problem->polarized_to_unpolarized_field(RT_problem->S_field_, RT_problem->S_unpol_field_);  
     }
@@ -4336,6 +4334,9 @@ PetscErrorCode UserMult_approx(Mat mat, Vec x, Vec y){
     {        
         // compute new emission in S_field_ 
         mf_ctx_->update_emission(x, true);  
+
+        // // TEST remove pol
+        // RT_problem->set_zero_polarization(RT_problem->S_field_); // TODO
     }
    
     const double emission_timer = MPI_Wtime() - start;
