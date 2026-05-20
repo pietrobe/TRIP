@@ -19,16 +19,18 @@
 // emissivty models
 enum class emissivity_model_t
 {
-	NONE,		   //
-	CRD_limit,	   //
-	CRD_limit_VHP, //
-	PRD,		   //
-	PRD_NORMAL,	   //
-	PRD_MEDIUM,	   //
-	PRD_FAST,	   //
-	PRD_AA,		   //
-	PRD_AA_MAPV,   //
-	ZERO		   //
+	NONE,		        //
+	CRD_limit,	        //
+	CRD_limit_VHP,      //
+	PRD,		        //
+	PRD_NORMAL,	        //
+	PRD_MEDIUM,	        //
+	PRD_FAST,	        //
+	PRD_AA,		        //
+	PRD_AA_MAPV,        //
+	PRD_AA_TWOTERM,     //
+	PRD_AA_TWOTERM_MAPV,//
+	ZERO		        //
 }; //
 
 inline bool is_CRD_limit(const emissivity_model_t model)
@@ -308,6 +310,12 @@ namespace YAML
 				case emissivity_model_t::PRD_AA_MAPV:
 					node = "PRD_AA_MAPV";
 					break;
+				case emissivity_model_t::PRD_AA_TWOTERM:
+					node = "PRD_AA_TWOTERM";
+					break;
+				case emissivity_model_t::PRD_AA_TWOTERM_MAPV:
+					node = "PRD_AA_TWOTERM_MAPV";
+					break;
 				case emissivity_model_t::ZERO:
 					node = "ZERO";
 					break;
@@ -339,6 +347,10 @@ namespace YAML
 				rhs = emissivity_model_t::PRD_AA;
 			else if (s == "PRD_AA_MAPV")
 				rhs = emissivity_model_t::PRD_AA_MAPV;
+			else if (s == "PRD_AA_TWOTERM")
+				rhs = emissivity_model_t::PRD_AA_TWOTERM;
+			else if (s == "PRD_AA_TWOTERM_MAPV")
+				rhs = emissivity_model_t::PRD_AA_TWOTERM_MAPV;
 			else if (s == "ZERO")
 				rhs = emissivity_model_t::ZERO;
 			else

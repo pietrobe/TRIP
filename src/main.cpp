@@ -231,7 +231,8 @@ main(int argc, char *argv[])
 
 			clocks.hdf5_out_time_JKQ = MPI_Wtime();
 			if (is_CRD_limit(cfg.emissivity_model))
-			{
+			{ // The CRD solition can be fully reconstructed from the J_KQ CRD solution.
+				// So we output only this filed for the CRD case.
 				rt_problem_ptr																		//
 					->write_JKQ_CRD_field_hdf5((output_path / "JKQ_CRD_field.h5").string(), false); //
 
@@ -240,8 +241,11 @@ main(int argc, char *argv[])
 			}
 			else
 			{
-				rt_problem_ptr														 //
-					->write_JKQ_field_hdf5((output_path / "JKQ_field.h5").string()); //
+				rt_problem_ptr																//
+					->write_JKQ_field_hdf5((output_path / "JKQ_field.h5").string(), false); //
+
+				rt_problem_ptr																			   //
+					->write_JKQ_field_hdf5((output_path / "JKQ_Doppler_shifted_field.h5").string(), true); //
 			}
 			clocks.hdf5_out_time_JKQ = MPI_Wtime() - clocks.hdf5_out_time_JKQ;
 
@@ -250,8 +254,10 @@ main(int argc, char *argv[])
 			if (cfg.write_whole_3D_field_hdf5)
 			{
 				if (mpi_rank == 0) std::cout << "Writing whole 3D field to HDF5..." << std::endl;
-				write_3D_whole_field_hdf5(*rt_problem_ptr, (output_path / "whole_3D_radiation_field.h5").string(), 2,
-										  false); //
+				write_3D_whole_field_hdf5(*rt_problem_ptr,										  //
+										  (output_path / "whole_3D_radiation_field.h5").string(), //
+										  2,													  //
+										  false);												  //
 			}
 
 			clocks.hdf5_out_time_whole_3D_field = MPI_Wtime() - clocks.hdf5_out_time_whole_3D_field;
