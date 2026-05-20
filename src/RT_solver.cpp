@@ -2876,7 +2876,8 @@ void MF_context::set_up_emission_module(){
     fsf_sh_ptr->make_formal_solver();
     ecc_sh_ptr_->set_RII_contrib_block_size(get_RII_contrib_block_size());
 
-    std::list<emission_coefficient_components> components;    
+    std::list<emission_coefficient_components> components;
+    std::list<emission_coefficient_components> components_approx;  
 
     // set emissivity module
     switch (RT_problem_->emissivity_model_)
@@ -2962,7 +2963,7 @@ void MF_context::set_up_emission_module(){
         if (mpi_rank_ == 0) std::cout << "ERROR: emissivity model not recognized!" << std::endl;
         MPI_Abort(MPI_COMM_WORLD, 1);
         break;
-    }
+    } // END switch
 
     epsilon_fun_ = ecc_sh_ptr_->make_computation_function(components);
     // Print out emission module
@@ -2972,20 +2973,30 @@ void MF_context::set_up_emission_module(){
 	start_device_handler_fun_ = ecc_sh_ptr_->make_strat_device_handler_function(components);
 #endif
 
-    // module for preconditioner 
-    std::list<emission_coefficient_components> components_approx{ 
- 	  // emission_coefficient_components::epsilon_R_II_AA_FAST_MAPV,
-      // emission_coefficient_components::epsilon_R_III_GL
-              
-	// // // TEST
-	emission_coefficient_components::epsilon_pCRD_limit       
-    //     // , emission_coefficient_components::epsilon_R_II_AA_PRECOND
-        // , emission_coefficient_components::epsilon_R_III
-        // , emission_coefficient_components::epsilon_R_II_CONTRIB_EXTREME_FAST
-        // , emission_coefficient_components::epsilon_csc
-    };       
-    
-    epsilon_fun_approx_ = ecc_sh_ptr_->make_computation_function(components_approx);
+	switch (RT_problem_->emissivity_model_prec_)
+	{
+        case preconditioner_emissivity_model_t::PRD_AA_MAPV_GB:
+            components_approx.push_back(
+				emission_coefficient_components::epsilon_R_II_TwoTerm_AA_GB);
+        break;
+        case preconditioner_emissivity_model_t::PRD_AA_GB:
+            components_approx.push_back(    
+				emission_coefficient_components::epsilon_R_II_TwoTerm_AA_GB_MAPV);
+        break;
+		case preconditioner_emissivity_model_t::CRD_limit:
+		default:
+			if (mpi_rank_ == 0) std::cout << "\nUsing CRD limit for preconditioner emissivity" << std::endl;
+			// module for preconditioner
+			components_approx.push_back(
+				emission_coefficient_components::epsilon_pCRD_limit
+				// , emission_coefficient_components::epsilon_R_II_AA_PRECOND
+				// , emission_coefficient_components::epsilon_R_III
+				// , emission_coefficient_components::epsilon_R_II_CONTRIB_EXTREME_FAST
+				// , emission_coefficient_components::epsilon_csc
+            );
+	}
+
+	epsilon_fun_approx_ = ecc_sh_ptr_->make_computation_function(components_approx);
 
     offset_fun_ = rii_include::make_default_offset_function(RT_problem_->N_theta_, RT_problem_->N_chi_, RT_problem_->N_nu_);
         	

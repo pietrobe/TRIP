@@ -93,7 +93,7 @@ loadConfig(const std::string &filename)
 {
 	YAML::Node config = YAML::LoadFile(filename);
 	AppConfig  cfg;
-	
+
 	cfg.input_directory = std::filesystem::path(requiredField<std::string>(config, "input_directory"));
 	cfg.input_file		= std::filesystem::path(requiredField<std::string>(config, "input_file"));
 	cfg.frequency_file	= std::filesystem::path(requiredField<std::string>(config, "frequency_file"));
@@ -103,22 +103,22 @@ loadConfig(const std::string &filename)
 
 	// load atom quantities
 	if (config["atom_file"])
-	{		
+	{
 		YAML::Node atom_config = YAML::LoadFile(config["atom_file"].as<std::string>());
 
 		if (mpi_rank == 0) std::cout << "Loading atom data from file: " << config["atom_file"] << std::endl;
 
 		cfg.atom.mass = requiredField<double>(atom_config, "mass");
 		cfg.atom.Aul  = requiredField<double>(atom_config, "Aul");
-		
-		cfg.atom.S2   = requiredField<int>(atom_config, "S2");
 
-		cfg.atom.Ll2  = requiredField<int>(atom_config, "Ll2");
-		cfg.atom.Lu2  = requiredField<int>(atom_config, "Lu2");		
+		cfg.atom.S2 = requiredField<int>(atom_config, "S2");
+
+		cfg.atom.Ll2 = requiredField<int>(atom_config, "Ll2");
+		cfg.atom.Lu2 = requiredField<int>(atom_config, "Lu2");
 
 		cfg.atom.El_vec = readDoubleVec(atom_config["El"]);
 		cfg.atom.Eu_vec = readDoubleVec(atom_config["Eu"]);
-		
+
 		if (atom_config["gl"]) cfg.atom.gl_vec = readDoubleVec(atom_config["gl"]);
 		if (atom_config["gu"]) cfg.atom.gu_vec = readDoubleVec(atom_config["gu"]);
 	}
@@ -151,12 +151,17 @@ loadConfig(const std::string &filename)
 
 	// Emissivity model (required)
 	cfg.emissivity_model = config["emissivity_model"].as<emissivity_model_t>();
+	cfg.preconditioner_emissivity_model =
+		config["preconditioner_emissivity_model"]
+			? config["preconditioner_emissivity_model"].as<preconditioner_emissivity_model_t>()
+			: preconditioner_emissivity_model_t::CRD_limit;
 
 	// Flags
-	if (config["use_B"])            cfg.use_B            = config["use_B"].as<bool>();
-	if (config["use_1_5D_approx"])  cfg.use_1_5D_approx  = config["use_1_5D_approx"].as<bool>();
+	if (config["use_B"]) cfg.use_B = config["use_B"].as<bool>();
+	if (config["use_1_5D_approx"]) cfg.use_1_5D_approx = config["use_1_5D_approx"].as<bool>();
 	if (config["enable_continuum"]) cfg.enable_continuum = config["enable_continuum"].as<bool>();
-	if (config["use_Vb"])           cfg.use_Vb           = config["use_Vb"].as<bool>();
+	if (config["use_Vb"]) cfg.use_Vb = config["use_Vb"].as<bool>();
+	if (config["enable_sigma_c"]) cfg.enable_sigma_c = config["enable_sigma_c"].as<bool>();
 
 	if (config["use_D2_from_input"]) cfg.use_D2_from_input = config["use_D2_from_input"].as<bool>();
 
@@ -272,8 +277,8 @@ loadConfig(const std::string &filename)
 void
 writeConfigResume(const AppConfig &cfg, std::ostream &os)
 {
-	const int label_width = 44;
-	auto	  print		  = [&](const std::string &label, const std::string &value)
+	const int label_width		 = 44;
+	auto	  print_AppCfg_field = [&](const std::string &label, const std::string &value)
 	{ os << std::left << std::setw(label_width) << (label + ":") << value << std::endl; };
 
 	auto to_sci = [](double v, int prec = 2)
@@ -284,72 +289,73 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 	};
 
 	os << "YAML Configuration Summary:" << std::endl;
-	print("Input Directory", cfg.input_directory.string());
-	print("Input File", cfg.input_file.string());
-	print("Frequency File", cfg.frequency_file.string());
-	print("Output Directory", cfg.output_directory.string());
-	print("Output Enabled", (cfg.output ? "Yes" : "No"));
-	print("Output Overwrite Prevention", (cfg.output_overwrite_prevention ? "Yes" : "No"));
-	print("Write Whole 3D Field (HDF5)", (cfg.write_whole_3D_field_hdf5 ? "Yes" : "No"));
-	print("Write Text Output", (cfg.write_text_output ? "Yes" : "No"));
-	print("Reference Solution Directory", cfg.reference_sol_directory.string());
-	print("Verbose", (cfg.verbose ? "Yes" : "No"));
-	print("Emissivity Model", emissivity_model_to_string_long(cfg.emissivity_model));
-	print("Use Magnetic Field", (cfg.use_B ? "Yes" : "No"));
-	print("Use Bulk Velocity", (cfg.use_Vb ? "Yes" : "No"));
-	print("Use D2 from Input", (cfg.use_D2_from_input ? "Yes" : "No"));
-	print("Enable Continuum", (cfg.enable_continuum ? "Yes" : "No"));
-	print("Use 1.5D Approximation", (cfg.use_1_5D_approx ? "Yes" : "No"));
-	print("Formal Solver", cfg.formal_solver);
-	print("Angular Grid - N_theta", std::to_string(cfg.N_theta));
-	print("Angular Grid - N_chi", std::to_string(cfg.N_chi));
-	print("Horizontal Grid - N_x", std::to_string(cfg.N_x));
-	print("Horizontal Grid - N_y", std::to_string(cfg.N_y));
-	print("Horizontal Grid - L", std::to_string(cfg.L));
-	print("Input CUL File", cfg.input_cul.string());
-	print("Input QEL File", cfg.input_qel.string());
-	print("Input LLP File", cfg.input_llp.string());
-	print("Input BACK File", cfg.input_back.string());
-	print("Use Preconditioner", (cfg.use_prec ? "Yes" : "No"));
-	print("Set Uniform Magnetic Field", (cfg.set_uniform_B ? "Yes" : "No"));
+	print_AppCfg_field("Input Directory", cfg.input_directory.string());
+	print_AppCfg_field("Input File", cfg.input_file.string());
+	print_AppCfg_field("Frequency File", cfg.frequency_file.string());
+	print_AppCfg_field("Output Directory", cfg.output_directory.string());
+	print_AppCfg_field("Output Enabled", (cfg.output ? "Yes" : "No"));
+	print_AppCfg_field("Output Overwrite Prevention", (cfg.output_overwrite_prevention ? "Yes" : "No"));
+	print_AppCfg_field("Write Whole 3D Field (HDF5)", (cfg.write_whole_3D_field_hdf5 ? "Yes" : "No"));
+	print_AppCfg_field("Write Text Output", (cfg.write_text_output ? "Yes" : "No"));
+	print_AppCfg_field("Reference Solution Directory", cfg.reference_sol_directory.string());
+	print_AppCfg_field("Verbose", (cfg.verbose ? "Yes" : "No"));
+	print_AppCfg_field("Emissivity Model", emissivity_model_to_string_long(cfg.emissivity_model));
+	print_AppCfg_field("Use Magnetic Field", (cfg.use_B ? "Yes" : "No"));
+	print_AppCfg_field("Use Bulk Velocity", (cfg.use_Vb ? "Yes" : "No"));
+	print_AppCfg_field("Use D2 from Input", (cfg.use_D2_from_input ? "Yes" : "No"));
+	print_AppCfg_field("Enable Continuum", (cfg.enable_continuum ? "Yes" : "No"));
+	print_AppCfg_field("Enable Sigma_c in Emissivity", (cfg.enable_sigma_c ? "Yes" : "No"));
+	print_AppCfg_field("Use 1.5D Approximation", (cfg.use_1_5D_approx ? "Yes" : "No"));
+	print_AppCfg_field("Formal Solver", cfg.formal_solver);
+	print_AppCfg_field("Angular Grid - N_theta", std::to_string(cfg.N_theta));
+	print_AppCfg_field("Angular Grid - N_chi", std::to_string(cfg.N_chi));
+	print_AppCfg_field("Horizontal Grid - N_x", std::to_string(cfg.N_x));
+	print_AppCfg_field("Horizontal Grid - N_y", std::to_string(cfg.N_y));
+	print_AppCfg_field("Horizontal Grid - L", std::to_string(cfg.L));
+	print_AppCfg_field("Input CUL File", cfg.input_cul.string());
+	print_AppCfg_field("Input QEL File", cfg.input_qel.string());
+	print_AppCfg_field("Input LLP File", cfg.input_llp.string());
+	print_AppCfg_field("Input BACK File", cfg.input_back.string());
+	print_AppCfg_field("Use Preconditioner", (cfg.use_prec ? "Yes" : "No"));
+	print_AppCfg_field("Set Uniform Magnetic Field", (cfg.set_uniform_B ? "Yes" : "No"));
 	if (cfg.set_uniform_B)
 	{
-		print("* Uniform Magnetic Field Value (Gauss)", std::to_string(cfg.B_field[0]));
-		print("* Uniform Magnetic Field Theta (rad)", std::to_string(cfg.B_field[1]));
-		print("* Uniform Magnetic Field Chi (rad)", std::to_string(cfg.B_field[2]));
+		print_AppCfg_field("* Uniform Magnetic Field Value (Gauss)", std::to_string(cfg.B_field[0]));
+		print_AppCfg_field("* Uniform Magnetic Field Theta (rad)", std::to_string(cfg.B_field[1]));
+		print_AppCfg_field("* Uniform Magnetic Field Chi (rad)", std::to_string(cfg.B_field[2]));
 	}
 
-	print("Set Uniform Bulk Velocity", (cfg.set_uniform_Vb ? "Yes" : "No"));
+	print_AppCfg_field("Set Uniform Bulk Velocity", (cfg.set_uniform_Vb ? "Yes" : "No"));
 	if (cfg.set_uniform_Vb)
 	{
-		print("* Uniform Bulk Velocity Vx (cm/s)", std::to_string(cfg.Vb_field[0]));
-		print("* Uniform Bulk Velocity Vy (cm/s)", std::to_string(cfg.Vb_field[1]));
-		print("* Uniform Bulk Velocity Vz (cm/s)", std::to_string(cfg.Vb_field[2]));
+		print_AppCfg_field("* Uniform Bulk Velocity Vx (cm/s)", std::to_string(cfg.Vb_field[0]));
+		print_AppCfg_field("* Uniform Bulk Velocity Vy (cm/s)", std::to_string(cfg.Vb_field[1]));
+		print_AppCfg_field("* Uniform Bulk Velocity Vz (cm/s)", std::to_string(cfg.Vb_field[2]));
 	}
 
-	print("Arbitrary Beams Count", std::to_string(cfg.arbitrary_beams.size()));
+	print_AppCfg_field("Arbitrary Beams Count", std::to_string(cfg.arbitrary_beams.size()));
 	for (size_t i = 0; i < cfg.arbitrary_beams.size(); ++i)
 	{
 		const auto		 &beam		   = cfg.arbitrary_beams[i];
 		const bool		  is_last_beam = (i + 1 == cfg.arbitrary_beams.size());
 		const std::string beam_prefix  = is_last_beam ? "" : "";
-		print(beam_prefix + "* Beam", std::to_string(i));
-		print("   > mu", std::to_string(beam.mu));
-		print("   > chi (rad)", std::to_string(beam.chi));
+		print_AppCfg_field(beam_prefix + "* Beam", std::to_string(i));
+		print_AppCfg_field("   > mu", std::to_string(beam.mu));
+		print_AppCfg_field("   > chi (rad)", std::to_string(beam.chi));
 	}
 
 	os << std::endl << "Solver Configuration:" << std::endl;
-	print("KSP Solver Type", KSPTypeToString(cfg.solver.ksp_solver_type));
-	print("KSP Relative Tolerance", to_sci(cfg.solver.ksp_rtol));
-	print("KSP Maximum Iterations", std::to_string(cfg.solver.ksp_max_it));
-	print("KSP Use J/KQ", (cfg.solver.ksp_use_J_KQ ? "Yes" : "No"));
-	print("GMRES Restart", std::to_string(cfg.solver.gmres_restart));
+	print_AppCfg_field("KSP Solver Type", KSPTypeToString(cfg.solver.ksp_solver_type));
+	print_AppCfg_field("KSP Relative Tolerance", to_sci(cfg.solver.ksp_rtol));
+	print_AppCfg_field("KSP Maximum Iterations", std::to_string(cfg.solver.ksp_max_it));
+	print_AppCfg_field("KSP Use J/KQ", (cfg.solver.ksp_use_J_KQ ? "Yes" : "No"));
+	print_AppCfg_field("GMRES Restart", std::to_string(cfg.solver.gmres_restart));
 
 	os << std::endl << "Preconditioner Configuration:" << std::endl;
-	print("PC Solver Type", KSPTypeToString(cfg.prec.pc_solver_type));
-	print("PC Relative Tolerance", to_sci(cfg.prec.pc_rtol));
-	print("PC Maximum Iterations", std::to_string(cfg.prec.pc_max_it));
-	print("PC Use J/KQ", (cfg.prec.pc_use_J_KQ ? "Yes" : "No"));
+	print_AppCfg_field("PC Solver Type", KSPTypeToString(cfg.prec.pc_solver_type));
+	print_AppCfg_field("PC Relative Tolerance", to_sci(cfg.prec.pc_rtol));
+	print_AppCfg_field("PC Maximum Iterations", std::to_string(cfg.prec.pc_max_it));
+	print_AppCfg_field("PC Use J/KQ", (cfg.prec.pc_use_J_KQ ? "Yes" : "No"));
 
 	os << std::endl;
 }

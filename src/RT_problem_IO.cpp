@@ -443,7 +443,7 @@ RT_problem::write_emergent_field_Omega_hdf5(const std::string				 &output_file,	
 	output_field.index_k		  = 0;
 	output_field.beam_index		  = beam_index;
 	output_field.N_frequencies	  = this->N_nu_;
-	
+
 	// assign data pointers
 	output_field.stokes_I  = surface_data_I.data();
 	output_field.stokes_QI = surface_data_Q.data();
@@ -496,24 +496,24 @@ RT_problem::accumulate_JKQ_values(const int						   x_strat,		  //
 			for (int k = z_strat; k < z_end; ++k)
 			{
 				const Real *block_ptr = I_field_->block(i, j, k);
-				const Real  dnd		= Doppler_width_->ref(i, j, k);
+				const Real	dnd		  = Doppler_width_->ref(i, j, k);
 
 				for (int ui = 0; ui < this->N_nu_; ++ui)
 				{
 					const Real nu = this->nu_grid_[ui];
-					u_vec[ui]		= (this->nu_0_ - nu) / dnd;
+					u_vec[ui]	  = (this->nu_0_ - nu) / dnd;
 				}
 
-				const Real v_b	     = v_b_->block(i, j, k)[0];
+				const Real v_b		 = v_b_->block(i, j, k)[0];
 				const Real v_b_theta = v_b_->block(i, j, k)[1];
-				const Real v_b_chi   = v_b_->block(i, j, k)[2];
+				const Real v_b_chi	 = v_b_->block(i, j, k)[2];
 				const Real T		 = T_->ref(i, j, k);
 
-				auto block_tmp = to_double(block_ptr, block_size_);				
+				auto block_tmp = to_double(block_ptr, block_size_);
 
 				// This calculate JKQ in the comoving frame
 				auto JKQ_matrix_sh_ptr =												   //
-					rii_include::make_JKQ_matrix_norm_comp(block_tmp.data(),					   //
+					rii_include::make_JKQ_matrix_norm_comp(block_tmp.data(),			   //
 														   u_vec.data(),				   //
 														   this->N_nu_,					   //
 														   this->N_theta_,				   //
@@ -550,6 +550,76 @@ RT_problem::accumulate_JKQ_values(const int						   x_strat,		  //
 					{
 						JKQ_imag.push_back(JKQ_matrix_sh_ptr->imag_compressed(idx, ui));
 					}
+				}
+			}
+		}
+	}
+
+	return 0;
+}
+
+int
+RT_problem::accumulate_JKQ_CRD_values(const int						  x_strat,		 //
+									  const int						  y_strat,		 //
+									  const int						  z_strat,		 //
+									  const int						  x_end,		 //
+									  const int						  y_end,		 //
+									  const int						  z_end,		 //
+									  std::vector<THDF_JKQ_double_t> &JKQ_real,		 //
+									  std::vector<THDF_JKQ_double_t> &JKQ_imag,		 //
+									  const bool					  doppler_shift) //
+{
+	std::vector<double> u_vec;
+	u_vec.resize(this->N_nu_);
+	for (int i = x_strat; i < x_end; ++i)
+	{
+		for (int j = y_strat; j < y_end; ++j)
+		{
+			for (int k = z_strat; k < z_end; ++k)
+			{
+				const Real *block_ptr = I_field_->block(i, j, k);
+				const Real	dnd		  = Doppler_width_->ref(i, j, k);
+
+				for (int ui = 0; ui < this->N_nu_; ++ui)
+				{
+					const Real nu = this->nu_grid_[ui];
+					u_vec[ui]	  = (this->nu_0_ - nu) / dnd;
+				}
+
+				const Real v_b		 = v_b_->block(i, j, k)[0];
+				const Real v_b_theta = v_b_->block(i, j, k)[1];
+				const Real v_b_chi	 = v_b_->block(i, j, k)[2];
+				const Real T		 = T_->ref(i, j, k);
+
+				auto block_tmp = to_double(block_ptr, block_size_);
+
+				// TODO !!!!!!
+
+				const double ds_mult = doppler_shift ? 1.0 : 0.0;
+
+				auto JKQ_CRD_sh_ptr =														   //
+					rii_include::make_JKQ_CRD_matrix_norm_comp(block_tmp.data(),			   //
+															   u_vec.data(),				   //
+															   this->N_nu_,					   //
+															   this->N_theta_,				   //
+															   this->N_chi_,				   //
+															   4,							   //
+															   4 * this->N_chi_ * this->N_nu_, //
+															   4 * this->N_nu_,				   //
+															   1,							   //
+															   ds_mult * v_b,				   //
+															   ds_mult * v_b_theta,			   //
+															   ds_mult * v_b_chi,			   //
+															   T,							   //
+															   this->atomic_mass(),			   //
+															   0.0);						   //
+
+				const int size = JKQ_CRD_sh_ptr->size();
+
+				for (int idx = 0; idx < size; ++idx)
+				{
+					JKQ_real.push_back(THDF_JKQ_double_t(JKQ_CRD_sh_ptr->real(idx)));
+					JKQ_imag.push_back(THDF_JKQ_double_t(JKQ_CRD_sh_ptr->imag(idx)));
 				}
 			}
 		}
@@ -706,6 +776,125 @@ RT_problem::write_JKQ_field_hdf5(const std::string &output_file)
 	if (mpi_rank_ == 0)
 	{
 		fprintf(stderr, "[DIAG r0] write_JKQ_field_hdf5 COMPLETE\n");
+		fflush(stderr);
+	}
+
+	return EXIT_SUCCESS;
+}
+
+int
+RT_problem::write_JKQ_CRD_field_hdf5(const std::string &output_file, const bool doppler_shift)
+{
+	// indeces
+	auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
+	auto [size_i, size_j, size_k]	 = space_grid_->getLocalSizes();
+
+	const int i_end = i_start + size_i;
+	const int j_end = j_start + size_j;
+	const int k_end = k_start + size_k;
+
+	std::vector<int> KQ_values;
+	std::vector<int> KQ_values_real_compressed;
+	std::vector<int> KQ_values_imag_compressed;
+
+	this->get_KQ_values(KQ_values, KQ_values_real_compressed, KQ_values_imag_compressed);
+
+	if (this->mpi_rank_ == 0)
+	{
+		std::cout << " Writing JKQ field to HDF5 file: " << output_file << std::endl;
+
+		// hid_t file_id, plist_id;
+		// plist_id = H5Pcreate(H5P_FILE_ACCESS);
+		// file_id	 = H5Fcreate(output_file.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
+		// H5Pclose(plist_id);
+
+		hid_t file_id = THDF_open_file(output_file.c_str());
+
+		THDF_frequencies_grid_t freq_grid;
+		freq_grid.N_frequencies = this->N_nu_;
+		freq_grid.frequencies	= this->nu_grid_.data();
+		if (THDF_write_frequencies_grid_to_hdf5(file_id, &freq_grid) != 0)
+		{
+			fprintf(stderr, "Error writing frequencies grid to HDF5 file\n");
+			MPI_Abort(MPI_COMM_WORLD, -1);
+		}
+
+		// write JKQ KQ matrix
+		THDF_KQ_table_t KQ_matrix;
+		KQ_matrix.KQ_size				  = KQ_values.size() / 2;
+		KQ_matrix.KQ_table				  = KQ_values.data();
+		KQ_matrix.KQ_compressed_size_real = KQ_values_real_compressed.size() / 2;
+		KQ_matrix.KQ_compressed_size_imag = KQ_values_imag_compressed.size() / 2;
+		KQ_matrix.KQ_compressed_real	  = KQ_values_real_compressed.data();
+		KQ_matrix.KQ_compressed_imag	  = KQ_values_imag_compressed.data();
+
+		if (THDF_write_KQ_table_to_hdf5(file_id, &KQ_matrix) != 0)
+		{
+			fprintf(stderr, "Error writing KQ matrix to HDF5 file\n");
+			MPI_Abort(MPI_COMM_WORLD, -1);
+		}
+
+		THDF_close_file(file_id);
+	}
+
+	MPI_Barrier(MPI_COMM_WORLD);
+
+	std::vector<THDF_JKQ_double_t> JKQ_real;
+	std::vector<THDF_JKQ_double_t> JKQ_imag;
+
+	const int i_start_global = space_grid_->local_to_global_coordinate(0, i_start);
+	const int j_start_global = space_grid_->local_to_global_coordinate(1, j_start);
+	const int k_start_global = space_grid_->local_to_global_coordinate(2, k_start);
+
+	JKQ_real.reserve(size_i * size_j * size_k * KQ_values.size() / 2);
+	JKQ_imag.reserve(size_i * size_j * size_k * KQ_values.size() / 2);
+
+	this->accumulate_JKQ_CRD_values(i_start, j_start, k_start, //
+									i_end, j_end, k_end,	   //
+									JKQ_real,				   //
+									JKQ_imag,				   //
+									doppler_shift);			   //
+
+	// {
+	// 	void *_p = malloc(1);
+	// 	if (_p) free(_p);
+	// 	fprintf(stderr, "[HEAP PROBE r%d] after accumulate_JKQ_CRD_values re=%zu im=%zu\n",
+	// 			mpi_rank_, JKQ_real.size(), JKQ_imag.size());
+	// 	fflush(stderr);
+	// }
+
+	hid_t file_id = THDF_open_file_MPI(output_file.c_str(), MPI_COMM_WORLD);
+
+	if (mpi_rank_ == 0)
+	{
+		std::cout << " Writing JKQ field data to HDF5 file: " << output_file << std::endl;
+	}
+
+	THDF_JKQ_CRD_field_t JKQ_field;
+	JKQ_field.JKQ_re = JKQ_real.data();
+	JKQ_field.JKQ_im = JKQ_imag.data();
+
+	THDF_JKQ_handler_t *JKQ_handler =								 //
+		THDF_create_JKQ_CRD_field_handler_mpi(file_id,				 //
+											  this->N_x_,			 //
+											  this->N_y_,			 //
+											  this->N_z_,			 //
+											  KQ_values.size() / 2,	 //
+											  KQ_values.size() / 2); //
+
+	THDF_write_JKQ_CRD_field_to_hdf5(JKQ_handler,									 //
+									 &JKQ_field,									 //
+									 i_start_global, j_start_global, k_start_global, //
+									 size_i, size_j, size_k);						 //
+
+	THDF_close_JKQ_CRD_field_handler_mpi(JKQ_handler);
+
+	THDF_close_file(file_id);
+
+	MPI_Barrier(MPI_COMM_WORLD);
+	if (mpi_rank_ == 0)
+	{
+		fprintf(stderr, "[DIAG r0] write_JKQ_CRD_field_hdf5 COMPLETE\n");
 		fflush(stderr);
 	}
 

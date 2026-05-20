@@ -28,7 +28,22 @@ enum class emissivity_model_t
 	PRD_FAST,	   //
 	PRD_AA,		   //
 	PRD_AA_MAPV,   //
-	ZERO
+	ZERO		   //
+}; //
+
+inline bool is_CRD_limit(const emissivity_model_t model)
+{
+	return model == emissivity_model_t::CRD_limit || model == emissivity_model_t::CRD_limit_VHP;
+}
+
+
+enum class preconditioner_emissivity_model_t
+{
+	NONE,			//
+	CRD_limit,		//
+	PRD_AA_GB,		//
+	PRD_AA_MAPV_GB, //
+	ZERO			//
 }; //
 
 namespace TRIP_Comms
@@ -332,25 +347,83 @@ namespace YAML
 		}
 	};
 
+	template <>
+	struct convert<preconditioner_emissivity_model_t>
+	{
+		static Node
+		encode(const preconditioner_emissivity_model_t &rhs)
+		{
+			Node node;
+			switch (rhs)
+			{
+				case preconditioner_emissivity_model_t::NONE:
+					node = "NONE";
+					break;
+				case preconditioner_emissivity_model_t::CRD_limit:
+					node = "CRD_limit";
+					break;
+				case preconditioner_emissivity_model_t::PRD_AA_GB:
+					node = "PRD_AA_GB";
+					break;
+				case preconditioner_emissivity_model_t::PRD_AA_MAPV_GB:
+					node = "PRD_AA_MAPV_GB";
+					break;
+				case preconditioner_emissivity_model_t::ZERO:
+					node = "ZERO";
+					break;
+			}
+			return node;
+		}
+
+		static bool
+		decode(const Node &node, preconditioner_emissivity_model_t &rhs)
+		{
+			if (!node.IsScalar()) return false;
+			const std::string s = node.as<std::string>();
+
+			if (s == "NONE")
+				rhs = preconditioner_emissivity_model_t::NONE;
+			else if (s == "CRD_limit")
+				rhs = preconditioner_emissivity_model_t::CRD_limit;
+			else if (s == "PRD_AA_GB")
+				rhs = preconditioner_emissivity_model_t::PRD_AA_GB;
+			else if (s == "PRD_AA_MAPV_GB")
+				rhs = preconditioner_emissivity_model_t::PRD_AA_MAPV_GB;
+			else if (s == "ZERO")
+				rhs = preconditioner_emissivity_model_t::ZERO;
+			else
+				return false;
+
+			return true;
+		}
+	};
+
 } // namespace YAML
 
-
 template <typename T>
-T requiredField(const YAML::Node& config, const std::string& key)
+T
+requiredField(const YAML::Node &config, const std::string &key)
 {
-    if (!config[key]) throw std::runtime_error("Missing required key: " + key);
-    return config[key].as<T>();
+	if (!config[key]) throw std::runtime_error("Missing required key: " + key);
+	return config[key].as<T>();
 }
 
 // function to read vector or scalar
-inline std::vector<double> readDoubleVec(const YAML::Node& node) {
-    if (node.IsSequence()) {
-        return node.as<std::vector<double>>();
-    } else if (node.IsScalar()) {
-        return { node.as<double>() };  // wrap scalar in a vector
-    } else {
-        throw std::runtime_error("Expected a scalar or sequence");
-    }
+inline std::vector<double>
+readDoubleVec(const YAML::Node &node)
+{
+	if (node.IsSequence())
+	{
+		return node.as<std::vector<double>>();
+	}
+	else if (node.IsScalar())
+	{
+		return {node.as<double>()}; // wrap scalar in a vector
+	}
+	else
+	{
+		throw std::runtime_error("Expected a scalar or sequence");
+	}
 }
 
 // Function declarations
@@ -398,7 +471,7 @@ struct PrecConfig
 struct AtomConfig
 {
 	double mass = 40.078;
-	double Aul  = 2.18e+08;
+	double Aul	= 2.18e+08;
 
 	int S2 = 0;
 
@@ -418,7 +491,7 @@ struct AppConfig
 	// Main I/O
 	std::filesystem::path input_directory;
 	std::filesystem::path input_file;
-	std::filesystem::path frequency_file;	
+	std::filesystem::path frequency_file;
 	std::filesystem::path output_directory;
 
 	// Output settings
@@ -431,7 +504,8 @@ struct AppConfig
 	std::filesystem::path reference_sol_directory;
 
 	// emissivity
-	emissivity_model_t emissivity_model;
+	emissivity_model_t				  emissivity_model;
+	preconditioner_emissivity_model_t preconditioner_emissivity_model;
 
 	// Physical switches
 	bool use_B			   = true;
@@ -442,6 +516,9 @@ struct AppConfig
 	// Set constant magnetic field
 	bool				  set_uniform_B = false;
 	std::array<double, 3> B_field		= {0.0, 0.0, 0.0};
+
+	bool enable_sigma_c = true; // It could be disabled for comparison with PORTA, which does not include sigma_c in the
+								// emissivity calculation.
 
 	// Set constant bulk velocity
 	bool				  set_uniform_Vb = false;
@@ -472,7 +549,7 @@ struct AppConfig
 	// Subsections
 	SolverConfig solver;
 	PrecConfig	 prec;
-	AtomConfig   atom;
+	AtomConfig	 atom;
 
 	// Arbitrary beam directions
 	std::vector<BeamDirection> arbitrary_beams;
@@ -510,12 +587,13 @@ write_3D_whole_field_falp_hdf5(RT_problem &rt_problem, const std::string &output
  * @brief Compute the collisional depolarization rate D2.
  *
  * Reference: Collisional Depolarization of the Solar Ca, Mg, and Ba Levels,
- * M. Derouich (2019), DOI: 10.3847/1538-4357/ab26b4, 
+ * M. Derouich (2019), DOI: 10.3847/1538-4357/ab26b4,
  * From Eq. (6).
  *
  * In the paper, T_ref is set to 5000 K with a = 1.24e-8 and b = 0.37.
  * In this implementation, a and b are provided in the h5 input file.
- * D2 is calculated as D2 = a * nH * (T / T_ref)^b, where nH is the neutral hydrogen density and T is the local temperature.
+ * D2 is calculated as D2 = a * nH * (T / T_ref)^b, where nH is the neutral hydrogen density and T is the local
+ * temperature.
  *
  * @param a Empirical coefficient from input data.
  * @param b Empirical exponent from input data.

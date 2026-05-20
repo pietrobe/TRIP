@@ -228,12 +228,16 @@ RT_problem::read_3D_h5(const std::string filename, const AppConfig &cfg, const b
 					v_b_->block(i, j, k)[2] = v_spherical[2];
 				}
 
+				const double sigma_c = cfg.enable_sigma_c
+										   ? data.c_scat_opacity_sigma_c
+										   : 0.0; // set to 0.0 as in PORTA, meaning that the scattering
+												  // contribution to the continuum opacity is ignored
+
 				// continuum
 				for (int n = 0; n < N_nu_; ++n)
 				{
-					// hardcoded to 0.0 as in PORTA  // Rename K_c.
-					this->sigma_->block(i, j, k)[n]	   = data.c_scat_opacity_sigma_c;
-					this->k_c_->block(i, j, k)[n]	   = data.c_therm_opacity_k_c + data.c_scat_opacity_sigma_c;
+					this->sigma_->block(i, j, k)[n]	   = sigma_c;
+					this->k_c_->block(i, j, k)[n]	   = data.c_therm_opacity_k_c + sigma_c;
 					this->eps_c_th_->block(i, j, k)[n] = data.c_therm_emissivity_epsilon_c;
 				}
 			});
