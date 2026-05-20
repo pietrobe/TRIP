@@ -616,7 +616,7 @@ class RT_problem
 	bool verbose_;
 
 	// emissivity model
-	emissivity_model_t				  emissivity_model_		 = emissivity_model_t::NONE;
+	emissivity_model_t				    emissivity_model_		= emissivity_model_t::NONE;
 	preconditioner_emissivity_model_t emissivity_model_prec_ = preconditioner_emissivity_model_t::NONE;
 
 	// spatial grid

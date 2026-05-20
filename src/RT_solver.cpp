@@ -2983,6 +2983,14 @@ void MF_context::set_up_emission_module(){
             components_approx.push_back(    
 				emission_coefficient_components::epsilon_R_II_TwoTerm_AA_GB_MAPV);
         break;
+        case preconditioner_emissivity_model_t::PRD_AA_MAPV:
+            components_approx.push_back(emission_coefficient_components::epsilon_R_II_AA_FAST_MAPV);
+            components_approx.push_back(emission_coefficient_components::epsilon_R_III_GL);
+        break;
+        case preconditioner_emissivity_model_t::PRD_AA:
+            components_approx.push_back(emission_coefficient_components::epsilon_R_II_AA_FAST);
+            components_approx.push_back(emission_coefficient_components::epsilon_R_III_GL);
+        break;
 		case preconditioner_emissivity_model_t::CRD_limit:
 		default:
 			if (mpi_rank_ == 0) std::cout << "\nUsing CRD limit for preconditioner emissivity" << std::endl;

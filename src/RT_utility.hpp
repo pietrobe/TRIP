@@ -36,11 +36,12 @@ inline bool is_CRD_limit(const emissivity_model_t model)
 	return model == emissivity_model_t::CRD_limit || model == emissivity_model_t::CRD_limit_VHP;
 }
 
-
 enum class preconditioner_emissivity_model_t
 {
 	NONE,			//
 	CRD_limit,		//
+	PRD_AA,		//
+	PRD_AA_MAPV, //
 	PRD_AA_GB,		//
 	PRD_AA_MAPV_GB, //
 	ZERO			//
@@ -362,6 +363,12 @@ namespace YAML
 				case preconditioner_emissivity_model_t::CRD_limit:
 					node = "CRD_limit";
 					break;
+				case preconditioner_emissivity_model_t::PRD_AA:
+					node = "PRD_AA";
+					break;
+				case preconditioner_emissivity_model_t::PRD_AA_MAPV:
+					node = "PRD_AA_MAPV";
+					break;
 				case preconditioner_emissivity_model_t::PRD_AA_GB:
 					node = "PRD_AA_GB";
 					break;
@@ -385,6 +392,10 @@ namespace YAML
 				rhs = preconditioner_emissivity_model_t::NONE;
 			else if (s == "CRD_limit")
 				rhs = preconditioner_emissivity_model_t::CRD_limit;
+			else if (s == "PRD_AA")
+				rhs = preconditioner_emissivity_model_t::PRD_AA;
+			else if (s == "PRD_AA_MAPV")
+				rhs = preconditioner_emissivity_model_t::PRD_AA_MAPV;
 			else if (s == "PRD_AA_GB")
 				rhs = preconditioner_emissivity_model_t::PRD_AA_GB;
 			else if (s == "PRD_AA_MAPV_GB")
