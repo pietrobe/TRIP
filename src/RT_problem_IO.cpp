@@ -485,8 +485,11 @@ RT_problem::accumulate_JKQ_values(const int						   x_strat,		  //
 								  std::vector<THDF_JKQ_float_t>	  &JKQ_real,	  //
 								  std::vector<THDF_JKQ_float_t>	  &JKQ_imag,	  //
 								  std::vector<THDF_JKQ_n_float_t> &JKQ_real_norm, //
-								  std::vector<THDF_JKQ_n_float_t> &JKQ_imag_norm)
+								  std::vector<THDF_JKQ_n_float_t> &JKQ_imag_norm, //
+								  const bool					   doppler_shift) //
 {
+	const double ds_mult = doppler_shift ? 1.0 : 0.0;
+
 	std::vector<double> u_vec;
 	u_vec.resize(this->N_nu_);
 	for (int i = x_strat; i < x_end; ++i)
@@ -522,9 +525,9 @@ RT_problem::accumulate_JKQ_values(const int						   x_strat,		  //
 														   4 * this->N_chi_ * this->N_nu_, //
 														   4 * this->N_nu_,				   //
 														   1,							   //
-														   0.0 * v_b,					   //
-														   0.0 * v_b_theta,				   //
-														   0.0 * v_b_chi,				   //
+														   ds_mult * v_b,				   //
+														   ds_mult * v_b_theta,			   //
+														   ds_mult * v_b_chi,			   //
 														   T,							   //
 														   this->atomic_mass(),			   //
 														   0.0);						   //
@@ -641,7 +644,7 @@ RT_problem::get_KQ_values(std::vector<int> &KQ_values,				   //
 }
 
 int
-RT_problem::write_JKQ_field_hdf5(const std::string &output_file)
+RT_problem::write_JKQ_field_hdf5(const std::string &output_file, const bool doppler_shift)
 {
 	// indeces
 	auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
@@ -713,7 +716,8 @@ RT_problem::write_JKQ_field_hdf5(const std::string &output_file)
 								JKQ_real,				   //
 								JKQ_imag,				   //
 								JKQ_real_norm_mult,		   //
-								JKQ_imag_norm_mult);	   //
+								JKQ_imag_norm_mult,		   //
+								doppler_shift);			   //
 
 	// {
 	// 	void *_p = malloc(1);
