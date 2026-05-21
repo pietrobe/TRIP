@@ -45,6 +45,8 @@ enum class preconditioner_emissivity_model_t
 	CRD_limit,		//
 	PRD_AA_GB,		//
 	PRD_AA_MAPV_GB, //
+	PRD_AA_MAPV,
+	PRD_AA,
 	ZERO			//
 }; //
 
@@ -380,6 +382,12 @@ namespace YAML
 				case preconditioner_emissivity_model_t::PRD_AA_MAPV_GB:
 					node = "PRD_AA_MAPV_GB";
 					break;
+				case preconditioner_emissivity_model_t::PRD_AA:
+					node = "PRD_AA";
+					break;
+				case preconditioner_emissivity_model_t::PRD_AA_MAPV:
+					node = "PRD_AA_MAPV";
+					break;
 				case preconditioner_emissivity_model_t::ZERO:
 					node = "ZERO";
 					break;
@@ -401,6 +409,10 @@ namespace YAML
 				rhs = preconditioner_emissivity_model_t::PRD_AA_GB;
 			else if (s == "PRD_AA_MAPV_GB")
 				rhs = preconditioner_emissivity_model_t::PRD_AA_MAPV_GB;
+			else if (s == "PRD_AA")
+				rhs = preconditioner_emissivity_model_t::PRD_AA;
+			else if (s == "PRD_AA_MAPV")
+				rhs = preconditioner_emissivity_model_t::PRD_AA_MAPV;
 			else if (s == "ZERO")
 				rhs = preconditioner_emissivity_model_t::ZERO;
 			else
