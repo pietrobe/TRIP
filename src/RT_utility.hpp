@@ -19,21 +19,22 @@
 // emissivty models
 enum class emissivity_model_t
 {
-	NONE,		        //
-	CRD_limit,	        //
-	CRD_limit_VHP,      //
-	PRD,		        //
-	PRD_NORMAL,	        //
-	PRD_MEDIUM,	        //
-	PRD_FAST,	        //
-	PRD_AA,		        //
-	PRD_AA_MAPV,        //
-	PRD_AA_TWOTERM,     //
-	PRD_AA_TWOTERM_MAPV,//
-	ZERO		        //
+	NONE,				 //
+	CRD_limit,			 //
+	CRD_limit_VHP,		 //
+	PRD,				 //
+	PRD_NORMAL,			 //
+	PRD_MEDIUM,			 //
+	PRD_FAST,			 //
+	PRD_AA,				 //
+	PRD_AA_MAPV,		 //
+	PRD_AA_TWOTERM,		 //
+	PRD_AA_TWOTERM_MAPV, //
+	ZERO				 //
 }; //
 
-inline bool is_CRD_limit(const emissivity_model_t model)
+inline bool
+is_CRD_limit(const emissivity_model_t model)
 {
 	return model == emissivity_model_t::CRD_limit || model == emissivity_model_t::CRD_limit_VHP;
 }
@@ -42,12 +43,10 @@ enum class preconditioner_emissivity_model_t
 {
 	NONE,			//
 	CRD_limit,		//
-	PRD_AA,		//
-	PRD_AA_MAPV, //
+	PRD_AA,			//
+	PRD_AA_MAPV,	//
 	PRD_AA_GB,		//
 	PRD_AA_MAPV_GB, //
-	PRD_AA_MAPV,
-	PRD_AA,
 	ZERO			//
 }; //
 
@@ -389,12 +388,6 @@ namespace YAML
 				case preconditioner_emissivity_model_t::PRD_AA_MAPV_GB:
 					node = "PRD_AA_MAPV_GB";
 					break;
-				case preconditioner_emissivity_model_t::PRD_AA:
-					node = "PRD_AA";
-					break;
-				case preconditioner_emissivity_model_t::PRD_AA_MAPV:
-					node = "PRD_AA_MAPV";
-					break;
 				case preconditioner_emissivity_model_t::ZERO:
 					node = "ZERO";
 					break;
@@ -500,7 +493,7 @@ struct PrecConfig
 	double	pc_rtol		   = 1e-5;
 	int		pc_max_it	   = 1000;
 	bool	pc_use_J_KQ	   = false;
-	bool	verbose	       = false;
+	bool	verbose		   = false;
 };
 
 struct AtomConfig
