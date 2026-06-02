@@ -48,6 +48,7 @@ THDF_make_empty_ard_field_handler(void) {
   // output_dset.dataspace_mu      = -1;
   // output_dset.dataspace_chi     = -1;
   output_dset.datatype_id       = -1;
+  output_dset.float_type        = HDF_OUT_NONE;
   output_dset.N_x               = 0;
   output_dset.N_y               = 0;
   output_dset.N_arbitrary_beams = 0;
@@ -61,18 +62,20 @@ THDF_make_empty_ard_field_handler(void) {
 /// THDF_create_ard_field_handler_mpi
 /////////////////////////////////////////////////////////////
 THDF_ard_field_handler *
-THDF_create_ard_field_handler_mpi(const hid_t  file_id,            //
-                                  const double mu,                 //
-                                  const double chi,                //
-                                  const int    N_x,                //
-                                  const int    N_y,                //
-                                  const int    N_arbitrary_beams,  //
-                                  const int    N_frequencies) {       //
+THDF_create_ard_field_handler_mpi(hid_t             file_id,            //
+                                  double            mu,                 //
+                                  double            chi,                //
+                                  int               N_x,                //
+                                  int               N_y,                //
+                                  int               N_arbitrary_beams,  //
+                                  int               N_frequencies,      //
+                                  THDF_float_type_t float_type) {       //
 
   THDF_ard_field_handler *output_dset = malloc(sizeof(THDF_ard_field_handler));
   *output_dset                        = THDF_make_empty_ard_field_handler();
 
   output_dset->file_id           = file_id;
+  output_dset->float_type        = float_type;
   output_dset->N_x               = N_x;
   output_dset->N_y               = N_y;
   output_dset->N_arbitrary_beams = N_arbitrary_beams;
@@ -98,7 +101,8 @@ THDF_create_ard_field_handler_mpi(const hid_t  file_id,            //
   //   hsize_t dims_direction[4] = {(hsize_t)N_x, (hsize_t)N_y, (hsize_t)N_arbitrary_beams, (hsize_t)1};
 
   // Create datatype for Stokes parameters (copy predefined type so we can close it later)
-  output_dset->datatype_id = H5Tcopy(THDF_get_hdf_float_datatype());
+  hid_t base_type          = (float_type == HDF_OUT_FLOAT32) ? THDF_get_hdf_float32_datatype() : THDF_get_hdf_float_datatype();
+  output_dset->datatype_id = H5Tcopy(base_type);
   if (output_dset->datatype_id < 0) {
     fprintf(stderr, "Error getting datatype for output_ar_field\n");
     CLOSE_OUTPUT_AR_FIELD((*output_dset));

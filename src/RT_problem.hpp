@@ -575,10 +575,10 @@ class RT_problem
 							  std::vector<Real> &surface_data_V);
 
 	int
-	accumulate_surface_profiles_Omega_domain_data(std::vector<double> &surface_data_I,	   //
-												  std::vector<double> &surface_data_Q,	   //
-												  std::vector<double> &surface_data_U,	   //
-												  std::vector<double> &surface_data_V);	   //
+	accumulate_surface_profiles_Omega_domain_data(std::vector<Real> &surface_data_I,	   //
+												  std::vector<Real> &surface_data_Q,	   //
+												  std::vector<Real> &surface_data_U,	   //
+												  std::vector<Real> &surface_data_V);	   //
 	int																					   //
 	write_beams_frequency_grids_Omega_hdf5(const std::vector<BeamDirection> &beams,		   //
 										   const std::string				&output_file); //
@@ -588,10 +588,10 @@ class RT_problem
 									MPI_Comm						  write_comm,	   //
 									const std::vector<BeamDirection> &beams,		   //
 									const int						  beam_index,	   //
-									std::vector<double>				 &surface_data_I,  //
-									std::vector<double>				 &surface_data_Q,  //
-									std::vector<double>				 &surface_data_U,  //
-									std::vector<double>				 &surface_data_V); //
+									std::vector<Real>				 &surface_data_I,  //
+									std::vector<Real>				 &surface_data_Q,  //
+									std::vector<Real>				 &surface_data_U,  //
+									std::vector<Real>				 &surface_data_V); //
 	// MPI varables
 	int mpi_rank_;
 	int mpi_size_;

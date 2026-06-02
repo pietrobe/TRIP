@@ -10,13 +10,11 @@
 #include <hdf5_hl.h>
 #include <mpi.h>
 
-// #include <petscsys.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef double THDF_float_t; 
+typedef double THDF_float_t;
 typedef double THDF_n_float_t;
 
 typedef float THDF_float32_t;
@@ -74,7 +72,7 @@ typedef struct {
   double           *azimuthal_angles;    // in radians, size N_directions
   int              *inclinations_indices;
   int              *azimuthal_indices;
-  THDF_float_type_t float_type;          // on-disk precision (HDF_OUT_FLOAT32 or HDF_OUT_FLOAT64)
+  THDF_float_type_t float_type;  // on-disk precision (HDF_OUT_FLOAT32 or HDF_OUT_FLOAT64)
 } THDF_angular_grid_t;
 
 typedef struct {
@@ -197,17 +195,17 @@ THDF_close_field_handler_mpi(THDF_field_handler_t *output_dset);
  * @return 0 on success, negative value on error.
  */
 int
-THDF_write_field_dataset_to_hdf5(THDF_field_handler_t *output_dset,    //
-                                 THDF_field_t         *output_field,   //
-                                 hsize_t               start_i,        //
-                                 hsize_t               start_j,        //
-                                 hsize_t               start_incl,     //
-                                 hsize_t               start_azimuth,  //
-                                 hsize_t               count_i,        //
-                                 hsize_t               count_j,        //
-                                 hsize_t               count_incl,     //
-                                 hsize_t               count_azimuth,  //
-                                 hsize_t               count_frequencies);           //
+THDF_write_field_dataset_to_hdf5(THDF_field_handler_t *output_dset,         //
+                                 THDF_field_t         *output_field,        //
+                                 hsize_t               start_i,             //
+                                 hsize_t               start_j,             //
+                                 hsize_t               start_incl,          //
+                                 hsize_t               start_azimuth,       //
+                                 hsize_t               count_i,             //
+                                 hsize_t               count_j,             //
+                                 hsize_t               count_incl,          //
+                                 hsize_t               count_azimuth,       //
+                                 hsize_t               count_frequencies);  //
 
 /**
  * @brief Write a complete Stokes parameter field to an HDF5 file.
@@ -225,13 +223,13 @@ THDF_write_field_dataset_to_hdf5(THDF_field_handler_t *output_dset,    //
  * @return 0 on success, negative value on error.
  */
 int
-THDF_write_field_to_hdf5(hid_t               file,          //
-                         const THDF_field_t *output_field,  //
-                         int                 N_x,           //
-                         int                 N_y,           //
-                         int                 N_incl,        //
-                         int                 N_azimuth,     //
-                         int                 N_frequencies);                //
+THDF_write_field_to_hdf5(hid_t               file,            //
+                         const THDF_field_t *output_field,    //
+                         int                 N_x,             //
+                         int                 N_y,             //
+                         int                 N_incl,          //
+                         int                 N_azimuth,       //
+                         int                 N_frequencies);  //
 
 /**
  * @brief Read a Stokes parameter field from an HDF5 file at a specific grid location and viewing angle.
@@ -365,6 +363,17 @@ THDF_clear_frequencies_grid(THDF_frequencies_grid_t *frequencies_grid);
 //        THDF_FIELD_AS_F32(field, stokes_I)[idx] = value;
 #define THDF_FIELD_AS_F64(field, member) ((double *)(field).member)
 #define THDF_FIELD_AS_F32(field, member) ((float *)(field).member)
+#define THDF_FIELD_AS_FC(__float_type, field, member) \
+  ((__float_type) == HDF_OUT_FLOAT32 ? THDF_FIELD_AS_F32(field, member) : THDF_FIELD_AS_F64(field, member))
+// Setter variant: avoids void* subscript issue from the ternary above.
+// Usage: THDF_FIELD_SET_FC(out_float_type, field, stokes_I, idx, value);
+#define THDF_FIELD_SET_FC(__float_type, field, member, idx, val) \
+  do { \
+    if ((__float_type) == HDF_OUT_FLOAT32) \
+      THDF_FIELD_AS_F32(field, member)[idx] = (float)(val); \
+    else \
+      THDF_FIELD_AS_F64(field, member)[idx] = (double)(val); \
+  } while (0)
 
 // Same via pointer to field:
 #define THDF_PFIELD_AS_F64(pfield, member) ((double *)(pfield)->member)

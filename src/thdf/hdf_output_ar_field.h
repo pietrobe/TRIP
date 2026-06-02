@@ -21,15 +21,17 @@ typedef struct {
 
   int N_frequencies;
 
+  THDF_float_type_t float_type;  // precision of the stokes arrays (HDF_OUT_FLOAT32 or HDF_OUT_FLOAT64)
+
   /**
    * @brief Stokes parameters I, Q, U, V for each frequency
    * @note Stored as 3D ROW major arrays [i, k, frequency] where i and k are spatial indices
    * and frequency is the frequency index
    */
-  THDF_float_t *stokes_I;   //
-  THDF_float_t *stokes_QI;  //
-  THDF_float_t *stokes_UI;  //
-  THDF_float_t *stokes_VI;  //
+  void *stokes_I;   //
+  void *stokes_QI;  //
+  void *stokes_UI;  //
+  void *stokes_VI;  //
 
   THDF_n_float_t *norm_multiplier_I;   // TODO: not used yet
   THDF_n_float_t *norm_multiplier_QI;  //
@@ -65,12 +67,13 @@ typedef struct {
   hid_t dataspace_id_U; /**< HDF5 dataspace identifier for Stokes U */
   hid_t dataspace_id_V; /**< HDF5 dataspace identifier for Stokes V */
 
-  hid_t datatype_id;       /**< HDF5 datatype identifier for the stored data */
-  int   N_x;               /**< Number of grid points in x direction */
-  int   N_y;               /**< Number of grid points in y direction */
-  int   N_arbitrary_beams; /**< Number of arbitrary beams */
-  int   N_frequencies;     /**< Number of frequencies */
-  int   is_open;           /**< Handler open state flag (1=open, 0=closed) */
+  hid_t             datatype_id;       /**< HDF5 datatype identifier for the stored data */
+  THDF_float_type_t float_type;        /**< Floating-point precision used for Stokes datasets */
+  int               N_x;               /**< Number of grid points in x direction */
+  int               N_y;               /**< Number of grid points in y direction */
+  int               N_arbitrary_beams; /**< Number of arbitrary beams */
+  int               N_frequencies;     /**< Number of frequencies */
+  int               is_open;           /**< Handler open state flag (1=open, 0=closed) */
 } THDF_ard_field_handler;
 
 /**
@@ -79,7 +82,7 @@ typedef struct {
  */
 typedef struct {
 
-  double *mu;    /**< Cosines of the inclination angles */
+  double *mu;  /**< Cosines of the inclination angles */
   double *chi; /**< Azimuthal angles */
 
   int N_directions; /**< Number of arbitrary directions */
@@ -113,13 +116,14 @@ THDF_make_empty_ard_field_handler(void);
  * @return Pointer to initialized THDF_ard_field_handler structure, or NULL on error
  */
 THDF_ard_field_handler *
-THDF_create_ard_field_handler_mpi(hid_t  file_id,            //
-                                  double mu,                 //
-                                  double chi,                //
-                                  int    N_x,                //
-                                  int    N_y,                //
-                                  int    N_arbitrary_beams,  //
-                                  int    N_frequencies);        //
+THDF_create_ard_field_handler_mpi(hid_t             file_id,            //
+                                  double            mu,                 //
+                                  double            chi,                //
+                                  int               N_x,                //
+                                  int               N_y,                //
+                                  int               N_arbitrary_beams,  //
+                                  int               N_frequencies,      //
+                                  THDF_float_type_t float_type);        //
 
 /** @brief
  * Close and free resources associated with an HDF5 handler for arbitrary field output datasets.
@@ -140,13 +144,13 @@ THDF_close_ard_field_handler_mpi(THDF_ard_field_handler *output_dset);
  * @return 0 on success, -1 on error
  */
 int
-THDF_write_ard_field_to_hdf5(THDF_ard_field_handler *output_dset,   //
-                             THDF_ard_field_t       *output_field,  //
-                             const hsize_t           start_i,       //
-                             const hsize_t           start_j,       //
-                             const hsize_t           count_i,       //
-                             const hsize_t           count_j,       //
-                             const hsize_t           count_frequencies);      //
+THDF_write_ard_field_to_hdf5(THDF_ard_field_handler *output_dset,         //
+                             THDF_ard_field_t       *output_field,        //
+                             const hsize_t           start_i,             //
+                             const hsize_t           start_j,             //
+                             const hsize_t           count_i,             //
+                             const hsize_t           count_j,             //
+                             const hsize_t           count_frequencies);  //
 
 /** @brief
  * Write arbitrary directions (mu, chi) to HDF5 file.

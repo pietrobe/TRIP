@@ -277,10 +277,10 @@ RT_problem::accumulate_surface_domain_data(std::vector<Real> &surface_data_I, st
 }
 
 int
-RT_problem::accumulate_surface_profiles_Omega_domain_data(std::vector<double> &surface_data_I, //
-														  std::vector<double> &surface_data_Q, //
-														  std::vector<double> &surface_data_U, //
-														  std::vector<double> &surface_data_V)
+RT_problem::accumulate_surface_profiles_Omega_domain_data(std::vector<Real> &surface_data_I, //
+														  std::vector<Real> &surface_data_Q, //
+														  std::vector<Real> &surface_data_U, //
+														  std::vector<Real> &surface_data_V)
 {
 	// indeces
 	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
@@ -318,10 +318,10 @@ RT_problem::accumulate_surface_profiles_Omega_domain_data(std::vector<double> &s
 				const double U = I_field_Omega_->block(i, j, k_start)[b + 2];
 				const double V = I_field_Omega_->block(i, j, k_start)[b + 3];
 
-				surface_data_I.push_back(I);
-				surface_data_Q.push_back(Q / I * 100.0);
-				surface_data_U.push_back(U / I * 100.0);
-				surface_data_V.push_back(V / I * 100.0);
+				surface_data_I.push_back(Real(I));
+				surface_data_Q.push_back(Real(Q / I * 100.0));
+				surface_data_U.push_back(Real(U / I * 100.0));
+				surface_data_V.push_back(Real(V / I * 100.0));
 			}
 		}
 	}
@@ -394,13 +394,15 @@ RT_problem::write_emergent_field_Omega_hdf5(const std::string				 &output_file,	
 											MPI_Comm						  write_comm,	  //
 											const std::vector<BeamDirection> &beams,		  //
 											const int						  beam_index,	  //
-											std::vector<double>				 &surface_data_I, //
-											std::vector<double>				 &surface_data_Q, //
-											std::vector<double>				 &surface_data_U, //
-											std::vector<double>				 &surface_data_V)
+											std::vector<Real>				 &surface_data_I, //
+											std::vector<Real>				 &surface_data_Q, //
+											std::vector<Real>				 &surface_data_U, //
+											std::vector<Real>				 &surface_data_V)
 {
 	// indeces
 	auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
+
+	const auto out_float_type = std::is_same_v<Real, float> ? HDF_OUT_FLOAT32 : HDF_OUT_FLOAT64;
 
 	const int size_i = space_grid_->getLocalSizeX();
 	const int size_j = space_grid_->getLocalSizeY();
@@ -429,7 +431,8 @@ RT_problem::write_emergent_field_Omega_hdf5(const std::string				 &output_file,	
 										  this->N_x_,			 //
 										  this->N_y_,			 //
 										  beams.size(),			 //
-										  this->N_nu_);			 //
+										  this->N_nu_,			 //
+										  out_float_type);		 //
 
 	if (dset_handler == NULL)
 	{
