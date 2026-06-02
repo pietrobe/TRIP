@@ -186,10 +186,10 @@ RT_problem::write_emergent_field_hdf5(const std::string &output_file, MPI_Comm w
 	output_field.float_type	   = out_float_type;
 
 	// assign data pointers
-	output_field.stokes_I  = surface_data_I.data();
-	output_field.stokes_QI = surface_data_Q.data();
-	output_field.stokes_UI = surface_data_U.data();
-	output_field.stokes_VI = surface_data_V.data();
+	output_field.stokes_I  = (Real *)surface_data_I.data();
+	output_field.stokes_QI = (Real *)surface_data_Q.data();
+	output_field.stokes_UI = (Real *)surface_data_U.data();
+	output_field.stokes_VI = (Real *)surface_data_V.data();
 
 	// Write local output field surface data
 	THDF_write_field_dataset_to_hdf5(output_dset_handler,				   //
@@ -277,10 +277,10 @@ RT_problem::accumulate_surface_domain_data(std::vector<Real> &surface_data_I, st
 }
 
 int
-RT_problem::accumulate_surface_profiles_Omega_domain_data(std::vector<Real> &surface_data_I, //
-														  std::vector<Real> &surface_data_Q, //
-														  std::vector<Real> &surface_data_U, //
-														  std::vector<Real> &surface_data_V)
+RT_problem::accumulate_surface_profiles_Omega_domain_data(std::vector<double> &surface_data_I, //
+														  std::vector<double> &surface_data_Q, //
+														  std::vector<double> &surface_data_U, //
+														  std::vector<double> &surface_data_V)
 {
 	// indeces
 	const auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();
@@ -313,10 +313,10 @@ RT_problem::accumulate_surface_profiles_Omega_domain_data(std::vector<Real> &sur
 
 			for (int b = 0; b < 4 * N_nu_; b = b + 4)
 			{
-				const Real I = I_field_Omega_->block(i, j, k_start)[b + 0];
-				const Real Q = I_field_Omega_->block(i, j, k_start)[b + 1];
-				const Real U = I_field_Omega_->block(i, j, k_start)[b + 2];
-				const Real V = I_field_Omega_->block(i, j, k_start)[b + 3];
+				const double I = I_field_Omega_->block(i, j, k_start)[b + 0];
+				const double Q = I_field_Omega_->block(i, j, k_start)[b + 1];
+				const double U = I_field_Omega_->block(i, j, k_start)[b + 2];
+				const double V = I_field_Omega_->block(i, j, k_start)[b + 3];
 
 				surface_data_I.push_back(I);
 				surface_data_Q.push_back(Q / I * 100.0);
@@ -394,10 +394,10 @@ RT_problem::write_emergent_field_Omega_hdf5(const std::string				 &output_file,	
 											MPI_Comm						  write_comm,	  //
 											const std::vector<BeamDirection> &beams,		  //
 											const int						  beam_index,	  //
-											std::vector<Real>				 &surface_data_I, //
-											std::vector<Real>				 &surface_data_Q, //
-											std::vector<Real>				 &surface_data_U, //
-											std::vector<Real>				 &surface_data_V)
+											std::vector<double>				 &surface_data_I, //
+											std::vector<double>				 &surface_data_Q, //
+											std::vector<double>				 &surface_data_U, //
+											std::vector<double>				 &surface_data_V)
 {
 	// indeces
 	auto [i_start, j_start, k_start] = space_grid_->getGhostMargins();

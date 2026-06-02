@@ -446,21 +446,21 @@ class RT_problem
 		return N_nu_ * (N_chi_ * j + k) + n;
 	}
 
-
 	// set Q,U,V = 0
-	inline void set_zero_polarization(Field_ptr_t field)
-	{		
-    	space_grid_->parallel_for([&](int i, int j, int k) 
-    	{         	                        
-	        for (int b = 0; b < block_size_; b = b + 4) 
-	        {
-	            field->block(i,j,k)[b + 1] = 0;                
-	            field->block(i,j,k)[b + 2] = 0;                
-	            field->block(i,j,k)[b + 3] = 0;                
-	        }                                                	        
-	    }); 
+	inline void
+	set_zero_polarization(Field_ptr_t field)
+	{
+		space_grid_->parallel_for(
+			[&](int i, int j, int k)
+			{
+				for (int b = 0; b < block_size_; b = b + 4)
+				{
+					field->block(i, j, k)[b + 1] = 0;
+					field->block(i, j, k)[b + 2] = 0;
+					field->block(i, j, k)[b + 3] = 0;
+				}
+			});
 	}
-
 
 	// print I_field on surface
 	void
@@ -575,10 +575,10 @@ class RT_problem
 							  std::vector<Real> &surface_data_V);
 
 	int
-	accumulate_surface_profiles_Omega_domain_data(std::vector<Real> &surface_data_I,	   //
-												  std::vector<Real> &surface_data_Q,	   //
-												  std::vector<Real> &surface_data_U,	   //
-												  std::vector<Real> &surface_data_V);	   //
+	accumulate_surface_profiles_Omega_domain_data(std::vector<double> &surface_data_I,	   //
+												  std::vector<double> &surface_data_Q,	   //
+												  std::vector<double> &surface_data_U,	   //
+												  std::vector<double> &surface_data_V);	   //
 	int																					   //
 	write_beams_frequency_grids_Omega_hdf5(const std::vector<BeamDirection> &beams,		   //
 										   const std::string				&output_file); //
@@ -588,10 +588,10 @@ class RT_problem
 									MPI_Comm						  write_comm,	   //
 									const std::vector<BeamDirection> &beams,		   //
 									const int						  beam_index,	   //
-									std::vector<Real>				 &surface_data_I,  //
-									std::vector<Real>				 &surface_data_Q,  //
-									std::vector<Real>				 &surface_data_U,  //
-									std::vector<Real>				 &surface_data_V); //
+									std::vector<double>				 &surface_data_I,  //
+									std::vector<double>				 &surface_data_Q,  //
+									std::vector<double>				 &surface_data_U,  //
+									std::vector<double>				 &surface_data_V); //
 	// MPI varables
 	int mpi_rank_;
 	int mpi_size_;
@@ -617,7 +617,7 @@ class RT_problem
 	bool verbose_;
 
 	// emissivity model
-	emissivity_model_t				    emissivity_model_		= emissivity_model_t::NONE;
+	emissivity_model_t				  emissivity_model_		 = emissivity_model_t::NONE;
 	preconditioner_emissivity_model_t emissivity_model_prec_ = preconditioner_emissivity_model_t::NONE;
 
 	// spatial grid
