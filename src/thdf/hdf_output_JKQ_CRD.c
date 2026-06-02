@@ -7,7 +7,7 @@
   if (_status_ < 0) {                                                              \
     char _buffer_[2048];                                                           \
     snprintf(_buffer_, 2048, "%s, file %s, line %d\n", _msg_, __FILE__, __LINE__); \
-    fprintf(stderr, _buffer_);                                                     \
+    fprintf(stderr, "%s", _buffer_);                                               \
     free(_handler_);                                                               \
     return NULL;                                                                   \
   }
@@ -16,7 +16,7 @@
   if (_status_ < 0) {                                                                \
     char __buffer__[2048];                                                           \
     snprintf(__buffer__, 2048, "%s, file %s, line %d\n", _msg_, __FILE__, __LINE__); \
-    fprintf(stderr, __buffer__);                                                     \
+    fprintf(stderr, "%s", __buffer__);                                                     \
     return _ret_;                                                                    \
   }
 

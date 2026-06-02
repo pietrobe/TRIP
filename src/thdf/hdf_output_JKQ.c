@@ -6,7 +6,7 @@
   if (_status_ < 0) {                                                              \
     char _buffer_[2048];                                                           \
     snprintf(_buffer_, 2048, "%s, file %s, line %d\n", _msg_, __FILE__, __LINE__); \
-    fprintf(stderr, _buffer_);                                                     \
+    fprintf(stderr, "%s", _buffer_);                                               \
     free(_handler_);                                                               \
     return NULL;                                                                   \
   }
@@ -14,13 +14,13 @@
 //////////////////////////////////////////////////////////////
 /// THDF_create_JKQ_field_handler_mpi
 //////////////////////////////////////////////////////////////
-THDF_JKQ_handler_t *                                    //
-THDF_create_JKQ_field_handler_mpi(hid_t file,           //
-                                  int   N_x,            //
-                                  int   N_y,            //
-                                  int   N_z,            //
-                                  int   N_JKQ_real,     //
-                                  int   N_JKQ_imag,     //
+THDF_JKQ_handler_t *                                      //
+THDF_create_JKQ_field_handler_mpi(hid_t file,             //
+                                  int   N_x,              //
+                                  int   N_y,              //
+                                  int   N_z,              //
+                                  int   N_JKQ_real,       //
+                                  int   N_JKQ_imag,       //
                                   int   N_frequencies) {  //
 
   THDF_JKQ_handler_t *handler = (THDF_JKQ_handler_t *)malloc(sizeof(THDF_JKQ_handler_t));
@@ -180,7 +180,7 @@ THDF_close_JKQ_field_handler_mpi(THDF_JKQ_handler_t *handler) {  //
   if (_status_ < 0) {                                                                \
     char __buffer__[2048];                                                           \
     snprintf(__buffer__, 2048, "%s, file %s, line %d\n", _msg_, __FILE__, __LINE__); \
-    fprintf(stderr, __buffer__);                                                     \
+    fprintf(stderr, "%s", __buffer__);                                               \
     return _ret_;                                                                    \
   }
 
@@ -198,8 +198,8 @@ THDF_write_KQ_table_to_hdf5(hid_t            file,        //
   // Create dataset for KQ matrix
   hsize_t dims_KQ[2]      = {KQ_table->KQ_size, 2};  // 2 columns: K and Q
   hid_t   dataspace_id_KQ = H5Screate_simple(2, dims_KQ, NULL);
-  hid_t   dataset_id_KQ   = H5Dcreate2(group_id,  //
-                                       "KQ_table", H5T_NATIVE_INT, dataspace_id_KQ, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  hid_t   dataset_id_KQ = H5Dcreate2(group_id,  //
+                                     "KQ_table", H5T_NATIVE_INT, dataspace_id_KQ, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   HDF5_CHECK_KQ_STATUS(dataset_id_KQ, "Error creating KQ_table dataset in HDF5 file\n", -1);
 
   // Write KQ matrix data
@@ -255,7 +255,7 @@ THDF_write_KQ_table_to_hdf5(hid_t            file,        //
   if (_status_ < 0) {                                                                \
     char __buffer__[2048];                                                           \
     snprintf(__buffer__, 2048, "%s, file %s, line %d\n", _msg_, __FILE__, __LINE__); \
-    fprintf(stderr, __buffer__);                                                     \
+    fprintf(stderr, "%s", __buffer__);                                               \
     return _ret_;                                                                    \
   }
 
@@ -270,7 +270,7 @@ THDF_write_JKQ_field_to_hdf5(THDF_JKQ_handler_t *handler,    //
                              hsize_t             start_k,    //
                              hsize_t             count_i,    //
                              hsize_t             count_j,    //
-                             hsize_t             count_k) {              //
+                             hsize_t             count_k) {  //
 
   // Define hyperslab in the file
   hsize_t file_start[5]    = {start_i, start_j, start_k, 0, 0};
