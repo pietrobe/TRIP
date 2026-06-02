@@ -176,6 +176,12 @@ struct MF_context {
 	void unpolarized_to_polarized(Vec &unpol_v, Vec &pol_v);
 };
 
+static PetscErrorCode precond_ksp_monitor(KSP ksp, PetscInt it, PetscReal rnorm, void *ctx)
+{
+	(void)ksp; (void)ctx;
+	return PetscPrintf(PETSC_COMM_WORLD, "%3d PRECOND Residual norm %14.12e\n", (int)it, (double)rnorm);
+}
+
 class RT_solver
 {
 public:
@@ -344,9 +350,17 @@ public:
 
 			// adding some options for verbosity
 	    	ierr = PetscOptionsSetValue(NULL, "-ksp_converged_reason", "");CHKERRV(ierr);
-	    	if (cfg.prec.verbose) ierr = PetscOptionsSetValue(NULL, "-ksp_monitor", "");CHKERRV(ierr);	    	
-    		ierr = KSPSetFromOptions(mf_ctx_.pc_solver_);CHKERRV(ierr);    
-    	}
+#define PRECOND_MONITORING // If it dosent work with some petsc versions, switch-off this macro.
+#ifdef PRECOND_MONITORING
+			ierr = KSPSetFromOptions(mf_ctx_.pc_solver_);
+			CHKERRV(ierr);
+			if (cfg.prec.verbose)
+			{
+				ierr = KSPMonitorSet(mf_ctx_.pc_solver_, precond_ksp_monitor, NULL, NULL);
+				CHKERRV(ierr);
+			}
+#endif
+		}
     	else
     	{
     		ierr = PCSetType(pc_,PCNONE);CHKERRV(ierr);
