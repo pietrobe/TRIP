@@ -356,6 +356,8 @@ public:
 			CHKERRV(ierr);
 			if (cfg.prec.verbose)
 			{
+				ierr = KSPMonitorCancel(mf_ctx_.pc_solver_);
+				CHKERRV(ierr);
 				ierr = KSPMonitorSet(mf_ctx_.pc_solver_, precond_ksp_monitor, NULL, NULL);
 				CHKERRV(ierr);
 			}
