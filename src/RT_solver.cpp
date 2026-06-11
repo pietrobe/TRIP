@@ -1530,7 +1530,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     const bool verbose = RT_problem_->verbose_;
 
     // set to true for more precise communication timers, butl slower in term of perf.
-    const bool timing_debug = false; 
+    const bool timing_debug = true; 
 
     if (mpi_rank_ == 0 && verbose) std::cout << (timing_debug ? "\nStart global formal solution..." : "\nStart global formal solution (approximate timings)...") << std::endl;
 
@@ -1945,20 +1945,26 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     
     if (verbose)
     {
-        double comm_timer_max1, comm_timer_max2, one_step_timer_max, total_timer_max;        
+        double comm_timer_max1, comm_timer_max2, one_step_timer_max, total_timer_max;
+        double one_step_timer_min, one_step_timer_sum;
 
         MPI_Reduce(&comm_timer1,    &comm_timer_max1,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
         MPI_Reduce(&comm_timer2,    &comm_timer_max2,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
         MPI_Reduce(&one_step_timer, &one_step_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&one_step_timer, &one_step_timer_min, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&one_step_timer, &one_step_timer_sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
         MPI_Reduce(&total_timer,    &total_timer_max,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
         if (mpi_rank_ == 0)
-        {                            
+        {
+            const double one_step_timer_avg = one_step_timer_sum / mpi_size_;
             printf("Comm. time (S):\t\t%g seconds\n", comm_timer_max1);
             printf("Comm. time (I):\t\t%g seconds\n", comm_timer_max2);
-            printf("ODE step time:\t\t%g seconds\n",  one_step_timer_max);                        
-            printf("Total time:\t\t%g seconds\n",     total_timer_max);          
-        }        
+            printf("ODE step time:\t\t%g seconds (min = %g, avg = %g, max = %g, max/avg = %g)\n",
+                   one_step_timer_max, one_step_timer_min, one_step_timer_avg,
+                   one_step_timer_max, one_step_timer_max / one_step_timer_avg);
+            printf("Total time:\t\t%g seconds\n",     total_timer_max);
+        }
     }           
 }
 
