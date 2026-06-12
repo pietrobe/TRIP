@@ -54,69 +54,9 @@ if(TRIP_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)$")
 		"ARM CPU detected (${CMAKE_SYSTEM_PROCESSOR}): targeting Neoverse V2 / Grace"
 	)
 elseif(TRIP_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|i[3-6]86)$")
-	# x86: probe AVX-512 and AVX2 at configure time, then select the best flags.
-	# Compiler-flag acceptance is checked first; on Linux the running CPU is also
-	# verified via /proc/cpuinfo so we never emit instructions that will SIGILL.
-	set(ARCH_FLAGS "")
-	set(TRIP_X86_ISA "baseline")
-
-	check_cxx_compiler_flag("-mavx512f" COMPILER_SUPPORTS_AVX512F)
-	if(COMPILER_SUPPORTS_AVX512F)
-		set(_cpu_avx512 0)
-		if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-			execute_process(
-				COMMAND grep -c "avx512f" /proc/cpuinfo
-				OUTPUT_VARIABLE _cpu_avx512
-				OUTPUT_STRIP_TRAILING_WHITESPACE
-				ERROR_QUIET
-			)
-		else()
-			set(_cpu_avx512 1) # non-Linux: trust the compiler flag check
-		endif()
-		if(_cpu_avx512 GREATER 0)
-			# -march=native auto-enables all AVX-512 sub-extensions present on
-			# this CPU (BW, DQ, VL, VNNI, VBMI2, …).
-			set(ARCH_FLAGS "-march=native")
-			# -mprefer-vector-width=512 tells the auto-vectoriser to use 512-bit
-			# registers. Beneficial on modern CPUs (Ice Lake, Sapphire Rapids)
-			# that do not throttle clock speed on 512-bit operations.
-			check_cxx_compiler_flag("-mprefer-vector-width=512"
-				COMPILER_SUPPORTS_PREFER_VECTOR_WIDTH_512
-			)
-			if(COMPILER_SUPPORTS_PREFER_VECTOR_WIDTH_512)
-				set(ARCH_FLAGS "${ARCH_FLAGS} -mprefer-vector-width=512")
-			endif()
-			set(TRIP_X86_ISA "AVX-512")
-		endif()
-	endif()
-
-	if(NOT ARCH_FLAGS)
-		check_cxx_compiler_flag("-mavx2" COMPILER_SUPPORTS_AVX2)
-		set(_cpu_avx2 0)
-		if(COMPILER_SUPPORTS_AVX2)
-			if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-				execute_process(
-					COMMAND grep -c "avx2" /proc/cpuinfo
-					OUTPUT_VARIABLE _cpu_avx2
-					OUTPUT_STRIP_TRAILING_WHITESPACE
-					ERROR_QUIET
-				)
-			else()
-				set(_cpu_avx2 1) # non-Linux: trust the compiler flag check
-			endif()
-		endif()
-		if(_cpu_avx2 GREATER 0)
-			set(ARCH_FLAGS "-march=native")
-			set(TRIP_X86_ISA "AVX2")
-		else()
-			set(ARCH_FLAGS "-mtune=native")
-			set(TRIP_X86_ISA "baseline (no AVX2/AVX-512)")
-		endif()
-	endif()
-
-	message(STATUS
-		"x86 CPU detected (${CMAKE_SYSTEM_PROCESSOR}): ISA=${TRIP_X86_ISA}"
-	)
+	# x86: tune for the build host; never use -mcpu here.
+	set(ARCH_FLAGS "-mtune=native")
+	message(STATUS "x86 CPU detected (${CMAKE_SYSTEM_PROCESSOR})")
 else()
 	set(ARCH_FLAGS "")
 	message(WARNING
