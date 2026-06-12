@@ -1950,6 +1950,23 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
         double comm_timer_max1, comm_timer_max2, one_step_timer_max, total_timer_max;
         double one_step_timer_min, one_step_timer_sum;
         double one_step_count_min, one_step_count_mean, one_step_count_max;
+        
+#ifdef SUPER_VERBOSE_STATS        
+        int tile_number_min, tile_number_mean, tile_number_max;
+        int k_size = k_end - k_start; 
+        int j_size = j_end - j_start;
+        int i_size = i_end - i_start;
+        int theta_size = j_theta_end - j_theta_start;
+        int chi_size = k_chi_end - k_chi_start;
+        int nu_size = n_nu_end - n_nu_start;
+
+        int k_size_min, k_size_mean, k_size_max;
+        int j_size_min, j_size_mean, j_size_max;
+        int i_size_min, i_size_mean, i_size_max;
+        int theta_size_min, theta_size_mean, theta_size_max;
+        int chi_size_min, chi_size_mean, chi_size_max;
+        int nu_size_min, nu_size_mean, nu_size_max;
+#endif // SUPER_VERBOSE_STATS
 
         MPI_Reduce(&comm_timer1,    &comm_timer_max1,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
         MPI_Reduce(&comm_timer2,    &comm_timer_max2,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
@@ -1961,10 +1978,36 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
         MPI_Reduce(&one_step_count, &one_step_count_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
         MPI_Reduce(&total_timer,    &total_timer_max,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
+#ifdef SUPER_VERBOSE_STATS  
+        MPI_Reduce(&n_tiles_,    &tile_number_min,    1, MPI_INT, MPI_MIN, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&n_tiles_,    &tile_number_mean,   1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&n_tiles_,    &tile_number_max,    1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&k_size,          &k_size_min,          1, MPI_INT, MPI_MIN, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&k_size,          &k_size_mean,         1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&k_size,          &k_size_max,          1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&j_size,          &j_size_min,          1, MPI_INT, MPI_MIN, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&j_size,          &j_size_mean,         1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&j_size,          &j_size_max,          1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&i_size,          &i_size_min,          1, MPI_INT, MPI_MIN, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&i_size,          &i_size_mean,         1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&i_size,          &i_size_max,          1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&theta_size,      &theta_size_min,      1, MPI_INT, MPI_MIN, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&theta_size,      &theta_size_mean,     1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&theta_size,      &theta_size_max,      1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&chi_size,        &chi_size_min,        1, MPI_INT, MPI_MIN, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&chi_size,        &chi_size_mean,       1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&chi_size,        &chi_size_max,        1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&nu_size,         &nu_size_min,         1, MPI_INT, MPI_MIN, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&nu_size,         &nu_size_mean,        1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&nu_size,         &nu_size_max,         1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
+#endif // SUPER_VERBOSE_STATS
+
         if (mpi_rank_ == 0)
         {
             const double one_step_timer_avg = one_step_timer_sum / mpi_size_;
             const double one_step_count_avg = one_step_count_mean / mpi_size_;
+            
+
             printf("Comm. time (S):\t\t%g seconds\n", comm_timer_max1);
             printf("Comm. time (I):\t\t%g seconds\n", comm_timer_max2);
             printf("ODE step time:\t\t%g seconds (min = %g, avg = %g, max = %g, max/avg = %g)\n",
@@ -1973,7 +2016,35 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
             printf("ODE step count:\t\t%g (min = %g, avg = %g, max = %g, max/avg = %g)\n",
                    one_step_count_max, one_step_count_min, one_step_count_avg,
                    one_step_count_max, one_step_count_max / one_step_count_avg);
+        
             printf("Total time:\t\t%g seconds\n",     total_timer_max);
+
+#ifdef SUPER_VERBOSE_STATS
+
+            const double tile_number_avg = static_cast<double>(tile_number_mean) / mpi_size_;
+
+            const double k_size_avg = static_cast<double>(k_size_mean) / mpi_size_;
+            const double j_size_avg = static_cast<double>(j_size_mean) / mpi_size_;
+            const double i_size_avg = static_cast<double>(i_size_mean) / mpi_size_;
+            const double theta_size_avg = static_cast<double>(theta_size_mean) / mpi_size_;
+            const double chi_size_avg = static_cast<double>(chi_size_mean) / mpi_size_;
+            const double nu_size_avg = static_cast<double>(nu_size_mean) / mpi_size_;
+
+            printf("Tile number:\t\t%d (min = %d, avg = %g, max = %d)\n",
+                   tile_number_max, tile_number_min, tile_number_avg, tile_number_max);
+            printf("k size:\t\t%d (min = %d, avg = %g, max = %d)\n",
+                   k_size_max, k_size_min, k_size_avg, k_size_max);
+            printf("j size:\t\t%d (min = %d, avg = %g, max = %d)\n",
+                   j_size_max, j_size_min, j_size_avg, j_size_max);
+            printf("i size:\t\t%d (min = %d, avg = %g, max = %d)\n",
+                   i_size_max, i_size_min, i_size_avg, i_size_max);
+            printf("theta size:\t%d (min = %d, avg = %g, max = %d)\n",
+                   theta_size_max, theta_size_min, theta_size_avg, theta_size_max);
+            printf("chi size:\t%d (min = %d, avg = %g, max = %d)\n",
+                   chi_size_max, chi_size_min, chi_size_avg, chi_size_max);
+            printf("nu size:\t\t%d (min = %d, avg = %g, max = %d)\n",
+                   nu_size_max, nu_size_min, nu_size_avg, nu_size_max);
+#endif // SUPER_VERBOSE_STATS
         }
     }           
 }
