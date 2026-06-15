@@ -1373,12 +1373,12 @@ void MF_context::formal_solve_ray(const double theta, const double chi)
                                 if (use_single_long_step_)
                                 {
                                     I2 = single_long_ray_step(intersection_data_long_ray, I_field_serial_Omega_, S_field_serial_Omega_,
-                                                                                            i_aux, j_aux, k_aux, b);
+                                                              i_aux, j_aux, k_aux, b);
                                 }
                                 else
                                 {
                                     I2 = long_ray_steps(intersection_data_long_ray, I_field_serial_Omega_, S_field_serial_Omega_,
-                                                                                            i_aux, j_aux, k_aux, b);
+                                                        i_aux, j_aux, k_aux, b);
                                 }                                                                         
                             }
                             else // short ray

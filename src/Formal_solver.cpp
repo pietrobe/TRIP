@@ -119,6 +119,239 @@ double mat_QBezierC0(double h0, double h1, double ym, double yo, double yp) {
 
 // solve I' = KI - S
 
+namespace
+{
+	inline void
+	delo_linear_step(const double dt,								   //
+					 input_vec &K1, input_vec &K2,					   //
+					 input_vec &S1, input_vec &S2,					   //
+					 input_vec	&I_in,								   //
+					 output_vec &I_out, bool debug_mode, int mpi_rank) //
+	{
+
+		/***  Delo Linear original version.
+		if (debug_mode_ and (K1.size() != 16 or S1.size() != 4) and mpi_rank_ == 0) std::cerr << "\nERROR: wrong input size for DELO_linear!\n";
+		
+		// solve I' = - KI + S
+		const long double dt_aux = -dt;         
+        const long double E = std::exp(-dt_aux);      
+        const long double F = 1.0 - E;
+        const long double G = (1.0 - (1.0 + dt_aux) * E) / dt_aux; 
+        
+        std::vector<double> K_times_I_in(4, 0.0);
+        int index_ij;
+				
+        bool Id;
+
+     	for (int i = 0; i < 4; ++i) 
+		{			
+			for (int j = 0; j < 4; ++j)
+			{
+				index_ij = 4 * i + j;
+
+				Id = (i == j);
+			
+				A[index_ij] = Id + (F - G) * (K2[index_ij] - Id);
+
+				// K * I_in
+				K_times_I_in[i] += (K1[index_ij] - Id) * I_in[j]; 								
+			}			
+
+			b[i] = E * I_in[i] - G * K_times_I_in[i] + G * S1[i] + (F - G) * S2[i];
+		}
+
+		I_out = solve_4_by_4_system(A, b);	
+		// I_out = solve_4_by_4_system_optimized(A,b);
+		***/
+
+		static const int ETA_Q = 1, ETA_U = 2, ETA_V = 3, RHO_Q = 11, RHO_U = 13, RHO_V = 6;
+
+		if (debug_mode and (K1[0] != 1.0 or K2[0] != 1.0) and mpi_rank == 0)
+			std::cerr << "\nERROR: DELO_linear requires the scaled propagation matrix (unit diagonal)!\n";
+
+		const double t	   = -dt; // input dtau is negative
+		const double ex	   = std::exp(-t);
+		const double psi_m = PSI_M_LIN(ex, t); // = G
+		const double psi_o = PSI_O_LIN(ex, t); // = F - G
+
+		double a  = -psi_m * K1[ETA_Q];
+		double b_ = -psi_m * K1[ETA_U];
+		double c  = -psi_m * K1[ETA_V];
+		double s  = -psi_m * K1[RHO_V];
+		double q  = -psi_m * K1[RHO_U];
+		double r  = -psi_m * K1[RHO_Q];
+
+		double vec[4];
+		vec[0] = ex * I_in[0] + a * I_in[1] + b_ * I_in[2] + c * I_in[3] + psi_m * S1[0] + psi_o * S2[0];
+		vec[1] = ex * I_in[1] + a * I_in[0] + s * I_in[2] - q * I_in[3] + psi_m * S1[1] + psi_o * S2[1];
+		vec[2] = ex * I_in[2] + b_ * I_in[0] - s * I_in[1] + r * I_in[3] + psi_m * S1[2] + psi_o * S2[2];
+		vec[3] = ex * I_in[3] + c * I_in[0] + q * I_in[1] - r * I_in[2] + psi_m * S1[3] + psi_o * S2[3];
+
+		a  = psi_o * K2[ETA_Q];
+		b_ = psi_o * K2[ETA_U];
+		c  = psi_o * K2[ETA_V];
+		s  = psi_o * K2[RHO_V];
+		q  = psi_o * K2[RHO_U];
+		r  = psi_o * K2[RHO_Q];
+
+		const double a2 = a * a, b2 = b_ * b_, c2 = c * c, q2 = q * q, r2 = r * r, s2 = s * s;
+		const double ab = a * b_, ac = a * c, bc = b_ * c, qr = q * r, qs = q * s, rs = r * s;
+		const double ar = a * r, bq = b_ * q, cs = c * s;
+		const double dot = ar + bq + cs;
+
+		double id = 1.0 - a2 - b2 - c2 + q2 + r2 + s2 - dot * dot;
+
+		if (0.0 == id) std::cerr << "ERROR in delo_linear_step: singular DELO_linear system!" << std::endl;
+
+		id = 1.0 / id;
+
+		const double sp = s + qr, sm = s - qr;
+		const double qp = q + rs, qm = q - rs;
+		const double rp = r + qs, rm = r - qs;
+		const double f1 = qr + ab, g1 = c * (ar + bq), h1 = s * (1.0 - c2);
+		const double f2 = rs + ac, g2 = b_ * (cs + ar), h2 = q * (1.0 - b2);
+		const double f3 = qs + bc, g3 = a * (cs + bq), h3 = r * (1.0 - a2);
+
+		double kappa[4][4];
+
+		kappa[0][0] = 1.0 + q2 + r2 + s2;
+		kappa[0][1] = -a * (1.0 + r2) - b_ * sp + c * qm;
+		kappa[0][2] = -b_ * (1.0 + q2) + a * sm - c * rp;
+		kappa[0][3] = -c * (1.0 + s2) - a * qp + b_ * rm;
+
+		kappa[1][0] = -a * (1.0 + r2) + b_ * sm - c * qp;
+		kappa[1][1] = 1.0 + r2 - c2 - b2;
+		kappa[1][2] = f1 + g1 - h1;
+		kappa[1][3] = f2 - g2 + h2;
+
+		kappa[2][0] = -b_ * (1.0 + q2) - a * sp + c * rm;
+		kappa[2][1] = f1 - g1 + h1;
+		kappa[2][2] = 1.0 + q2 - c2 - a2;
+		kappa[2][3] = f3 + g3 - h3;
+
+		kappa[3][0] = -c * (1.0 + s2) + a * qm - b_ * rp;
+		kappa[3][1] = f2 + g2 - h2;
+		kappa[3][2] = f3 - g3 + h3;
+		kappa[3][3] = 1.0 + s2 - b2 - a2;
+
+		for (int jj = 0; jj < 4; ++jj)
+			for (int ii = 0; ii < 4; ++ii) kappa[jj][ii] *= id;
+
+		I_out[0] = kappa[0][0] * vec[0] + kappa[0][1] * vec[1] + kappa[0][2] * vec[2] + kappa[0][3] * vec[3];
+		I_out[1] = kappa[1][0] * vec[0] + kappa[1][1] * vec[1] + kappa[1][2] * vec[2] + kappa[1][3] * vec[3];
+		I_out[2] = kappa[2][0] * vec[0] + kappa[2][1] * vec[1] + kappa[2][2] * vec[2] + kappa[2][3] * vec[3];
+		I_out[3] = kappa[3][0] * vec[0] + kappa[3][1] * vec[1] + kappa[3][2] * vec[2] + kappa[3][3] * vec[3];
+	}
+
+	inline void
+	besser_step(const double dt_1, const double dt_2,		 //
+				input_vec &K1, input_vec &K2,				 //
+				input_vec &S1, input_vec &S2, input_vec &S3, //
+				input_vec &I_in, output_vec &I_out,			 //
+				bool debug_mode, int mpi_rank)
+	{
+		static const double VACUUM_OPACITY = 1e-30;
+		static const int	ETA_I = 0, ETA_Q = 1, ETA_U = 2, ETA_V = 3, RHO_Q = 11, RHO_U = 13, RHO_V = 6;
+		static const int	STOKES_I = 0, STOKES_Q = 1, STOKES_U = 2, STOKES_V = 3;
+
+		const double tm = -dt_1 + VACUUM_OPACITY, tp = -dt_2 + VACUUM_OPACITY;
+		const double ex	  = exp(-tm);
+		const double om_m = OMEGA_M(ex, tm), om_o = OMEGA_O(ex, tm), om_c = OMEGA_C(ex, tm);
+		const double psi_m_lin = PSI_M_LIN(ex, tm), psi_o_lin = PSI_O_LIN(ex, tm);
+
+		// ---- upwind (M) coefficients ----
+		// NOTE: single reciprocal instead of 6 divisions -> NOT bit-identical to
+		//       the original "(-psi_m * K1[i]) / etaI" ordering. See remarks.
+		const double inv_eta1 = -psi_m_lin / (K1[ETA_I] + VACUUM_OPACITY);
+		const double a1		  = inv_eta1 * K1[ETA_Q];
+		const double b1		  = inv_eta1 * K1[ETA_U];
+		const double c1		  = inv_eta1 * K1[ETA_V];
+		const double s1		  = inv_eta1 * K1[RHO_V];
+		const double q1		  = inv_eta1 * K1[RHO_U];
+		const double r1		  = inv_eta1 * K1[RHO_Q];
+
+		// ---- Bezier control point for the source term ----
+		double c0[4];
+		c0[0] = mat_QBezierC0(tm, tp, S1[STOKES_I], S2[STOKES_I], S3[STOKES_I]);
+		c0[1] = mat_QBezierC0(tm, tp, S1[STOKES_Q], S2[STOKES_Q], S3[STOKES_Q]);
+		c0[2] = mat_QBezierC0(tm, tp, S1[STOKES_U], S2[STOKES_U], S3[STOKES_U]);
+		c0[3] = mat_QBezierC0(tm, tp, S1[STOKES_V], S2[STOKES_V], S3[STOKES_V]);
+
+		// ---- RHS vector ----
+		double vec[4];
+		vec[0] = ex * I_in[STOKES_I] + a1 * I_in[STOKES_Q] + b1 * I_in[STOKES_U] + c1 * I_in[STOKES_V];
+		vec[1] = ex * I_in[STOKES_Q] + a1 * I_in[STOKES_I] + s1 * I_in[STOKES_U] - q1 * I_in[STOKES_V];
+		vec[2] = ex * I_in[STOKES_U] + b1 * I_in[STOKES_I] - s1 * I_in[STOKES_Q] + r1 * I_in[STOKES_V];
+		vec[3] = ex * I_in[STOKES_V] + c1 * I_in[STOKES_I] + q1 * I_in[STOKES_Q] - r1 * I_in[STOKES_U];
+
+		vec[0] += om_m * S1[STOKES_I] + om_o * S2[STOKES_I] + om_c * c0[0];
+		vec[1] += om_m * S1[STOKES_Q] + om_o * S2[STOKES_Q] + om_c * c0[1];
+		vec[2] += om_m * S1[STOKES_U] + om_o * S2[STOKES_U] + om_c * c0[2];
+		vec[3] += om_m * S1[STOKES_V] + om_o * S2[STOKES_V] + om_c * c0[3];
+
+		// ---- downwind (O) coefficients ----
+		const double id2 = psi_o_lin / (K2[ETA_I] + VACUUM_OPACITY);
+		const double a	 = id2 * K2[ETA_Q];
+		const double b	 = id2 * K2[ETA_U];
+		const double c	 = id2 * K2[ETA_V];
+		const double s	 = id2 * K2[RHO_V];
+		const double q	 = id2 * K2[RHO_U];
+		const double r	 = id2 * K2[RHO_Q];
+
+		// ---- squares ----
+		const double aa = a * a, bb = b * b, cc = c * c;
+		const double qq = q * q, rr = r * r, ss = s * s;
+		// ---- pairwise products ----
+		const double ab = a * b, ac = a * c, bc = b * c;
+		const double ar = a * r, aq = a * q, as = a * s;
+		const double br = b * r, bq = b * q, bs = b * s;
+		const double cr = c * r, cq = c * q, cs = c * s;
+		const double qr = q * r, qs = q * s, rs = r * s;
+		// ---- triple products (associativity matches the original a*b*c order) ----
+		const double crs = cr * s, arr = ar * r, bqr = bq * r;
+		const double cqs = cq * s, aqr = aq * r, bqq = bq * q;
+		const double css = cs * s, ars = ar * s, bqs = bq * s;
+		const double ccs = cc * s, acr = ac * r, bcq = bc * q;
+		const double bcs = bc * s, abr = ab * r, bbq = bb * q;
+		const double acs = ac * s, aar = aa * r, abq = ab * q;
+
+		// ---- determinant (grouped: reordered summation, NOT bit-identical) ----
+		double det =
+			1.0 - aa - bb - cc + qq + rr + ss - cc * ss - aa * rr - bb * qq - 2.0 * (ac * rs + bc * qs + ab * qr);
+
+		if (0.0 == det) std::cerr << "ERROR in one_step!" << std::endl;
+		const double idet = 1.0 / det;
+
+		// ---- inverse matrix (each entry term-for-term as the original) ----
+		double kappa[4][4];
+		kappa[0][0] = ss + rr + qq + 1.0;
+		kappa[0][1] = -crs - bs - arr - bqr + cq - a;
+		kappa[0][2] = -cqs + as - aqr - cr - bqq - b;
+		kappa[0][3] = -css - ars - bqs + br - aq - c;
+		kappa[1][0] = -crs + bs - arr - bqr - cq - a;
+		kappa[1][1] = rr - cc - bb + 1.0;
+		kappa[1][2] = ccs - s + qr + acr + bcq + ab;
+		kappa[1][3] = rs - bcs - abr - bbq + q + ac;
+		kappa[2][0] = -cqs - as - aqr + cr - bqq - b;
+		kappa[2][1] = -ccs + s + qr - acr - bcq + ab;
+		kappa[2][2] = qq - cc - aa + 1.0;
+		kappa[2][3] = qs + acs + aar - r + abq + bc;
+		kappa[3][0] = -css - ars - bqs - br + aq - c;
+		kappa[3][1] = rs + bcs + abr + bbq - q + ac;
+		kappa[3][2] = qs - acs - aar + r - abq + bc;
+		kappa[3][3] = ss - bb - aa + 1.0;
+
+		for (int j = 0; j < 4; j++)
+			for (int i = 0; i < 4; i++) kappa[j][i] *= idet;
+
+		I_out[STOKES_I] = kappa[0][0] * vec[0] + kappa[0][1] * vec[1] + kappa[0][2] * vec[2] + kappa[0][3] * vec[3];
+		I_out[STOKES_Q] = kappa[1][0] * vec[0] + kappa[1][1] * vec[1] + kappa[1][2] * vec[2] + kappa[1][3] * vec[3];
+		I_out[STOKES_U] = kappa[2][0] * vec[0] + kappa[2][1] * vec[1] + kappa[2][2] * vec[2] + kappa[2][3] * vec[3];
+		I_out[STOKES_V] = kappa[3][0] * vec[0] + kappa[3][1] * vec[1] + kappa[3][2] * vec[2] + kappa[3][3] * vec[3];
+	}
+
+} // namespace
+
 void Formal_solver::one_step(const double dt, input_vec &K1, input_vec &K2, input_vec &S1, input_vec &S2, input_vec &I_in, output_vec &I_out){
 
 	// sanity checks
@@ -178,39 +411,8 @@ void Formal_solver::one_step(const double dt, input_vec &K1, input_vec &K2, inpu
 		I_out = solve_4_by_4_system(A, b);	
 	}
 	else // DELO_linear is used if not specified
-	{    			
-		if (debug_mode_ and (K1.size() != 16 or S1.size() != 4) and mpi_rank_ == 0) std::cerr << "\nERROR: wrong input size for DELO_linear!\n";
-		
-		// solve I' = - KI + S
-		const long double dt_aux = -dt;         
-        const long double E = std::exp(-dt_aux);      
-        const long double F = 1.0 - E;
-        const long double G = (1.0 - (1.0 + dt_aux) * E) / dt_aux; 
-        
-        std::vector<double> K_times_I_in(4, 0.0);
-        int index_ij;
-				
-        bool Id;
-
-     	for (int i = 0; i < 4; ++i) 
-		{			
-			for (int j = 0; j < 4; ++j)
-			{
-				index_ij = 4 * i + j;
-
-				Id = (i == j);
-			
-				A[index_ij] = Id + (F - G) * (K2[index_ij] - Id);
-
-				// K * I_in
-				K_times_I_in[i] += (K1[index_ij] - Id) * I_in[j]; 								
-			}			
-
-			b[i] = E * I_in[i] - G * K_times_I_in[i] + G * S1[i] + (F - G) * S2[i];
-		}
-
-		I_out = solve_4_by_4_system(A, b);	
-		// I_out = solve_4_by_4_system_optimized(A,b);
+	{    	
+		delo_linear_step(dt, K1, K2, S1, S2, I_in, I_out, debug_mode_, mpi_rank_);
 	}	
 	
 	// // check valore negativo
