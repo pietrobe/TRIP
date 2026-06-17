@@ -1927,7 +1927,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     								}			
 
                                     one_step_timer += MPI_Wtime() - start_one;
-                                    one_step_count += 1.0;
+                                    one_step_count += (n_nu_end - n_nu_start) * intersection_data_long_ray.size();
     							}
     						}
     					}
@@ -1950,7 +1950,8 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
         double comm_timer_max1, comm_timer_max2, one_step_timer_max, total_timer_max;
         double one_step_timer_min, one_step_timer_sum;
         double one_step_count_min, one_step_count_mean, one_step_count_max;
-        
+ 
+// #define SUPER_VERBOSE_STATS
 #ifdef SUPER_VERBOSE_STATS        
         int tile_number_min, tile_number_mean, tile_number_max;
         int k_size = k_end - k_start; 
