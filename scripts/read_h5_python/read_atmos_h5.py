@@ -14,9 +14,11 @@ from __future__ import annotations
 import h5py
 import numpy as np
 import os
+import re
 from dataclasses import dataclass
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
+
 
 # Terminal formatting constants
 BOLD = "\033[1m"
@@ -36,9 +38,9 @@ CMAP_BLACKRED = LinearSegmentedColormap.from_list("blackred", ["black", "red"])
 
 
 # Physical constants (CGS/Gauss units)
-K_B = 1.380649e-16  # Boltzmann constant [erg/K]
+K_B = 1.380649e-16              # Boltzmann constant [erg/K]
 ATOMIC_MASS_UNIT = 1.660539e-24  # atomic mass unit [g]
-PLANCK_H = 6.62607015e-27  # Planck constant [erg·s]
+PLANCK_H = 6.62607015e-27       # Planck constant [erg·s]
 SPEED_OF_LIGHT = 2.99792458e10  # speed of light [cm/s]
 
 
@@ -46,20 +48,19 @@ SPEED_OF_LIGHT = 2.99792458e10  # speed of light [cm/s]
 # Data classes
 # ---------------------------------------------------------------------------
 
-
 @dataclass
 class Geometry:
     N_x: int
     N_y: int
     N_z: int
-    delta: float  # horizontal grid spacing [cm or m, as stored]
-    height: np.ndarray  # 1-D array of height values, shape (N_z,)
+    delta: float          # horizontal grid spacing [cm or m, as stored]
+    height: np.ndarray    # 1-D array of height values, shape (N_z,)
 
 
 @dataclass
 class FrequencyGrid:
     N_frequencies: int
-    frequency: np.ndarray  # 1-D array of frequencies, shape (N_frequencies,)
+    frequency: np.ndarray   # 1-D array of frequencies, shape (N_frequencies,)
 
 
 @dataclass
@@ -71,8 +72,8 @@ class Atom:
     g_lower: float
     g_upper: float
     Aul: float
-    jl2: int  # 2*J for lower level
-    ju2: int  # 2*J for upper level
+    jl2: int              # 2*J for lower level
+    ju2: int              # 2*J for upper level
     a_coef_D2: float
     b_coef_D2: float
 
@@ -80,7 +81,6 @@ class Atom:
 @dataclass
 class AtmosPoint:
     """All atmospheric quantities at a single grid point (i, j, k)."""
-
     index_i: int
     index_j: int
     index_k: int
@@ -116,27 +116,27 @@ class AtmosPoint:
 # ---------------------------------------------------------------------------
 
 FIELD_MAP: dict[str, str] = {
-    "index_i": "index_i",
-    "index_j": "index_j",
-    "index_k": "index_k",
-    "temperature": "temperature",
-    "vmicro": "vmicro",
-    "damping": "damping",
-    "pop_lower_level": "pop_lower_level",
-    "pop_upper_level": "pop_upper_level",
-    "Cul": "Cul",
-    "Qel": "Qel",
-    "magnetic_field_x": "magnetic_field_x",
-    "magnetic_field_y": "magnetic_field_y",
-    "magnetic_field_z": "magnetic_field_z",
-    "bulk_velocity_x": "bulk_velocity_x",
-    "bulk_velocity_y": "bulk_velocity_y",
-    "bulk_velocity_z": "bulk_velocity_z",
-    "c_scat_opacity_sigma_c": "c_scat_opacity_sigma_c",
+    "index_i"                     : "index_i",
+    "index_j"                     : "index_j",
+    "index_k"                     : "index_k",
+    "temperature"                 : "temperature",
+    "vmicro"                      : "vmicro",
+    "damping"                     : "damping",
+    "pop_lower_level"             : "pop_lower_level",
+    "pop_upper_level"             : "pop_upper_level",
+    "Cul"                         : "Cul",
+    "Qel"                         : "Qel",
+    "magnetic_field_x"            : "magnetic_field_x",
+    "magnetic_field_y"            : "magnetic_field_y",
+    "magnetic_field_z"            : "magnetic_field_z",
+    "bulk_velocity_x"             : "bulk_velocity_x",
+    "bulk_velocity_y"             : "bulk_velocity_y",
+    "bulk_velocity_z"             : "bulk_velocity_z",
+    "c_scat_opacity_sigma_c"      : "c_scat_opacity_sigma_c",
     "c_therm_opacity_k_c": "c_therm_opacity_k_c",
-    "c_therm_emissivity_epsilon_c": "c_therm_emissivity_epsilon_c",
-    "nH": "nH",
-    "D2": "D2",
+    "c_therm_emissivity_epsilon_c"           : "c_therm_emissivity_epsilon_c",
+    "nH"                          : "nH",
+    "D2"                          : "D2",
 }
 
 # HDF5-side names, used to validate read_field / read_field_slice.
@@ -169,12 +169,10 @@ def inspect_structure(path: str) -> None:
     Print the top-level structure of the HDF5 file.
     """
     with h5py.File(path, "r") as f:
-
         def print_tree(name, obj):
             print(f"  {name}")
             if hasattr(obj, "shape"):
                 print(f"    shape: {obj.shape}, dtype: {obj.dtype}")
-
         print("File structure:")
         f.visititems(print_tree)
 
@@ -182,7 +180,6 @@ def inspect_structure(path: str) -> None:
 # ---------------------------------------------------------------------------
 # Helper: scalar extraction from length-1 HDF5 datasets
 # ---------------------------------------------------------------------------
-
 
 def _scalar(ds) -> float | int:
     """Return a plain Python scalar from an HDF5 dataset."""
@@ -197,7 +194,6 @@ def _scalar(ds) -> float | int:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
-
 
 def _get_group(f, *names):
     for name in names:
@@ -259,11 +255,11 @@ def read_metadata(path: str) -> tuple[Geometry, FrequencyGrid, Atom]:
             delta = _scalar(geo["cell_size"])
 
         geometry = Geometry(
-            N_x=N_x,
-            N_y=N_y,
-            N_z=N_z,
-            delta=delta,
-            height=height,
+            N_x    = N_x,
+            N_y    = N_y,
+            N_z    = N_z,
+            delta  = delta,
+            height = height,
         )
 
         try:
@@ -273,9 +269,7 @@ def read_metadata(path: str) -> tuple[Geometry, FrequencyGrid, Atom]:
             elif "freq" in fg:
                 frequency = fg["freq"][:]
             else:
-                print(
-                    f"{YELLOW}Warning: 'frequency' dataset not found in frequency_grid group. Skipping frequency data.{RESET}"
-                )
+                print(f"{YELLOW}Warning: 'frequency' dataset not found in frequency_grid group. Skipping frequency data.{RESET}")
                 frequency = np.array([])
 
             N_freq = len(frequency)
@@ -283,45 +277,41 @@ def read_metadata(path: str) -> tuple[Geometry, FrequencyGrid, Atom]:
                 N_freq = _scalar(fg["N_frequencies"])
 
             freq_grid = FrequencyGrid(
-                N_frequencies=N_freq,
-                frequency=frequency,
+                N_frequencies = N_freq,
+                frequency     = frequency,
             )
         except KeyError:
-            print(
-                f"{YELLOW}Warning: frequency_grid group not found. Skipping frequency data.{RESET}"
-            )
-            freq_grid = FrequencyGrid(N_frequencies=0, frequency=np.array([]))
+            print(f"{YELLOW}Warning: frequency_grid group not found. Skipping frequency data.{RESET}")
+            freq_grid = FrequencyGrid(N_frequencies = 0, frequency = np.array([]))
 
         at = _get_group(f, "atom", "Atom", "atom_data")
         if at.shape == () or at.shape == (1,):
             if at.shape == (1,):
                 at = at[0]
             atom = Atom(
-                atomic_number=int(at["atomic_number"]),
-                atomic_mass=float(at["atomic_mass"]),
-                E_lower=float(at["E_lower"]),
-                E_upper=float(at["E_upper"]),
-                g_lower=float(at["g_lower"]),
-                g_upper=float(at["g_upper"]),
-                jl2=int(at["jl2"]),
-                ju2=int(at["ju2"]),
-                Aul=float(at["Aul"]),
-                a_coef_D2=float(at["a_coef_D2"]),
-                b_coef_D2=float(at["b_coef_D2"]),
+                atomic_number = int(at["atomic_number"]),
+                atomic_mass   = float(at["atomic_mass"]),
+                E_lower       = float(at["E_lower"]),
+                E_upper       = float(at["E_upper"]),
+                g_lower       = float(at["g_lower"]),
+                g_upper       = float(at["g_upper"]),
+                jl2           = int(at["jl2"]),
+                ju2           = int(at["ju2"]),
+                Aul           = float(at["Aul"]),
+                a_coef_D2     = float(at["a_coef_D2"]),
+                b_coef_D2     = float(at["b_coef_D2"]),
             )
         else:
             atom = Atom(
-                atomic_number=(
-                    _scalar(at["atomic_number"]) if "atomic_number" in at else 0
-                ),
-                atomic_mass=_scalar(at["atomic_mass"]) if "atomic_mass" in at else 0.0,
-                E_lower=_scalar(at["E_lower"]) if "E_lower" in at else 0.0,
-                E_upper=_scalar(at["E_upper"]) if "E_upper" in at else 0.0,
-                g_lower=_scalar(at["g_lower"]) if "g_lower" in at else 1.0,
-                g_upper=_scalar(at["g_upper"]) if "g_upper" in at else 1.0,
-                Aul=_scalar(at["Aul"]) if "Aul" in at else 0.0,
-                jl2=_scalar(at["jl2"]) if "jl2" in at else 0,
-                ju2=_scalar(at["ju2"]) if "ju2" in at else 0,
+                atomic_number = _scalar(at["atomic_number"]) if "atomic_number" in at else 0,
+                atomic_mass   = _scalar(at["atomic_mass"]) if "atomic_mass" in at else 0.0,
+                E_lower       = _scalar(at["E_lower"]) if "E_lower" in at else 0.0,
+                E_upper       = _scalar(at["E_upper"]) if "E_upper" in at else 0.0,
+                g_lower       = _scalar(at["g_lower"]) if "g_lower" in at else 1.0,
+                g_upper       = _scalar(at["g_upper"]) if "g_upper" in at else 1.0,
+                Aul           = _scalar(at["Aul"]) if "Aul" in at else 0.0,
+                jl2           = _scalar(at["jl2"]) if "jl2" in at else 0,
+                ju2           = _scalar(at["ju2"]) if "ju2" in at else 0,
             )
 
     return geometry, freq_grid, atom
@@ -347,39 +337,39 @@ def read_point(path: str, i: int, j: int, k: int) -> AtmosPoint:
     AtmosPoint
     """
     with h5py.File(path, "r") as f:
-        ds = f["atmos"]
+        ds   = f["atmos"]
         Nx, Ny, Nz = ds.shape
         if not (0 <= i < Nx and 0 <= j < Ny and 0 <= k < Nz):
             raise IndexError(
                 f"Index ({i}, {j}, {k}) out of bounds for dataset "
                 f"with shape ({Nx}, {Ny}, {Nz})."
             )
-        rec = ds[i, j, k]  # numpy void (compound record)
+        rec = ds[i, j, k]   # numpy void (compound record)
 
     # Use FIELD_MAP so HDF5 name changes only need updating in one place.
     fm = FIELD_MAP
     return AtmosPoint(
-        index_i=int(rec[fm["index_i"]]),
-        index_j=int(rec[fm["index_j"]]),
-        index_k=int(rec[fm["index_k"]]),
-        temperature=float(rec[fm["temperature"]]),
-        vmicro=float(rec[fm["vmicro"]]),
-        damping=float(rec[fm["damping"]]),
-        pop_lower_level=float(rec[fm["pop_lower_level"]]),
-        pop_upper_level=float(rec[fm["pop_upper_level"]]),
-        Cul=float(rec[fm["Cul"]]),
-        Qel=float(rec[fm["Qel"]]),
-        magnetic_field_x=float(rec[fm["magnetic_field_x"]]),
-        magnetic_field_y=float(rec[fm["magnetic_field_y"]]),
-        magnetic_field_z=float(rec[fm["magnetic_field_z"]]),
-        bulk_velocity_x=float(rec[fm["bulk_velocity_x"]]),
-        bulk_velocity_y=float(rec[fm["bulk_velocity_y"]]),
-        bulk_velocity_z=float(rec[fm["bulk_velocity_z"]]),
-        c_scat_opacity_sigma_c=float(rec[fm["c_scat_opacity_sigma_c"]]),
-        c_therm_opacity_k_c=float(rec[fm["c_therm_opacity_k_c"]]),
-        c_therm_emissivity_epsilon_c=float(rec[fm["c_therm_emissivity_epsilon_c"]]),
-        nH=float(rec[fm["nH"]]),
-        D2=float(rec[fm["D2"]]),
+        index_i                     = int(rec[fm["index_i"]]),
+        index_j                     = int(rec[fm["index_j"]]),
+        index_k                     = int(rec[fm["index_k"]]),
+        temperature                 = float(rec[fm["temperature"]]),
+        vmicro                      = float(rec[fm["vmicro"]]),
+        damping                     = float(rec[fm["damping"]]),
+        pop_lower_level             = float(rec[fm["pop_lower_level"]]),
+        pop_upper_level             = float(rec[fm["pop_upper_level"]]),
+        Cul                         = float(rec[fm["Cul"]]),
+        Qel                         = float(rec[fm["Qel"]]),
+        magnetic_field_x            = float(rec[fm["magnetic_field_x"]]),
+        magnetic_field_y            = float(rec[fm["magnetic_field_y"]]),
+        magnetic_field_z            = float(rec[fm["magnetic_field_z"]]),
+        bulk_velocity_x             = float(rec[fm["bulk_velocity_x"]]),
+        bulk_velocity_y             = float(rec[fm["bulk_velocity_y"]]),
+        bulk_velocity_z             = float(rec[fm["bulk_velocity_z"]]),
+        c_scat_opacity_sigma_c      = float(rec[fm["c_scat_opacity_sigma_c"]]),
+        c_therm_opacity_k_c= float(rec[fm["c_therm_opacity_k_c"]]),
+        c_therm_emissivity_epsilon_c           = float(rec[fm["c_therm_emissivity_epsilon_c"]]),
+        nH                          = float(rec[fm["nH"]]),
+        D2                          = float(rec[fm["D2"]]),
     )
 
 
@@ -438,9 +428,8 @@ def read_field_slice(
             f"Valid fields are: {ATMOS_FIELDS}"
         )
 
-    fixed = {
-        name: val for name, val in (("i", i), ("j", j), ("k", k)) if val is not None
-    }
+    fixed = {name: val for name, val in (("i", i), ("j", j), ("k", k))
+             if val is not None}
     if len(fixed) != 1:
         raise ValueError(
             "Exactly one of 'i', 'j', or 'k' must be provided, "
@@ -454,7 +443,7 @@ def read_field_slice(
         Nx, Ny, Nz = ds.shape
 
         bounds = {"i": Nx, "j": Ny, "k": Nz}
-        limit = bounds[axis_name]
+        limit  = bounds[axis_name]
         if not (0 <= idx < limit):
             raise IndexError(
                 f"Index {axis_name}={idx} is out of bounds "
@@ -465,11 +454,11 @@ def read_field_slice(
         # requested slab is read from disk.
         field_ds = ds.fields(field_name)
         if axis_name == "i":
-            arr = field_ds[idx, :, :]  # shape (Ny, Nz)
+            arr = field_ds[idx, :, :]   # shape (Ny, Nz)
         elif axis_name == "j":
-            arr = field_ds[:, idx, :]  # shape (Nx, Nz)
-        else:  # k
-            arr = field_ds[:, :, idx]  # shape (Nx, Ny)
+            arr = field_ds[:, idx, :]   # shape (Nx, Nz)
+        else:                           # k
+            arr = field_ds[:, :, idx]   # shape (Nx, Ny)
 
     return arr
 
@@ -508,16 +497,10 @@ def read_field(path: str, field_name: str) -> np.ndarray:
         # which avoids loading the entire compound dataset into memory.
         arr = ds.fields(field_name)[...]
 
-    return arr  # shape (128, 128, 128), dtype matches the HDF5 field type
+    return arr   # shape (128, 128, 128), dtype matches the HDF5 field type
 
 
-def rescale_atmos(
-    input_path: str,
-    output_path: str,
-    step_k: int,
-    force_even_k: bool = False,
-    rescale_h_zero: bool = False,
-) -> None:
+def rescale_atmos(input_path: str, output_path: str, step_k: int, force_even_k: bool = False, rescale_h_zero: bool = False) -> None:
     """
     Rescale an atmosphere HDF5 file by picking one in every N planes along the height (k) axis.
 
@@ -549,26 +532,29 @@ def rescale_atmos(
         geometry, freq_grid, atom = read_metadata(input_path)
         N_x = geometry.N_x
         N_y = geometry.N_y
+        if N_x != N_y:
+            raise ValueError(
+                f"N_x ({N_x}) != N_y ({N_y}): the output format stores a "
+                f"single N_ij value, requiring a square horizontal grid."
+            )
         N_z_orig = geometry.N_z
         height_orig = geometry.height
 
         N_z_new = (N_z_orig + step_k - 1) // step_k
-
+        
         if force_even_k:
             if N_z_new % 2 != 0:
                 N_z_new -= 1
-            k_indices = np.arange(0, N_z_orig, step_k)[1 : N_z_new + 1]
+            k_indices = np.arange(0, N_z_orig, step_k)[1:N_z_new+1]
             new_height = height_orig[k_indices]
         else:
             k_indices = np.arange(0, N_z_orig, step_k)[:N_z_new]
             new_height = height_orig[k_indices]
-
+        
         if rescale_h_zero:
             new_height = new_height - new_height.min()
-
-        print(
-            f"Original N_z: {N_z_orig}, New N_z: {N_z_new}, step_k: {step_k}, force_even_k: {force_even_k}, rescale_h_zero: {rescale_h_zero}"
-        )
+            
+        print(f"Original N_z: {N_z_orig}, New N_z: {N_z_new}, step_k: {step_k}, force_even_k: {force_even_k}, rescale_h_zero: {rescale_h_zero}")
 
         with h5py.File(output_path, "w") as f_out:
             f_out.create_group("geometry")
@@ -578,27 +564,23 @@ def rescale_atmos(
             f_out["geometry/height"] = new_height.astype(np.float32)
 
             f_out.create_group("frequency_grid")
-            f_out["frequency_grid/N_frequencies"] = np.array(
-                [freq_grid.N_frequencies], dtype=np.int32
-            )
+            f_out["frequency_grid/N_frequencies"] = np.array([freq_grid.N_frequencies], dtype=np.int32)
             if freq_grid.N_frequencies > 0:
                 f_out["frequency_grid/frequency"] = freq_grid.frequency
 
-            atom_dtype = np.dtype(
-                [
-                    ("atomic_number", "<i4"),
-                    ("atomic_mass", "<f8"),
-                    ("E_lower", "<f8"),
-                    ("E_upper", "<f8"),
-                    ("g_lower", "<f8"),
-                    ("g_upper", "<f8"),
-                    ("jl2", "<i4"),
-                    ("ju2", "<i4"),
-                    ("Aul", "<f8"),
-                    ("a_coef_D2", "<f8"),
-                    ("b_coef_D2", "<f8"),
-                ]
-            )
+            atom_dtype = np.dtype([
+                ("atomic_number", "<i4"),
+                ("atomic_mass", "<f8"),
+                ("E_lower", "<f8"),
+                ("E_upper", "<f8"),
+                ("g_lower", "<f8"),
+                ("g_upper", "<f8"),
+                ("jl2", "<i4"),
+                ("ju2", "<i4"),
+                ("Aul", "<f8"),
+                ("a_coef_D2", "<f8"),
+                ("b_coef_D2", "<f8"),
+            ])
             f_out.create_dataset("atom_data", shape=(1,), dtype=atom_dtype)
             at = f_out["atom_data"]
             at[0] = (
@@ -618,9 +600,7 @@ def rescale_atmos(
             if "continuum" in f_in:
                 f_out.create_group("continuum")
             else:
-                print(
-                    f"{YELLOW}Warning: continuum dataset not found in input file. Skipping continuum data.{RESET}"
-                )
+                print(f"{YELLOW}Warning: continuum dataset not found in input file. Skipping continuum data.{RESET}")
 
             atmos_dtype = f_in["atmos"].dtype
             atmos_ds_out = f_out.create_dataset(
@@ -639,9 +619,7 @@ def rescale_atmos(
                         if fname in ("index_i", "index_j"):
                             slab_new[fname] = slab_orig[fname]
                         elif fname == "index_k":
-                            slab_new[fname] = np.arange(
-                                N_z_new, dtype=slab_orig[fname].dtype
-                            )
+                            slab_new[fname] = np.arange(N_z_new, dtype=slab_orig[fname].dtype)
                         else:
                             slab_new[fname] = slab_orig[fname]
                     atmos_ds_out[i, j, :] = slab_new
@@ -657,15 +635,9 @@ def rescale_atmos(
                 )
                 for i in range(N_x):
                     for j in range(N_y):
-                        cont_ds_out[i, j, :] = f_in["continuum/continuum_norm"][
-                            i, j, k_indices
-                        ]
+                        cont_ds_out[i, j, :] = f_in["continuum/continuum_norm"][i, j, k_indices]
 
-            for name in (
-                "c_scat_opacity_sigma_c",
-                "c_therm_opacity_k_c",
-                "c_therm_emissivity_epsilon_c",
-            ):
+            for name in ("c_scat_opacity_sigma_c", "c_therm_opacity_k_c", "c_therm_emissivity_epsilon_c"):
                 if f"continuum/{name}" in f_in:
                     ds_in = f_in[f"continuum/{name}"]
                     shape_in = ds_in.shape
@@ -718,9 +690,7 @@ def analyze_height_grid(path: str) -> None:
     print(f"    max Δh: {GREEN}{dh_max:.4e} cm{RESET}")
 
 
-def check_damping_stats(
-    path: str, plot: bool = False, axis: str = "xy", idx: int = 0
-) -> np.ndarray:
+def check_damping_stats(path: str, plot: bool = False, axis: str = "xy", idx: int = 0) -> np.ndarray:
     """
     Compute global statistics of the damping factor comparison.
 
@@ -810,13 +780,9 @@ def check_damping_stats(
     print(f"  {BLUE}Points analyzed:{RESET} {N_x} × {N_y} × {N_z} = {N_x * N_y * N_z}")
     print(f"  {BLUE}Valid points:{RESET} {valid_mask.sum()}")
     print(f"  {BLUE}Relative error:{RESET}")
-    print(
-        f"    min: {GREEN}{min_err:.4f}{RESET} at ({min_idx[0]}, {min_idx[1]}, {min_idx[2]})"
-    )
+    print(f"    min: {GREEN}{min_err:.4f}{RESET} at ({min_idx[0]}, {min_idx[1]}, {min_idx[2]})")
     print(f"      theoretical: {a_theo_at_min:.4e}, file: {damping_at_min:.4e}")
-    print(
-        f"    max: {RED}{max_err:.4f}{RESET} at ({max_idx[0]}, {max_idx[1]}, {max_idx[2]})"
-    )
+    print(f"    max: {RED}{max_err:.4f}{RESET} at ({max_idx[0]}, {max_idx[1]}, {max_idx[2]})")
     print(f"      theoretical: {a_theo_at_max:.4e}, file: {damping_at_max:.4e}")
     print(f"    mean: {CYAN}{mean_err:.4f}{RESET}")
     print(f"    std: {YELLOW}{std_err:.4f}{RESET}")
@@ -833,7 +799,7 @@ def check_damping_stats(
     print(f"{'─' * 68}")
     for i in range(len(hist_counts)):
         lo = bin_edges[i]
-        hi = bin_edges[i + 1]
+        hi = bin_edges[i+1]
         bar_len = int(hist_counts[i] / max_count * 25)
         bar = "█" * bar_len
         range_str = f"[{lo:>8.2f}, {hi:>8.2f})"
@@ -847,9 +813,7 @@ def check_damping_stats(
     return rel_err
 
 
-def plot_damping_error_slice(
-    path: str, rel_err: np.ndarray, axis: str, idx: int, geometry: Geometry
-) -> None:
+def plot_damping_error_slice(path: str, rel_err: np.ndarray, axis: str, idx: int, geometry: Geometry) -> None:
     """
     Plot a slice of the damping relative error.
 
@@ -883,14 +847,8 @@ def plot_damping_error_slice(
         y_vals = geometry.height / 1e5
 
     fig, ax = plt.subplots()
-    im = ax.imshow(
-        slice_data.T,
-        origin="lower",
-        aspect="auto",
-        cmap="seismic",
-        vmin=np.nanpercentile(rel_err, 2),
-        vmax=np.nanpercentile(rel_err, 98),
-    )
+    im = ax.imshow(slice_data.T, origin="lower", aspect="auto", cmap="seismic",
+                   vmin=np.nanpercentile(rel_err, 2), vmax=np.nanpercentile(rel_err, 98))
     fig.colorbar(im, ax=ax, label="Relative error (%)")
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -899,9 +857,7 @@ def plot_damping_error_slice(
     plt.show()
 
 
-def check_D2_stats(
-    path: str, T_ref: float = 5000.0, plot: bool = False, axis: str = "xy", idx: int = 0
-) -> np.ndarray:
+def check_D2_stats(path: str, T_ref: float = 5000.0, plot: bool = False, axis: str = "xy", idx: int = 0) -> np.ndarray:
     """
     Compute global statistics of the D2 factor comparison.
 
@@ -984,13 +940,9 @@ def check_D2_stats(
     print(f"  {BLUE}Points analyzed:{RESET} {N_x} × {N_y} × {N_z} = {N_x * N_y * N_z}")
     print(f"  {BLUE}Valid points:{RESET} {valid_mask.sum()}")
     print(f"  {BLUE}Relative error:{RESET}")
-    print(
-        f"    min: {GREEN}{min_err:.4f}{RESET} at ({min_idx[0]}, {min_idx[1]}, {min_idx[2]})"
-    )
+    print(f"    min: {GREEN}{min_err:.4f}{RESET} at ({min_idx[0]}, {min_idx[1]}, {min_idx[2]})")
     print(f"      theoretical: {D2_theo_at_min:.4e}, file: {D2_at_min:.4e}")
-    print(
-        f"    max: {RED}{max_err:.4f}{RESET} at ({max_idx[0]}, {max_idx[1]}, {max_idx[2]})"
-    )
+    print(f"    max: {RED}{max_err:.4f}{RESET} at ({max_idx[0]}, {max_idx[1]}, {max_idx[2]})")
     print(f"      theoretical: {D2_theo_at_max:.4e}, file: {D2_at_max:.4e}")
     print(f"    mean: {CYAN}{mean_err:.4f}{RESET}")
     print(f"    std: {YELLOW}{std_err:.4f}{RESET}")
@@ -1007,7 +959,7 @@ def check_D2_stats(
     print(f"{'─' * 68}")
     for i in range(len(hist_counts)):
         lo = bin_edges[i]
-        hi = bin_edges[i + 1]
+        hi = bin_edges[i+1]
         bar_len = int(hist_counts[i] / max_count * 25)
         bar = "█" * bar_len
         range_str = f"[{lo:>8.2f}, {hi:>8.2f})"
@@ -1021,9 +973,7 @@ def check_D2_stats(
     return rel_err
 
 
-def plot_D2_error_slice(
-    path: str, rel_err: np.ndarray, axis: str, idx: int, geometry: Geometry
-) -> None:
+def plot_D2_error_slice(path: str, rel_err: np.ndarray, axis: str, idx: int, geometry: Geometry) -> None:
     """
     Plot a slice of the D2 relative error.
 
@@ -1057,14 +1007,8 @@ def plot_D2_error_slice(
         y_vals = geometry.height / 1e5
 
     fig, ax = plt.subplots()
-    im = ax.imshow(
-        slice_data.T,
-        origin="lower",
-        aspect="auto",
-        cmap="seismic",
-        vmin=np.nanpercentile(rel_err, 2),
-        vmax=np.nanpercentile(rel_err, 98),
-    )
+    im = ax.imshow(slice_data.T, origin="lower", aspect="auto", cmap="seismic",
+                   vmin=np.nanpercentile(rel_err, 2), vmax=np.nanpercentile(rel_err, 98))
     fig.colorbar(im, ax=ax, label="Relative error (%)")
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -1097,14 +1041,7 @@ def plot_D2_error_vs_k(path: str, rel_err: np.ndarray, geometry: Geometry) -> No
     height_km = geometry.height / 1e5
 
     fig, ax = plt.subplots(figsize=(10, 5))
-    ax.fill_between(
-        height_km,
-        mean - std,
-        mean + std,
-        alpha=0.3,
-        color="steelblue",
-        label="mean ± σ",
-    )
+    ax.fill_between(height_km, mean - std, mean + std, alpha=0.3, color="steelblue", label="mean ± σ")
     ax.plot(height_km, mean, "k-", linewidth=1.5, label="mean")
     ax.plot(height_km, max_err, "r--", linewidth=0.8, label="max")
     ax.plot(height_km, min_err, "b--", linewidth=0.8, label="min")
@@ -1142,14 +1079,7 @@ def plot_damping_error_vs_k(path: str, rel_err: np.ndarray, geometry: Geometry) 
     height_km = geometry.height / 1e5
 
     fig, ax = plt.subplots(figsize=(10, 5))
-    ax.fill_between(
-        height_km,
-        mean - std,
-        mean + std,
-        alpha=0.3,
-        color="steelblue",
-        label="mean ± σ",
-    )
+    ax.fill_between(height_km, mean - std, mean + std, alpha=0.3, color="steelblue", label="mean ± σ")
     ax.plot(height_km, mean, "k-", linewidth=1.5, label="mean")
     ax.plot(height_km, max_err, "r--", linewidth=0.8, label="max")
     ax.plot(height_km, min_err, "b--", linewidth=0.8, label="min")
@@ -1211,24 +1141,16 @@ def rescale_heights(path: str, index: int | None = None, dry_run: bool = False) 
     print(f"  {BLUE}Current heights:{RESET}")
     print(f"    min: {GREEN}{h_min:.4e} cm{RESET} ({CYAN}{h_min/1e5:.4f} km{RESET})")
     print(f"    max: {GREEN}{h_max:.4e} cm{RESET} ({CYAN}{h_max/1e5:.4f} km{RESET})")
-    print(
-        f"  {BLUE}Offset (subtract):{RESET} {YELLOW}{offset:.4e} cm{RESET} (from {source})"
-    )
+    print(f"  {BLUE}Offset (subtract):{RESET} {YELLOW}{offset:.4e} cm{RESET} (from {source})")
     print(f"  {BLUE}New heights:{RESET}")
-    print(
-        f"    min: {GREEN}{new_min:.4e} cm{RESET} ({CYAN}{new_min/1e5:.4f} km{RESET})"
-    )
-    print(
-        f"    max: {GREEN}{new_max:.4e} cm{RESET} ({CYAN}{new_max/1e5:.4f} km{RESET})"
-    )
+    print(f"    min: {GREEN}{new_min:.4e} cm{RESET} ({CYAN}{new_min/1e5:.4f} km{RESET})")
+    print(f"    max: {GREEN}{new_max:.4e} cm{RESET} ({CYAN}{new_max/1e5:.4f} km{RESET})")
 
     if dry_run:
         print(f"\n{BOLD}Dry run - no changes made.{RESET}")
         return False
 
-    confirm = input(
-        f"\n{BOLD}Apply changes?{RESET} (type '{GREEN}yes{RESET}' to confirm, default: no): "
-    )
+    confirm = input(f"\n{BOLD}Apply changes?{RESET} (type '{GREEN}yes{RESET}' to confirm, default: no): ")
     if confirm.lower() != "yes":
         print("Cancelled.")
         return False
@@ -1274,9 +1196,7 @@ def extract_subdomain(path: str, i: int, j: int, N: int, output_path: str) -> No
     N_x, N_y, N_z = geometry.N_x, geometry.N_y, geometry.N_z
 
     if i < 0 or j < 0 or i + N > N_x or j + N > N_y:
-        print(
-            f"{RED}Error: Subdomain ({i}, {j}) to ({i+N-1}, {j+N-1}) out of bounds ({N_x}, {N_y}){RESET}"
-        )
+        print(f"{RED}Error: Subdomain ({i}, {j}) to ({i+N-1}, {j+N-1}) out of bounds ({N_x}, {N_y}){RESET}")
         return
 
     print(f"\n{'─' * 50}")
@@ -1287,9 +1207,7 @@ def extract_subdomain(path: str, i: int, j: int, N: int, output_path: str) -> No
     print(f"  {BLUE}Heights:{RESET} {N_z} (unchanged)")
     print(f"  {BLUE}Output size:{RESET} {GREEN}{N} × {N} × {N_z}{RESET}")
 
-    confirm = input(
-        f"\n{BOLD}Extract subdomain?{RESET} (type '{GREEN}yes{RESET}' to confirm, default: no): "
-    )
+    confirm = input(f"\n{BOLD}Extract subdomain?{RESET} (type '{GREEN}yes{RESET}' to confirm, default: no): ")
     if confirm.lower() != "yes":
         print("Cancelled.")
         return
@@ -1303,27 +1221,23 @@ def extract_subdomain(path: str, i: int, j: int, N: int, output_path: str) -> No
             f_out["geometry/height"] = geometry.height.astype(np.float32)
 
             f_out.create_group("frequency_grid")
-            f_out["frequency_grid/N_frequencies"] = np.array(
-                [freq_grid.N_frequencies], dtype=np.int32
-            )
+            f_out["frequency_grid/N_frequencies"] = np.array([freq_grid.N_frequencies], dtype=np.int32)
             if freq_grid.N_frequencies > 0:
                 f_out["frequency_grid/frequency"] = freq_grid.frequency
 
-            atom_dtype = np.dtype(
-                [
-                    ("atomic_number", "<i4"),
-                    ("atomic_mass", "<f8"),
-                    ("E_lower", "<f8"),
-                    ("E_upper", "<f8"),
-                    ("g_lower", "<f8"),
-                    ("g_upper", "<f8"),
-                    ("jl2", "<i4"),
-                    ("ju2", "<i4"),
-                    ("Aul", "<f8"),
-                    ("a_coef_D2", "<f8"),
-                    ("b_coef_D2", "<f8"),
-                ]
-            )
+            atom_dtype = np.dtype([
+                ("atomic_number", "<i4"),
+                ("atomic_mass", "<f8"),
+                ("E_lower", "<f8"),
+                ("E_upper", "<f8"),
+                ("g_lower", "<f8"),
+                ("g_upper", "<f8"),
+                ("jl2", "<i4"),
+                ("ju2", "<i4"),
+                ("Aul", "<f8"),
+                ("a_coef_D2", "<f8"),
+                ("b_coef_D2", "<f8"),
+            ])
             f_out.create_dataset("atom_data", shape=(1,), dtype=atom_dtype)
             at = f_out["atom_data"]
             at[0] = (
@@ -1343,9 +1257,7 @@ def extract_subdomain(path: str, i: int, j: int, N: int, output_path: str) -> No
             if "continuum" in f_in:
                 f_out.create_group("continuum")
             else:
-                print(
-                    f"{YELLOW}Warning: continuum dataset not found in input file. Skipping continuum data.{RESET}"
-                )
+                print(f"{YELLOW}Warning: continuum dataset not found in input file. Skipping continuum data.{RESET}")
 
             atmos_dtype = f_in["atmos"].dtype
             atmos_ds_out = f_out.create_dataset(
@@ -1356,7 +1268,7 @@ def extract_subdomain(path: str, i: int, j: int, N: int, output_path: str) -> No
                 compression_opts=4,
             )
 
-            slab_orig = f_in["atmos"][i : i + N, j : j + N, :][:]
+            slab_orig = f_in["atmos"][i:i+N, j:j+N, :][:]
             out_data = np.zeros((N, N, N_z), dtype=atmos_dtype)
             for fname in atmos_dtype.names:
                 if fname not in ("index_i", "index_j", "index_k"):
@@ -1378,15 +1290,9 @@ def extract_subdomain(path: str, i: int, j: int, N: int, output_path: str) -> No
                     compression="gzip",
                     compression_opts=4,
                 )
-                cont_ds_out[:] = f_in["continuum/continuum_norm"][
-                    i : i + N, j : j + N, :
-                ]
+                cont_ds_out[:] = f_in["continuum/continuum_norm"][i:i+N, j:j+N, :]
 
-            for name in (
-                "c_scat_opacity_sigma_c",
-                "c_therm_opacity_k_c",
-                "c_therm_emissivity_epsilon_c",
-            ):
+            for name in ("c_scat_opacity_sigma_c", "c_therm_opacity_k_c", "c_therm_emissivity_epsilon_c"):
                 if f"continuum/{name}" in f_in:
                     ds_in = f_in[f"continuum/{name}"]
                     shape_in = ds_in.shape
@@ -1398,9 +1304,43 @@ def extract_subdomain(path: str, i: int, j: int, N: int, output_path: str) -> No
                         compression="gzip",
                         compression_opts=4,
                     )
-                    ds_out[:] = ds_in[i : i + N, j : j + N, :, :]
+                    ds_out[:] = ds_in[i:i+N, j:j+N, :, :]
 
     print(f"{GREEN}Extracted subdomain to: {output_path}{RESET}")
+
+
+def add_Nij(input_path: str, output_path: str) -> None:
+    """
+    Copy an HDF5 file and add ``geometry/N_ij`` if not present.
+
+    Parameters
+    ----------
+    input_path : str
+        Path to the input HDF5 file.
+    output_path : str
+        Path to the output HDF5 file.
+    """
+    import shutil
+
+    geometry, _, _ = read_metadata(input_path)
+    N_x, N_y = geometry.N_x, geometry.N_y
+    if N_x != N_y:
+        raise ValueError(
+            f"N_x ({N_x}) != N_y ({N_y}): N_ij requires a square horizontal grid."
+        )
+
+    shutil.copy2(input_path, output_path)
+
+    with h5py.File(output_path, "r+") as f_out:
+        if "geometry/N_ij" not in f_out:
+            f_out["geometry/N_ij"] = np.array([N_x], dtype=np.int64)
+            print(f"Added geometry/N_ij = {N_x}")
+        else:
+            existing = int(f_out["geometry/N_ij"][0])
+            if existing != N_x:
+                print(f"Warning: existing geometry/N_ij = {existing}, expected {N_x}")
+            else:
+                print(f"geometry/N_ij already present = {N_x}")
 
 
 def scale_delta(path: str, factor: float, dry_run: bool = False) -> bool:
@@ -1443,17 +1383,13 @@ def scale_delta(path: str, factor: float, dry_run: bool = False) -> bool:
     print(f"    new:     {GREEN}{new_delta:.4f} cm{RESET} (×{factor})")
     print(f"  {BLUE}domain size:{RESET}")
     print(f"    N_x × N_y = {geometry.N_x} × {geometry.N_y} = {N_ij} points")
-    print(
-        f"    horizontal: {CYAN}{domain_size_cm:.4e} cm{RESET} ({YELLOW}{domain_size_km:.4f} km{RESET})"
-    )
+    print(f"    horizontal: {CYAN}{domain_size_cm:.4e} cm{RESET} ({YELLOW}{domain_size_km:.4f} km{RESET})")
 
     if dry_run:
         print(f"\n{BOLD}Dry run - no changes made.{RESET}")
         return False
 
-    confirm = input(
-        f"\n{BOLD}Apply changes?{RESET} (type '{GREEN}yes{RESET}' to confirm, default: no): "
-    )
+    confirm = input(f"\n{BOLD}Apply changes?{RESET} (type '{GREEN}yes{RESET}' to confirm, default: no): ")
     if confirm.lower() != "yes":
         print("Cancelled.")
         return False
@@ -1464,12 +1400,7 @@ def scale_delta(path: str, factor: float, dry_run: bool = False) -> bool:
     return True
 
 
-def plot_z_profile(
-    path: str,
-    field: str = "temperature",
-    geometry: Geometry | None = None,
-    show_minmax: bool = False,
-) -> None:
+def plot_z_profile(path: str, field: str = "temperature", geometry: Geometry | None = None, show_minmax: bool = False) -> None:
     """
     Plot the vertical profile of a field showing mean ± std, min and max over x,y at each z.
 
@@ -1508,9 +1439,7 @@ def plot_z_profile(
     plt.show()
 
 
-def compute_z_profile(
-    path: str, field: str, geometry: Geometry | None = None
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def compute_z_profile(path: str, field: str, geometry: Geometry | None = None) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Compute average and std of a field at each height z.
 
@@ -1536,9 +1465,7 @@ def compute_z_profile(
     return z_km, mean, std
 
 
-def plot_z_profile_with_std_band(
-    path: str, field: str, geometry: Geometry | None = None, show_minmax: bool = False
-) -> None:
+def plot_z_profile_with_std_band(path: str, field: str, geometry: Geometry | None = None, show_minmax: bool = False) -> None:
     """
     Plot the vertical profile of a field with a +/- std band.
 
@@ -1565,9 +1492,7 @@ def plot_z_profile_with_std_band(
         max_val = data.max(axis=(0, 1))
 
     fig, ax = plt.subplots(figsize=(8, 6))
-    ax.fill_between(
-        z_km, mean - std, mean + std, alpha=0.3, color="steelblue", label="mean ± σ"
-    )
+    ax.fill_between(z_km, mean - std, mean + std, alpha=0.3, color="steelblue", label="mean ± σ")
     ax.plot(z_km, mean, "k-", linewidth=1.5, label="mean")
     if show_minmax:
         ax.plot(z_km, max_val, "r--", linewidth=0.8, label="max")
@@ -1582,13 +1507,7 @@ def plot_z_profile_with_std_band(
     plt.show()
 
 
-def plot_all_z_profiles(
-    path: str,
-    fields: list[str] | None = None,
-    geometry: Geometry | None = None,
-    show_minmax: bool = False,
-    log: bool = False,
-) -> None:
+def plot_all_z_profiles(path: str, fields: list[str] | None = None, geometry: Geometry | None = None, show_minmax: bool = False, log: bool = False) -> None:
     """Plot multiple field profiles in a tiled layout."""
     if geometry is None:
         geometry, _, _ = read_metadata(path)
@@ -1604,12 +1523,12 @@ def plot_all_z_profiles(
             "Qel",
             "magnetic_field_z",
             "bulk_velocity_z",
-            "c_scat_opacity_sigma_c",
-            "c_therm_opacity_k_c",
-            "c_therm_emissivity_epsilon_c",
-            "nH",
-            "D2",
-        ]
+        "c_scat_opacity_sigma_c",
+        "c_therm_opacity_k_c",
+        "c_therm_emissivity_epsilon_c",
+        "nH",
+        "D2",
+    ]
 
     LOG_SCALE_FIELDS = {
         "c_scat_opacity_sigma_c",
@@ -1680,6 +1599,31 @@ def plot_all_z_profiles(
     plt.show()
 
 
+def compute_field_stats(path: str, field: str) -> dict[str, float]:
+    """
+    Compute global statistics (mean, min, max, std) for a named field.
+
+    Parameters
+    ----------
+    path : str
+        Path to the HDF5 file.
+    field : str
+        Field name to analyze.
+
+    Returns
+    -------
+    dict[str, float]
+        Dictionary with keys 'mean', 'min', 'max', 'std'.
+    """
+    data = read_field(path, field)
+    return {
+        "mean": float(data.mean()),
+        "min": float(data.min()),
+        "max": float(data.max()),
+        "std": float(data.std()),
+    }
+
+
 def average_z_velocity(path: str) -> float:
     """
     Calculate the average of the z-component of the bulk velocity.
@@ -1709,17 +1653,7 @@ def _format_ticks_km(ax, axis: str, delta: float, n_points: int) -> None:
         ax.set_yticklabels([f"{t * delta / 1e5:.1f}" for t in ticks])
 
 
-def plot_slice_xy(
-    path: str,
-    field: str = "temperature",
-    k: int = 0,
-    log: bool = False,
-    sign: bool = False,
-    quiver: bool = False,
-    geometry: Geometry | None = None,
-    threshold: float | None = None,
-    cmap: str = "blackred",
-) -> None:
+def plot_slice_xy(path: str, field: str = "temperature", k: int = 0, log: bool = False, sign: bool = False, quiver: bool = False, geometry: Geometry | None = None, threshold: float | None = None, cmap: str = "blackred") -> None:
     """
     Plot a horizontal (x-y) slice of *field* from the HDF5 file at depth *k*.
 
@@ -1747,9 +1681,7 @@ def plot_slice_xy(
         "seismic" for diverging blue-white-red.
     """
     label = f"log10({field})" if log else field
-    print(
-        f"Plotting field '{field}' at k={k} (log={log}, sign={sign}, quiver={quiver}) …"
-    )
+    print(f"Plotting field '{field}' at k={k} (log={log}, sign={sign}, quiver={quiver}) …")
     slice_xy = _get_field_slice(path, field, axis="xy", idx=k)
     if threshold is not None:
         slice_xy = np.clip(slice_xy, None, threshold)
@@ -1764,7 +1696,10 @@ def plot_slice_xy(
     fig, ax = plt.subplots()
     im = ax.imshow(slice_xy.T, origin="lower", aspect="auto", cmap=cmap)
     fig.colorbar(im, ax=ax, label=label)
-    ax.set_title(f"{label}  (k={k})")
+    if geometry is not None and k < len(geometry.height):
+        ax.set_title(f"{label}  (k={k}, z={geometry.height[k]/1e5:.2f} km)")
+    else:
+        ax.set_title(f"{label}  (k={k})")
 
     if geometry is not None:
         ax.set_xlabel("x [km]")
@@ -1784,17 +1719,7 @@ def plot_slice_xy(
     plt.show()
 
 
-def plot_slice_xz(
-    path: str,
-    field: str = "temperature",
-    j: int = 0,
-    log: bool = False,
-    sign: bool = False,
-    quiver: bool = False,
-    geometry: Geometry | None = None,
-    threshold: float | None = None,
-    cmap: str = "blackred",
-) -> None:
+def plot_slice_xz(path: str, field: str = "temperature", j: int = 0, log: bool = False, sign: bool = False, quiver: bool = False, geometry: Geometry | None = None, threshold: float | None = None, cmap: str = "blackred") -> None:
     """
     Plot a vertical (x-z) slice of *field* from the HDF5 file at index *j*.
 
@@ -1822,9 +1747,7 @@ def plot_slice_xz(
         "seismic" for diverging blue-white-red.
     """
     label = f"log10({field})" if log else field
-    print(
-        f"Plotting field '{field}' at j={j} (log={log}, sign={sign}, quiver={quiver}) …"
-    )
+    print(f"Plotting field '{field}' at j={j} (log={log}, sign={sign}, quiver={quiver}) …")
     slice_xz = _get_field_slice(path, field, axis="xz", idx=j)
     if threshold is not None:
         slice_xz = np.clip(slice_xz, None, threshold)
@@ -1846,12 +1769,7 @@ def plot_slice_xz(
         ax.set_ylabel("z [km]")
         _format_ticks_km(ax, "x", geometry.delta, geometry.N_x)
         ax.set_yticks(np.linspace(0, len(geometry.height) - 1, 5))
-        ax.set_yticklabels(
-            [
-                f"{h / 1e5:.1f}"
-                for h in np.linspace(geometry.height[0], geometry.height[-1], 5)
-            ]
-        )
+        ax.set_yticklabels([f"{h / 1e5:.1f}" for h in np.linspace(geometry.height[0], geometry.height[-1], 5)])
     else:
         ax.set_xlabel("x index")
         ax.set_ylabel("z index")
@@ -1859,29 +1777,13 @@ def plot_slice_xz(
     if quiver:
         Bx = read_field_slice(path, "magnetic_field_x", j=j)
         Bz = read_field_slice(path, "magnetic_field_z", j=j)
-        _plot_quiver(
-            ax,
-            Bx,
-            Bz,
-            geometry=geometry,
-            z_heights=geometry.height if geometry else None,
-        )
+        _plot_quiver(ax, Bx, Bz, geometry=geometry, z_heights=geometry.height if geometry else None)
 
     plt.tight_layout()
     plt.show()
 
 
-def plot_slice_yz(
-    path: str,
-    field: str = "temperature",
-    i: int = 0,
-    log: bool = False,
-    sign: bool = False,
-    quiver: bool = False,
-    geometry: Geometry | None = None,
-    threshold: float | None = None,
-    cmap: str = "blackred",
-) -> None:
+def plot_slice_yz(path: str, field: str = "temperature", i: int = 0, log: bool = False, sign: bool = False, quiver: bool = False, geometry: Geometry | None = None, threshold: float | None = None, cmap: str = "blackred") -> None:
     """
     Plot a vertical (y-z) slice of *field* from the HDF5 file at index *i*.
 
@@ -1909,9 +1811,7 @@ def plot_slice_yz(
         "seismic" for diverging blue-white-red.
     """
     label = f"log10({field})" if log else field
-    print(
-        f"Plotting field '{field}' at i={i} (log={log}, sign={sign}, quiver={quiver}) …"
-    )
+    print(f"Plotting field '{field}' at i={i} (log={log}, sign={sign}, quiver={quiver}) …")
     slice_yz = _get_field_slice(path, field, axis="yz", idx=i)
     if threshold is not None:
         slice_yz = np.clip(slice_yz, None, threshold)
@@ -1933,12 +1833,7 @@ def plot_slice_yz(
         ax.set_ylabel("z [km]")
         _format_ticks_km(ax, "x", geometry.delta, geometry.N_y)
         ax.set_yticks(np.linspace(0, len(geometry.height) - 1, 5))
-        ax.set_yticklabels(
-            [
-                f"{h / 1e5:.1f}"
-                for h in np.linspace(geometry.height[0], geometry.height[-1], 5)
-            ]
-        )
+        ax.set_yticklabels([f"{h / 1e5:.1f}" for h in np.linspace(geometry.height[0], geometry.height[-1], 5)])
     else:
         ax.set_xlabel("y index")
         ax.set_ylabel("z index")
@@ -1946,26 +1841,13 @@ def plot_slice_yz(
     if quiver:
         By = read_field_slice(path, "magnetic_field_y", i=i)
         Bz = read_field_slice(path, "magnetic_field_z", i=i)
-        _plot_quiver(
-            ax,
-            By,
-            Bz,
-            geometry=geometry,
-            z_heights=geometry.height if geometry else None,
-        )
+        _plot_quiver(ax, By, Bz, geometry=geometry, z_heights=geometry.height if geometry else None)
 
     plt.tight_layout()
     plt.show()
 
 
-def _plot_quiver(
-    ax,
-    U: np.ndarray,
-    V: np.ndarray,
-    step: int = 8,
-    geometry: Geometry | None = None,
-    z_heights: np.ndarray | None = None,
-) -> None:
+def _plot_quiver(ax, U: np.ndarray, V: np.ndarray, step: int = 8, geometry: Geometry | None = None, z_heights: np.ndarray | None = None) -> None:
     """
     Overlay arrows on an existing axes showing the vector field.
 
@@ -1999,17 +1881,8 @@ def _plot_quiver(
         else:
             x_grid = x_grid * geometry.delta / 1e5
             y_grid = y_grid * geometry.delta / 1e5
-    ax.quiver(
-        x_grid,
-        y_grid,
-        u_sub,
-        v_sub,
-        norm,
-        cmap="plasma",
-        clim=[0, norm.max()],
-        scale=20,
-        pivot="mid",
-    )
+    ax.quiver(x_grid, y_grid, u_sub, v_sub, norm, cmap="plasma",
+              clim=[0, norm.max()], scale=20, pivot="mid")
 
 
 def _get_field_slice(path: str, field: str, axis: str, idx: int) -> np.ndarray:
@@ -2062,22 +1935,16 @@ def _get_field_slice(path: str, field: str, axis: str, idx: int) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 # Type alias for interpolation callables
-InterpFunc = (
-    callable  # (old_z: np.ndarray, data: np.ndarray, new_z: np.ndarray) -> np.ndarray
-)
+InterpFunc = callable  # (old_z: np.ndarray, data: np.ndarray, new_z: np.ndarray) -> np.ndarray
 
 
-def _cubic_spline_interp(
-    old_z: np.ndarray, data: np.ndarray, new_z: np.ndarray
-) -> np.ndarray:
+def _cubic_spline_interp(old_z: np.ndarray, data: np.ndarray, new_z: np.ndarray) -> np.ndarray:
     """Interpolate data along z using a cubic spline."""
     cs = CubicSpline(old_z, data, bc_type="natural")
     return cs(new_z)
 
 
-def _fast_linear_interp_3d(
-    data_3d: np.ndarray, old_z: np.ndarray, new_z: np.ndarray
-) -> np.ndarray:
+def _fast_linear_interp_3d(data_3d: np.ndarray, old_z: np.ndarray, new_z: np.ndarray) -> np.ndarray:
     """Fast linear interpolation along the last axis of a 3D array.
 
     Uses numpy searchsorted for vectorized interpolation without Python loops.
@@ -2148,6 +2015,11 @@ def interpolate_k(
     with h5py.File(input_path, "r") as f_in:
         geometry, freq_grid, atom = read_metadata(input_path)
         N_x, N_y, N_z_orig = geometry.N_x, geometry.N_y, geometry.N_z
+        if N_x != N_y:
+            raise ValueError(
+                f"N_x ({N_x}) != N_y ({N_y}): the output format stores a "
+                f"single N_ij value, requiring a square horizontal grid."
+            )
         height_orig = geometry.height
 
         atmos_dtype = f_in["atmos"].dtype
@@ -2198,47 +2070,23 @@ def interpolate_k(
         print(f"{BOLD}{indent}Interpolation Summary{RESET}")
         print(f"{'─' * W}")
         print(f"{indent}{BLUE}{_rpad('Input file:', label_w)}{RESET}{sep}{input_path}")
-        print(
-            f"{indent}{BLUE}{_rpad('Output file:', label_w)}{RESET}{sep}{output_path}"
-        )
-        print(
-            f"{indent}{BLUE}{_rpad('Method:', label_w)}{RESET}{sep}Fast linear interpolation"
-        )
+        print(f"{indent}{BLUE}{_rpad('Output file:', label_w)}{RESET}{sep}{output_path}")
+        print(f"{indent}{BLUE}{_rpad('Method:', label_w)}{RESET}{sep}Fast linear interpolation")
         print()
-        print(
-            f"{indent}{BOLD}{_rpad('', label_w)}{sep}{header_in}{sep}{header_out}{RESET}"
-        )
+        print(f"{indent}{BOLD}{_rpad('', label_w)}{sep}{header_in}{sep}{header_out}{RESET}")
         print(f"{indent}{'─' * label_w}{sep}{'─' * col_w}{sep}{'─' * col_w}")
-        print(
-            f"{indent}{BLUE}{_rpad('Grid size (Nx × Ny × Nz)', label_w)}{RESET}{sep}{_lpad(grid_in, col_w)}{sep}{_lpad(grid_out, col_w)}"
-        )
-        print(
-            f"{indent}{BLUE}{_rpad('Total grid points', label_w)}{RESET}{sep}{_lpad(pts_in, col_w)}{sep}{_lpad(pts_out, col_w)}"
-        )
-        print(
-            f"{indent}{BLUE}{_rpad('Height range [cm]', label_w)}{RESET}{sep}{GREEN}{_lpad(h0_in, col_w)}{RESET}{sep}{GREEN}{_lpad(h0_out, col_w)}{RESET}"
-        )
-        print(
-            f"{indent}{DIM}{_rpad('', label_w)}{sep}{GREEN}{_lpad(h1_in, col_w)}{RESET}{sep}{GREEN}{_lpad(h1_out, col_w)}{RESET}"
-        )
-        print(
-            f"{indent}{BLUE}{_rpad('Fields to interpolate', label_w)}{RESET}{sep}{YELLOW}{_lpad(fields_s, col_w)}{RESET}{sep}{YELLOW}{_lpad(fields_s, col_w)}{RESET}"
-        )
-        print(
-            f"{indent}{BLUE}{_rpad('Atmos dataset size', label_w)}{RESET}{sep}{_lpad(atmos_in, col_w)}{sep}{_lpad(atmos_out, col_w)}"
-        )
-        print(
-            f"{indent}{DIM}{_rpad('(uncompressed, gzip lvl 4 applied to output)', label_w)}{RESET}"
-        )
+        print(f"{indent}{BLUE}{_rpad('Grid size (Nx × Ny × Nz)', label_w)}{RESET}{sep}{_lpad(grid_in, col_w)}{sep}{_lpad(grid_out, col_w)}")
+        print(f"{indent}{BLUE}{_rpad('Total grid points', label_w)}{RESET}{sep}{_lpad(pts_in, col_w)}{sep}{_lpad(pts_out, col_w)}")
+        print(f"{indent}{BLUE}{_rpad('Height range [cm]', label_w)}{RESET}{sep}{GREEN}{_lpad(h0_in, col_w)}{RESET}{sep}{GREEN}{_lpad(h0_out, col_w)}{RESET}")
+        print(f"{indent}{DIM}{_rpad('', label_w)}{sep}{GREEN}{_lpad(h1_in, col_w)}{RESET}{sep}{GREEN}{_lpad(h1_out, col_w)}{RESET}")
+        print(f"{indent}{BLUE}{_rpad('Fields to interpolate', label_w)}{RESET}{sep}{YELLOW}{_lpad(fields_s, col_w)}{RESET}{sep}{YELLOW}{_lpad(fields_s, col_w)}{RESET}")
+        print(f"{indent}{BLUE}{_rpad('Atmos dataset size', label_w)}{RESET}{sep}{_lpad(atmos_in, col_w)}{sep}{_lpad(atmos_out, col_w)}")
+        print(f"{indent}{DIM}{_rpad('(uncompressed, gzip lvl 4 applied to output)', label_w)}{RESET}")
         print(f"{indent}{'─' * label_w}{sep}{'─' * col_w}{sep}{'─' * col_w}")
-        print(
-            f"{indent}{BOLD}{_rpad('Total estimated size', label_w)}{RESET}{sep}{BOLD}{_lpad(atmos_in, col_w)}{RESET}{sep}{BOLD}{_lpad(atmos_out, col_w)}{RESET}"
-        )
+        print(f"{indent}{BOLD}{_rpad('Total estimated size', label_w)}{RESET}{sep}{BOLD}{_lpad(atmos_in, col_w)}{RESET}{sep}{BOLD}{_lpad(atmos_out, col_w)}{RESET}")
         print(f"{'─' * W}")
 
-        confirm = input(
-            f"\n{indent}{BOLD}Proceed?{RESET} (type '{GREEN}yes{RESET}' to confirm): "
-        )
+        confirm = input(f"\n{indent}{BOLD}Proceed?{RESET} (type '{GREEN}yes{RESET}' to confirm): ")
         if confirm.lower() != "yes":
             print(f"{indent}{RED}Cancelled.{RESET}")
             return
@@ -2253,27 +2101,23 @@ def interpolate_k(
             f_out["geometry/height"] = new_height.astype(np.float32)
 
             f_out.create_group("frequency_grid")
-            f_out["frequency_grid/N_frequencies"] = np.array(
-                [freq_grid.N_frequencies], dtype=np.int32
-            )
+            f_out["frequency_grid/N_frequencies"] = np.array([freq_grid.N_frequencies], dtype=np.int32)
             if freq_grid.N_frequencies > 0:
                 f_out["frequency_grid/frequency"] = freq_grid.frequency
 
-            atom_dtype = np.dtype(
-                [
-                    ("atomic_number", "<i4"),
-                    ("atomic_mass", "<f8"),
-                    ("E_lower", "<f8"),
-                    ("E_upper", "<f8"),
-                    ("g_lower", "<f8"),
-                    ("g_upper", "<f8"),
-                    ("jl2", "<i4"),
-                    ("ju2", "<i4"),
-                    ("Aul", "<f8"),
-                    ("a_coef_D2", "<f8"),
-                    ("b_coef_D2", "<f8"),
-                ]
-            )
+            atom_dtype = np.dtype([
+                ("atomic_number", "<i4"),
+                ("atomic_mass", "<f8"),
+                ("E_lower", "<f8"),
+                ("E_upper", "<f8"),
+                ("g_lower", "<f8"),
+                ("g_upper", "<f8"),
+                ("jl2", "<i4"),
+                ("ju2", "<i4"),
+                ("Aul", "<f8"),
+                ("a_coef_D2", "<f8"),
+                ("b_coef_D2", "<f8"),
+            ])
             f_out.create_dataset("atom_data", shape=(1,), dtype=atom_dtype)
             at = f_out["atom_data"]
             at[0] = (
@@ -2298,9 +2142,7 @@ def interpolate_k(
                 compression_opts=4,
             )
 
-            print(
-                f"\n  {BOLD}Interpolating {n_fields} fields from {N_z_orig} → {N_k} heights ...{RESET}"
-            )
+            print(f"\n  {BOLD}Interpolating {n_fields} fields from {N_z_orig} → {N_k} heights ...{RESET}")
 
             old_z = height_orig
             new_z = new_height
@@ -2316,9 +2158,7 @@ def interpolate_k(
                 out_data[i, :, :]["index_i"] = i
             for j in range(N_y):
                 out_data[:, j, :]["index_j"] = j
-            out_data[:, :, :]["index_k"] = np.arange(N_k, dtype=np.int32)[
-                np.newaxis, np.newaxis, :
-            ]
+            out_data[:, :, :]["index_k"] = np.arange(N_k, dtype=np.int32)[np.newaxis, np.newaxis, :]
 
             atmos_ds_out[:] = out_data
 
@@ -2370,23 +2210,22 @@ Examples:
 
     # ── General ────────────────────────────────────────────────────────
     general = parser.add_argument_group("general options")
-    general.add_argument(
-        "-f", "--file", default="atmosphere_mpi.h5", help="Path to the HDF5 file"
-    )
-    general.add_argument("-i", type=int, default=0, help="x-index for point read")
-    general.add_argument("-j", type=int, default=0, help="y-index for point read")
-    general.add_argument("-k", type=int, default=0, help="z-index for point read")
-    general.add_argument(
-        "--out",
-        type=str,
-        default="",
-        help="Output file path (required for manipulation methods)",
-    )
-    general.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Show what would be done without making changes",
-    )
+    general.add_argument("-f", "--file", default="atmosphere_mpi.h5",
+                         help="Path to the HDF5 file")
+    general.add_argument("-i", type=int, default=0,
+                         help="x-index for point read")
+    general.add_argument("-j", type=int, default=0,
+                         help="y-index for point read")
+    general.add_argument("-k", type=int, default=0,
+                         help="z-index for point read")
+    general.add_argument("--dir", type=str, default="",
+                         help="Scan all *.h5 files in DIR and print grid info")
+    general.add_argument("--csv", action="store_true",
+                         help="With --dir, print output as CSV table")
+    general.add_argument("--out", type=str, default="",
+                         help="Output file path (required for manipulation methods)")
+    general.add_argument("--dry-run", action="store_true",
+                         help="Show what would be done without making changes")
 
     # ── Plot methods ───────────────────────────────────────────────────
     PLOT_HELP = (
@@ -2400,184 +2239,142 @@ Examples:
         "  --check-damping --plot-damping-vs-k          # damping error vs height\n"
     )
     plots = parser.add_argument_group("plot methods", PLOT_HELP)
-    plots.add_argument(
-        "--plot",
-        action="store_true",
-        help="Plot a 2-D slice of a field (requires --axis / --idx)",
-    )
-    plots.add_argument(
-        "--axis",
-        type=str,
-        choices=["xy", "xz", "yz"],
-        default="xy",
-        help="Plane to plot: xy (horizontal), xz (vertical), yz (vertical) (default: xy)",
-    )
-    plots.add_argument(
-        "--idx", type=int, default=0, help="Index along the sliced axis (default: 0)"
-    )
-    parser.add_argument(
-        "--iheight",
-        type=float,
-        default=None,
-        help="Find closest height index for given height value (cm)",
-    )
-    plots.add_argument(
-        "--field",
-        type=str,
-        default="temperature",
-        help="Field name to plot (default: temperature). Use 'magnetic_field_abs' for ||B||",
-    )
-    plots.add_argument("--log", action="store_true", help="Plot field in log10 scale")
-    plots.add_argument(
-        "--sign",
-        action="store_true",
-        help="Use diverging colormap (seismic) to show sign of positive/negative values",
-    )
-    plots.add_argument(
-        "--quiver",
-        action="store_true",
-        help="Overlay arrows showing magnetic field projection",
-    )
-    plots.add_argument(
-        "--no-scale",
-        action="store_true",
-        help="Disable physical units scaling (use grid indices)",
-    )
-    plots.add_argument(
-        "--threshold",
-        type=float,
-        default=None,
-        help="Maximum value for colormap scaling",
-    )
-    plots.add_argument(
-        "--cmap",
-        type=str,
-        default="blackred",
-        help="Colormap: blackred (default), hot, seismic",
-    )
-    plots.add_argument(
-        "--z-profile",
-        action="store_true",
-        help="Plot vertical profile (mean ± std) of a field vs height",
-    )
-    plots.add_argument(
-        "--z-profile-minmax",
-        action="store_true",
-        help="Show min/max lines in z-profile plot",
-    )
-    plots.add_argument(
-        "--plot-all-profiles",
-        action="store_true",
-        help="Plot all z-profiles in a tiled layout",
-    )
-    plots.add_argument(
-        "--fields",
-        nargs="+",
-        default=None,
-        help="List of fields to plot (use with --plot-all-profiles)",
-    )
-    plots.add_argument(
-        "--plot-damping-err",
-        action="store_true",
-        help="Plot relative error slice of the damping factor",
-    )
-    plots.add_argument(
-        "--plot-damping-vs-k",
-        action="store_true",
-        help="Plot relative error of the damping factor vs height index k",
-    )
-    plots.add_argument(
-        "--plot-D2-err",
-        action="store_true",
-        help="Plot relative error slice of the D2 factor",
-    )
-    plots.add_argument(
-        "--plot-D2-vs-k",
-        action="store_true",
-        help="Plot relative error of the D2 factor vs height index k",
-    )
+    plots.add_argument("--plot", action="store_true",
+                       help="Plot a 2-D slice of a field (requires --axis / --idx)")
+    plots.add_argument("--axis", type=str, choices=["xy", "xz", "yz"], default="xy",
+                       help="Plane to plot: xy (horizontal), xz (vertical), yz (vertical) (default: xy)")
+    plots.add_argument("--idx", type=int, default=0,
+                       help="Index along the sliced axis (default: 0)")
+    parser.add_argument("--iheight", type=float, default=None,
+                        help="Find closest height index for given height value (cm)")
+    plots.add_argument("--field", type=str, default="temperature",
+                       help="Field name to plot (default: temperature). Use 'magnetic_field_abs' for ||B||")
+    plots.add_argument("--log", action="store_true",
+                       help="Plot field in log10 scale")
+    plots.add_argument("--sign", action="store_true",
+                       help="Use diverging colormap (seismic) to show sign of positive/negative values")
+    plots.add_argument("--quiver", action="store_true",
+                       help="Overlay arrows showing magnetic field projection")
+    plots.add_argument("--no-scale", action="store_true",
+                       help="Disable physical units scaling (use grid indices)")
+    plots.add_argument("--threshold", type=float, default=None,
+                       help="Maximum value for colormap scaling")
+    plots.add_argument("--cmap", type=str, default="blackred",
+                       help="Colormap: blackred (default), hot, seismic")
+    plots.add_argument("--z-profile", action="store_true",
+                       help="Plot vertical profile (mean ± std) of a field vs height")
+    plots.add_argument("--z-profile-minmax", action="store_true",
+                       help="Show min/max lines in z-profile plot")
+    plots.add_argument("--plot-all-profiles", action="store_true",
+                       help="Plot all z-profiles in a tiled layout")
+    plots.add_argument("--fields", nargs="+", default=None,
+                       help="List of fields to plot (use with --plot-all-profiles)")
+    plots.add_argument("--plot-damping-err", action="store_true",
+                       help="Plot relative error slice of the damping factor")
+    plots.add_argument("--plot-damping-vs-k", action="store_true",
+                       help="Plot relative error of the damping factor vs height index k")
+    plots.add_argument("--plot-D2-err", action="store_true",
+                       help="Plot relative error slice of the D2 factor")
+    plots.add_argument("--plot-D2-vs-k", action="store_true",
+                       help="Plot relative error of the D2 factor vs height index k")
 
     # ── Analysis methods ───────────────────────────────────────────────
     analysis = parser.add_argument_group("analysis methods")
-    analysis.add_argument(
-        "--avg-vz",
-        action="store_true",
-        help="Print the average of the z-component of the bulk velocity",
-    )
-    analysis.add_argument(
-        "--check-damping",
-        action="store_true",
-        help="Compute global damping factor statistics (min/max/mean/std + histogram)",
-    )
-    analysis.add_argument(
-        "--check-D2",
-        action="store_true",
-        help="Compute global D2 factor statistics (min/max/mean/std + histogram)",
-    )
-    analysis.add_argument(
-        "--D2-T-ref",
-        type=float,
-        default=5000.0,
-        help="Reference temperature in K for D2 computation (default: 5000)",
-    )
-    analysis.add_argument(
-        "--analyze-height",
-        action="store_true",
-        help="Print height grid statistics (min/max height and spacing)",
-    )
+    analysis.add_argument("--avg-vz", action="store_true",
+                          help="Print the average of the z-component of the bulk velocity")
+    analysis.add_argument("--check-damping", action="store_true",
+                           help="Compute global damping factor statistics (min/max/mean/std + histogram)")
+    analysis.add_argument("--check-D2", action="store_true",
+                           help="Compute global D2 factor statistics (min/max/mean/std + histogram)")
+    analysis.add_argument("--D2-T-ref", type=float, default=5000.0,
+                           help="Reference temperature in K for D2 computation (default: 5000)")
+    analysis.add_argument("--stats", action="store_true",
+                          help="Compute global statistics (mean/min/max/std) for a given field (use with --field)")
+    analysis.add_argument("--analyze-height", action="store_true",
+                           help="Print height grid statistics (min/max height and spacing)")
 
     # ── Update methods ─────────────────────────────────────────────────
     updates = parser.add_argument_group("update methods (modify file in place)")
-    updates.add_argument(
-        "--scale-delta",
-        type=float,
-        default=0.0,
-        help="Multiply delta by this factor in place",
-    )
-    updates.add_argument(
-        "--rescale-heights",
-        type=int,
-        default=None,
-        nargs="?",
-        const=0,
-        help="Shift heights to start from zero. If an index is given, subtract height[index]",
-    )
+    updates.add_argument("--scale-delta", type=float, default=0.0,
+                         help="Multiply delta by this factor in place")
+    updates.add_argument("--rescale-heights", type=int, default=None, nargs="?", const=0,
+                         help="Shift heights to start from zero. If an index is given, subtract height[index]")
 
     # ── Manipulation methods ───────────────────────────────────────────
     manipulation = parser.add_argument_group(
-        "manipulation methods (create a new output file, requires --out)"
-    )
-    manipulation.add_argument(
-        "--rescale-k",
-        type=int,
-        default=0,
-        help="Rescale height axis by picking 1 in N planes (N = value)",
-    )
-    manipulation.add_argument(
-        "--force-even-k",
-        action="store_true",
-        help="Force the resulting number of heights to be even",
-    )
-    parser.add_argument(
-        "--rescale-h-zero",
-        action="store_true",
-        help="Rescale heights so the minimum height is zero (default: False)",
-    )
-    manipulation.add_argument(
-        "--interpolate-k",
-        type=int,
-        default=0,
-        help="Rescale z-axis to N heights using fast linear interpolation (N = value)",
-    )
-    manipulation.add_argument(
-        "--extract",
-        nargs=3,
-        type=int,
-        metavar=("I", "J", "N"),
-        help="Extract a horizontal subdomain: I J N — starting at (I,J) with size N×N",
-    )
+        "manipulation methods (create a new output file, requires --out)")
+    manipulation.add_argument("--rescale-k", type=int, default=0,
+                              help="Rescale height axis by picking 1 in N planes (N = value)")
+    manipulation.add_argument("--force-even-k", action="store_true",
+                              help="Force the resulting number of heights to be even")
+    parser.add_argument("--rescale-h-zero", action="store_true",
+                        help="Rescale heights so the minimum height is zero (default: False)")
+    manipulation.add_argument("--interpolate-k", type=int, default=0,
+                              help="Rescale z-axis to N heights using fast linear interpolation (N = value)")
+    manipulation.add_argument("--extract", nargs=3, type=int, metavar=("I", "J", "N"),
+                              help="Extract a horizontal subdomain: I J N — starting at (I,J) with size N×N")
+    manipulation.add_argument("--addNij", action="store_true",
+                              help="Copy file and add geometry/N_ij if not present")
 
     args = parser.parse_args(args=None if sys.argv[1:] else ["--help"])
+
+    # Constants for DOF estimation
+    N_OMEGA = 16 * 8  # 128 directions
+    N_NU = 96         # frequency points
+    N_STOKES = 4      # Stokes parameters
+    DOF_PER_POINT = N_OMEGA * N_NU * N_STOKES  # 49152
+
+    # ── Directory scan mode ───────────────────────────────────────────
+    if args.dir:
+        if not os.path.isdir(args.dir):
+            print(f"\n  Error: directory not found: {args.dir}\n")
+            sys.exit(1)
+        import glob
+        h5_files = sorted(glob.glob(os.path.join(args.dir, "*.h5")))
+        if not h5_files:
+            print(f"\n  No *.h5 files found in {args.dir}\n")
+            sys.exit(0)
+
+        rows = []
+        for fpath in h5_files:
+            fname = os.path.basename(fpath)
+            try:
+                geo, _, _ = read_metadata(fpath)
+            except Exception as e:
+                print(f"\n  {RED}Error reading {fname}:{RESET} {e}\n")
+                continue
+            delta_km = geo.delta / 1e5
+            domain_km = (geo.N_x - 1) * delta_km
+            h_min = geo.height.min()
+            h_max = geo.height.max()
+            n_pts = geo.N_x * geo.N_y * geo.N_z
+            total_dof = n_pts * DOF_PER_POINT
+            rows.append((fname, geo.N_x, geo.N_y, geo.N_z, n_pts, geo.delta, delta_km, domain_km, h_min, h_max, total_dof))
+
+        if args.csv:
+            print("file,N_x,N_y,N_z,n_points,delta_cm,delta_km,domain_km,h_min_cm,h_max_cm,total_dof")
+            for r in rows:
+                print(f"{r[0]},{r[1]},{r[2]},{r[3]},{r[4]},{r[5]:.4e},{r[6]:.4f},{r[7]:.2f},{r[8]:.4e},{r[9]:.4e},{r[10]}")
+        else:
+            for r in rows:
+                fname, Nx, Ny, Nz, n_pts, delta, delta_km, domain_km, h_min, h_max, total_dof = r
+                grid_match = re.search(r'(\d+)\s*[xX]\s*(\d+)\s*[xX]\s*(\d+)', fname)
+                if grid_match:
+                    fn_Nx, fn_Ny, fn_Nz = int(grid_match.group(1)), int(grid_match.group(2)), int(grid_match.group(3))
+                    grid_ok = (fn_Nx == Nx and fn_Ny == Ny and fn_Nz == Nz)
+                    grid_status = f"{GREEN}✓ match (file grid {Nx}×{Ny}×{Nz} matches filename){RESET}" if grid_ok else f"{RED}✗ MISMATCH{RESET} (file says {fn_Nx}×{fn_Ny}×{fn_Nz})"
+                else:
+                    grid_status = f"{DIM}—{RESET}"
+
+                print(f"\n{BOLD}{fname}{RESET}  {grid_status}")
+                print(f"{indent}{BOLD}{'Grid:':<20s}{RESET} {Nx} × {Ny} × {Nz}")
+                print(f"{indent}{BOLD}{'Points:':<20s}{RESET} {n_pts:,}")
+                print(f"{indent}{BOLD}{'Cell size (δ):':<20s}{RESET} {GREEN}{delta:.4e} cm{RESET}  ({CYAN}{delta_km:.4f} km{RESET})")
+                print(f"{indent}{BOLD}{'Domain size:':<20s}{RESET} {CYAN}{domain_km:.2f} km{RESET}  (horizontal)")
+                print(f"{indent}{BOLD}{'Height range:':<20s}{RESET} {GREEN}{h_min:.4e} cm{RESET}  →  {GREEN}{h_max:.4e} cm{RESET}")
+                print(f"{indent}{BOLD}{'DOFs (est.):':<20s}{RESET} {YELLOW}{total_dof:,}{RESET}  (N_Ω={N_OMEGA}, N_ν={N_NU}, n_Stokes={N_STOKES})")
+            print()
+        sys.exit(0)
 
     hdf5_path = args.file
 
@@ -2603,9 +2400,7 @@ Examples:
             obj = f[ds_path]
             if hasattr(obj, "shape") and obj.shape:
                 ds = _dtype_str(obj.dtype)
-                print(
-                    f"{indent}{ds_path:<40s} {CYAN}{list(obj.shape)}{RESET}  {DIM}{ds}{RESET}"
-                )
+                print(f"{indent}{ds_path:<40s} {CYAN}{list(obj.shape)}{RESET}  {DIM}{ds}{RESET}")
             elif hasattr(obj, "shape"):
                 print(f"{indent}{ds_path:<40s} {DIM}(scalar){RESET}")
             else:
@@ -2614,9 +2409,7 @@ Examples:
                     sub_obj = obj[sub]
                     if hasattr(sub_obj, "shape") and sub_obj.shape:
                         ds = _dtype_str(sub_obj.dtype)
-                        print(
-                            f"{indent}  {sub:<38s} {CYAN}{list(sub_obj.shape)}{RESET}  {DIM}{ds}{RESET}"
-                        )
+                        print(f"{indent}  {sub:<38s} {CYAN}{list(sub_obj.shape)}{RESET}  {DIM}{ds}{RESET}")
                     elif hasattr(sub_obj, "shape"):
                         print(f"{indent}  {sub:<38s} {DIM}(scalar){RESET}")
                     else:
@@ -2625,9 +2418,7 @@ Examples:
                             sub2_obj = obj[sub][sub2]
                             if hasattr(sub2_obj, "shape") and sub2_obj.shape:
                                 ds = _dtype_str(sub2_obj.dtype)
-                                print(
-                                    f"{indent}    {sub2:<36s} {CYAN}{list(sub2_obj.shape)}{RESET}  {DIM}{ds}{RESET}"
-                                )
+                                print(f"{indent}    {sub2:<36s} {CYAN}{list(sub2_obj.shape)}{RESET}  {DIM}{ds}{RESET}")
 
         field_names = atmos_dtype.names
         n_fields = len(field_names)
@@ -2641,47 +2432,29 @@ Examples:
     print(f"\n{BLUE}{BOLD}Geometry{RESET}")
     delta_km = geometry.delta / 1e5
     domain_km = (geometry.N_x - 1) * delta_km
-    print(
-        f"{indent}{BOLD}{'Grid:':<20s}{RESET} {geometry.N_x} × {geometry.N_y} × {geometry.N_z}"
-    )
-    print(
-        f"{indent}{BOLD}{'Cell size (δ):':<20s}{RESET} {GREEN}{geometry.delta:.4e} cm{RESET}  ({CYAN}{delta_km:.4f} km{RESET})"
-    )
-    print(
-        f"{indent}{BOLD}{'Domain size:':<20s}{RESET} {CYAN}{domain_km:.2f} km{RESET}  (horizontal)"
-    )
+    print(f"{indent}{BOLD}{'Grid:':<20s}{RESET} {geometry.N_x} × {geometry.N_y} × {geometry.N_z}")
+    print(f"{indent}{BOLD}{'Cell size (δ):':<20s}{RESET} {GREEN}{geometry.delta:.4e} cm{RESET}  ({CYAN}{delta_km:.4f} km{RESET})")
+    print(f"{indent}{BOLD}{'Domain size:':<20s}{RESET} {CYAN}{domain_km:.2f} km{RESET}  (horizontal)")
     h_min = geometry.height.min()
     h_max = geometry.height.max()
-    print(
-        f"{indent}{BOLD}{'Height range:':<20s}{RESET} {GREEN}{h_min:.4e} cm{RESET}  →  {GREEN}{h_max:.4e} cm{RESET}"
-    )
+    print(f"{indent}{BOLD}{'Height range:':<20s}{RESET} {GREEN}{h_min:.4e} cm{RESET}  →  {GREEN}{h_max:.4e} cm{RESET}")
 
     if freq_grid.N_frequencies > 0:
         print(f"\n{BLUE}{BOLD}Frequency grid{RESET}")
         print(f"{indent}{BOLD}{'N frequencies:':<20s}{RESET} {freq_grid.N_frequencies}")
         freq_min = freq_grid.frequency.min()
         freq_max = freq_grid.frequency.max()
-        print(
-            f"{indent}{BOLD}{'Frequency range:':<20s}{RESET} {GREEN}{freq_min:.4e}{RESET}  →  {GREEN}{freq_max:.4e}"
-        )
+        print(f"{indent}{BOLD}{'Frequency range:':<20s}{RESET} {GREEN}{freq_min:.4e}{RESET}  →  {GREEN}{freq_max:.4e}")
 
     print(f"\n{BLUE}{BOLD}Atom{RESET}")
     print(f"{indent}{BOLD}{'Atomic number:':<20s}{RESET} {atom.atomic_number}")
     print(f"{indent}{BOLD}{'Atomic mass:':<20s}{RESET} {atom.atomic_mass}")
-    print(
-        f"{indent}{BOLD}{'E_lower / E_upper:':<20s}{RESET} {GREEN}{atom.E_lower:.4e}{RESET}  /  {GREEN}{atom.E_upper:.4e}{RESET}"
-    )
-    print(
-        f"{indent}{BOLD}{'g_lower / g_upper:':<20s}{RESET} {atom.g_lower}  /  {atom.g_upper}"
-    )
+    print(f"{indent}{BOLD}{'E_lower / E_upper:':<20s}{RESET} {GREEN}{atom.E_lower:.4e}{RESET}  /  {GREEN}{atom.E_upper:.4e}{RESET}")
+    print(f"{indent}{BOLD}{'g_lower / g_upper:':<20s}{RESET} {atom.g_lower}  /  {atom.g_upper}")
     print(f"{indent}{BOLD}{'Aul:':<20s}{RESET} {GREEN}{atom.Aul:.4e}{RESET}")
     print(f"{indent}{BOLD}{'jl2 / ju2:':<20s}{RESET} {atom.jl2}  /  {atom.ju2}")
-    print(
-        f"{indent}{BOLD}{'a_coef_D2:':<20s}{RESET} {GREEN}{atom.a_coef_D2:.4e}{RESET}"
-    )
-    print(
-        f"{indent}{BOLD}{'b_coef_D2:':<20s}{RESET} {GREEN}{atom.b_coef_D2:.4e}{RESET}"
-    )
+    print(f"{indent}{BOLD}{'a_coef_D2:':<20s}{RESET} {GREEN}{atom.a_coef_D2:.4e}{RESET}")
+    print(f"{indent}{BOLD}{'b_coef_D2:':<20s}{RESET} {GREEN}{atom.b_coef_D2:.4e}{RESET}")
 
     pt = read_point(hdf5_path, args.i, args.j, args.k)
     print(f"\n{BLUE}{BOLD}Point ({args.i}, {args.j}, {args.k}){RESET}")
@@ -2694,34 +2467,23 @@ Examples:
         by = getattr(pt, f"{prefix}y")
         bz = getattr(pt, f"{prefix}z")
         label = prefix.rstrip("_")
-        print(
-            f"{indent}{label:<30s} ({GREEN}{bx:.4e}{RESET}, {GREEN}{by:.4e}{RESET}, {GREEN}{bz:.4e}{RESET})"
-        )
+        print(f"{indent}{label:<30s} ({GREEN}{bx:.4e}{RESET}, {GREEN}{by:.4e}{RESET}, {GREEN}{bz:.4e}{RESET})")
     print(f"{indent}{'pop_lower_level':<30s} {GREEN}{pt.pop_lower_level:.6e}{RESET}")
     print(f"{indent}{'pop_upper_level':<30s} {GREEN}{pt.pop_upper_level:.6e}{RESET}")
     print(f"{indent}{'Cul':<30s} {GREEN}{pt.Cul:.6e}{RESET}")
     print(f"{indent}{'Qel':<30s} {GREEN}{pt.Qel:.6e}{RESET}")
-    print(
-        f"{indent}{'c_scat_opacity_sigma_c':<30s} {GREEN}{pt.c_scat_opacity_sigma_c:.6e}{RESET}"
-    )
-    print(
-        f"{indent}{'c_therm_opacity_k_c':<30s} {GREEN}{pt.c_therm_opacity_k_c:.6e}{RESET}"
-    )
-    print(
-        f"{indent}{'c_therm_emissivity_epsilon_c':<30s} {GREEN}{pt.c_therm_emissivity_epsilon_c:.6e}{RESET}"
-    )
+    print(f"{indent}{'c_scat_opacity_sigma_c':<30s} {GREEN}{pt.c_scat_opacity_sigma_c:.6e}{RESET}")
+    print(f"{indent}{'c_therm_opacity_k_c':<30s} {GREEN}{pt.c_therm_opacity_k_c:.6e}{RESET}")
+    print(f"{indent}{'c_therm_emissivity_epsilon_c':<30s} {GREEN}{pt.c_therm_emissivity_epsilon_c:.6e}{RESET}")
     print(f"{indent}{'nH':<30s} {GREEN}{pt.nH:.6e}{RESET}")
     print(f"{indent}{'D2':<30s} {GREEN}{pt.D2:.6e}{RESET}")
 
     import time
-
     print(f"\n{BLUE}{BOLD}Read benchmarks (temperature field){RESET}")
     _t0 = time.perf_counter()
     T = read_field(hdf5_path, "temperature")
     _elapsed = time.perf_counter() - _t0
-    print(
-        f"{indent}{'read_field (full 3D):':<30s} {GREEN}{_elapsed * 1e3:.1f} ms{RESET}  [{T.min():.1f} – {T.max():.1f}]"
-    )
+    print(f"{indent}{'read_field (full 3D):':<30s} {GREEN}{_elapsed * 1e3:.1f} ms{RESET}  [{T.min():.1f} – {T.max():.1f}]")
 
     test_i = min(geometry.N_x // 2, 4)
     test_j = min(geometry.N_y // 2, 4)
@@ -2730,38 +2492,24 @@ Examples:
     _t0 = time.perf_counter()
     s_yz = read_field_slice(hdf5_path, "temperature", i=test_i)
     _elapsed = time.perf_counter() - _t0
-    print(
-        f"{indent}{'read_field_slice (y-z plane):':<30s} {GREEN}{_elapsed * 1e3:.1f} ms{RESET}  [{s_yz.min():.1f} – {s_yz.max():.1f}]"
-    )
+    print(f"{indent}{'read_field_slice (y-z plane):':<30s} {GREEN}{_elapsed * 1e3:.1f} ms{RESET}  [{s_yz.min():.1f} – {s_yz.max():.1f}]")
 
     _t0 = time.perf_counter()
     s_xz = read_field_slice(hdf5_path, "temperature", j=test_j)
     _elapsed = time.perf_counter() - _t0
-    print(
-        f"{indent}{'read_field_slice (x-z plane):':<30s} {GREEN}{_elapsed * 1e3:.1f} ms{RESET}  [{s_xz.min():.1f} – {s_xz.max():.1f}]"
-    )
+    print(f"{indent}{'read_field_slice (x-z plane):':<30s} {GREEN}{_elapsed * 1e3:.1f} ms{RESET}  [{s_xz.min():.1f} – {s_xz.max():.1f}]")
 
     _t0 = time.perf_counter()
     s_xy = read_field_slice(hdf5_path, "temperature", k=test_k)
     _elapsed = time.perf_counter() - _t0
-    print(
-        f"{indent}{'read_field_slice (x-y plane):':<30s} {GREEN}{_elapsed * 1e3:.1f} ms{RESET}  [{s_xy.min():.1f} – {s_xy.max():.1f}]"
-    )
+    print(f"{indent}{'read_field_slice (x-y plane):':<30s} {GREEN}{_elapsed * 1e3:.1f} ms{RESET}  [{s_xy.min():.1f} – {s_xy.max():.1f}]")
     print()
 
     if args.rescale_k > 0:
         if not args.out:
             raise ValueError("--out is required when --rescale-k is specified")
-        print(
-            f"Rescaling height axis with step {args.rescale_k} (force_even_k={args.force_even_k}, rescale_h_zero={args.rescale_h_zero}) ..."
-        )
-        rescale_atmos(
-            hdf5_path,
-            args.out,
-            args.rescale_k,
-            force_even_k=args.force_even_k,
-            rescale_h_zero=args.rescale_h_zero,
-        )
+        print(f"Rescaling height axis with step {args.rescale_k} (force_even_k={args.force_even_k}, rescale_h_zero={args.rescale_h_zero}) ...")
+        rescale_atmos(hdf5_path, args.out, args.rescale_k, force_even_k=args.force_even_k, rescale_h_zero=args.rescale_h_zero)
         print(f"Output written to: {args.out}")
         exit(0)
 
@@ -2772,9 +2520,7 @@ Examples:
             print(f"\n{RED}Error:{RESET} Output file already exists: {args.out}")
             print(f"{DIM}       Remove it or choose a different path.{RESET}\n")
             exit(1)
-        print(
-            f"Interpolating z-axis to {args.interpolate_k} heights using fast linear interpolation ..."
-        )
+        print(f"Interpolating z-axis to {args.interpolate_k} heights using fast linear interpolation ...")
         interpolate_k(hdf5_path, args.out, args.interpolate_k)
         exit(0)
 
@@ -2800,18 +2546,22 @@ Examples:
         extract_subdomain(hdf5_path, i, j, N, args.out)
         exit(0)
 
+    if args.addNij:
+        if not args.out:
+            print("Error: --out is required with --addNij")
+            exit(1)
+        if os.path.exists(args.out):
+            print(f"\n  Error: output file already exists: {args.out}\n")
+            exit(1)
+        add_Nij(hdf5_path, args.out)
+        exit(0)
+
     if args.check_D2 or args.plot_D2_err or args.plot_D2_vs_k:
         if args.plot_D2_vs_k:
             rel_err = check_D2_stats(hdf5_path, T_ref=args.D2_T_ref, plot=False)
             plot_D2_error_vs_k(hdf5_path, rel_err, geometry)
             exit(0)
-        check_D2_stats(
-            hdf5_path,
-            T_ref=args.D2_T_ref,
-            plot=args.plot_D2_err,
-            axis=args.axis,
-            idx=args.idx,
-        )
+        check_D2_stats(hdf5_path, T_ref=args.D2_T_ref, plot=args.plot_D2_err, axis=args.axis, idx=args.idx)
         if not args.plot_D2_err:
             exit(0)
 
@@ -2820,59 +2570,47 @@ Examples:
             rel_err = check_damping_stats(hdf5_path, plot=False)
             plot_damping_error_vs_k(hdf5_path, rel_err, geometry)
             exit(0)
-        check_damping_stats(
-            hdf5_path, plot=args.plot_damping_err, axis=args.axis, idx=args.idx
-        )
+        check_damping_stats(hdf5_path, plot=args.plot_damping_err, axis=args.axis, idx=args.idx)
         if not args.plot_damping_err:
             exit(0)
 
     if args.iheight is not None:
         heights = geometry.height
         idx = _find_closest_index(heights, args.iheight)
-        print(
-            f"Height {args.iheight:.4e} cm -> index {idx} (height: {heights[idx]:.4e} cm)"
-        )
+        print(f"Height {args.iheight:.4e} cm -> index {idx} (height: {heights[idx]:.4e} cm)")
         args.idx = idx
 
     if args.plot:
         print(f"Delta: {geometry.delta:.4e} cm ({geometry.delta/1e5:.4f} km)")
+        slice_data = _get_field_slice(hdf5_path, args.field, args.axis, args.idx)
+        slice_mean = float(slice_data.mean())
+        slice_min = float(slice_data.min())
+        slice_max = float(slice_data.max())
+        slice_std = float(slice_data.std())
+        print(f"\n{BOLD}Slice statistics ({args.axis} at {args.idx}): {args.field}{RESET}")
+        print(f"{indent}{BLUE}mean:{RESET} {GREEN}{slice_mean:.6e}{RESET}")
+        print(f"{indent}{BLUE}min: {RESET} {GREEN}{slice_min:.6e}{RESET}")
+        print(f"{indent}{BLUE}max: {RESET} {GREEN}{slice_max:.6e}{RESET}")
+        print(f"{indent}{BLUE}std: {RESET} {GREEN}{slice_std:.6e}{RESET}\n")
         geo = None if args.no_scale else geometry
         if args.axis == "xy":
-            plot_slice_xy(
-                hdf5_path,
-                field=args.field,
-                k=args.idx,
-                log=args.log,
-                sign=args.sign,
-                quiver=args.quiver,
-                geometry=geo,
-                threshold=args.threshold,
-                cmap=args.cmap,
-            )
+            z_idx = args.idx
+            z_km = geometry.height[z_idx] / 1e5 if z_idx < len(geometry.height) else float('nan')
+            print(f"z-index: {z_idx}, height: {z_km:.4f} km")
+            plot_slice_xy(hdf5_path, field=args.field, k=args.idx, log=args.log, sign=args.sign, quiver=args.quiver, geometry=geo, threshold=args.threshold, cmap=args.cmap)
         elif args.axis == "xz":
-            plot_slice_xz(
-                hdf5_path,
-                field=args.field,
-                j=args.idx,
-                log=args.log,
-                sign=args.sign,
-                quiver=args.quiver,
-                geometry=geo,
-                threshold=args.threshold,
-                cmap=args.cmap,
-            )
+            plot_slice_xz(hdf5_path, field=args.field, j=args.idx, log=args.log, sign=args.sign, quiver=args.quiver, geometry=geo, threshold=args.threshold, cmap=args.cmap)
         elif args.axis == "yz":
-            plot_slice_yz(
-                hdf5_path,
-                field=args.field,
-                i=args.idx,
-                log=args.log,
-                sign=args.sign,
-                quiver=args.quiver,
-                geometry=geo,
-                threshold=args.threshold,
-                cmap=args.cmap,
-            )
+            plot_slice_yz(hdf5_path, field=args.field, i=args.idx, log=args.log, sign=args.sign, quiver=args.quiver, geometry=geo, threshold=args.threshold, cmap=args.cmap)
+        exit(0)
+
+    if args.stats:
+        stats = compute_field_stats(hdf5_path, args.field)
+        print(f"\n{BOLD}Field statistics: {args.field}{RESET}")
+        print(f"{indent}{BLUE}mean:{RESET} {GREEN}{stats['mean']:.6e}{RESET}")
+        print(f"{indent}{BLUE}min: {RESET} {GREEN}{stats['min']:.6e}{RESET}")
+        print(f"{indent}{BLUE}max: {RESET} {GREEN}{stats['max']:.6e}{RESET}")
+        print(f"{indent}{BLUE}std: {RESET} {GREEN}{stats['std']:.6e}{RESET}")
         exit(0)
 
     if args.avg_vz:
@@ -2881,20 +2619,11 @@ Examples:
         exit(0)
 
     if args.z_profile:
-        plot_z_profile(
-            hdf5_path,
-            field=args.field,
-            geometry=geometry,
-            show_minmax=args.z_profile_minmax,
-        )
+        plot_z_profile(hdf5_path, field=args.field, geometry=geometry, show_minmax=args.z_profile_minmax)
         exit(0)
 
     if args.plot_all_profiles:
-        plot_all_z_profiles(
-            hdf5_path,
-            fields=args.fields,
-            geometry=geometry,
-            show_minmax=args.z_profile_minmax,
-            log=args.log,
-        )
+        plot_all_z_profiles(hdf5_path, fields=args.fields, geometry=geometry, show_minmax=args.z_profile_minmax, log=args.log)
         exit(0)
+
+

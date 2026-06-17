@@ -34,9 +34,9 @@ public:
 		{
 			if (mpi_rank_ == 0) std::cout << "Formal solver: implicit Euler\n";	
 		}
-		else if (type_ == "trapezoidal" or type_ == "Crank–Nicolson")
+		else if (type_ == "trapezoidal" or type_ == "CrankNicolson")
 		{
-			if (mpi_rank_ == 0) std::cout << "Formal solver: Crank–Nicolson\n";	
+			if (mpi_rank_ == 0) std::cout << "Formal solver: CrankNicolson\n";	
 		}
 		else if (type_ == "DELO_linear")
 		{
@@ -61,7 +61,7 @@ public:
 		else
 		{
 			if (mpi_rank_ == 0) std::cerr << "ERROR: " << type_ << " is not supported as formal solver.\n";
-			if (mpi_rank_ == 0) std::cerr << "Supported inputs: implicit_Euler, Crank–Nicolson, DELO_linear, SC_linear, SC_parabolic, and BESSER.\n";
+			if (mpi_rank_ == 0) std::cerr << "Supported inputs: implicit_Euler, CrankNicolson, DELO_linear, SC_linear, SC_parabolic, and BESSER.\n";
 		}
 
 		if (debug_mode_ and mpi_rank_ == 0) std::cout << "Formal solver bebug mode enabled.\n";				
