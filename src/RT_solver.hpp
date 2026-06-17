@@ -178,8 +178,13 @@ struct MF_context {
 
 static PetscErrorCode precond_ksp_monitor(KSP ksp, PetscInt it, PetscReal rnorm, void *ctx)
 {
-	(void)ksp; (void)ctx;
-	return PetscPrintf(PETSC_COMM_WORLD, "%3d PRECOND Residual norm %14.12e\n", (int)it, (double)rnorm);
+	(void)ctx;
+	Vec r;
+	PetscReal truenorm;
+	PetscCall(KSPBuildResidual(ksp, NULL, NULL, &r));
+	PetscCall(VecNorm(r, NORM_2, &truenorm));
+	PetscCall(VecDestroy(&r));
+	return PetscPrintf(PETSC_COMM_WORLD, "%3d PRECOND Residual norm %14.12e  ||pre_r(i)||/||pre_b|| %14.12e\n", (int)it, (double)rnorm, (double)truenorm);
 }
 
 class RT_solver
@@ -360,7 +365,10 @@ public:
 				CHKERRV(ierr);
 				ierr = KSPMonitorSet(mf_ctx_.pc_solver_, precond_ksp_monitor, NULL, NULL);
 				CHKERRV(ierr);
-			}
+			} else {
+				ierr = KSPMonitorCancel(mf_ctx_.pc_solver_);
+				CHKERRV(ierr);
+			}			
 #endif
 		}
     	else
@@ -371,7 +379,7 @@ public:
 
 		if (RT_problem_->verbose_)  {
 			ierr = PetscOptionsSetValue(NULL, "-ksp_monitor", "");CHKERRV(ierr);
-			// ierr = PetscOptionsSetValue(NULL, "-ksp_monitor_true_residual", "");CHKERRV(ierr);    // WARNING: this costs
+			ierr = PetscOptionsSetValue(NULL, "-ksp_monitor_true_residual", "");CHKERRV(ierr);    // WARNING: this costs
 			ierr = PetscOptionsSetValue(NULL, "-ksp_view", "");CHKERRV(ierr);			
 		}
 
