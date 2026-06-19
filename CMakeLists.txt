@@ -196,6 +196,7 @@ include_directories(${RII_INCLUDES}/src/acc_includes)
 include_directories(${RII_INCLUDES}/src/riii_approx_two_terms)
 include_directories(${RII_INCLUDES}/src/rii_aa_twoterm)
 include_directories(${RII_INCLUDES}/src/rii_aa_twoterm_unmag)
+include_directories(${RII_INCLUDES}/src/eps_II_twoterm_AD)
 if(USE_ACC)
 	include_directories(${RII_INCLUDES}/src_mpi/RII_contrib)
 	include_directories(${RII_INCLUDES}/src_acc/src)
@@ -307,8 +308,8 @@ target_include_directories(solar_3D_tests PUBLIC src/thdf/)
 target_link_libraries(solar_3D_tests PRIVATE hdf_atmos)
 target_include_directories(solar_3D_tests PUBLIC src/atmos_input_TRIP/)
 
-# target_link_libraries(solar_3D_tests PUBLIC ${HDF5_LIBRARIES})
-# target_link_libraries(solar_3D_tests PUBLIC ${HDF5_HL_LIBRARIES})
+target_link_libraries(solar_3D_tests PUBLIC ${HDF5_LIBRARIES})
+target_link_libraries(solar_3D_tests PUBLIC ${HDF5_HL_LIBRARIES})
 
 target_sources(solar_3D_tests PUBLIC ${SOURCES_FILES})
 target_include_directories(solar_3D_tests
@@ -336,9 +337,9 @@ target_include_directories(solar_3D_tests PUBLIC src/thdf/)
 target_include_directories(solar_3D_tests PUBLIC src/atmos_input_TRIP)
 
 # Link the static library
-target_link_libraries(solar_3D_tests
-	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a
-)
+# target_link_libraries(solar_3D_tests
+# 	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/thdf/libhdf_output.a
+# )
 
 # make does not build test
 set_target_properties(solar_3D_tests PROPERTIES EXCLUDE_FROM_ALL TRUE)
