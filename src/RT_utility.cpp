@@ -44,7 +44,7 @@ KSPTypeToString(KSPType type)
 inline std::string
 validateFormalSolver(const std::string &s)
 {
-	static const std::vector<std::string> allowed{"implicit_Euler", "trapezoidal", "Crank–Nicolson", "DELO_linear",
+	static const std::vector<std::string> allowed{"implicit_Euler", "trapezoidal", "CrankNicolson", "DELO_linear",
 												  "BESSER"};
 
 	for (const auto &a : allowed)

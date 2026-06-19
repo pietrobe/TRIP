@@ -19,6 +19,52 @@ else()
 	set(OPENMP_FLAG "-fopenmp")
 endif()
 
+# Architecture-specific optimization flags. The ARM and x86 branches are kept
+# strictly separate: -mcpu is the canonical target flag on aarch64 (where
+# -mtune alone does not enable the native ISA, e.g. NEON/SVE), while on x86 it
+# is deprecated/ambiguous and -mtune/-march are used instead. No x86 flag may
+# leak into the ARM branch or vice versa.
+include(CheckCXXCompilerFlag)
+string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" TRIP_SYSTEM_PROCESSOR)
+if(TRIP_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)$")
+	# ARM: target NVIDIA Grace (Neoverse V2, as in GH200 nodes). Prefer the
+	# hardcoded neoverse-v2 over -mcpu=native so that building on a front-end
+	# node of a different ARM arch still targets the compute nodes.
+	if(CMAKE_CXX_COMPILER_ID MATCHES "NVHPC|PGI")
+		# NVHPC does not understand -mcpu; its target-processor flag is -tp.
+		set(ARCH_FLAGS "-tp=neoverse-v2")
+	else()
+		check_cxx_compiler_flag("-mcpu=neoverse-v2" COMPILER_SUPPORTS_NEOVERSE_V2)
+		if(COMPILER_SUPPORTS_NEOVERSE_V2)
+			set(ARCH_FLAGS "-mcpu=neoverse-v2")
+			# Neoverse V2 implements SVE2 with 128-bit vectors: fixing the
+			# scalable vector length lets the compiler emit fixed-width SVE
+			# code instead of vector-length-agnostic code.
+			set(CMAKE_REQUIRED_FLAGS "-mcpu=neoverse-v2")
+			check_cxx_compiler_flag("-msve-vector-bits=128" COMPILER_SUPPORTS_SVE_VECTOR_BITS)
+			unset(CMAKE_REQUIRED_FLAGS)
+			if(COMPILER_SUPPORTS_SVE_VECTOR_BITS)
+				set(ARCH_FLAGS "${ARCH_FLAGS} -msve-vector-bits=128")
+			endif()
+		else()
+			set(ARCH_FLAGS "-mcpu=native")
+		endif()
+	endif()
+	message(STATUS
+		"ARM CPU detected (${CMAKE_SYSTEM_PROCESSOR}): targeting Neoverse V2 / Grace"
+	)
+elseif(TRIP_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|i[3-6]86)$")
+	# x86: tune for the build host; never use -mcpu here.
+	set(ARCH_FLAGS "-mtune=native")
+	message(STATUS "x86 CPU detected (${CMAKE_SYSTEM_PROCESSOR})")
+else()
+	set(ARCH_FLAGS "")
+	message(WARNING
+		"Unknown CPU architecture '${CMAKE_SYSTEM_PROCESSOR}': no architecture-specific flags set"
+	)
+endif()
+message(STATUS "Architecture flags (${CMAKE_SYSTEM_PROCESSOR}): ${ARCH_FLAGS}")
+
 option(DEBUG "Build with debugging symbols and flags" OFF)
 if(DEBUG)
 	message(STATUS "Configuring Debug build")
@@ -31,11 +77,16 @@ else()
 	message(STATUS "Configuring Release build")
 	# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option")
 	set(CMAKE_CXX_FLAGS
-		"${CMAKE_CXX_FLAGS} -O3 ${OPENMP_FLAG} -std=c++17 -Wno-deprecated-declarations "
+		"${CMAKE_CXX_FLAGS} -O3 ${OPENMP_FLAG} -std=c++17 -Wno-deprecated-declarations -ffast-math ${ARCH_FLAGS}"
 	)
 	# set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Ofast -fno-signed-zeros -fno-trapping-math -fassociative-math -march=native -mtune=native -mprefer-vector-width=512 -fopenmp -std=c++17 -Wno-deprecated-declarations -Wno-tautological-constant-compare -Wno-recommended-option -pedantic ")
 	set(EXECUTABLE_NAME "solar_3D")
 endif()
+
+message(STATUS
+	"C++ compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} (${CMAKE_CXX_COMPILER})"
+)
+message(STATUS "C++ compiler options: ${CMAKE_CXX_FLAGS}")
 
 ### DEPENDENCIES
 # Skip MPI compiler test which doesn't work with NVHPC compilers
