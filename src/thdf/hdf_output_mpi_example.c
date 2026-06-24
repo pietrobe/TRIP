@@ -6,6 +6,7 @@
 #include "hdf_output_domain_decomposition_3D.h"
 #include "hdf_output_example_3D.h"
 #include "hdf_output_example_zslice_3D.h"
+#include "output_utils.h"
 #include "thdf.h"
 
 static void
@@ -214,7 +215,8 @@ main_default(int argc, char **argv) {
     N_frequencies = atoi(env);
   double *frequencies = NULL;
 
-  const char filename[100] = "output_field_mpi.h5";
+  char filename[PATH_MAX];
+  build_output_filepath(filename, sizeof(filename), "output_field_mpi.h5");
 
   int mpi_index_x = mpi_rank % N_x;
   int mpi_index_y = (mpi_rank / N_x) % N_y;
@@ -429,6 +431,12 @@ main_JKQ_domain_dec(int argc, char **argv) {
   int mpi_rank, mpi_size;
   MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+
+  if (mpi_rank == 0) {
+    printf("Starting MPI-enabled JKQ field output example with %d ranks...\n", mpi_size);
+    fflush(stdout);
+  }
+
   print_env_var_status(mpi_rank);
 
   int   N_x;
@@ -513,7 +521,8 @@ main_JKQ_domain_dec(int argc, char **argv) {
   int local_start_x = index_x * base_N_x + (index_x < rem_x ? index_x : rem_x);
   int local_start_y = index_y * base_N_y + (index_y < rem_y ? index_y : rem_y);
 
-  const char filename[100] = "output_JKQ_mpi.h5";
+  char filename[PATH_MAX];
+  build_output_filepath(filename, sizeof(filename), "output_JKQ_mpi.h5");
 
   frequencies = (double *)malloc(N_frequencies * sizeof(double));
   for (int i = 0; i < N_frequencies; i++) {
@@ -594,16 +603,21 @@ main_JKQ_domain_dec(int argc, char **argv) {
   free(KQ_values_commpressed_imag);
 
   {
-    printf("Rank %2d: Writing to MPI-enabled output JKQ dataset... from index (%2d, %2d, %2d) to end (%2d, %2d, %2d)\n",
-           mpi_rank, local_start_x, local_start_y, 0, local_start_x + local_N_x - 1, local_start_y + local_N_y - 1,
-           N_z - 1);
-    fflush(stdout);
+    if (mpi_rank == 0) {
+
+      printf("Rank %2d: Writing to MPI-enabled output JKQ dataset... from index (%2d, %2d, %2d) to end (%2d, %2d, %2d)\n",
+             mpi_rank, local_start_x, local_start_y, 0, local_start_x + local_N_x - 1, local_start_y + local_N_y - 1,
+             N_z - 1);
+      fflush(stdout);
+    }
 
     // hid_t file_id, plist_id;
     // plist_id = H5Pcreate(H5P_FILE_ACCESS);
     // H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
     // file_id = H5Fopen(filename, H5F_ACC_RDWR, plist_id);
     // H5Pclose(plist_id);
+
+    double t_start = MPI_Wtime();
 
     hid_t file_id = THDF_open_file_MPI(filename, MPI_COMM_WORLD);
 
@@ -630,6 +644,22 @@ main_JKQ_domain_dec(int argc, char **argv) {
 
     THDF_close_JKQ_field_handler_mpi(JKQ_dset_handler);
     THDF_close_file(file_id);
+
+    double t_end   = MPI_Wtime();
+    double elapsed = t_end - t_start;
+
+    double max_elapsed;
+    MPI_Reduce(&elapsed, &max_elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+    if (mpi_rank == 0) {
+      const size_t bytes_jkq  = (size_t)N_x * N_y * N_z * (N_JKQ_real + N_JKQ_imag) * N_frequencies * sizeof(THDF_JKQ_float_t);
+      const size_t bytes_norm = (size_t)N_x * N_y * N_z * (N_JKQ_real + N_JKQ_imag) * sizeof(THDF_JKQ_n_float_t);
+      const double total_gb   = (double)(bytes_jkq + bytes_norm) / (1024.0 * 1024.0 * 1024.0);
+      const double bw_gbs     = total_gb / max_elapsed;
+      printf("JKQ write: %.3f GB in %.3f s => %.2f GB/s  (walltime = max across %d ranks)\n",
+             total_gb, max_elapsed, bw_gbs, mpi_size);
+      fflush(stdout);
+    }
 
     destroy_example_JKQ_field(JKQ_field);
   }
@@ -772,7 +802,8 @@ main_JKQ_CRD_domain_dec(int argc, char **argv) {
   int local_start_x = index_x * base_N_x + (index_x < rem_x ? index_x : rem_x);
   int local_start_y = index_y * base_N_y + (index_y < rem_y ? index_y : rem_y);
 
-  const char filename[100] = "output_JKQ_CRD_mpi.h5";
+  char filename[PATH_MAX];
+  build_output_filepath(filename, sizeof(filename), "output_JKQ_CRD_mpi.h5");
 
   KQ_values = (int *)malloc(9 * 2 * sizeof(int));
   int i     = 0;
@@ -930,7 +961,8 @@ main_domain_dec(int argc, char **argv) {
   if (env && strcmp(env, "float32") == 0)
     float_type = HDF_OUT_FLOAT32;
 
-  const char filename[100] = "output_field_mpi.h5";
+  char filename[PATH_MAX];
+  build_output_filepath(filename, sizeof(filename), "output_field_mpi.h5");
 
   // const int mpi_surface_size = N_x * N_y;
 
@@ -1120,7 +1152,8 @@ main_example_ar_domain_dec(int argc, char **argv) {
   double *muv         = NULL;
   double *chiv        = NULL;
 
-  const char filename[100] = "output_field_ar_mpi.h5";
+  char filename[PATH_MAX];
+  build_output_filepath(filename, sizeof(filename), "output_field_ar_mpi.h5");
 
   // Domain decomposition setup
   int       ranks_per_surface = mpi_size / N_z;
@@ -1260,13 +1293,13 @@ main_example_ar_domain_dec(int argc, char **argv) {
           // Fill with example data
           for (int f = 0; f < N_frequencies; f++) {
             THDF_FIELD_SET_FC(out_float_type, field_data, stokes_I, f,
-              sin(1.0 * (global_ix + 1) / (di + 0.2 * N_x) * (global_jy + 1) * (f + 1) / N_frequencies));
+                              sin(1.0 * (global_ix + 1) / (di + 0.2 * N_x) * (global_jy + 1) * (f + 1) / N_frequencies));
             THDF_FIELD_SET_FC(out_float_type, field_data, stokes_QI, f,
-              cos(1.5 * (global_ix + 1) / (di + 0.2 * N_x) * (global_jy + 1) * (f + 1) / N_frequencies));
+                              cos(1.5 * (global_ix + 1) / (di + 0.2 * N_x) * (global_jy + 1) * (f + 1) / N_frequencies));
             THDF_FIELD_SET_FC(out_float_type, field_data, stokes_UI, f,
-              sin(2.0 * (global_ix + 1) / (di + 0.2 * N_x) * (global_jy + 1) * (f + 1) / N_frequencies));
+                              sin(2.0 * (global_ix + 1) / (di + 0.2 * N_x) * (global_jy + 1) * (f + 1) / N_frequencies));
             THDF_FIELD_SET_FC(out_float_type, field_data, stokes_VI, f,
-              cos(3.0 * (global_ix + 1) / (di + 0.2 * N_x) * (global_jy + 1) * (f + 1) / N_frequencies));
+                              cos(3.0 * (global_ix + 1) / (di + 0.2 * N_x) * (global_jy + 1) * (f + 1) / N_frequencies));
           }
 
           // Write field data for this position
@@ -1308,13 +1341,13 @@ main(int argc, char **argv) {
   // Switch between different examples:
   // return main_default(argc, argv);              // Simple MPI example
   // return main_domain_dec(argc, argv);  // Domain decomposition for regular fields
-  return main_example_ar_domain_dec(argc, argv);  // Domain decomposition for ARD fields
+  // return main_example_ar_domain_dec(argc, argv);  // Domain decomposition for ARD fields
   // return main_JKQ_domain_dec(argc, argv);  // Domain decomposition for JKQ fieldsmain_JKQ_CRD_domain_dec
   // return main_JKQ_CRD_domain_dec(argc, argv);  // Domain decomposition for JKQ CRD fields
   // return main_3d_example_v2(argc, argv);
-  // return main_3d_example_zslice(argc, argv);
+  // return main_3d_example_zslice(argc, argv); /// Single with mono creation and sincronous writing of z-slices
   // return main_3d_example_multi_zslice(argc, argv);
-  // return main_3d_example_single_file(argc, argv);
+  return main_3d_example_single_file(argc, argv); /// Single with sincronous creation and writing of multiple z-slices
 
   MPI_Init(&argc, &argv);
   int mpi_rank, mpi_size;
@@ -1322,7 +1355,7 @@ main(int argc, char **argv) {
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 
   if (mpi_rank == 0) {
-    demo_decompose_domain_3d(argc, argv);
+    // demo_decompose_domain_3d(argc, argv);
   }
 
   MPI_Finalize();

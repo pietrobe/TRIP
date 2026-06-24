@@ -8,7 +8,7 @@
  * Usage in job script:
  *
  *   # Required
- *   export HDF_FS_TYPE=lustre          # or gpfs
+ *   export HDF_FS_TYPE=lustre          # or gpfs / vast
  *
  *   # ROMIO collective buffering
  *   export HDF_CB_NODES=auto           # "auto" = 1 per physical node
@@ -24,18 +24,42 @@
  *   export HDF_GPFS_RECV_QUEUES=4
  *   export HDF_GPFS_ACCESS_STYLE=write_once
  *
+ *   # VAST Universal Storage (NVMe object storage, no stripe config)
+ *   export HDF_FS_TYPE=vast
+ *   export HDF_CB_NODES=auto                    # all nodes as aggregators
+ *   export HDF_CB_BUFFER_SIZE=536870912         # 512 MB — VAST sustains high BW per aggregator
+ *   export HDF_ROMIO_DS_WRITE=disable           # no read-before-write; VAST writes in-place
+ *   export HDF_ALIGNMENT_THRESHOLD=1048576      # align objects >= 1 MB
+ *   export HDF_ALIGNMENT_VALUE=67108864         # 64 MB — matches VAST internal block granularity
+ *   export HDF_CHUNK_Z=<HDF_STEP_Z>             # chunk_z must equal step_z — zero partial-chunk writes
+ *   # NOTE: access_style=write_once is NOT set for VAST. HDF5 chunked datasets
+ *   # update B-tree metadata nodes in-place when the tree splits; write_once
+ *   # causes ROMIO to cache stale B-tree pages → "wrong B-tree signature" crashes.
+ *
  *   # HDF5 layer
  *   export HDF_ALIGNMENT_THRESHOLD=1
  *   export HDF_ALIGNMENT_VALUE=4194304
  *   export HDF_META_BLOCK_SIZE=4194304
  *   export HDF_COLL_METADATA_OPS=1
  *   export HDF_COLL_METADATA_WRITE=1
+ *
+ *   # File format (always set; not env-tunable)
+ *   H5Pset_libver_bounds(fapl, H5F_LIBVER_V110, H5F_LIBVER_LATEST) is always
+ *   applied. This forces HDF5 1.10+ file format so fixed-size chunked datasets
+ *   use the fixed-array chunk index instead of the v1 B-tree, eliminating
+ *   "wrong B-tree signature" crashes under high-parallelism parallel writes.
  */
 
 #include "hdf_fapl_from_env.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+/* =========================================================================
+ * Debug macro: enable/disable printing of all captured env variables
+ * Set to 1 to enable, 0 to disable
+ * ========================================================================= */
+#define PRINT_FAPL_ENV_DEBUG 1
 
 /* =========================================================================
  * Environment helpers
@@ -135,8 +159,12 @@ build_fapl_from_env(MPI_Comm comm) {
 
   /* ----------------------------------------------------------------
    * ROMIO hints
+   * VAST sustains much higher per-aggregator bandwidth than Lustre/GPFS,
+   * so default cb_buffer_size is raised to 512 MB when HDF_FS_TYPE=vast.
    * ---------------------------------------------------------------- */
-  size_t      cb_buffer_size = env_size("HDF_CB_BUFFER_SIZE", 134217728); /* 128 MB */
+  const size_t cb_buffer_default = (strcmp(fs_type, "vast") == 0) ? 536870912UL  /* 512 MB */
+                                                                   : 134217728UL; /* 128 MB */
+  size_t      cb_buffer_size = env_size("HDF_CB_BUFFER_SIZE", cb_buffer_default);
   const char *romio_cb_write = env_str("HDF_ROMIO_CB_WRITE", "enable");
   const char *romio_ds_write = env_str("HDF_ROMIO_DS_WRITE", "disable");
   const char *romio_ds_read  = env_str("HDF_ROMIO_DS_READ", "disable");
@@ -157,17 +185,51 @@ build_fapl_from_env(MPI_Comm comm) {
   /* ----------------------------------------------------------------
    * HDF5 layer
    * ---------------------------------------------------------------- */
-  // ✅ Allinea solo oggetti >= 1 MB — i chunk vengono allineati,
-  //    i metadata piccoli no
+  /* Align objects at their natural block boundary.
+   * On VAST, alignment is disabled by default (value=1): chunks are ~1-3 MB and
+   * padding them to any large boundary inflates the file without I/O benefit —
+   * VAST handles its own block placement internally.
+   * On Lustre/GPFS, 4 MB (one stripe unit) is a good default. */
+  const hsize_t align_default = (strcmp(fs_type, "vast") == 0) ? 1UL          /* disabled */
+                                                                 : 4194304UL;  /* 4 MB */
   hsize_t alignment_threshold = (hsize_t)env_size("HDF_ALIGNMENT_THRESHOLD", 1048576); /* 1 MB */
-  hsize_t alignment_value     = (hsize_t)env_size("HDF_ALIGNMENT_VALUE", 4194304);     /* 4 MB */
+  hsize_t alignment_value     = (hsize_t)env_size("HDF_ALIGNMENT_VALUE", (size_t)align_default);
 
   // hsize_t meta_block_size = (hsize_t)env_size("HDF_META_BLOCK_SIZE", 4194304); /* 4 MB */
   // In THDF_create_zslab_file
   hsize_t meta_block_size = (hsize_t)env_size("HDF_META_BLOCK_SIZE", 4096);
 
-  int coll_metadata_ops   = (int)env_long("HDF_COLL_METADATA_OPS", 1);
-  int coll_metadata_write = (int)env_long("HDF_COLL_METADATA_WRITE", 1);
+  int coll_metadata_ops    = (int)env_long("HDF_COLL_METADATA_OPS", 1);
+  int coll_metadata_write  = (int)env_long("HDF_COLL_METADATA_WRITE", 1);
+  int meta_read_attempts   = (int)env_long("HDF_META_READ_ATTEMPTS", 10);
+
+  /* ================================================================
+   * Debug: Print all captured environment variables
+   * ================================================================ */
+#if PRINT_FAPL_ENV_DEBUG
+  if (mpi_rank == 0) {
+    printf("\n[DEBUG] ===== All Captured Environment Variables =====\n");
+    printf("[DEBUG] fs_type                    = %s\n", fs_type);
+    printf("[DEBUG] cb_nodes_env               = %s\n", cb_nodes_env);
+    printf("[DEBUG] cb_nodes_str (computed)    = %s\n", cb_nodes_str);
+    printf("[DEBUG] cb_buffer_size             = %zu\n", cb_buffer_size);
+    printf("[DEBUG] romio_cb_write             = %s\n", romio_cb_write);
+    printf("[DEBUG] romio_ds_write             = %s\n", romio_ds_write);
+    printf("[DEBUG] romio_ds_read              = %s\n", romio_ds_read);
+    printf("[DEBUG] lustre_striping_factor     = %ld\n", lustre_striping_factor);
+    printf("[DEBUG] lustre_striping_unit       = %zu\n", lustre_striping_unit);
+    printf("[DEBUG] gpfs_recv_queues           = %ld\n", gpfs_recv_queues);
+    printf("[DEBUG] gpfs_access_style          = %s\n", gpfs_access_style);
+    printf("[DEBUG] gpfs_num_io_nodes          = %ld\n", gpfs_num_io_nodes);
+    printf("[DEBUG] alignment_threshold        = %zu\n", (size_t)alignment_threshold);
+    printf("[DEBUG] alignment_value            = %zu\n", (size_t)alignment_value);
+    printf("[DEBUG] meta_block_size            = %zu\n", (size_t)meta_block_size);
+    printf("[DEBUG] coll_metadata_ops          = %d\n", coll_metadata_ops);
+    printf("[DEBUG] coll_metadata_write        = %d\n", coll_metadata_write);
+    printf("[DEBUG] meta_read_attempts         = %d\n", meta_read_attempts);
+    printf("[DEBUG] ===================================================\n\n");
+  }
+#endif
 
   /* ================================================================
    * Build MPI_Info
@@ -206,6 +268,20 @@ build_fapl_from_env(MPI_Comm comm) {
       MPI_Info_set(info, "gpfs_num_io_nodes", buf);
     }
 
+  } else if (strcmp(fs_type, "vast") == 0) {
+    /* VAST Universal Storage (NVMe object store, no stripe config).
+     * VAST distributes data internally — no striping hints needed.
+     *
+     * Do NOT set access_style=write_once here. HDF5 chunked datasets
+     * update B-tree metadata nodes in place as chunks are allocated and
+     * the tree splits; write_once tells ROMIO to never re-read a region
+     * it has already written, so other processes get stale B-tree pages
+     * → "wrong B-tree signature" corruption under high parallelism.
+     *
+     * collective_buffering is honoured by the UFS/GPFS ROMIO driver
+     * that many VAST deployments use. */
+    MPI_Info_set(info, "collective_buffering", "true");
+
   } else {
     if (mpi_rank == 0)
       fprintf(stderr,
@@ -231,6 +307,16 @@ build_fapl_from_env(MPI_Comm comm) {
     H5Pset_all_coll_metadata_ops(fapl, 1);
   if (coll_metadata_write)
     H5Pset_coll_metadata_write(fapl, 1);
+  if (meta_read_attempts > 1)
+    H5Pset_metadata_read_attempts(fapl, (unsigned)meta_read_attempts);
+
+  /* Force HDF5 1.10+ file format so chunked fixed-size datasets use the
+   * fixed-array chunk index instead of the v1 B-tree.  The v1 B-tree
+   * requires in-place node updates as chunks are allocated; with 1000+
+   * concurrent writers the B-tree splits race → "wrong B-tree signature".
+   * The fixed-array index is a flat pre-allocated array of chunk offsets:
+   * O(1) lookup, no tree, no splits, fully parallel-safe. */
+  H5Pset_libver_bounds(fapl, H5F_LIBVER_V110, H5F_LIBVER_LATEST);
 
   MPI_Info_free(&info);
 
@@ -247,6 +333,8 @@ build_fapl_from_env(MPI_Comm comm) {
     printf("[fapl] %-30s = %zu\n", "meta_block_size", (size_t)meta_block_size);
     printf("[fapl] %-30s = %d\n", "coll_metadata_ops", coll_metadata_ops);
     printf("[fapl] %-30s = %d\n", "coll_metadata_write", coll_metadata_write);
+    printf("[fapl] %-30s = %d\n", "meta_read_attempts", meta_read_attempts);
+    printf("[fapl] %-30s = V110..LATEST\n", "libver_bounds");
 
     if (strcmp(fs_type, "lustre") == 0) {
       printf("[fapl] %-30s = %ld\n", "lustre striping_factor", lustre_striping_factor);
@@ -256,6 +344,10 @@ build_fapl_from_env(MPI_Comm comm) {
       printf("[fapl] %-30s = %s\n", "gpfs access_style", gpfs_access_style);
       if (gpfs_num_io_nodes > 0)
         printf("[fapl] %-30s = %ld\n", "gpfs num_io_nodes", gpfs_num_io_nodes);
+    } else if (strcmp(fs_type, "vast") == 0) {
+      printf("[fapl] %-30s = true\n", "vast collective_buffering");
+      printf("[fapl] %-30s = %zu MB\n", "vast alignment_value", (size_t)alignment_value / (1024 * 1024));
+      printf("[fapl] %-30s = %zu MB\n", "vast cb_buffer_size", cb_buffer_size / (1024 * 1024));
     }
   }
 

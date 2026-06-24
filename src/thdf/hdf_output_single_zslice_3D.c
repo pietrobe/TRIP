@@ -12,7 +12,6 @@ int
 THDF_create_zslab_file_single(MPI_Comm comm, const char *path, bool normalized_output, int N_x, int N_y, int N_z,
                               int N_incl, int N_azimuth, int N_frequencies) {
   hid_t file = -1, group = -1;
-  hid_t dcpl = -1, dcpl_n = -1;
   hid_t fspace = -1, nspace = -1;
   hid_t f32 = -1, f64 = -1;
   hid_t dset = -1;
@@ -44,24 +43,8 @@ THDF_create_zslab_file_single(MPI_Comm comm, const char *path, bool normalized_o
     goto cleanup;
   }
 
-  dcpl = H5Pcreate(H5P_DATASET_CREATE);
-  if (dcpl < 0) {
-    rc = -1;
-    goto cleanup;
-  }
-  {
-    int     cz_env = read_env_int_or_default("HDF_CHUNK_Z", N_z < 16 ? N_z : 16);
-    hsize_t cy     = (hsize_t)(N_y < 16 ? N_y : 16);
-    hsize_t cz     = (hsize_t)(cz_env > 0 ? cz_env : 1);
-    if (rank == 0)
-      printf("[single] chunk6 {1,%llu,%llu,%d,%d,%d}\n", (unsigned long long)cy, (unsigned long long)cz, N_incl,
-             N_azimuth, N_frequencies);
-    hsize_t chunk6[6] = {1, cy, cz, (hsize_t)N_incl, (hsize_t)N_azimuth, (hsize_t)N_frequencies};
-    if (H5Pset_chunk(dcpl, 6, chunk6) < 0) {
-      rc = -1;
-      goto cleanup;
-    }
-  }
+  if (rank == 0)
+    printf("[single] layout: contiguous (no chunking)\n");
 
   {
     hsize_t dims6[6] = {(hsize_t)N_x,    (hsize_t)N_y,       (hsize_t)N_z,
@@ -73,7 +56,7 @@ THDF_create_zslab_file_single(MPI_Comm comm, const char *path, bool normalized_o
     }
     const char *names6[4] = {"I", "QI_pc", "UI_pc", "VI_pc"};
     for (int i = 0; i < 4; i++) {
-      dset = H5Dcreate2(group, names6[i], f32, fspace, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+      dset = H5Dcreate2(group, names6[i], f32, fspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
       if (dset < 0) {
         if (rank == 0)
           fprintf(stderr, "[single] Error dataset %s\n", names6[i]);
@@ -86,8 +69,6 @@ THDF_create_zslab_file_single(MPI_Comm comm, const char *path, bool normalized_o
     H5Sclose(fspace);
     fspace = -1;
   }
-  H5Pclose(dcpl);
-  dcpl = -1;
 
   if (!normalized_output)
     goto sync;
@@ -98,21 +79,6 @@ THDF_create_zslab_file_single(MPI_Comm comm, const char *path, bool normalized_o
     goto cleanup;
   }
 
-  dcpl_n = H5Pcreate(H5P_DATASET_CREATE);
-  if (dcpl_n < 0) {
-    rc = -1;
-    goto cleanup;
-  }
-  {
-    int     cz_env    = read_env_int_or_default("HDF_CHUNK_Z", N_z < 16 ? N_z : 16);
-    hsize_t cy        = (hsize_t)(N_y < 16 ? N_y : 16);
-    hsize_t cz        = (hsize_t)(cz_env > 0 ? cz_env : 1);
-    hsize_t chunk5[5] = {1, cy, cz, (hsize_t)N_incl, (hsize_t)N_azimuth};
-    if (H5Pset_chunk(dcpl_n, 5, chunk5) < 0) {
-      rc = -1;
-      goto cleanup;
-    }
-  }
   {
     hsize_t dims5[5] = {(hsize_t)N_x, (hsize_t)N_y, (hsize_t)N_z, (hsize_t)N_incl, (hsize_t)N_azimuth};
     nspace           = H5Screate_simple(5, dims5, NULL);
@@ -123,7 +89,7 @@ THDF_create_zslab_file_single(MPI_Comm comm, const char *path, bool normalized_o
     const char *names5[4] = {"norm_multiplier_I", "norm_multiplier_QI_pc", "norm_multiplier_UI_pc",
                              "norm_multiplier_VI_pc"};
     for (int i = 0; i < 4; i++) {
-      dset = H5Dcreate2(group, names5[i], f64, nspace, H5P_DEFAULT, dcpl_n, H5P_DEFAULT);
+      dset = H5Dcreate2(group, names5[i], f64, nspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
       if (dset < 0) {
         if (rank == 0)
           fprintf(stderr, "[single] Error dataset %s\n", names5[i]);
@@ -136,8 +102,6 @@ THDF_create_zslab_file_single(MPI_Comm comm, const char *path, bool normalized_o
     H5Sclose(nspace);
     nspace = -1;
   }
-  H5Pclose(dcpl_n);
-  dcpl_n = -1;
 
 sync:
   if (H5Fflush(file, H5F_SCOPE_GLOBAL) < 0) {
@@ -153,10 +117,6 @@ cleanup:
     H5Sclose(fspace);
   if (nspace >= 0)
     H5Sclose(nspace);
-  if (dcpl >= 0)
-    H5Pclose(dcpl);
-  if (dcpl_n >= 0)
-    H5Pclose(dcpl_n);
   if (f32 >= 0)
     H5Tclose(f32);
   if (f64 >= 0)
