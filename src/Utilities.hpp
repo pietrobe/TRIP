@@ -6,6 +6,9 @@
 #include <map>
 #include <numeric>
 #include <ostream>
+#include <algorithm>
+#include <cmath>
+
 #include "Faddeeva.hpp"
 #include "Legendre_rule.hpp"
 #include "RT_types.hpp"
@@ -286,5 +289,74 @@ refine_vector_blocked2(const std::vector<double> &v, const int block_size_fn);
 
 double
 pow_gen(const double x, const double exponent);
+
+
+
+namespace HeII_inelastic_collisions {
+
+	// v values table for He II 304 from Janev (1987)
+    const int N = 15;
+
+    static const double TK[N] = {
+        3000., 5000., 7000., 10000., 15000., 
+		20000., 25000., 30000., 40000., 50000., 
+		60000., 80000., 100000., 150000., 200000.
+    };
+
+    static const double vT[N] = {
+        0.126657091063009, 0.162647119063730, 0.192237894128096, 0.229957563710787, 
+		0.282637879731763, 0.327807171027031, 0.368224501041440, 0.405299561542058,
+        0.472461037141359, 0.533128364313460, 0.589242272986984, 0.691950763217367,
+        0.785777153064998, 0.995940776604376, 1.183297238171380
+    };
+
+	inline double b_coeff[N - 1];
+    inline double c_coeff[N];
+    inline double d_coeff[N - 1];
+	inline bool spline_initialised = false;
+
+    // Internal initialization function for the Spline
+    void init_spline();
+
+	/**
+	 * @brief Interpolate v from table in Janev (1987)
+	 * @param T temperature in K for which we want to obtain the value v
+	 * @param interpolation_type type of interpolation we want to employ (0 = linear, 1 = cubic spline)
+	 */
+	double
+	interpolate_v(const double T, const unsigned int interpolation_type = 0);
+
+	/**
+	 * @brief Compute inelastic collisions Qul (for HeII304A) in a given spatial point
+	 * @param T temperature [K]
+	 * @param gu degeneracy of the upper term 
+	 * @note Assume that v is already the value interpolated from Janev (1987)
+	 */ 
+	inline double
+	compute_Qul(
+		const double T, 
+		const int gu)
+	{
+		const double v = interpolate_v(T);
+		return 8.63e-6 * v  / (static_cast<double>(gu) * std::sqrt(T));
+	}
+
+	/**
+	 * @brief Compute inelastic collisional rate Cul=Ne*Qul [s^-1] (for HeII304A) in a given spatial point
+	 * @param T temperature [K]
+	 * @param gu degeneracy of the upper term 
+	 * @param Ne  electron density [cm^-3]
+	 * @note Assume that v is already the value interpolated from Janev (1987)
+	 */ 
+	inline double
+	compute_Cul(
+		const double T, 
+		const int gu, 
+		const double Ne) 
+	{ 
+		return Ne * compute_Qul(T, gu);
+	}
+
+}
 
 #endif

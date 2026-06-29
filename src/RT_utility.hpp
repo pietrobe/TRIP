@@ -28,6 +28,8 @@ enum class emissivity_model_t
 	PRD_FAST,			 //
 	PRD_AA,				 //
 	PRD_AA_MAPV,		 //
+	PRD_AA_GB, 			 //
+	PRD_TWOTERM,		 //
 	PRD_AA_TWOTERM,		 //
 	PRD_AA_TWOTERM_MAPV, //
 	ZERO				 //
@@ -311,6 +313,12 @@ namespace YAML
 				case emissivity_model_t::PRD_AA_MAPV:
 					node = "PRD_AA_MAPV";
 					break;
+				case emissivity_model_t::PRD_AA_GB:
+					node = "PRD_AA_GB";
+					break;
+				case emissivity_model_t::PRD_TWOTERM:
+					node = "PRD_TWOTERM";
+					break;
 				case emissivity_model_t::PRD_AA_TWOTERM:
 					node = "PRD_AA_TWOTERM";
 					break;
@@ -348,6 +356,10 @@ namespace YAML
 				rhs = emissivity_model_t::PRD_AA;
 			else if (s == "PRD_AA_MAPV")
 				rhs = emissivity_model_t::PRD_AA_MAPV;
+			else if (s == "PRD_AA_GB")
+				rhs = emissivity_model_t::PRD_AA_GB;
+			else if (s == "PRD_TWOTERM")
+				rhs = emissivity_model_t::PRD_TWOTERM;
 			else if (s == "PRD_AA_TWOTERM")
 				rhs = emissivity_model_t::PRD_AA_TWOTERM;
 			else if (s == "PRD_AA_TWOTERM_MAPV")
