@@ -614,3 +614,47 @@ calculate_D2(const double a, const double b, const double nH, const double T, co
 
 	return D2;
 }
+
+int
+print_geometry(const RT_problem &rt_problem, std::ostream &os)
+{
+	os << "N_x: " << rt_problem.N_x_ << std::endl;
+	os << "N_y: " << rt_problem.N_y_ << std::endl;
+	os << "N_z: " << rt_problem.N_z_ << std::endl;
+	os << "delta: " << rt_problem.L_ << std::endl;
+	os << "height_min: " << *std::min_element(rt_problem.depth_grid_.begin(), rt_problem.depth_grid_.end())
+	   << std::endl;
+	os << "height_max: " << *std::max_element(rt_problem.depth_grid_.begin(), rt_problem.depth_grid_.end())
+	   << std::endl;
+
+
+
+
+	std::vector<double> depth_grid_local = rt_problem.depth_grid_;
+
+	double delta_max = 0.0;
+	double delta_min = std::numeric_limits<double>::max();
+
+	for (size_t i = 1; i < depth_grid_local.size(); ++i)
+	{
+		double delta = depth_grid_local[i] - depth_grid_local[i - 1];
+		if (delta > delta_max) delta_max = delta;
+		if (delta < delta_min) delta_min = delta;
+	}
+
+	os << "height_delta_max: " << delta_max << std::endl;
+	os << "height_delta_min: " << delta_min << std::endl;
+
+	std::sort(depth_grid_local.begin(), depth_grid_local.end());
+	os << "heights: [";
+	for (size_t i = 0; i < depth_grid_local.size(); ++i)
+	{
+		os << depth_grid_local[i];
+		if (i != depth_grid_local.size() - 1)
+		{
+			os << ", ";
+		}
+	}
+	os << "]" << std::endl;
+	return 0;
+}

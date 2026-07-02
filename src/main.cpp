@@ -152,6 +152,11 @@ main(int argc, char *argv[])
 				output_file_info << ss_a.str();
 				output_file_info << ss_b.str();
 				output_file_info.close();
+
+				std::filesystem::path geometry_file_name = output_path / "geometry.txt";
+				std::ofstream geometry_file(geometry_file_name);
+				print_geometry(*rt_problem_ptr, geometry_file);
+				geometry_file.close();
 			}
 		} // end if (output)
 

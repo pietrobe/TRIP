@@ -600,6 +600,11 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os);
 int
 acc_devices_print_info(const int mpi_rank, const int mpi_size, std::ostream &os);
 
+
+int
+print_geometry(const RT_problem &rt_problem, std::ostream &os);
+
+
 int
 write_emergent_field_hdf5(RT_problem &rt_problem_ptr, const std::string &output_file);
 
