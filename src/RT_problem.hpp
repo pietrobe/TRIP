@@ -38,6 +38,16 @@ emissivity_model_to_string(const emissivity_model_t &model)
 		case emissivity_model_t::PRD_AA_MAPV:
 			return "PRD_AA";
 			break;
+		case emissivity_model_t::PRD_AA_GB:
+			return "PRD_AA_GB";
+			break;
+		case emissivity_model_t::PRD_TWOTERM:
+			return "PRD_TWOTERM";
+			break;
+		case emissivity_model_t::PRD_AA_TWOTERM:
+		case emissivity_model_t::PRD_AA_TWOTERM_MAPV:
+			return "PRD_AA_TWOTERM";
+			break;
 		case emissivity_model_t::ZERO:
 			return "CONTINUUM";
 			break;
@@ -75,6 +85,18 @@ emissivity_model_to_string_long(const emissivity_model_t &model)
 			break;
 		case emissivity_model_t::PRD_AA_MAPV:
 			return "PRD_AA_MAPV";
+			break;
+		case emissivity_model_t::PRD_AA_GB:
+			return "PRD_AA_GB";
+			break;
+		case emissivity_model_t::PRD_TWOTERM:
+			return "PRD_TWOTERM";
+			break;
+		case emissivity_model_t::PRD_AA_TWOTERM:
+			return "PRD_AA_TWOTERM";
+			break;
+		case emissivity_model_t::PRD_AA_TWOTERM_MAPV:
+			return "PRD_AA_TWOTERM_MAPV";
 			break;
 		case emissivity_model_t::ZERO:
 			return "CONTINUUM";

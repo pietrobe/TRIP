@@ -413,6 +413,7 @@ double W3JS(int J1, int J2, int J3, int M1, int M2, int M3) {
     return CC;
 }
 
+
  
 std::vector<double> solve_4_by_4_system(const std::vector<double>  &K, const std::vector<double> &rhs)
 {
@@ -837,7 +838,73 @@ double pow_gen(const double x, const double exponent){
 }
 
 
+// ==============================================================
+// INELASTIC COLLISONAL RATE   
+// ==============================================================
+void HeII_inelastic_collisions::init_spline() 
+{
+  double h[N - 1], alpha[N];
+  double l[N], mu[N], z[N];
 
+  for (int k = 0; k < N - 1; k++)
+    h[k] = TK[k + 1] - TK[k];
+
+  alpha[0] = 0.0;
+  alpha[N - 1] = 0.0;
+
+  for (int k = 1; k < N - 1; k++) {
+    alpha[k] = 3.0 / h[k] * (vT[k + 1] - vT[k])
+              - 3.0 / h[k - 1] * (vT[k] - vT[k - 1]);
+  }
+
+  l[0] = 1.0;
+  mu[0] = 0.0;
+  z[0] = 0.0;
+
+  for (int k = 1; k < N - 1; k++) {
+    l[k] = 2.0 * (TK[k + 1] - TK[k - 1]) - h[k - 1] * mu[k - 1];
+    mu[k] = h[k] / l[k];
+    z[k] = (alpha[k] - h[k - 1] * z[k - 1]) / l[k];
+  }
+
+  l[N - 1] = 1.0;
+  z[N - 1] = 0.0;
+  c_coeff[N - 1] = 0.0;
+
+  for (int k = N - 2; k >= 0; k--) {
+    c_coeff[k] = z[k] - mu[k] * c_coeff[k + 1];
+    b_coeff[k] = (vT[k + 1] - vT[k]) / h[k]
+                - h[k] * (c_coeff[k + 1] + 2.0 * c_coeff[k]) / 3.0;
+    d_coeff[k] = (c_coeff[k + 1] - c_coeff[k]) / (3.0 * h[k]);
+  }
+  spline_initialised = true;
+}
+
+
+double
+HeII_inelastic_collisions::interpolate_v(const double T, const unsigned int interpolation_type) 
+{
+  // Edge cases outside the table
+  if (T <= TK[0]) return vT[0];
+  if (T >= TK[N-1]) return vT[N-1];
+  
+  // Find interval with binary search O(logN)
+  auto it = std::upper_bound(TK, TK + N, T);
+  int i = std::distance(TK, it) - 1;
+  if (i >= N - 1) i = N - 2;
+
+  // Linear interpolation
+  if (interpolation_type == 0) {
+    double t = (T - TK[i]) / (TK[i + 1] - TK[i]);
+    return vT[i] + t * (vT[i + 1] - vT[i]);
+  }
+  
+  // Cubic spline (via Horner's Method)
+  if (!spline_initialised) init_spline();
+  double dx = T - TK[i];
+  return vT[i] + dx * (b_coeff[i] + dx * (c_coeff[i] + dx * d_coeff[i]));
+}
+// ==============================================================
 
 
 
