@@ -183,6 +183,34 @@ write_main_demo_TRIP(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
+  // Example two-term atom data
+  THDF_atom_two_terms_t atom_two_terms;
+  // Example for Mg I b2 triplet (3s3p 3P - 3s4s 3S transition)
+  atom_two_terms.atomic_number = 12;        // Example: Magnesium
+  atom_two_terms.atomic_mass   = 24.305;    // Atomic mass of Magnesium in atomic mass units
+  atom_two_terms.Aul           = 3.37E+07;  // Einstein coefficient.
+  atom_two_terms.L2_upper      = 0;         // Upper term orbital angular momentum (multiplied by 2)
+  atom_two_terms.L2_lower      = 2;         // Lower term orbital angular momentum (multiplied by 2)
+  atom_two_terms.S2            = 2;         // Total spin (multiplied by 2)
+
+  atom_two_terms.E_size     = 3;  // Number of energy levels for this term
+  atom_two_terms.E_lower[0] = 21850.405;
+  atom_two_terms.E_lower[1] = 21870.464;
+  atom_two_terms.E_lower[2] = 21911.178;
+  atom_two_terms.E_upper[0] = 35051.264;
+  atom_two_terms.E_upper[1] = 35051.264;
+  atom_two_terms.E_upper[2] = 35051.264;
+
+  // Write two-term atom data to HDF5 file
+  int flag_atom_two_terms = write_atom_two_terms_to_hdf5(file, &atom_two_terms);
+
+  // Check for errors
+  if (flag_atom_two_terms < 0) {
+    fprintf(stderr, "Error writing two-term atom data\n");
+    H5Fclose(file);
+    return EXIT_FAILURE;
+  }
+
   // Allocate a sufficiently large array to hold the atmosphere data for the actual exigence.
   THDF_atmos_t *atmos_data = (THDF_atmos_t *)malloc(N_x * N_y * N_z * sizeof(THDF_atmos_t));
   if (atmos_data == NULL) {
