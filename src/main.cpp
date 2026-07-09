@@ -152,6 +152,11 @@ main(int argc, char *argv[])
 				output_file_info << ss_a.str();
 				output_file_info << ss_b.str();
 				output_file_info.close();
+
+				std::filesystem::path geometry_file_name = output_path / "geometry.txt";
+				std::ofstream geometry_file(geometry_file_name);
+				print_geometry(*rt_problem_ptr, geometry_file);
+				geometry_file.close();
 			}
 		} // end if (output)
 
@@ -254,7 +259,7 @@ main(int argc, char *argv[])
 			if (cfg.write_whole_3D_field_hdf5)
 			{
 				if (mpi_rank == 0) std::cout << "Writing whole 3D field to HDF5..." << std::endl;
-				write_3D_whole_field_hdf5(*rt_problem_ptr,										  //
+				write_3D_whole_field_falp_hdf5(*rt_problem_ptr,										  //
 										  (output_path / "whole_3D_radiation_field.h5").string(), //
 										  2,													  //
 										  false);												  //

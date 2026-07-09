@@ -124,9 +124,9 @@ RT_problem::read_3D_h5(const std::string filename, const AppConfig &cfg, const b
 
 				const int k_reverse = (N_z_ - k_global - 1);
 
-				std::vector<THDF_atmos_t> atmos_data;
+				std::vector<THDF_atmos_t> atmos_data_vec; // vector to hold the data read from HDF5 for this cell
 
-				const int read_success = hdf_atmos_cpp::read_atmos_3D_partial_data(file_id, atmos_data,			  //
+				const int read_success = hdf_atmos_cpp::read_atmos_3D_partial_data(file_id, atmos_data_vec,		  //
 																				   i_global, j_global, k_reverse, //
 																				   1, 1, 1);					  //
 
@@ -136,7 +136,7 @@ RT_problem::read_3D_h5(const std::string filename, const AppConfig &cfg, const b
 					throw std::runtime_error("Error reading atmospheric data");
 				}
 
-				const THDF_atmos_t &data = atmos_data[0];
+				const THDF_atmos_t &atmos_data = atmos_data_vec[0];
 
 				// // get global indeces form local ones
 				// // space_grid_->getGlobalStartX() + i - space_grid_->getGhostMarginX();
@@ -151,35 +151,36 @@ RT_problem::read_3D_h5(const std::string filename, const AppConfig &cfg, const b
 				// const int k_global = this->space_grid_						 //
 				// 						 ->local_to_global_coordinate(2, k); //
 
-				if (data.index_i != i_global	  //
-					|| data.index_j != j_global	  //
-					|| data.index_k != k_reverse) // reversed z is stored in descending order in z
+				if (atmos_data.index_i != i_global		//
+					|| atmos_data.index_j != j_global	//
+					|| atmos_data.index_k != k_reverse) // reversed z is stored in descending order in z
 
 				{
 					std::string error_message =
 						"Error: Mismatch between expected global indices and those in the HDF5 data. ";
 					error_message += "Expected (i, j, k): (" + std::to_string(i_global) + ", " + std::to_string(j_global)
 									 + ", " + std::to_string(k_global) + "). ";
-					error_message += "Found (index_i, index_j, index_k): (" + std::to_string(data.index_i) + ", "
-									 + std::to_string(data.index_j) + ", " + std::to_string(data.index_k) + ").";
+					error_message += "Found (index_i, index_j, index_k): (" + std::to_string(atmos_data.index_i) + ", "
+									 + std::to_string(atmos_data.index_j) + ", " + std::to_string(atmos_data.index_k)
+									 + ").";
 
 					throw std::runtime_error(error_message);
 				}
 
-				this->T_->ref(i, j, k)	 = data.temperature;
-				this->nH_->ref(i, j, k)	 = data.nH;
-				this->Nl_->ref(i, j, k)	 = data.pop_lower_level;
-				this->a_->ref(i, j, k)	 = data.damping;
-				this->Qel_->ref(i, j, k) = data.Qel;
-				this->Cul_->ref(i, j, k) = data.Cul;
-				xi_->ref(i, j, k)		 = data.vmicro;
-				nH_->ref(i, j, k)		 = data.nH;
+				this->T_->ref(i, j, k)	 = atmos_data.temperature;
+				this->nH_->ref(i, j, k)	 = atmos_data.nH;
+				this->Nl_->ref(i, j, k)	 = atmos_data.pop_lower_level;
+				this->a_->ref(i, j, k)	 = atmos_data.damping;
+				this->Qel_->ref(i, j, k) = atmos_data.Qel;
+				this->Cul_->ref(i, j, k) = atmos_data.Cul;
+				xi_->ref(i, j, k)		 = atmos_data.vmicro;
+				nH_->ref(i, j, k)		 = atmos_data.nH;
 
 				this->epsilon_->ref(i, j, k) = this->Cul_->ref(i, j, k) /				//
 											   (this->Cul_->ref(i, j, k) + this->Aul_); //
 
 				// Calculated BUT it should be in the hdf5 file and read directly
-				this->D2_->ref(i, j, k) = cfg.use_D2_from_input ? data.D2
+				this->D2_->ref(i, j, k) = cfg.use_D2_from_input ? atmos_data.D2
 																: calculate_D2(this->a_coef_D2_, this->b_coef_D2_,
 																			   nH_->ref(i, j, k), this->T_->ref(i, j, k));
 
@@ -194,9 +195,9 @@ RT_problem::read_3D_h5(const std::string filename, const AppConfig &cfg, const b
 					else
 					{
 						// convert to spherical coordinates
-						auto B_spherical = convert_cartesian_to_spherical(data.magnetic_field_x,  //
-																		  data.magnetic_field_y,  //
-																		  data.magnetic_field_z); //
+						auto B_spherical = convert_cartesian_to_spherical(atmos_data.magnetic_field_x,	//
+																		  atmos_data.magnetic_field_y,	//
+																		  atmos_data.magnetic_field_z); //
 
 						B_->block(i, j, k)[0] =
 							GAUSS_TO_LARMOR_FREQUENCY(B_spherical[0]); // converting to Larmor frequency
@@ -220,20 +221,20 @@ RT_problem::read_3D_h5(const std::string filename, const AppConfig &cfg, const b
 				else
 				{
 					// convert to spherical coordinates
-					const auto v_spherical	= convert_cartesian_to_spherical(data.bulk_velocity_x,	//
-																			 data.bulk_velocity_y,	//
-																			 data.bulk_velocity_z); //
+					const auto v_spherical	= convert_cartesian_to_spherical(atmos_data.bulk_velocity_x,  //
+																			 atmos_data.bulk_velocity_y,  //
+																			 atmos_data.bulk_velocity_z); //
 					v_b_->block(i, j, k)[0] = v_spherical[0];
 					v_b_->block(i, j, k)[1] = v_spherical[1];
 					v_b_->block(i, j, k)[2] = v_spherical[2];					
 				}
 
-							// set to 0.0 as in PORTA, meaning that the scattering
-				const double sigma_c = cfg.enable_sigma_c ? data.c_scat_opacity_sigma_c : 0.0;
+				// set to 0.0 as in PORTA, meaning that the scattering
+				const double sigma_c = cfg.enable_sigma_c ? atmos_data.c_scat_opacity_sigma_c : 0.0;
 
 				// total continuum opacity (absorption + scattering)
-				const double k_c	  = data.c_therm_opacity_k_c + data.c_scat_opacity_sigma_c;
-				const double eps_c_th = data.c_therm_emissivity_epsilon_c;
+				const double k_c	  = atmos_data.c_therm_opacity_k_c + atmos_data.c_scat_opacity_sigma_c;
+				const double eps_c_th = atmos_data.c_therm_emissivity_epsilon_c;
 
 				// continuum
 				for (int n = 0; n < N_nu_; ++n)

@@ -22,6 +22,11 @@
 #include "hdf_output_single_zslice_3D.h"
 #include "output_utils.h"
 
+/* Set to 0 (e.g. -DZSLAB_PROGRESS_BAR=0) to silence the z-slab progress bar. */
+#ifndef ZSLAB_PROGRESS_BAR
+#define ZSLAB_PROGRESS_BAR 1
+#endif
+
 /* =========================================================================
  * main_3d_example_single_file
  * ========================================================================= */
@@ -35,6 +40,9 @@ main_3d_example_single_file(int argc, char **argv) {
   int mpi_rank, mpi_size;
   MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+
+  if (mpi_rank == 0)
+    printf("Running 3D single-file example with MPI: main_3d_example_single_file %s:%d\n", __FILE__, __LINE__);
 
   const double t_start = MPI_Wtime();
 
@@ -119,7 +127,8 @@ main_3d_example_single_file(int argc, char **argv) {
     }
     THDF_frequencies_grid_t fg = {N_frequencies, frequencies, HDF_OUT_FLOAT64};
     THDF_write_frequencies_grid_to_hdf5(fs, &fg);
-    THDF_angular_grid_t ag = {N_incl * N_azimuth, N_incl, N_azimuth, theta, chi, inclinations_idx, azimuthal_idx, HDF_OUT_FLOAT64};
+    THDF_angular_grid_t ag = {N_incl * N_azimuth, N_incl,        N_azimuth,      theta, chi,
+                              inclinations_idx,   azimuthal_idx, HDF_OUT_FLOAT64};
     THDF_write_angular_grid_to_hdf5(fs, &ag);
     THDF_geometry_3D_t g3 = {N_x, N_y, N_z, heights, 100.0, HDF_OUT_FLOAT64};
     THDF_write_geometry_3D_to_hdf5(fs, &g3);
@@ -164,7 +173,8 @@ main_3d_example_single_file(int argc, char **argv) {
     THDF_float_t   *norm_UI     = normalized_output ? malloc(max_norm * sizeof(THDF_float_t)) : NULL;
     THDF_float_t   *norm_VI     = normalized_output ? malloc(max_norm * sizeof(THDF_float_t)) : NULL;
 
-    const double wt0 = MPI_Wtime();
+    const double wt0               = MPI_Wtime();
+    const int    total_zslab_steps = (max_N_local_z + step_z - 1) / step_z;
 
     for (int local_zi = 0; local_zi < max_N_local_z; local_zi += step_z) {
       const int is_writer      = (local_zi < N_local_z);
@@ -196,6 +206,24 @@ main_3d_example_single_file(int argc, char **argv) {
         printf("[t] local written: %.3f GB  approx. peak-bandwidth: %.3f GB/s\n", gb_written,
                gb_written / (MPI_Wtime() - tw0));
       }
+
+#if ZSLAB_PROGRESS_BAR
+      const int progess_bar_step = 16;
+      if (mpi_rank == 0 && (local_zi / step_z) % progess_bar_step == 0) {
+        const int    step_idx = local_zi / step_z + 1;
+        const double pct      = (double)step_idx / total_zslab_steps;
+        const double elapsed   = MPI_Wtime() - wt0;
+        const double eta       = pct > 0.0 ? elapsed / pct - elapsed : 0.0;
+        const double gb_so_far = pct * total_size * sizeof(THDF_float32_t) / (1024.0 * 1024.0 * 1024.0);
+        const double bw_gbs    = elapsed > 0.0 ? gb_so_far / elapsed : 0.0;
+        const int    filled    = (int)(pct * 30);
+        char         bar[31];
+        for (int b = 0; b < 30; b++) bar[b] = b < filled ? '=' : ' ';
+        bar[30] = '\0';
+        printf("[prog] [%s] %3.0f%%  step %d/%d  elapsed %.0fs  ETA ~%.0fs  BW ~%.2f GB/s\n", bar, pct * 100.0,
+               step_idx, total_zslab_steps, elapsed, eta, bw_gbs);
+      }
+#endif
     }  // for local_zi
 
     MPI_Barrier(MPI_COMM_WORLD);

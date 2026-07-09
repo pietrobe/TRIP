@@ -61,7 +61,7 @@ compute_arbitrary_beam_hdf(RT_solver						&rt_solver,			//
 						   std::shared_ptr<RT_problem>		&rt_problem_ptr,	//
 						   const std::vector<BeamDirection> &beams,				//
 						   const int						 beam_index,		//
-						   const std::string				&output_file)						//
+						   const std::string				&output_file)		//
 {
 	const Real mu  = beams[beam_index].mu;
 	const Real chi = beams[beam_index].chi;
@@ -229,12 +229,12 @@ process_arbitrary_beams(const std::vector<BeamDirection> &beams, RT_solver &rt_s
 }
 
 int
-process_arbitrary_beams_hdf(const std::vector<BeamDirection> &beams,			 //
-							bool							  write_text_output, //
-							RT_solver						 &rt_solver,		 //
-							std::shared_ptr<RT_problem>		 &rt_problem_ptr,	 //
-							const std::string				 &output_file,		 //
-							const std::filesystem::path		 &output_info_file_name)	 //
+process_arbitrary_beams_hdf(const std::vector<BeamDirection> &beams,				 //
+							bool							  write_text_output,	 //
+							RT_solver						 &rt_solver,			 //
+							std::shared_ptr<RT_problem>		 &rt_problem_ptr,		 //
+							const std::string				 &output_file,			 //
+							const std::filesystem::path		 &output_info_file_name) //
 {
 	const int mpi_rank = rt_problem_ptr->mpi_rank_;
 

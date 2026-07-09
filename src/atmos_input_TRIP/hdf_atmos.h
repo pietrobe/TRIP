@@ -12,6 +12,9 @@
 extern "C" {
 #endif
 
+/**
+ * @brief Structure representing a single point in the 3D atmosphere grid
+ */
 typedef struct {
   int16_t index_i;  // horizontal x index
   int16_t index_j;  // horizontal y index
@@ -44,12 +47,15 @@ typedef struct {
   // ATTENTION !!!!!!!!!!!!!!!!!!!!!!!
   // the user must calculate /////////
   // Kc = c_therm_opacity_k_c + c_scat_opacity_sigma_c
-  double c_scat_opacity_sigma_c;          // sigma_c
-  double c_therm_opacity_k_c;             // k_c (new) / Corresponds to k_c (old) - sigma_c
+  double c_scat_opacity_sigma_c;        // sigma_c
+  double c_therm_opacity_k_c;           // k_c (new) / Corresponds to k_c (old) - sigma_c
   double c_therm_emissivity_epsilon_c;  // epsilon_cth
 
 } THDF_atmos_t;
 
+/**
+ * @brief Structure representing a two-level atom for HDF5 storage
+ */
 typedef struct {
   int    atomic_number;  // Atomic number
   double atomic_mass;    // Relative atomic mass in amu
@@ -65,6 +71,30 @@ typedef struct {
   double b_coef_D2;  // From: Derouich (2019) - The Astrophysical Journal, 880:10 (6pp), 2019 July 20
 } THDF_atom_two_levels_t;
 
+/**
+ * @brief Maximum number of atomic levels for placeholder arrays in THDF_atom_two_terms_t
+ */
+#define MAX_ATOM_TERMS_PLACEHOLDER 16
+
+/**
+ * @brief Structure representing a two-term atom for HDF5 storage
+ */
+typedef struct {
+  int    atomic_number;  // Atomic number
+  double atomic_mass;    // Relative atomic mass in amu
+  double Aul;            // Einstein A coefficient for spontaneous emission (in s^-1)
+  int    L2_upper;       // Upper level orbital angular momentum (multiplied by 2)
+  int    L2_lower;       // Lower level orbital angular momentum (multiplied by 2)
+  int    S2;             // total spin multiplied by 2
+
+  int    E_size;                                // Number of energy levels (should not exceed MAX_ATOM_TERMS_PLACEHOLDER)
+  double E_lower[MAX_ATOM_TERMS_PLACEHOLDER];  // Lower level energy in cm^-1
+  double E_upper[MAX_ATOM_TERMS_PLACEHOLDER];  // Upper level energy in cm^-1
+} THDF_atom_two_terms_t;
+
+/**
+ * @brief Structure representing the frequency grid for HDF5 storage
+ */
 typedef struct {
   int     N_frequencies;
   double *frequency;  // in Hz a vector of size N_frequencies
@@ -164,8 +194,29 @@ THDF_read_geometry_from_hdf5(hid_t    file,  //
  * @return EXIT_SUCCESS on success, EXIT_FAILURE on error
  */
 int
-write_atom_to_hdf5(hid_t                   file,  //
-                   THDF_atom_two_levels_t *atom);
+write_atom_to_hdf5(hid_t                   file,   //
+                   THDF_atom_two_levels_t *atom);  //
+
+/**
+ * @brief Write two-term atom data to HDF5 file
+ *
+ * Creates /atom_two_terms_data dataset and writes the atom structure to it.
+ * atom->E_size must not exceed MAX_ATOM_TERMS_PLACEHOLDER. Entries of
+ * E_lower/E_upper beyond E_size are zeroed out before writing.
+ *
+ * @param file HDF5 file handle
+ * @param atom Pointer to atom structure with two-term transition parameters
+ * @return EXIT_SUCCESS on success, EXIT_FAILURE on error
+ */
+int
+write_atom_two_terms_to_hdf5(hid_t                  file,   //
+                             THDF_atom_two_terms_t *atom);  //
+
+/**
+ * @brief Check if the atom data in the HDF5 file is a two-term atom
+ */
+bool
+THDF_is_two_term_atom(hid_t file);  //
 
 /**
  * @brief Read atomic transition parameters from HDF5 file
@@ -179,6 +230,19 @@ write_atom_to_hdf5(hid_t                   file,  //
 int
 THDF_read_atom_from_hdf5(hid_t                   file,  //
                          THDF_atom_two_levels_t *atom);
+
+/**
+ * @brief Read two-term atom data from HDF5 file
+ *
+ * Reads atomic data from /atom_two_terms_data dataset.
+ *
+ * @param file HDF5 file handle
+ * @param atom Pointer to atom structure to populate
+ * @return EXIT_SUCCESS on success, EXIT_FAILURE on error
+ */
+int
+THDF_read_atom_two_terms_from_hdf5(hid_t                  file,  //
+                                   THDF_atom_two_terms_t *atom);
 
 /**
  * @brief Write frequency grid to HDF5 file
@@ -266,6 +330,18 @@ THDF_read_atmos_3D_data_from_hdf5(hid_t          file,        //
  */
 hid_t
 create_atom_compound_type(void);
+
+/**
+ * @brief Create HDF5 compound datatype for two-term atom structure
+ *
+ * Defines HDF5 compound type matching the THDF_atom_two_terms_t C struct.
+ * E_lower and E_upper are stored as fixed-size arrays of length
+ * MAX_ATOM_TERMS_PLACEHOLDER. Caller must close the returned type with H5Tclose().
+ *
+ * @return HDF5 datatype handle, negative on error
+ */
+hid_t
+create_atom_two_terms_compound_type(void);
 
 /**
  * @brief Create HDF5 compound datatype for hdf_atmos structure

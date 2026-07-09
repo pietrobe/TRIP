@@ -38,7 +38,8 @@ create_hdf_atmos_compound_type(void) {
   H5Tinsert(atmos_type, "bulk_velocity_z", HOFFSET(THDF_atmos_t, bulk_velocity_z), H5T_NATIVE_FLOAT);
   H5Tinsert(atmos_type, "c_scat_opacity_sigma_c", HOFFSET(THDF_atmos_t, c_scat_opacity_sigma_c), H5T_NATIVE_DOUBLE);
   H5Tinsert(atmos_type, "c_therm_opacity_k_c", HOFFSET(THDF_atmos_t, c_therm_opacity_k_c), H5T_NATIVE_DOUBLE);
-  H5Tinsert(atmos_type, "c_therm_emissivity_epsilon_c", HOFFSET(THDF_atmos_t, c_therm_emissivity_epsilon_c), H5T_NATIVE_DOUBLE);
+  H5Tinsert(atmos_type, "c_therm_emissivity_epsilon_c", HOFFSET(THDF_atmos_t, c_therm_emissivity_epsilon_c),
+            H5T_NATIVE_DOUBLE);
 
   return atmos_type;
 }
@@ -51,27 +52,27 @@ THDF_atmos_t
 create_atmos_data_point(int i, int j, int k, const THDF_atom_two_levels_t *atom) {
   THDF_atmos_t atmos_point;
 
-  atmos_point.index_i                   = i;
-  atmos_point.index_j                   = j;
-  atmos_point.index_k                   = k;
-  atmos_point.temperature               = 5000.0 + k * 100.0 + i * 10.0 + j * 5.0;
-  atmos_point.vmicro                    = 2.0 + 0.1 * k;
-  atmos_point.Doppler_width             = 1.0e8 + 1.0e6 * k;
-  atmos_point.damping                   = 1.0e-4 + 1.0e-6 * k;
-  atmos_point.pop_lower_level           = 1.0e12 - k * 1.0e10;
-  atmos_point.pop_upper_level           = 1.0e10 + k * 1.0e9;
-  atmos_point.Cul                       = 1.0e-8 + 1.0e-10 * k;
-  atmos_point.Qel                       = 1.0e-9 + 1.0e-11 * k;
-  atmos_point.nH                        = 1.0e17 + 1.0e15 * k;
-  atmos_point.magnetic_field_x          = (float)(100.0 + 10.0 * k);
-  atmos_point.magnetic_field_y          = (float)(45.0 + k);
-  atmos_point.magnetic_field_z          = (float)(90.0 + 2 * k);
-  atmos_point.bulk_velocity_x           = (float)(1.0e5 + 1.0e4 * k);
-  atmos_point.bulk_velocity_y           = (float)(0.0 + k);
-  atmos_point.bulk_velocity_z           = (float)(0.0 + 2 * k);
-  atmos_point.c_scat_opacity_sigma_c    = 1.0e-2 + 1.0e-4 * k;
-  atmos_point.c_therm_opacity_k_c = 1.0e-3 + 1.0e-5 * k;
-  atmos_point.c_therm_emissivity_epsilon_c             = 1.0e-1 + 1.0e-3 * k;
+  atmos_point.index_i                      = i;
+  atmos_point.index_j                      = j;
+  atmos_point.index_k                      = k;
+  atmos_point.temperature                  = 5000.0 + k * 100.0 + i * 10.0 + j * 5.0;
+  atmos_point.vmicro                       = 2.0 + 0.1 * k;
+  atmos_point.Doppler_width                = 1.0e8 + 1.0e6 * k;
+  atmos_point.damping                      = 1.0e-4 + 1.0e-6 * k;
+  atmos_point.pop_lower_level              = 1.0e12 - k * 1.0e10;
+  atmos_point.pop_upper_level              = 1.0e10 + k * 1.0e9;
+  atmos_point.Cul                          = 1.0e-8 + 1.0e-10 * k;
+  atmos_point.Qel                          = 1.0e-9 + 1.0e-11 * k;
+  atmos_point.nH                           = 1.0e17 + 1.0e15 * k;
+  atmos_point.magnetic_field_x             = (float)(100.0 + 10.0 * k);
+  atmos_point.magnetic_field_y             = (float)(45.0 + k);
+  atmos_point.magnetic_field_z             = (float)(90.0 + 2 * k);
+  atmos_point.bulk_velocity_x              = (float)(1.0e5 + 1.0e4 * k);
+  atmos_point.bulk_velocity_y              = (float)(0.0 + k);
+  atmos_point.bulk_velocity_z              = (float)(0.0 + 2 * k);
+  atmos_point.c_scat_opacity_sigma_c       = 1.0e-2 + 1.0e-4 * k;
+  atmos_point.c_therm_opacity_k_c          = 1.0e-3 + 1.0e-5 * k;
+  atmos_point.c_therm_emissivity_epsilon_c = 1.0e-1 + 1.0e-3 * k;
 
   if (atom != NULL) {
     atmos_point.D2 = atom->a_coef_D2 * atmos_point.nH * pow(atmos_point.temperature / 5000.0, atom->b_coef_D2);
@@ -242,24 +243,24 @@ create_atmos_data_point_mpi(int i, int j, int k, int mpi_rank, const THDF_atom_t
   atmos_point.index_k = k;
 
   // Add MPI rank dependency to some calculations for variety across processes
-  atmos_point.temperature               = 5000.0 + k * 100.0 + i * 10.0 + j * 5.0 + mpi_rank * 2.0;
-  atmos_point.vmicro                    = 2.0 + 0.1 * k + mpi_rank * 0.01;
-  atmos_point.Doppler_width             = 1.0e8 + 1.0e6 * k + mpi_rank * 1.0e5;
-  atmos_point.damping                   = 1.0e-4 + 1.0e-6 * k + mpi_rank * 1.0e-7;
-  atmos_point.pop_lower_level           = 1.0e12 - k * 1.0e10 + mpi_rank * 1.0e9;
-  atmos_point.pop_upper_level           = 1.0e10 + k * 1.0e9 + mpi_rank * 1.0e8;
-  atmos_point.Cul                       = 1.0 + 2.0 * k + mpi_rank;
-  atmos_point.Qel                       = 1.0 + 3.0 * k + mpi_rank;
-  atmos_point.nH                        = 1.0e17 + 1.0e15 * k + mpi_rank * 1.0e14;
-  atmos_point.magnetic_field_x          = (float)(100.0 + 10.0 * k + mpi_rank * 1.0);
-  atmos_point.magnetic_field_y          = (float)(45.0 + k + mpi_rank * 0.5);
-  atmos_point.magnetic_field_z          = (float)(90.0 + 2 * k + mpi_rank * 1.0);
-  atmos_point.bulk_velocity_x           = (float)(1.0e5 + 1.0e4 * k + mpi_rank * 1.0e3);
-  atmos_point.bulk_velocity_y           = (float)(0.0 + k + mpi_rank * 0.1);
-  atmos_point.bulk_velocity_z           = (float)(0.0 + 2 * k + mpi_rank * 0.2);
-  atmos_point.c_scat_opacity_sigma_c    = 1.0e-2 + 1.0e-4 * k + mpi_rank * 1.0e-5;
-  atmos_point.c_therm_opacity_k_c = 1.0e-3 + 1.0e-5 * k + mpi_rank * 1.0e-6;
-  atmos_point.c_therm_emissivity_epsilon_c             = 1.0e-1 + 1.0e-3 * k + mpi_rank * 1.0e-4;
+  atmos_point.temperature                  = 5000.0 + k * 100.0 + i * 10.0 + j * 5.0 + mpi_rank * 2.0;
+  atmos_point.vmicro                       = 2.0 + 0.1 * k + mpi_rank * 0.01;
+  atmos_point.Doppler_width                = 1.0e8 + 1.0e6 * k + mpi_rank * 1.0e5;
+  atmos_point.damping                      = 1.0e-4 + 1.0e-6 * k + mpi_rank * 1.0e-7;
+  atmos_point.pop_lower_level              = 1.0e12 - k * 1.0e10 + mpi_rank * 1.0e9;
+  atmos_point.pop_upper_level              = 1.0e10 + k * 1.0e9 + mpi_rank * 1.0e8;
+  atmos_point.Cul                          = 1.0 + 2.0 * k + mpi_rank;
+  atmos_point.Qel                          = 1.0 + 3.0 * k + mpi_rank;
+  atmos_point.nH                           = 1.0e17 + 1.0e15 * k + mpi_rank * 1.0e14;
+  atmos_point.magnetic_field_x             = (float)(100.0 + 10.0 * k + mpi_rank * 1.0);
+  atmos_point.magnetic_field_y             = (float)(45.0 + k + mpi_rank * 0.5);
+  atmos_point.magnetic_field_z             = (float)(90.0 + 2 * k + mpi_rank * 1.0);
+  atmos_point.bulk_velocity_x              = (float)(1.0e5 + 1.0e4 * k + mpi_rank * 1.0e3);
+  atmos_point.bulk_velocity_y              = (float)(0.0 + k + mpi_rank * 0.1);
+  atmos_point.bulk_velocity_z              = (float)(0.0 + 2 * k + mpi_rank * 0.2);
+  atmos_point.c_scat_opacity_sigma_c       = 1.0e-2 + 1.0e-4 * k + mpi_rank * 1.0e-5;
+  atmos_point.c_therm_opacity_k_c          = 1.0e-3 + 1.0e-5 * k + mpi_rank * 1.0e-6;
+  atmos_point.c_therm_emissivity_epsilon_c = 1.0e-1 + 1.0e-3 * k + mpi_rank * 1.0e-4;
 
   if (atom != NULL) {
     atmos_point.D2 = atom->a_coef_D2 * atmos_point.nH * pow(atmos_point.temperature / 5000.0, atom->b_coef_D2);
@@ -540,6 +541,93 @@ THDF_read_atom_from_hdf5(hid_t file, THDF_atom_two_levels_t *atom) {
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;
+}
+
+//============================================================================
+// create_atom_two_terms_compound_type
+//============================================================================
+hid_t
+create_atom_two_terms_compound_type(void) {
+  hsize_t E_dims[1]    = {MAX_ATOM_TERMS_PLACEHOLDER};
+  hid_t   E_array_type = H5Tarray_create2(H5T_NATIVE_DOUBLE, 1, E_dims);
+
+  hid_t atom_type = H5Tcreate(H5T_COMPOUND, sizeof(THDF_atom_two_terms_t));
+  H5Tinsert(atom_type, "atomic_number", HOFFSET(THDF_atom_two_terms_t, atomic_number), H5T_NATIVE_INT);
+  H5Tinsert(atom_type, "atomic_mass", HOFFSET(THDF_atom_two_terms_t, atomic_mass), H5T_NATIVE_DOUBLE);
+  H5Tinsert(atom_type, "Aul", HOFFSET(THDF_atom_two_terms_t, Aul), H5T_NATIVE_DOUBLE);
+  H5Tinsert(atom_type, "L2_upper", HOFFSET(THDF_atom_two_terms_t, L2_upper), H5T_NATIVE_INT);
+  H5Tinsert(atom_type, "L2_lower", HOFFSET(THDF_atom_two_terms_t, L2_lower), H5T_NATIVE_INT);
+  H5Tinsert(atom_type, "S2", HOFFSET(THDF_atom_two_terms_t, S2), H5T_NATIVE_INT);
+  H5Tinsert(atom_type, "E_size", HOFFSET(THDF_atom_two_terms_t, E_size), H5T_NATIVE_INT);
+  H5Tinsert(atom_type, "E_lower", HOFFSET(THDF_atom_two_terms_t, E_lower), E_array_type);
+  H5Tinsert(atom_type, "E_upper", HOFFSET(THDF_atom_two_terms_t, E_upper), E_array_type);
+
+  H5Tclose(E_array_type);
+  return atom_type;
+}
+
+//============================================================================
+// write_atom_two_terms_to_hdf5
+//============================================================================
+int
+write_atom_two_terms_to_hdf5(hid_t file, THDF_atom_two_terms_t *atom) {
+  if (atom->E_size < 0 || atom->E_size > MAX_ATOM_TERMS_PLACEHOLDER) {
+    fprintf(stderr, "Error: E_size (%d) out of range [0, %d]\n", atom->E_size, MAX_ATOM_TERMS_PLACEHOLDER);
+    return EXIT_FAILURE;
+  }
+
+  // Levels beyond E_size are unused: zero them out before writing so no
+  // uninitialized/stale values are persisted to the file.
+  for (int i = atom->E_size; i < MAX_ATOM_TERMS_PLACEHOLDER; i++) {
+    atom->E_lower[i] = 0.0;
+    atom->E_upper[i] = 0.0;
+  }
+
+  hsize_t dims[1]   = {1};
+  hid_t   atom_type = create_atom_two_terms_compound_type();
+  hid_t   dataspace = H5Screate_simple(1, dims, NULL);
+  hid_t   dataset = H5Dcreate2(file, "/atom_two_terms_data", atom_type, dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (dataset < 0) {
+    fprintf(stderr, "Error creating atom_two_terms_data dataset\n");
+    H5Sclose(dataspace);
+    H5Tclose(atom_type);
+    return EXIT_FAILURE;
+  }
+  H5Dwrite(dataset, atom_type, H5S_ALL, H5S_ALL, H5P_DEFAULT, atom);
+  H5Dclose(dataset);
+  H5Sclose(dataspace);
+  H5Tclose(atom_type);
+  return EXIT_SUCCESS;
+}
+
+//============================================================================
+// THDF_read_atom_two_terms_from_hdf5
+//============================================================================
+int
+THDF_read_atom_two_terms_from_hdf5(hid_t file, THDF_atom_two_terms_t *atom) {
+  hid_t dataset = H5Dopen2(file, "/atom_two_terms_data", H5P_DEFAULT);
+  if (dataset < 0) {
+    fprintf(stderr, "Error opening atom_two_terms_data dataset\n");
+    return EXIT_FAILURE;
+  }
+  hid_t  atom_type = create_atom_two_terms_compound_type();
+  herr_t status    = H5Dread(dataset, atom_type, H5S_ALL, H5S_ALL, H5P_DEFAULT, atom);
+  H5Tclose(atom_type);
+  H5Dclose(dataset);
+  if (status < 0) {
+    fprintf(stderr, "Error reading atom_two_terms_data dataset\n");
+    return EXIT_FAILURE;
+  }
+  return EXIT_SUCCESS;
+}
+
+//============================================================================
+// THDF_is_two_term_atom
+//============================================================================
+bool
+THDF_is_two_term_atom(hid_t file) {
+  htri_t exists = H5Lexists(file, "/atom_two_terms_data", H5P_DEFAULT);
+  return exists > 0;
 }
 
 //============================================================================

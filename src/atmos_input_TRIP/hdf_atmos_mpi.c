@@ -200,6 +200,19 @@ main(int argc, char **argv) {
       .b_coef_D2     = 0.4,
   };
 
+  // Example two-term atom data (all processes need this)
+  THDF_atom_two_terms_t atom_two_terms = {
+      .atomic_number = 12,        // Example: Magnesium
+      .atomic_mass   = 24.305,    // Atomic mass of Magnesium in atomic mass units
+      .Aul           = 3.37e7,    // Einstein coefficient.
+      .L2_upper      = 0,         // Upper term orbital angular momentum (multiplied by 2)
+      .L2_lower      = 2,         // Lower term orbital angular momentum (multiplied by 2)
+      .S2            = 2,         // Total spin (multiplied by 2)
+      .E_size        = 3,         // Number of energy levels for this term
+      .E_lower       = {21850.405, 21870.464, 21911.178},
+      .E_upper       = {35051.264, 35051.264, 35051.264},
+  };
+
   // Only rank 0 writes metadata using serial HDF5
   if (mpi_rank == 0) {
     file = H5Fopen("atmosphere_mpi.h5", H5F_ACC_RDWR, H5P_DEFAULT);
@@ -214,6 +227,10 @@ main(int argc, char **argv) {
 
     if (write_atom_to_hdf5(file, &atom) < 0) {
       fprintf(stderr, "Error writing atom data\n");
+    }
+
+    if (write_atom_two_terms_to_hdf5(file, &atom_two_terms) < 0) {
+      fprintf(stderr, "Error writing two-term atom data\n");
     }
 
     make_continuum_hdf5_mpi(file, N_x, N_y, N_z, N_frequencies);  // Example dimensions

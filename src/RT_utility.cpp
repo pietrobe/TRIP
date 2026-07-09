@@ -44,7 +44,7 @@ KSPTypeToString(KSPType type)
 inline std::string
 validateFormalSolver(const std::string &s)
 {
-	static const std::vector<std::string> allowed{"implicit_Euler", "trapezoidal", "Crank–Nicolson", "DELO_linear",
+	static const std::vector<std::string> allowed{"implicit_Euler", "trapezoidal", "CrankNicolson", "DELO_linear",
 												  "BESSER"};
 
 	for (const auto &a : allowed)
@@ -275,6 +275,30 @@ loadConfig(const std::string &filename)
 	return cfg;
 }
 
+inline std::string
+preconditioner_emissivity_model_to_string(const preconditioner_emissivity_model_t &model)
+{
+	switch (model)
+	{
+		case preconditioner_emissivity_model_t::NONE:
+			return "NONE";
+		case preconditioner_emissivity_model_t::CRD_limit:
+			return "CRD_limit";
+		case preconditioner_emissivity_model_t::PRD_AA:
+			return "PRD_AA";
+		case preconditioner_emissivity_model_t::PRD_AA_MAPV:
+			return "PRD_AA_MAPV";
+		case preconditioner_emissivity_model_t::PRD_AA_GB:
+			return "PRD_AA_GB";
+		case preconditioner_emissivity_model_t::PRD_AA_MAPV_GB:
+			return "PRD_AA_MAPV_GB";
+		case preconditioner_emissivity_model_t::ZERO:
+			return "ZERO";
+		default:
+			return "UNKNOWN";
+	}
+}
+
 void
 writeConfigResume(const AppConfig &cfg, std::ostream &os)
 {
@@ -301,6 +325,8 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 	print_AppCfg_field("Reference Solution Directory", cfg.reference_sol_directory.string());
 	print_AppCfg_field("Verbose", (cfg.verbose ? "Yes" : "No"));
 	print_AppCfg_field("Emissivity Model", emissivity_model_to_string_long(cfg.emissivity_model));
+	print_AppCfg_field("Preconditioner Emissivity Model",
+					   preconditioner_emissivity_model_to_string(cfg.preconditioner_emissivity_model));
 	print_AppCfg_field("Use Magnetic Field", (cfg.use_B ? "Yes" : "No"));
 	print_AppCfg_field("Use Bulk Velocity", (cfg.use_Vb ? "Yes" : "No"));
 	print_AppCfg_field("Use D2 from Input", (cfg.use_D2_from_input ? "Yes" : "No"));
@@ -357,6 +383,32 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 	print_AppCfg_field("PC Relative Tolerance", to_sci(cfg.prec.pc_rtol));
 	print_AppCfg_field("PC Maximum Iterations", std::to_string(cfg.prec.pc_max_it));
 	print_AppCfg_field("PC Use J/KQ", (cfg.prec.pc_use_J_KQ ? "Yes" : "No"));
+	print_AppCfg_field("PC Verbose", (cfg.prec.verbose ? "Yes" : "No"));
+
+	os << std::endl << "Atom Configuration:" << std::endl;
+	print_AppCfg_field("Atom Mass (amu)", to_sci(cfg.atom.mass, 4));
+	print_AppCfg_field("Atom Aul (s^-1)", to_sci(cfg.atom.Aul));
+	print_AppCfg_field("Atom S2", std::to_string(cfg.atom.S2));
+	print_AppCfg_field("Atom Ll2", std::to_string(cfg.atom.Ll2));
+	print_AppCfg_field("Atom Lu2", std::to_string(cfg.atom.Lu2));
+
+	auto vec_to_str = [](const std::vector<double> &v)
+	{
+		std::ostringstream oss;
+		oss << "[";
+		for (size_t i = 0; i < v.size(); ++i)
+		{
+			if (i) oss << ", ";
+			oss << v[i];
+		}
+		oss << "]";
+		return oss.str();
+	};
+
+	print_AppCfg_field("Atom El_vec (cm^-1)", vec_to_str(cfg.atom.El_vec));
+	print_AppCfg_field("Atom Eu_vec (cm^-1)", vec_to_str(cfg.atom.Eu_vec));
+	print_AppCfg_field("Atom gl_vec", vec_to_str(cfg.atom.gl_vec));
+	print_AppCfg_field("Atom gu_vec", vec_to_str(cfg.atom.gu_vec));
 
 	os << std::endl;
 }
@@ -562,4 +614,48 @@ calculate_D2(const double a, const double b, const double nH, const double T, co
 	double D2 = a * nH * std::pow(T / T_ref, b);
 
 	return D2;
+}
+
+int
+print_geometry(const RT_problem &rt_problem, std::ostream &os)
+{
+	os << "N_x: " << rt_problem.N_x_ << std::endl;
+	os << "N_y: " << rt_problem.N_y_ << std::endl;
+	os << "N_z: " << rt_problem.N_z_ << std::endl;
+	os << "delta: " << rt_problem.L_ << std::endl;
+	os << "height_min: " << *std::min_element(rt_problem.depth_grid_.begin(), rt_problem.depth_grid_.end())
+	   << std::endl;
+	os << "height_max: " << *std::max_element(rt_problem.depth_grid_.begin(), rt_problem.depth_grid_.end())
+	   << std::endl;
+
+
+
+
+	std::vector<double> depth_grid_local = rt_problem.depth_grid_;
+
+	double delta_max = 0.0;
+	double delta_min = std::numeric_limits<double>::max();
+
+	for (size_t i = 1; i < depth_grid_local.size(); ++i)
+	{
+		double delta = depth_grid_local[i] - depth_grid_local[i - 1];
+		if (delta > delta_max) delta_max = delta;
+		if (delta < delta_min) delta_min = delta;
+	}
+
+	os << "height_delta_max: " << delta_max << std::endl;
+	os << "height_delta_min: " << delta_min << std::endl;
+
+	std::sort(depth_grid_local.begin(), depth_grid_local.end());
+	os << "heights: [";
+	for (size_t i = 0; i < depth_grid_local.size(); ++i)
+	{
+		os << depth_grid_local[i];
+		if (i != depth_grid_local.size() - 1)
+		{
+			os << ", ";
+		}
+	}
+	os << "]" << std::endl;
+	return 0;
 }

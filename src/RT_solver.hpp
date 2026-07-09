@@ -182,6 +182,17 @@ struct MF_context {
 	void unpolarized_to_polarized(Vec &unpol_v, Vec &pol_v);
 };
 
+static PetscErrorCode precond_ksp_monitor(KSP ksp, PetscInt it, PetscReal rnorm, void *ctx)
+{
+	(void)ctx;
+	Vec r;
+	PetscReal truenorm;
+	PetscCall(KSPBuildResidual(ksp, NULL, NULL, &r));
+	PetscCall(VecNorm(r, NORM_2, &truenorm));
+	PetscCall(VecDestroy(&r));
+	return PetscPrintf(PETSC_COMM_WORLD, "%3d PRECOND Residual norm %14.12e  ||pre_r(i)||/||pre_b|| %14.12e\n", (int)it, (double)rnorm, (double)truenorm);
+}
+
 class RT_solver
 {
 public:
@@ -352,9 +363,22 @@ public:
 
 			// adding some options for verbosity
 	    	ierr = PetscOptionsSetValue(NULL, "-ksp_converged_reason", "");CHKERRV(ierr);
-	    	if (cfg.prec.verbose) ierr = PetscOptionsSetValue(NULL, "-ksp_monitor", "");CHKERRV(ierr);	    	
-    		ierr = KSPSetFromOptions(mf_ctx_.pc_solver_);CHKERRV(ierr);    
-    	}
+#define PRECOND_MONITORING // If it dosent work with some petsc versions, switch-off this macro.
+#ifdef PRECOND_MONITORING
+			ierr = KSPSetFromOptions(mf_ctx_.pc_solver_);
+			CHKERRV(ierr);
+			if (cfg.prec.verbose)
+			{
+				ierr = KSPMonitorCancel(mf_ctx_.pc_solver_);
+				CHKERRV(ierr);
+				ierr = KSPMonitorSet(mf_ctx_.pc_solver_, precond_ksp_monitor, NULL, NULL);
+				CHKERRV(ierr);
+			} else {
+				ierr = KSPMonitorCancel(mf_ctx_.pc_solver_);
+				CHKERRV(ierr);
+			}			
+#endif
+		}
     	else
     	{
     		ierr = PCSetType(pc_,PCNONE);CHKERRV(ierr);
@@ -363,7 +387,7 @@ public:
 
 		if (RT_problem_->verbose_)  {
 			ierr = PetscOptionsSetValue(NULL, "-ksp_monitor", "");CHKERRV(ierr);
-			// ierr = PetscOptionsSetValue(NULL, "-ksp_monitor_true_residual", "");CHKERRV(ierr);    // WARNING: this costs
+			ierr = PetscOptionsSetValue(NULL, "-ksp_monitor_true_residual", "");CHKERRV(ierr);    // WARNING: this costs
 			ierr = PetscOptionsSetValue(NULL, "-ksp_view", "");CHKERRV(ierr);			
 		}
 
