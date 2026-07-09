@@ -21,7 +21,7 @@ use_prec: true
 
 solver:
   ksp_solver_type: KSPFGMRES
-  ksp_rtol: 1e-7 #use 1e-6 for single precision, 1e-8 for double
+  ksp_rtol: 1e-8 #use 1e-6 for single precision, 1e-8 for double
   ksp_max_it: 1000
 
 prec:
