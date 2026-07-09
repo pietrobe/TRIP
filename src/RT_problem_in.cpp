@@ -225,20 +225,22 @@ RT_problem::read_3D_h5(const std::string filename, const AppConfig &cfg, const b
 																			 data.bulk_velocity_z); //
 					v_b_->block(i, j, k)[0] = v_spherical[0];
 					v_b_->block(i, j, k)[1] = v_spherical[1];
-					v_b_->block(i, j, k)[2] = v_spherical[2];
+					v_b_->block(i, j, k)[2] = v_spherical[2];					
 				}
 
-				const double sigma_c = cfg.enable_sigma_c
-										   ? data.c_scat_opacity_sigma_c
-										   : 0.0; // set to 0.0 as in PORTA, meaning that the scattering
-												  // contribution to the continuum opacity is ignored
+							// set to 0.0 as in PORTA, meaning that the scattering
+				const double sigma_c = cfg.enable_sigma_c ? data.c_scat_opacity_sigma_c : 0.0;
+
+				// total continuum opacity (absorption + scattering)
+				const double k_c	  = data.c_therm_opacity_k_c + data.c_scat_opacity_sigma_c;
+				const double eps_c_th = data.c_therm_emissivity_epsilon_c;
 
 				// continuum
 				for (int n = 0; n < N_nu_; ++n)
 				{
 					this->sigma_->block(i, j, k)[n]	   = sigma_c;
-					this->k_c_->block(i, j, k)[n]	   = data.c_therm_opacity_k_c + sigma_c;
-					this->eps_c_th_->block(i, j, k)[n] = data.c_therm_emissivity_epsilon_c;
+					this->k_c_->block(i, j, k)[n]	   = k_c;
+					this->eps_c_th_->block(i, j, k)[n] = eps_c_th;
 				}
 			});
 

@@ -160,7 +160,7 @@ main(int argc, char *argv[])
 		if (mpi_rank == 0)
 		{
 			std::stringstream ss_mem;
-			ss_mem << std::fixed << std::setprecision(2);
+			ss_mem << std::fixed << std::setprecision(1);
 			ss_mem << "Setup time: " << (clocks.setup_time - clocks.start_time) << " seconds." << std::endl;
 
 			std::cout << ss_mem.str();
@@ -175,7 +175,7 @@ main(int argc, char *argv[])
 		///////////////////////////////////////////////////
 		// solve //////////////////////////////////////////
 		rt_solver.solve();
-
+		
 		clocks.solve_end_time = MPI_Wtime();
 
 		// print some memory info

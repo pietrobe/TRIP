@@ -46,8 +46,6 @@ enum class preconditioner_emissivity_model_t
 	PRD_AA_MAPV, //
 	PRD_AA_GB,		//
 	PRD_AA_MAPV_GB, //
-	PRD_AA_MAPV,
-	PRD_AA,
 	ZERO			//
 }; //
 
@@ -388,13 +386,7 @@ namespace YAML
 					break;
 				case preconditioner_emissivity_model_t::PRD_AA_MAPV_GB:
 					node = "PRD_AA_MAPV_GB";
-					break;
-				case preconditioner_emissivity_model_t::PRD_AA:
-					node = "PRD_AA";
-					break;
-				case preconditioner_emissivity_model_t::PRD_AA_MAPV:
-					node = "PRD_AA_MAPV";
-					break;
+					break;				
 				case preconditioner_emissivity_model_t::ZERO:
 					node = "ZERO";
 					break;
@@ -501,6 +493,8 @@ struct PrecConfig
 	int		pc_max_it	   = 1000;
 	bool	pc_use_J_KQ	   = false;
 	bool	verbose	       = false;
+
+	bool pc_formal_solver_approx = false; 
 };
 
 struct AtomConfig

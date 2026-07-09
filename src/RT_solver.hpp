@@ -44,6 +44,9 @@ struct MF_context {
 	Formal_solver formal_solver_;
 	Formal_solver formal_solver_unpol_;
 
+	// for preconditioning
+	bool approx_formal_solver_; // TODO put this into config
+
 	// preconditioner data structures 
 	KSP pc_solver_;
 
@@ -51,8 +54,8 @@ struct MF_context {
 	int mpi_rank_;
 	int mpi_size_;
 	
-	const bool use_single_long_step_ = false; 
-	const bool use_always_long_ray_  = true;
+	const bool use_long_characteristics_ = true; // gor rays intersecting vertical planes
+	const bool use_single_long_step_     = false; 
 
 	// use JKQ vector as unknown
 	bool ksp_use_J_KQ_;
@@ -68,7 +71,7 @@ struct MF_context {
 	bool formal_solution_Omega_ = false;
 	
 	// serial objects for formal solution
-	Grid_ptr_t  space_grid_serial_;	
+	Grid_ptr_t space_grid_serial_;	
 
 	ReMap3D Pol_remap;
 	
@@ -144,11 +147,14 @@ struct MF_context {
 	void get_2D_weigths(const double x, const double y, double *w);
 
 	// formal solver	
-	void formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
+	void formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0, const bool approx_formal_solver = false);		
 	void formal_solve_ray(const double mu, const double chi);		
 	void formal_solve_unpolarized(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
 	void formal_solve_1_5D(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);	
-	void formal_solve(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0);		
+	void formal_solve(Field_ptr_t I_field, const Field_ptr_t S_field, const Real I0, const bool approx_formal_solver = false);		
+
+	// formation height of a specific LOS
+	void get_formation_height(const double mu, const double chi);
 
 	void apply_bc(       Field_ptr_t I_field, const Real I0, const bool polarized = true);	
 	void apply_bc_serial(Field_ptr_t I_field, const Real I0, const bool polarized = true);	
@@ -199,7 +205,9 @@ public:
     	mf_ctx_.mpi_rank_   = mpi_rank_;
     	mf_ctx_.mpi_size_   = mpi_size_;   
 
-    	mf_ctx_.formal_solver_ = Formal_solver(cfg.formal_solver);     
+    	mf_ctx_.formal_solver_ = Formal_solver(cfg.formal_solver);         	
+
+    	mf_ctx_.approx_formal_solver_ = cfg.prec.pc_formal_solver_approx;
 
     	mf_ctx_.ksp_use_J_KQ_ = cfg.solver.ksp_use_J_KQ;
     	mf_ctx_.pc_use_J_KQ_  = cfg.prec.pc_use_J_KQ;
@@ -361,7 +369,7 @@ public:
 
 		ierr = PetscOptionsSetValue(NULL, "-ksp_converged_reason", "");CHKERRV(ierr);
 
-		// print warning if it is case 
+		// print warning when mponitoring true residual
 		PetscBool ksp_true_res_flg;
   		PetscOptionsHasName(NULL,NULL,"-ksp_monitor_true_residual",&ksp_true_res_flg);
         if (ksp_true_res_flg) PetscPrintf(PETSC_COMM_WORLD,"WARNING: -ksp_monitor_true_residual may significantly impact performance.\n\n");
@@ -419,6 +427,7 @@ public:
         mf_ctx_.update_emission_J_KQ(mf_ctx_.x_J_KQ_);
         
         // (ii) perform a formal solution        
+        if (mpi_rank_ == 0) std::cout << "\nFinal solution to map J_KQ solution to radiation field...";			
         mf_ctx_.formal_solve(RT_problem_->I_field_, RT_problem_->S_field_, 0.0); 
 
         // map back to y adding rhs for consistency
@@ -658,7 +667,7 @@ public:
 		const double clock_diff = clock_end - clock_start;
 
 		if (mpi_rank_ == 0){ 
-			std::cout << "Computing emission took (s) = " << clock_diff << "    file: " << __FILE__ << ":" << __LINE__ << std::endl;
+			std::cout << "\nComputing emission took (s) = " << clock_diff << "    file: " << __FILE__ << ":" << __LINE__ << std::endl;
 			std::cout.flush();
 		}
 		
@@ -676,6 +685,36 @@ public:
 		double clock_diff_formal = clock_end_formal - clock_start_formal;
 		if (mpi_rank_ == 0) std::cout << "Formal solve time (s) = " << clock_diff_formal << "    file: " << __FILE__ << ":" << __LINE__ << std::endl;
 	}
+
+
+	inline void get_formation_height(const double theta, const double chi)
+	{
+		mf_ctx_.get_formation_height(theta, chi);
+	}
+
+	// inline void test()
+	// {		
+	// 	const auto N_nu  = RT_problem_->N_nu_;
+	// 	const auto N_pol = RT_problem_->N_pol_;
+	// 	const auto space_grid = RT_problem_->space_grid_;
+	// 	const auto space_grid_s = mf_ctx_.space_grid_serial_;
+
+	// 	const int block_size = N_pol * N_nu;
+	// 	const int local_block_size = N_pol;
+
+    //     Field_ptr_t test_field_        = std::make_shared<Field>("test"       , space_grid,   N_pol, std::vector<PetscInt>{N_nu}, false);       
+    //     Field_ptr_t test_field_serial_ = std::make_shared<Field>("test_serial", space_grid_s, local_block_size, false);
+               
+    //     ReMap3D test_remap;
+    //     test_remap.init(space_grid, space_grid_s, block_size, local_block_size);         
+       
+    // 	// write eta to the serial grid
+    // 	if (mpi_rank_ == 0) std::cout << "Sending eta to serial" << std::endl;
+    // 	MPI_Barrier(MPI_COMM_WORLD);
+    // 	test_remap.from_space_to_block_distributed(test_field_, test_field_serial_);         
+    // 	MPI_Barrier(MPI_COMM_WORLD);
+    // 	if (mpi_rank_ == 0) std::cout << "DONE" << std::endl;
+	// }
 	
 
 	inline void test_transfer()
@@ -779,7 +818,7 @@ private:
 	
 	KSP ksp_solver_;
 	KSPType ksp_type_;    //= KSPFGMRES; //KSPFBCGS //KSPRICHARDSON; //KSPPIPEFGMRES
-	KSPType pc_ksp_type_; //= KSPGMRES; //KSPPIPEFGMRES //KSPBCGS
+	KSPType pc_ksp_type_; //= KSPGMRES;  //KSPPIPEFGMRES //KSPBCGS
 	PC pc_;
 	
 	bool using_prec_;	

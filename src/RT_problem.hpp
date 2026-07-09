@@ -109,19 +109,19 @@ class RT_problem
 		}
 
 		// set flags
-		use_PORTA_input_	   = not(cfg_.input_directory.string().find("FAL-C") != std::string::npos);
-		use_magnetic_field_	   = cfg_.use_B;
-		emissivity_model_	   = cfg_.emissivity_model;
+		use_PORTA_input_ = not(cfg_.input_directory.string().find("FAL-C") != std::string::npos);
+		use_magnetic_field_	  = cfg_.use_B;
+		emissivity_model_	     = cfg_.emissivity_model;
 		emissivity_model_prec_ = cfg_.preconditioner_emissivity_model;
-		enable_continuum_	   = cfg_.enable_continuum;
-		use_1_5D_approx_	   = cfg_.use_1_5D_approx;
-		use_bulk_velocity_	   = cfg_.use_Vb;
-		verbose_			   = cfg_.verbose;
+		enable_continuum_	     = cfg_.enable_continuum;
+		use_1_5D_approx_	     = cfg_.use_1_5D_approx;
+		use_bulk_velocity_	  = cfg_.use_Vb;
+		verbose_			        = cfg_.verbose;
 
 		// atom quantities
 		mass_ = cfg.atom.mass;
 		Aul_  = cfg.atom.Aul;
-		S2_	  = cfg.atom.S2;
+		S2_	= cfg.atom.S2;
 		Ll2_  = cfg.atom.Ll2;
 		Lu2_  = cfg.atom.Lu2;
 
@@ -135,12 +135,13 @@ class RT_problem
 		{
 			uniform_magnetic_field_value_ = cfg_.B_field[0];
 			uniform_magnetic_field_theta_ = cfg_.B_field[1];
-			uniform_magnetic_field_chi_	  = cfg_.B_field[2];
+			uniform_magnetic_field_chi_	= cfg_.B_field[2];
 		}
 
 		// set input files
-		const auto input_file_path		  = cfg_.input_directory / cfg_.input_file;
+		const auto input_file_path		    = cfg_.input_directory / cfg_.input_file;
 		const auto frequencies_input_path = cfg_.input_directory / cfg_.frequency_file;
+		// const auto frequencies_input_path = cfg_.frequency_file;
 
 		// read input frequencies from separate file
 		read_frequency(frequencies_input_path.string().c_str());
@@ -149,15 +150,15 @@ class RT_problem
 		if (use_PORTA_input_)
 		{
 			if (cfg_.input_cul.string().empty() || cfg_.input_qel.empty() || cfg_.input_llp.empty())
-			{
-				if (mpi_rank_ == 0) std::cout << "Using PORTA PMD input file ONLY:  " << input_file_path << std::endl;
-
+			{				
 				if (hdf_atmos_cpp::is_valid_hdf5_file(input_file_path))
 				{
 					this->read_3D_h5(input_file_path.string(), this->cfg_, true);
 				}
 				else
 				{
+					if (mpi_rank_ == 0) std::cout << "Using PORTA PMD input file ONLY:  " << input_file_path << std::endl;
+					
 					read_3D(input_file_path.string().c_str());
 				}
 			}
@@ -165,9 +166,9 @@ class RT_problem
 			{
 				if (mpi_rank_ == 0) std::cout << "Using PORTA PMD + CUL + QEL + LLP + BACK input files" << std::endl;
 
-				auto input_cul_path	 = cfg_.input_directory / cfg_.input_cul;
-				auto input_qel_path	 = cfg_.input_directory / cfg_.input_qel;
-				auto input_llp_path	 = cfg_.input_directory / cfg_.input_llp;
+				auto input_cul_path	= cfg_.input_directory / cfg_.input_cul;
+				auto input_qel_path	= cfg_.input_directory / cfg_.input_qel;
+				auto input_llp_path	= cfg_.input_directory / cfg_.input_llp;
 				auto input_back_path = cfg_.input_directory / cfg_.input_back;
 
 				read_3D(input_file_path.string().c_str(), input_cul_path.string().c_str(),
@@ -221,7 +222,7 @@ class RT_problem
 		// set flags
 		use_PORTA_input_	= true;
 		use_magnetic_field_ = use_magnetic_field;
-		emissivity_model_	= emissivity_model_arg;
+		emissivity_model_   = emissivity_model_arg;
 
 		// frequency grid is not contained in PORTA input (but can be computed from T_ref)
 		// const bool use_wavelength = false; // TEST
@@ -367,9 +368,7 @@ class RT_problem
 		set_grid_partition();
 		space_grid_ = std::make_shared<Grid3D>(MPI_COMM_WORLD, N_x_, N_y_, N_z_,
 											   std::array<PetscInt, 3>{mpi_size_x_, mpi_size_y_, mpi_size_z_});
-
-		print_info();
-
+		
 		// init fields
 		allocate_fields();
 
@@ -678,12 +677,12 @@ class RT_problem
 	// atmospheric quantities
 	// Field_ptr_t Nu_;   // upper level populations
 	Field_ptr_t Nl_;  // lower level populations
-	Field_ptr_t T_;	  // temperature
+	Field_ptr_t T_;	// temperature
 	Field_ptr_t nH_;  // hydrogen number density
 	Field_ptr_t xi_;  // microturbulent velocity (a.k.a. non-thermal microscopic velocity)
 	Field_ptr_t Cul_; // rate of inelastic de-exciting collisions
 	Field_ptr_t Qel_; // rate of elastic collisions // TODO: for memory, maybe this could be removed, leaving only D2_?
-	Field_ptr_t a_;	  // damping constant
+	Field_ptr_t a_;	// damping constant
 	Field_ptr_t W_T_; // Wien function
 
 	// magnetic field [nu_L, theta_B_, chi_B_]

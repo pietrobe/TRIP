@@ -150,9 +150,8 @@ loadConfig(const std::string &filename)
 	if (config["verbose"]) cfg.verbose = config["verbose"].as<bool>();
 
 	// Emissivity model (required)
-	cfg.emissivity_model = config["emissivity_model"].as<emissivity_model_t>();
-	cfg.preconditioner_emissivity_model =
-		config["preconditioner_emissivity_model"]
+	cfg.emissivity_model                = config["emissivity_model"].as<emissivity_model_t>();
+	cfg.preconditioner_emissivity_model = config["preconditioner_emissivity_model"]
 			? config["preconditioner_emissivity_model"].as<preconditioner_emissivity_model_t>()
 			: preconditioner_emissivity_model_t::CRD_limit;
 
@@ -257,6 +256,8 @@ loadConfig(const std::string &filename)
 		if (p["pc_max_it"])      cfg.prec.pc_max_it   = p["pc_max_it"].as<int>();
 		if (p["pc_use_J_KQ"])    cfg.prec.pc_use_J_KQ = p["pc_use_J_KQ"].as<bool>();
 		if (p["verbose"])        cfg.prec.verbose     = p["verbose"].as<bool>();
+
+		if (p["pc_formal_solver_approx"]) cfg.prec.pc_formal_solver_approx = p["pc_formal_solver_approx"].as<bool>();
 	}
 
 	// Arbitrary beams section

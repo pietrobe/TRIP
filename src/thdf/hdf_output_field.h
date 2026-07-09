@@ -10,14 +10,14 @@
 #include <hdf5_hl.h>
 #include <mpi.h>
 
-// #include <petscsys.h>
+#include <petscsys.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef double THDF_float_t; 
-typedef double THDF_n_float_t;
+typedef PetscScalar THDF_float_t; 
+typedef PetscScalar THDF_n_float_t;
 
 typedef float THDF_float32_t;
 

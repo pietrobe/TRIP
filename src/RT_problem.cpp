@@ -1414,10 +1414,8 @@ void RT_problem::allocate_unpolarized_fields(){
 }
 
 
-// allocate fields in a single direction Omega
+// allocate fields in a single direction Omega 
 void RT_problem::allocate_fields_Omega() {		
-
-	const PetscInt block_size_Omega = 4 * N_nu_; // UNUSED
 
 	// create fields 
 	I_field_Omega_   = std::make_shared<Field>(
