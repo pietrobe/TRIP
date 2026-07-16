@@ -302,9 +302,17 @@ preconditioner_emissivity_model_to_string(const preconditioner_emissivity_model_
 void
 writeConfigResume(const AppConfig &cfg, std::ostream &os)
 {
-	const int label_width		 = 44;
-	auto	  print_AppCfg_field = [&](const std::string &label, const std::string &value)
-	{ os << std::left << std::setw(label_width) << (label + ":") << value << std::endl; };
+	const int total_width = 78;
+	const int label_width = 44;
+
+	auto print_AppCfg_field = [&](const std::string &label, const std::string &value)
+	{ os << "  " << std::left << std::setw(label_width) << (label + ":") << value << std::endl; };
+
+	auto print_section = [&](const std::string &title)
+	{
+		const std::string head = "-- " + title + " ";
+		os << std::endl << head << std::string(total_width - head.size(), '-') << std::endl;
+	};
 
 	auto to_sci = [](double v, int prec = 2)
 	{
@@ -313,10 +321,33 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 		return oss.str();
 	};
 
-	os << "YAML Configuration Summary:" << std::endl;
+	auto vec_to_str = [](const std::vector<double> &v)
+	{
+		std::ostringstream oss;
+		oss << "[";
+		for (size_t i = 0; i < v.size(); ++i)
+		{
+			if (i) oss << ", ";
+			oss << v[i];
+		}
+		oss << "]";
+		return oss.str();
+	};
+
+	os << std::string(total_width, '=') << std::endl;
+	os << std::string((total_width - 21) / 2, ' ') << "CONFIGURATION SUMMARY" << std::endl;
+	os << std::string(total_width, '=') << std::endl;
+
+	print_section("Input");
 	print_AppCfg_field("Input Directory", cfg.input_directory.string());
 	print_AppCfg_field("Input File", cfg.input_file.string());
 	print_AppCfg_field("Frequency File", cfg.frequency_file.string());
+	print_AppCfg_field("Input CUL File", cfg.input_cul.string());
+	print_AppCfg_field("Input QEL File", cfg.input_qel.string());
+	print_AppCfg_field("Input LLP File", cfg.input_llp.string());
+	print_AppCfg_field("Input BACK File", cfg.input_back.string());
+
+	print_section("Output");
 	print_AppCfg_field("Output Directory", cfg.output_directory.string());
 	print_AppCfg_field("Output Enabled", (cfg.output ? "Yes" : "No"));
 	print_AppCfg_field("Output Overwrite Prevention", (cfg.output_overwrite_prevention ? "Yes" : "No"));
@@ -324,6 +355,8 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 	print_AppCfg_field("Write Text Output", (cfg.write_text_output ? "Yes" : "No"));
 	print_AppCfg_field("Reference Solution Directory", cfg.reference_sol_directory.string());
 	print_AppCfg_field("Verbose", (cfg.verbose ? "Yes" : "No"));
+
+	print_section("Physics");
 	print_AppCfg_field("Emissivity Model", emissivity_model_to_string_long(cfg.emissivity_model));
 	print_AppCfg_field("Preconditioner Emissivity Model",
 					   preconditioner_emissivity_model_to_string(cfg.preconditioner_emissivity_model));
@@ -332,18 +365,6 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 	print_AppCfg_field("Use D2 from Input", (cfg.use_D2_from_input ? "Yes" : "No"));
 	print_AppCfg_field("Enable Continuum", (cfg.enable_continuum ? "Yes" : "No"));
 	print_AppCfg_field("Enable Sigma_c in Emissivity", (cfg.enable_sigma_c ? "Yes" : "No"));
-	print_AppCfg_field("Use 1.5D Approximation", (cfg.use_1_5D_approx ? "Yes" : "No"));
-	print_AppCfg_field("Formal Solver", cfg.formal_solver);
-	print_AppCfg_field("Angular Grid - N_theta", std::to_string(cfg.N_theta));
-	print_AppCfg_field("Angular Grid - N_chi", std::to_string(cfg.N_chi));
-	print_AppCfg_field("Horizontal Grid - N_x", std::to_string(cfg.N_x));
-	print_AppCfg_field("Horizontal Grid - N_y", std::to_string(cfg.N_y));
-	print_AppCfg_field("Horizontal Grid - L", std::to_string(cfg.L));
-	print_AppCfg_field("Input CUL File", cfg.input_cul.string());
-	print_AppCfg_field("Input QEL File", cfg.input_qel.string());
-	print_AppCfg_field("Input LLP File", cfg.input_llp.string());
-	print_AppCfg_field("Input BACK File", cfg.input_back.string());
-	print_AppCfg_field("Use Preconditioner", (cfg.use_prec ? "Yes" : "No"));
 	print_AppCfg_field("Set Uniform Magnetic Field", (cfg.set_uniform_B ? "Yes" : "No"));
 	if (cfg.set_uniform_B)
 	{
@@ -360,57 +381,53 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 		print_AppCfg_field("* Uniform Bulk Velocity Vz (cm/s)", std::to_string(cfg.Vb_field[2]));
 	}
 
+	print_section("Numerics");
+	print_AppCfg_field("Use 1.5D Approximation", (cfg.use_1_5D_approx ? "Yes" : "No"));
+	print_AppCfg_field("Formal Solver", cfg.formal_solver);
+	print_AppCfg_field("Use Preconditioner", (cfg.use_prec ? "Yes" : "No"));
+	print_AppCfg_field("Angular Grid - N_theta", std::to_string(cfg.N_theta));
+	print_AppCfg_field("Angular Grid - N_chi", std::to_string(cfg.N_chi));
+	print_AppCfg_field("Horizontal Grid - N_x", std::to_string(cfg.N_x));
+	print_AppCfg_field("Horizontal Grid - N_y", std::to_string(cfg.N_y));
+	print_AppCfg_field("Horizontal Grid - L", std::to_string(cfg.L));
+
+	print_section("Arbitrary Beams");
 	print_AppCfg_field("Arbitrary Beams Count", std::to_string(cfg.arbitrary_beams.size()));
 	for (size_t i = 0; i < cfg.arbitrary_beams.size(); ++i)
 	{
-		const auto		 &beam		   = cfg.arbitrary_beams[i];
-		const bool		  is_last_beam = (i + 1 == cfg.arbitrary_beams.size());
-		const std::string beam_prefix  = is_last_beam ? "" : "";
-		print_AppCfg_field(beam_prefix + "* Beam", std::to_string(i));
+		const auto &beam = cfg.arbitrary_beams[i];
+		print_AppCfg_field("* Beam", std::to_string(i));
 		print_AppCfg_field("   > mu", std::to_string(beam.mu));
 		print_AppCfg_field("   > chi (rad)", std::to_string(beam.chi));
 	}
 
-	os << std::endl << "Solver Configuration:" << std::endl;
+	print_section("Solver");
 	print_AppCfg_field("KSP Solver Type", KSPTypeToString(cfg.solver.ksp_solver_type));
 	print_AppCfg_field("KSP Relative Tolerance", to_sci(cfg.solver.ksp_rtol));
 	print_AppCfg_field("KSP Maximum Iterations", std::to_string(cfg.solver.ksp_max_it));
 	print_AppCfg_field("KSP Use J/KQ", (cfg.solver.ksp_use_J_KQ ? "Yes" : "No"));
 	print_AppCfg_field("GMRES Restart", std::to_string(cfg.solver.gmres_restart));
 
-	os << std::endl << "Preconditioner Configuration:" << std::endl;
+	print_section("Preconditioner");
 	print_AppCfg_field("PC Solver Type", KSPTypeToString(cfg.prec.pc_solver_type));
 	print_AppCfg_field("PC Relative Tolerance", to_sci(cfg.prec.pc_rtol));
 	print_AppCfg_field("PC Maximum Iterations", std::to_string(cfg.prec.pc_max_it));
 	print_AppCfg_field("PC Use J/KQ", (cfg.prec.pc_use_J_KQ ? "Yes" : "No"));
 	print_AppCfg_field("PC Verbose", (cfg.prec.verbose ? "Yes" : "No"));
+	print_AppCfg_field("PC Approximate Formal Solver", (cfg.prec.pc_formal_solver_approx ? "Yes" : "No"));
 
-	os << std::endl << "Atom Configuration:" << std::endl;
+	print_section("Atom");
 	print_AppCfg_field("Atom Mass (amu)", to_sci(cfg.atom.mass, 4));
 	print_AppCfg_field("Atom Aul (s^-1)", to_sci(cfg.atom.Aul));
 	print_AppCfg_field("Atom S2", std::to_string(cfg.atom.S2));
 	print_AppCfg_field("Atom Ll2", std::to_string(cfg.atom.Ll2));
 	print_AppCfg_field("Atom Lu2", std::to_string(cfg.atom.Lu2));
-
-	auto vec_to_str = [](const std::vector<double> &v)
-	{
-		std::ostringstream oss;
-		oss << "[";
-		for (size_t i = 0; i < v.size(); ++i)
-		{
-			if (i) oss << ", ";
-			oss << v[i];
-		}
-		oss << "]";
-		return oss.str();
-	};
-
 	print_AppCfg_field("Atom El_vec (cm^-1)", vec_to_str(cfg.atom.El_vec));
 	print_AppCfg_field("Atom Eu_vec (cm^-1)", vec_to_str(cfg.atom.Eu_vec));
 	print_AppCfg_field("Atom gl_vec", vec_to_str(cfg.atom.gl_vec));
 	print_AppCfg_field("Atom gu_vec", vec_to_str(cfg.atom.gu_vec));
 
-	os << std::endl;
+	os << std::endl << std::string(total_width, '=') << std::endl;
 }
 
 // std::string get_arg(const std::string &input, const std::string &word) {
