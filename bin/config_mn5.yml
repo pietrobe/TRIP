@@ -1,0 +1,75 @@
+# I/O
+input_directory: /gpfs/projects/ehpc597/model128/original
+# input_file: cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_32x32x133.pmd
+# input_file:      AR_385_Cut_128x128x48_V0-B0_V0_fix_conv_KQ_MC.pmd
+# input_file:        GPP_SCALING_test_64x64x128.pmd
+# input_file:     small_ssd_from3D_128x128x143.h5
+# input_file:      small_ssd_from3D_8x8x143.h5
+input_file:      small_ssd_from3D_nij.h5
+frequency_file:  frequency/96F/frequency.dat
+
+output: true
+output_overwrite_prevention: true
+
+# output_directory: /gpfs/scratch/ehpc597/model128/CRD_limit_128x128_DL_PORTA_comparison
+output_directory: /gpfs/scratch/ehpc597/model128_nij/AA
+
+write_whole_3D_field_hdf5: false
+write_text_output: false
+
+use_B: true
+use_Vb: true
+
+use_continuum: false
+formal_solver: BESSER
+# formal_solver: DELO_linear
+
+enable_sigma_c: true
+
+# emissivity_model: PRD
+preconditioner_emissivity_model: CRD_limit
+
+emissivity_model: PRD_AA_MAPV
+# emissivity_model: CRD_limit
+
+# used only for FAL-C input
+N_theta: 8
+N_chi:   16
+
+use_prec: true
+
+solver:
+  ksp_solver_type: KSPRICHARDSON
+  ksp_rtol: 1e-6
+  ksp_max_it: 12
+  verbose: true
+
+prec:
+  pc_solver_type: KSPFGMRES
+  pc_rtol: 1e-6
+  pc_max_it: 25
+  pc_use_J_KQ: true
+  verbose: true
+
+
+default_chi: &default_chi 0.0
+
+arbitrary_beams: 
+ - mu: 0.1
+   chi: *default_chi
+
+ - mu: 0.3
+   chi: *default_chi
+    
+ - mu: 0.7
+   chi: *default_chi
+
+ - mu: 0.9
+   chi: *default_chi
+
+ - mu: 1.0
+   chi: *default_chi
+
+#  - mu:  3.30009478207572e-01
+#    chi: 1.96349540849362e-01
+
