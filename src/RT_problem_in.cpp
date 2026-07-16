@@ -226,7 +226,7 @@ RT_problem::read_3D_h5(const std::string filename, const AppConfig &cfg, const b
 																			 atmos_data.bulk_velocity_z); //
 					v_b_->block(i, j, k)[0] = v_spherical[0];
 					v_b_->block(i, j, k)[1] = v_spherical[1];
-					v_b_->block(i, j, k)[2] = v_spherical[2];
+					v_b_->block(i, j, k)[2] = v_spherical[2];					
 				}
 
 				// set to 0.0 as in PORTA, meaning that the scattering

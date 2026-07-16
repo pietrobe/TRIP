@@ -11,6 +11,7 @@ formal_solver: DELO_linear
 use_1_5D_approx: false
 
 emissivity_model: PRD
+preconditioner_emissivity_model: CRD_limit
 
 set_uniform_B: true
 B_field: [12.0, 0.78, 0.78]
@@ -20,7 +21,7 @@ use_prec: true
 
 solver:
   ksp_solver_type: KSPFGMRES
-  ksp_rtol: 1e-8 # use 1e-6 for single precision
+  ksp_rtol: 1e-8 #use 1e-6 for single precision, 1e-8 for double
   ksp_max_it: 1000
 
 prec:
@@ -28,3 +29,4 @@ prec:
   pc_rtol: 1e-4
   pc_max_it: 1000
   pc_use_J_KQ: true
+  pc_formal_solver_approx: true
