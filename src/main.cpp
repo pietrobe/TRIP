@@ -90,7 +90,7 @@ main(int argc, char *argv[])
 
 #else
 
-	set_RII_contrib_block_size(1);
+	set_RII_contrib_block_size(rii_include::get_RII_block_size());
 
 #endif // ACC_SOLAR_3D
 

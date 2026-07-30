@@ -207,18 +207,16 @@ void MF_context::apply_bc_serial(Field_ptr_t I_field, const Real I0, const bool 
     const auto N_y = RT_problem_->N_y_;     
     const auto N_z = RT_problem_->N_z_;
 
-    // only intensity in the unpolarized case     
-    PetscInt increment, block_size;
-    // NOTE With the new layout of field this could be avoided 
-    if (polarized)
+    // only intensity in the unpolarized case
+    const PetscInt increment = polarized ? 4 : 1;
+
+    const PetscInt block_size = I_field->getBlockSize();
+
+    if (block_size % increment != 0 and mpi_rank_ == 0)
     {
-        increment  = 4;
-        block_size = n_local_rays_;
-    }
-    else
-    {
-        increment  = 1;
-        block_size = n_local_rays_unpol_;
+        std::cout << "ERROR: in apply_bc_serial(): block size of field " << I_field->getName()
+                  << " (" << block_size << ") is not a multiple of " << increment
+                  << "    file: " << __FILE__ << ":" << __LINE__ << std::endl;
     }
 
     space_grid_serial_->parallel_for([&](int i, int j, int k) {
@@ -233,10 +231,10 @@ void MF_context::apply_bc_serial(Field_ptr_t I_field, const Real I0, const bool 
                         
             const Real W_T_deep = I0 * W_T_ij_serial_[j_global * N_y + i_global];                        
                     
-            for (int b = 0; b < block_size; b = b + increment) 
-            {                
-                I_field->block(i,j,k)[b] = W_T_deep;                
-            }                                                
+            for (PetscInt b = 0; b < block_size; b = b + increment)
+            {
+                I_field->block(i,j,k)[b] = W_T_deep;
+            }
         }
     });     
 }
@@ -4516,40 +4514,83 @@ void MF_context::unpolarized_to_polarized(Vec &unpol_v, Vec &pol_v) {
 
 void MF_context::init_serial_fields_Omega(){
     
-    auto N_z  = RT_problem_->N_z_;
-    auto N_nu = RT_problem_->N_nu_;
-    auto block_size_Omega = 4 * N_nu;
+    const auto N_nu             = RT_problem_->N_nu_;
+    const int  block_size_Omega = 4 * N_nu;
 
-    // set the number of local rays and tiles   
-    local_block_size_ = block_size_Omega/mpi_size_;        
+    // The Omega serial fields live on space_grid_serial_, which is created by
+    // init_serial_fields(). That call is skipped when use_1_5D_approx_ is true.
+    if (not space_grid_serial_)
+    {
+        if (mpi_rank_ == 0)
+        {
+            std::cout << "ERROR: in init_serial_fields_Omega(): space_grid_serial_ is null, "
+                      << "init_serial_fields() must run first (it is skipped for use_1_5D_approx_)"
+                      << "    file: " << __FILE__ << ":" << __LINE__ << std::endl;
+            std::cout.flush();
+        }
+
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+
+    // -------------------------------------------------------------------------------
+    // Split the block dimension (4 * N_nu) across ranks.
+    //
+    // Two invariants the rest of the Omega path relies on without checking:
+    //
+    //   (1) local_block_size_ % 4 == 0
+    //       formal_solve_ray() walks the block with "b += 4" and touches
+    //       [b + 0 .. b + 3]. A block size that is not a multiple of 4 makes the
+    //       last iteration write past the end of the serial field block -> heap
+    //       corruption (Field::block() bounds-checks i,j,k but not the block index).
+    //
+    //   (2) block_size_Omega % local_block_size_ == 0
+    //       ReMap3D::init() asserts num_tiles_per_block == block_size / tile_size,
+    //       and asserts are compiled out in the -O3 build (NDEBUG).
+    //
+    // Both were previously reported with a plain "ERROR: ..." print, after which
+    // execution continued into undefined behaviour. They are now fatal.
+    // -------------------------------------------------------------------------------
+    local_block_size_ = block_size_Omega/mpi_size_;
 
     if (local_block_size_ < 4)
     {
-        if (mpi_rank_ == 0) std::cout << "WARNING: mpi_size > number of rays" << std::endl;
-        
-        local_block_size_ = 4; 
-        
-        // // some ranks can stay idle
-        // if (mpi_rank_ >= N_nu)
-        // {
-        //     idle_processor_Omega_ = true;         TODO  local_block_size_ = 0 here?
-        // }
-    } 
-    else
-    {
-        if (local_block_size_ * mpi_size_ != block_size_Omega and this->mpi_rank_ == 0) { 
-            std::cout << "ERROR: file: " << __FILE__ << " line: " << __LINE__ << std::endl;
-            std::cout << "ERROR: in init_serial_fields(): block_size_Omega/mpi_size_ not integer" << std::endl;
-            std::cout << "ERROR: block_size_Omega = " << block_size_Omega << std::endl;
-            std::cout << "ERROR: mpi_size = " << mpi_size_ << std::endl;
-            std::cout << "ERROR: n_local_rays_ = " << n_local_rays_ << std::endl;
-            std::cout << "ERROR: block_size_Omega % mpi_size_ = " << (block_size_Omega % mpi_size_) << std::endl;
-        }    
+        // More ranks than frequencies: give every rank one full Stokes quadruplet and
+        // let ranks >= N_nu stay idle (see idle_proc in formal_solve_ray()).
+        // block_size_Omega is 4 * N_nu, so a tile of 4 always satisfies (1) and (2).
+        if (mpi_rank_ == 0)
+        {
+            std::cout << "WARNING: mpi_size (" << mpi_size_ << ") > number of frequencies ("
+                      << N_nu << "): " << (mpi_size_ - N_nu)
+                      << " ranks will be idle in the arbitrary-direction formal solution."
+                      << std::endl;
+        }
+
+        local_block_size_ = 4;
     }
-    
-    if (local_block_size_ % 4 != 0) std::cout << "ERROR: in init_serial_fields_Omega(): local_block_size_ should be divisible by 4" << std::endl;        
-        
-    // create serial fields 
+
+    // Every rank evaluates this identically (only global sizes and mpi_size_ are involved),
+    // so the abort is collective and cannot deadlock.
+    if (local_block_size_ % 4 != 0 or block_size_Omega % local_block_size_ != 0)
+    {
+        if (mpi_rank_ == 0)
+        {
+            std::cout << "ERROR: in init_serial_fields_Omega(): invalid block decomposition"
+                      << "    file: " << __FILE__ << ":" << __LINE__ << std::endl;
+            std::cout << "ERROR: N_nu              = " << N_nu              << std::endl;
+            std::cout << "ERROR: block_size_Omega  = " << block_size_Omega  << std::endl;
+            std::cout << "ERROR: mpi_size          = " << mpi_size_         << std::endl;
+            std::cout << "ERROR: local_block_size_ = " << local_block_size_ << std::endl;
+            std::cout << "ERROR: local_block_size_ must be a multiple of 4 and must divide "
+                      << block_size_Omega << " exactly." << std::endl;
+            std::cout << "ERROR: pick a rank count for which (4 * N_nu) / mpi_size is a "
+                      << "multiple of 4, or a rank count >= N_nu." << std::endl;
+            std::cout.flush();
+        }
+
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+
+    // create serial fields
     I_field_serial_Omega_   = std::make_shared<Field>(
         "I_serial", space_grid_serial_, local_block_size_, false
     ); 
