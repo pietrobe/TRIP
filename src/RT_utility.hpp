@@ -49,6 +49,8 @@ enum class preconditioner_emissivity_model_t
 	PRD_AA_MAPV,	//
 	PRD_AA_GB,		//
 	PRD_AA_MAPV_GB, //
+	CRD_TWOTERM,    //
+	// PRD_AA_TWOTERM, //
 	ZERO			//
 }; //
 
@@ -400,6 +402,9 @@ namespace YAML
 				case preconditioner_emissivity_model_t::PRD_AA_MAPV_GB:
 					node = "PRD_AA_MAPV_GB";
 					break;
+				case preconditioner_emissivity_model_t::CRD_TWOTERM:
+					node = "CRD_TWOTERM";
+					break;
 				case preconditioner_emissivity_model_t::ZERO:
 					node = "ZERO";
 					break;
@@ -429,6 +434,8 @@ namespace YAML
 				rhs = preconditioner_emissivity_model_t::PRD_AA;
 			else if (s == "PRD_AA_MAPV")
 				rhs = preconditioner_emissivity_model_t::PRD_AA_MAPV;
+			else if (s == "CRD_TWOTERM")
+				rhs = preconditioner_emissivity_model_t::CRD_TWOTERM;
 			else if (s == "ZERO")
 				rhs = preconditioner_emissivity_model_t::ZERO;
 			else
@@ -512,6 +519,7 @@ struct PrecConfig
 
 struct AtomConfig
 {
+	int atomic_number = 20;
 	double mass = 40.078;
 	double Aul	= 2.18e+08;
 

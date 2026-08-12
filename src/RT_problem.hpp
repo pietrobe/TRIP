@@ -819,6 +819,11 @@ class RT_problem
 		return Eu0_;
 	}
 
+	inline double get_nu0() const 
+	{
+		return nu_0_;
+	}
+
 	bool
 	field_is_zero(const Field_ptr_t field);
 

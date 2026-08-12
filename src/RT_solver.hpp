@@ -4,6 +4,11 @@
 #include "Formal_solver.hpp"
 #include "RT_problem.hpp"
 #include "GridManager/GridManager.hpp"
+#include <tuple>
+#include <iostream>
+#include <algorithm>
+#include <cmath>
+#include <limits>
 
 extern PetscErrorCode UserMult(Mat mat,Vec x,Vec y);
 extern PetscErrorCode UserMult_approx(Mat mat,Vec x,Vec y);
@@ -155,6 +160,12 @@ struct MF_context {
 
 	// formation height of a specific LOS
 	void get_formation_height(const double mu, const double chi);
+
+	// tau at line center frequency of a specific LOS
+	std::tuple<int,double, bool> get_line_center_optical_depth(
+		const double mu, const double chi, 
+		const double tau_target = 10.0,
+		bool use_min = true);
 
 	void apply_bc(       Field_ptr_t I_field, const Real I0, const bool polarized = true);	
 	void apply_bc_serial(Field_ptr_t I_field, const Real I0, const bool polarized = true);	
@@ -714,6 +725,16 @@ public:
 	inline void get_formation_height(const double theta, const double chi)
 	{
 		mf_ctx_.get_formation_height(theta, chi);
+	}
+
+
+	std::tuple<int,double,bool> get_line_center_optical_depth(
+		const double theta, 
+		const double chi, 
+		const double tau_target,
+		bool use_min)
+	{
+		return mf_ctx_.get_line_center_optical_depth(theta, chi, tau_target, use_min);
 	}
 
 	// inline void test()

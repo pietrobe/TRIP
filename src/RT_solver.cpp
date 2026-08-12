@@ -1,5 +1,6 @@
 #include "RT_solver.hpp"
 #include "cpu_clock.h"
+#include <cmath>
 
 namespace {
 unsigned int RII_contrib_block_size = 1;
@@ -1544,6 +1545,321 @@ void MF_context::get_formation_height(const double theta, const double chi)
     }                        
 }     
 
+
+
+
+std::tuple<int,double, bool> MF_context::get_line_center_optical_depth(
+    const double theta, 
+    const double chi, 
+    const double tau_target,
+    bool use_min)
+{
+    const auto N_nu = RT_problem_->N_nu_;
+    const double nu_0_ = RT_problem_->get_nu0();
+    const auto& nu = RT_problem_->nu_grid_;
+
+
+    if (mpi_size_ < N_nu and mpi_rank_ == 0) std::cout << "\nWARNING, get_line_center_optical_depth() method is set for mpi_size_ >= 1";
+
+    // compute mu for later use 
+    const double mu = cos(theta);
+
+    // allocate new data structure
+    if (not formal_solution_Omega_)
+    {
+        if (mpi_rank_ == 0) std::cout << "\nAllocating fields for new direction for line-center optical depth computations...";
+
+        RT_problem_->allocate_fields_Omega();
+        init_serial_fields_Omega();
+        formal_solution_Omega_ = true;
+
+        if (mpi_rank_ == 0) std::cout << "done" << std::endl;    
+    }       
+
+    // set eta and rhos (only eta is needed)
+    RT_problem_->set_eta_and_rhos_Omega(theta, chi);    
+
+    // write eta to the serial grid
+    // if (mpi_rank_ == 0) std::cout << "Sending eta to serial" << std::endl;
+    MPI_Barrier(MPI_COMM_WORLD);
+    Omega_remap.from_space_to_block_distributed(RT_problem_->eta_field_Omega_, eta_field_serial_Omega_);  
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (mpi_rank_ == 0) std::cout << "\nGet optical depth for mu = " << mu << ", and chi = " << chi << std::endl;    
+
+    if (mu <= 0)
+    {
+        std::cout << "ERROR: mu should be positive for emerging direction!" << std::endl;    
+        MPI_Abort(MPI_COMM_WORLD, 1);
+    } 
+
+    // allocate data structures to get temperature
+    auto T_serial_ = std::make_shared<Field>("T_serial", space_grid_serial_, 1, false);  
+    ReMap3D T_remap;
+    T_remap.init(RT_problem_->space_grid_, space_grid_serial_, 1, 1);         
+    T_remap.from_space_to_block_distributed(RT_problem_->T_, T_serial_);  
+
+    // HERE T_serial_ is known only to rank 0! <-------------------------------------------------
+    
+    // init some quantities         
+    const auto N_x  = RT_problem_->N_x_;
+    const auto N_y  = RT_problem_->N_y_;
+    const auto N_z  = RT_problem_->N_z_;    
+    
+    const auto depth_grid = RT_problem_->depth_grid_;   
+    const auto L          = RT_problem_->L_;            
+
+    const auto eta_dev = eta_field_serial_Omega_; 
+
+    // we use these data structures to store the dtaus
+    const auto tau_dev = I_field_serial_Omega_;      
+
+    int k_aux, k_global, b_index;
+
+    std::vector<int> i_intersect(4), j_intersect(4), k_intersect(4);
+
+    // misc coeffs
+    double dtau, dz, weight;
+    
+    bool horizontal_face, long_ray;
+
+    // intersection object
+    t_intersect intersection_data;  
+
+    // intersection_data_long_ray
+    std::vector<t_intersect> T;
+
+    // minus for optical depth conversion, trap rule and conversion to cm (- 0.5 * 1e5)
+    const double coeff = -50000;
+
+    const double epsilon = 1e-1 * tau_target; // Tolerance margin for optical depth match
+
+    int best_z = (use_min) ? N_z : -1;
+    double best_height = use_min ?  std::numeric_limits<double>::infinity()
+                              : -std::numeric_limits<double>::infinity();
+    double best_tau = 0.0; 
+    bool found_any = false;
+
+    if (mpi_rank_ < N_nu) // not idle processor
+    {                              
+        // loops over spatial points
+        for (int k = 0; k < N_z - 1; ++k)      
+        {                
+            // set vertical box size
+            dz = depth_grid[k] - depth_grid[k + 1];
+                                        
+            find_intersection(theta, chi, dz, dz, L, &intersection_data); 
+
+            horizontal_face = intersection_data.iz[0] == intersection_data.iz[1] and 
+                              intersection_data.iz[0] == intersection_data.iz[2] and 
+                              intersection_data.iz[0] == intersection_data.iz[3];
+            
+            long_ray = not horizontal_face;                        
+                
+            if (long_ray) T = find_prolongation(theta, chi, dz, L);           
+
+            for (int j = 0; j < N_y; ++j)
+            {                
+                for (int i = 0; i < N_x; ++i)
+                {                                                                                                                                  
+                    // set intersection indeces 
+                    if (not long_ray) 
+                    {
+                        for (int face_v = 0; face_v < 4; ++face_v)
+                        {
+                            i_intersect[face_v] = i + intersection_data.ix[face_v];
+                            j_intersect[face_v] = j + intersection_data.iy[face_v];
+                            k_intersect[face_v] = k - intersection_data.iz[face_v]; // minus because k increases going downwards  
+                            
+                            // impose periodic BC
+                            i_intersect[face_v] = apply_periodic_bc(i_intersect[face_v], N_x);
+                            j_intersect[face_v] = apply_periodic_bc(j_intersect[face_v], N_y);                                                            
+                        }                                                           
+                    }                                                                                                             
+
+                    // loop over block (frequencies)
+                    for (int b = 0; b < local_block_size_; b = b + 4)
+                    {             
+                        double previous_dts = 0;
+
+                        // set first to zero, just in case it is not 
+                        if (k == 0) tau_dev->block(i,j,k)[b] = 0;                            
+
+                        // set (1)
+                        const double eta_I_1 = eta_dev->block(i,j,k)[b];
+                        
+                        // set (2)
+                        double eta_I_2 = 0;
+
+                        if (long_ray)
+                        {                                                                                                          
+                            // coeff trap + cm conversion = - 0.5 * 1e5;
+                            const double coeff = -50000;
+                            
+                            int i_intersect, j_intersect, k_intersect;                                                                                
+                                                       
+                            const double debug_value = std::abs(T[0].iz[0] + T[0].iz[1] + T[0].iz[2] + T[0].iz[3]);
+                            if (debug_value != 4) std::cout << "ERROR HERE" << std::endl;
+
+                            for (int face_vertices = 0; face_vertices < 4; ++face_vertices)
+                            {
+                                i_intersect = i + T[0].ix[face_vertices];
+                                j_intersect = j + T[0].iy[face_vertices];
+                                k_intersect = k - T[0].iz[face_vertices]; 
+                                
+                                // correction for periodic BC 
+                                i_intersect = apply_periodic_bc(i_intersect, N_x);
+                                j_intersect = apply_periodic_bc(j_intersect, N_y);                
+                               
+                                weight = T[0].w[face_vertices];      
+                                
+                                eta_I_2 += weight * eta_dev->block(i_intersect,j_intersect,k_intersect)[b];
+
+                                // for accumulation (opposite direction)
+                                if (k > 0) 
+                                {
+                                    i_intersect = i - T[0].ix[face_vertices];
+                                    j_intersect = j - T[0].iy[face_vertices];
+                                    k_intersect = k + T[0].iz[face_vertices]; 
+                                    
+                                    // correction for periodic BC 
+                                    i_intersect = apply_periodic_bc(i_intersect, N_x);
+                                    j_intersect = apply_periodic_bc(j_intersect, N_y);                
+
+                                    if (k_intersect != k-1) std::cout << "ERROR: k_intersect should be on thes previous plane!" << std::endl;                                          
+                                   
+                                    previous_dts += weight * tau_dev->block(i_intersect, j_intersect, k - 1)[b];
+                                }
+                            }
+                            
+                            if (eta_I_2 < 0) std::cout << "WARNING eta_I_2" << std::endl;      
+
+                            // optical depth step                               
+                            dtau = - coeff * (eta_I_1 + eta_I_2) * T[0].distance;
+                        }
+                        else // short ray
+                        {                                                   
+                            // set (2)
+                            // loop over the four vertex of the intersection face
+                            for (int face_v = 0; face_v < 4; ++face_v)
+                            {                                                       
+                                weight = intersection_data.w[face_v];
+                            
+                                // interpolate eta 
+                                eta_I_2 += weight * eta_dev->block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b];                                
+                                                                                                                                  
+
+                                // for accumulation
+                                if (k > 0) 
+                                {
+                                    i_intersect[face_v] = i - intersection_data.ix[face_v];
+                                    j_intersect[face_v] = j - intersection_data.iy[face_v];
+                                    k_intersect[face_v] = k + intersection_data.iz[face_v]; // minus because k increases going downwards  
+                                    
+                                    // impose periodic BC
+                                    i_intersect[face_v] = apply_periodic_bc(i_intersect[face_v], N_x);
+                                    j_intersect[face_v] = apply_periodic_bc(j_intersect[face_v], N_y); 
+
+                                    // weight = intersection_data.w[face_v];
+
+                                    if (k_intersect[face_v] != k-1) std::cout << "ERROR: k_intersect should be the previous (k-1) plane!" << std::endl;                                   
+
+                                    previous_dts += weight * tau_dev->block(i_intersect[face_v], j_intersect[face_v], k - 1)[b];                                
+                                }      
+                            }                                      
+                                                                                                                                    
+                            // optical depth step                               
+                            dtau = - coeff * (eta_I_1 + eta_I_2) * intersection_data.distance;                                                                                                    
+                        }   
+
+                        if (dtau < 0) std::cout << "ERROR in dtau sign, dtau = " << dtau << std::endl;  
+
+                        tau_dev->block(i,j,k)[b] = dtau;                        
+
+                        // if k > 0 accumulate values from previous step
+                        if (k > 0) tau_dev->block(i,j,k)[b] += previous_dts;                                                                    
+                    }                          
+                }                
+            }   
+        }    
+    
+        int b_nu0 = 0;
+        for (int j = 0; j < N_y; ++j) {        
+            for (int i = 0; i < N_x; ++i) {  
+
+                int    col_z    = -1;
+                double col_height = use_min ?  std::numeric_limits<double>::infinity()
+                              : -std::numeric_limits<double>::infinity();
+                double col_diff = std::numeric_limits<double>::max();
+                double col_tau  = 0.0;
+                
+                // for each element z  in the column (x,y)
+                for (int z = 0; z < N_z; ++z) {
+                    const double h = depth_grid[z];
+                    const double tau_ij = tau_dev->block(i,j,z)[b_nu0];
+                    const double diff   = std::abs(tau_ij - tau_target) / tau_target;
+
+                    if (diff < col_diff) {
+                        col_diff   = diff;
+                        col_z      = z;
+                        col_tau    = tau_ij;
+                        col_height = h;
+                    } else if (diff == col_diff) {
+                        if (use_min  && h < col_height) { col_z = z; col_height = h; col_tau = tau_ij; }
+                        if (!use_min && h > col_height) { col_z = z; col_height = h; col_tau = tau_ij; }
+                    }
+                }
+                
+                // col_z is now ALWAYS the best available match in this column (>=0 as long as N_z>0)
+                // if (col_diff > epsilon) {
+                //     std::cout << "WARNING: column (" << i << "," << j << ") closest tau="
+                //                << col_tau << " at z=" << col_z
+                //                << " is outside tolerance (diff=" << col_diff
+                //                << ", epsilon=" << epsilon << ")\n";
+                // }
+    
+                if (col_diff <= epsilon) {
+                    found_any = true;
+                    const double h = depth_grid[col_z];
+
+                    if (use_min && h < best_height)  { 
+                        best_height = h;
+                        best_z = col_z;
+                        best_tau = col_tau; 
+                        std::cout << "change: column (" << i << "," << j << ") closest tau="
+                               << col_tau << " at z=" << col_z
+                               << " (diffrel=" << col_diff
+                               << ", tol=" << epsilon << ")\n";
+                    }
+                    if (!use_min && h > best_height) { 
+                        best_height = h; 
+                        best_z = col_z; 
+                        best_tau = col_tau;
+                        std::cout << "change: column (" << i << "," << j << ") closest tau="
+                               << col_tau << " at z=" << col_z
+                               << " (diffrel=" << col_diff
+                               << ", tol=" << epsilon << ")\n";
+                    }
+                }
+
+            }
+        }  
+
+        if (not found_any && mpi_rank_ == 0)
+        {
+            best_z = N_z - 1;
+            best_tau = tau_dev->block(0,0,best_z)[b_nu0];
+            std::cout << "WARNING: no columns satisfy tau  = " << tau_target
+                      << " within the tolerance = " << epsilon 
+                      << ", setting (x,y,z)=(0,0," << best_z << ")"
+                      << " with tau=" << best_tau
+                      << std::endl << std::flush;
+        }
+        return std::make_tuple(best_z, best_tau, found_any);          
+    }      
+
+    return std::make_tuple(-1, 0.0, false);
+}     
 
 void MF_context::formal_solve_ray(const double theta, const double chi)
 {       
@@ -3512,6 +3828,10 @@ void MF_context::set_up_emission_module(){
             components_approx.push_back(emission_coefficient_components::epsilon_R_II_AA_FAST);
             components_approx.push_back(emission_coefficient_components::epsilon_R_III_GL);
             if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA for preconditioner emissivity" << std::endl;
+        break;
+        case preconditioner_emissivity_model_t::CRD_TWOTERM: // ADDED 
+            components_approx.push_back(emission_coefficient_components::epsilon_R_III_TwoTerm_GL_FAST);
+            if (mpi_rank_ == 0) std::cout << "\nUsing CRD_TWOTERM for preconditioner emissivity" << std::endl;
         break;
 		case preconditioner_emissivity_model_t::CRD_limit:
 		default:

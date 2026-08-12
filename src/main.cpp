@@ -30,6 +30,11 @@ main(int argc, char *argv[])
 	if (getOptionFlag(argc, argv, "--help") && mpi_rank == 0)
 	{
 		print_help();
+		PetscFinalize(); // CHKERRQ(ierr);
+		MPI_Barrier(MPI_COMM_WORLD);
+		if (mpi_rank == 0) std::cout << "TRIP ended at: " << getCurrentDateTime() << std::endl;
+		TRIP_Comms::finalize_MPI_TRIP_Communicators();
+		MPI_CHECK(MPI_Finalize());
 		return 0;
 	}
 
@@ -51,6 +56,11 @@ main(int argc, char *argv[])
 	catch (const std::exception &e)
 	{
 		std::cerr << "Config error: " << e.what() << std::endl;
+		PetscFinalize(); // CHKERRQ(ierr);
+		MPI_Barrier(MPI_COMM_WORLD);
+		if (mpi_rank == 0) std::cout << "TRIP ended unsuccessfully at: " << getCurrentDateTime() << std::endl;
+		TRIP_Comms::finalize_MPI_TRIP_Communicators();
+		MPI_CHECK(MPI_Finalize());
 		return EXIT_FAILURE;
 	}
 

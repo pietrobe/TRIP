@@ -108,6 +108,7 @@ loadConfig(const std::string &filename)
 
 		if (mpi_rank == 0) std::cout << "Loading atom data from file: " << config["atom_file"] << std::endl;
 
+		cfg.atom.atomic_number =  requiredField<double>(atom_config, "atomic_number");
 		cfg.atom.mass = requiredField<double>(atom_config, "mass");
 		cfg.atom.Aul  = requiredField<double>(atom_config, "Aul");
 
@@ -292,6 +293,8 @@ preconditioner_emissivity_model_to_string(const preconditioner_emissivity_model_
 			return "PRD_AA_GB";
 		case preconditioner_emissivity_model_t::PRD_AA_MAPV_GB:
 			return "PRD_AA_MAPV_GB";
+		case preconditioner_emissivity_model_t::CRD_TWOTERM:
+			return "CRD_TWOTERM";
 		case preconditioner_emissivity_model_t::ZERO:
 			return "ZERO";
 		default:
