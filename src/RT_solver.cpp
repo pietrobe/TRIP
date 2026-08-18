@@ -1868,8 +1868,11 @@ void MF_context::formal_solve_ray(const double theta, const double chi)
 
     const double mu = cos(theta);
 
-    if (mpi_rank_ == 0) std::cout << "\nStart formal solution for mu = " << mu << 
-                                    ", theta = " << theta << ", and chi = " << chi << std::endl;    
+    if (mpi_rank_ == 0) {
+        std::cout << "---------------------------------------------------------------------------------------------------\n";
+        std::cout << "\nStart formal solution for: mu = " << mu << " (theta = " << theta << "), and chi = " << chi << std::endl;
+        std::cout << "---------------------------------------------------------------------------------------------------\n";
+    }
 
     // init some quantities         
     const auto N_x = RT_problem_->N_x_;
@@ -4503,16 +4506,16 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const double theta, con
         // scattering_model = "CONTINUUM"; 
         // for continuum only   
         // DANGER: this is a hack to TEST and debug the continuum only
-        if ( mpi_rank_ == 0) printf("Start: ecc_sh_ptr_->make_computation_function_arbitrary_direction, %s:%d \n", __FILE__, __LINE__);
+        // if ( mpi_rank_ == 0) printf("Start: ecc_sh_ptr_->make_computation_function_arbitrary_direction, %s:%d \n", __FILE__, __LINE__);
         auto epsilon_computation_Omega = ecc_sh_ptr_->make_computation_function_arbitrary_direction(scattering_model, 
                                                                                                     include_continuum, 
                                                                                                     include_eps_lth);
 
-        if ( mpi_rank_ == 0) printf("Start: ecc_sh_ptr_->update_incoming_field, %s:%d \n", __FILE__, __LINE__);
+        // if ( mpi_rank_ == 0) printf("Start: ecc_sh_ptr_->update_incoming_field, %s:%d \n", __FILE__, __LINE__);
         ecc_sh_ptr_->update_incoming_field(i, j, k, offset_fun_, input.data());
 
         // get IQUV for (theta, chi direction)
-        if ( mpi_rank_ == 0) printf("Start: epsilon_computation_Omega, %s:%d \n", __FILE__, __LINE__);
+        // if ( mpi_rank_ == 0) printf("Start: epsilon_computation_Omega, %s:%d \n", __FILE__, __LINE__);
         auto IQUV_matrix_sh_ptr = epsilon_computation_Omega(i, j, k, theta, chi);
 
 #ifdef DEBUG_MU_ARBITRARY
