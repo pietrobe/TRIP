@@ -542,6 +542,7 @@ struct AppConfig
 	std::filesystem::path input_directory;
 	std::filesystem::path input_file;
 	std::filesystem::path frequency_file;
+	std::filesystem::path atom_file;
 	std::filesystem::path output_directory;
 
 	// Output settings
