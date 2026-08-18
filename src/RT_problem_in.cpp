@@ -1,6 +1,7 @@
 #include "RT_problem.hpp"
 #include "RT_utility.hpp"
 #include "hdf_atmos_cpp.hpp"
+#include <iomanip>
 
 // read 3D input from pmd file
 void
@@ -15,43 +16,92 @@ RT_problem::read_3D_h5(const std::string filename, const AppConfig &cfg, const b
 	}
 
 	//////////////// read atom data ////////////////////////////////
+	if (THDF_is_two_term_atom(file_id)) { // Two-term atom
+		THDF_atom_two_terms_t atom;
 
-	THDF_atom_two_levels_t atom;
+		if (hdf_atmos_cpp::read_atom_two_terms(file_id, atom) < 0)
+		{
+			H5Fclose(file_id);
+			throw std::runtime_error("Error reading atom data");
+		}
 
-	if (hdf_atmos_cpp::read_atom(file_id, atom) < 0)
-	{
-		H5Fclose(file_id);
-		throw std::runtime_error("Error reading atom data");
+		this->El_vec_.clear();
+		this->Eu_vec_.clear();
+		this->El_vec_.resize(atom.E_size);
+		this->Eu_vec_.resize(atom.E_size);
+
+		for (size_t i = 0; i < atom.E_size; i++) {
+			this->El_vec_[i] = (atom.E_lower[i]);
+			this->Eu_vec_[i] = (atom.E_upper[i]);
+		}
+		this->Ll2_		 = atom.L2_lower; 
+		this->Lu2_		 = atom.L2_upper; 
+		this->S2_ 		 = atom.S2;
+		this->mass_		 = atom.atomic_mass;
+		this->Aul_		 = atom.Aul;
+		this->gl_        = atom.g_lower;
+		this->gu_        = atom.g_upper;
+
+		// Print Atom data for verification
+		if (mpi_rank_ == 0 and verbose)
+		{
+			std::cout << std::fixed << std::setprecision(8);
+			std::cout << "Atom data read from HDF5 file:" << std::endl;
+			std::cout << "  atomic_mass = " << mass_ << std::endl;
+			std::cout << "  Ll2 =         " << Ll2_ << std::endl;
+			std::cout << "  Lu2 =         " << Lu2_ << std::endl;
+			std::cout << "  S2 =          " << S2_ << std::endl;
+			std::cout << "  Aul =         " << std::scientific << Aul_ << std::endl;
+			std::cout << "  gL_lower =    " << gl_ << std::endl;
+			std::cout << "  gL_upper =    " << gu_ << std::endl;
+			std::cout << "  E_lower =     [";
+			for(size_t i = 0; i < atom.E_size; i++)
+				std::cout<< El_vec_[i] << " ";
+			std::cout << "]" << std::endl;
+			std::cout << "  E_upper =     [";
+			for(size_t i = 0; i < atom.E_size; i++)
+				std::cout<< Eu_vec_[i] << " ";
+			std::cout << "]" << std::endl;
+		}
+
+	} else { // Two-level data
+		THDF_atom_two_levels_t atom;
+
+		if (hdf_atmos_cpp::read_atom(file_id, atom) < 0)
+		{
+			H5Fclose(file_id);
+			throw std::runtime_error("Error reading atom data");
+		}
+
+		this->gl_		 = atom.g_lower;
+		this->gu_		 = atom.g_upper;
+		this->El_		 = atom.E_lower;
+		this->Eu_		 = atom.E_upper;
+		this->Ll2_		 = atom.jl2; // TODO change h5 input naming
+		this->Lu2_		 = atom.ju2; // TODO change h5 input naming
+		this->mass_		 = atom.atomic_mass;
+		this->Aul_		 = atom.Aul;
+		this->a_coef_D2_ = atom.a_coef_D2;
+		this->b_coef_D2_ = atom.b_coef_D2;
+		this->T_ref_	 = 5000.0; // reference temperature (never used).
+
+		// Print Atom data for verification
+		if (mpi_rank_ == 0 and verbose)
+		{
+			std::cout << "Atom data read from HDF5 file:" << std::endl;
+			std::cout << "  atomic_mass = " << mass_ << std::endl;
+			std::cout << "  E_lower =     " << El_ << std::endl;
+			std::cout << "  E_upper =     " << Eu_ << std::endl;
+			std::cout << "  g_lower =     " << gl_ << std::endl;
+			std::cout << "  g_upper =     " << gu_ << std::endl;
+			std::cout << "  Ll2 =         " << Ll2_ << std::endl;
+			std::cout << "  Lu2 =         " << Lu2_ << std::endl;
+			std::cout << "  Aul =         " << Aul_ << std::endl;
+			std::cout << "  a_coef_D2 =   " << a_coef_D2_ << std::endl;
+			std::cout << "  b_coef_D2 =   " << b_coef_D2_ << std::endl;
+		}
 	}
-
-	this->gl_		 = atom.g_lower;
-	this->gu_		 = atom.g_upper;
-	this->El_		 = atom.E_lower;
-	this->Eu_		 = atom.E_upper;
-	this->Ll2_		 = atom.jl2; // TODO change h5 input naming
-	this->Lu2_		 = atom.ju2; // TODO change h5 input naming
-	this->mass_		 = atom.atomic_mass;
-	this->Aul_		 = atom.Aul;
-	this->a_coef_D2_ = atom.a_coef_D2;
-	this->b_coef_D2_ = atom.b_coef_D2;
-	this->T_ref_	 = 5000.0; // reference temperature (never used).
-
-	// Print Atom data for verification
-	if (mpi_rank_ == 0 and verbose)
-	{
-		std::cout << "Atom data read from HDF5 file:" << std::endl;
-		std::cout << "  atomic_mass = " << mass_ << std::endl;
-		std::cout << "  E_lower =     " << El_ << std::endl;
-		std::cout << "  E_upper =     " << Eu_ << std::endl;
-		std::cout << "  g_lower =     " << gl_ << std::endl;
-		std::cout << "  g_upper =     " << gu_ << std::endl;
-		std::cout << "  Ll2 =         " << Ll2_ << std::endl;
-		std::cout << "  Lu2 =         " << Lu2_ << std::endl;
-		std::cout << "  Aul =         " << Aul_ << std::endl;
-		std::cout << "  a_coef_D2 =   " << a_coef_D2_ << std::endl;
-		std::cout << "  b_coef_D2 =   " << b_coef_D2_ << std::endl;
-	}
-
+	
 	//////////////// read frequency grid ////////////////////////////////
 	// Read geometry and set the sizes:
 

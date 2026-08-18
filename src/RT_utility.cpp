@@ -104,10 +104,18 @@ loadConfig(const std::string &filename)
 	// load atom quantities
 	if (config["atom_file"])
 	{
-		YAML::Node atom_config = YAML::LoadFile(config["atom_file"].as<std::string>());
+		// the atom file is expected to reside in the input directory, next to the input model file
+		cfg.atom_file = cfg.input_directory / std::filesystem::path(config["atom_file"].as<std::string>());
 
-		if (mpi_rank == 0) std::cout << "Loading atom data from file: " << config["atom_file"] << std::endl;
+		if (not std::filesystem::exists(cfg.atom_file))
+			throw std::runtime_error("Atom file not found: " + cfg.atom_file.string() +
+									 " (it must be placed in the input directory " + cfg.input_directory.string() + ")");
 
+		YAML::Node atom_config = YAML::LoadFile(cfg.atom_file.string());
+
+		if (mpi_rank == 0) std::cout << "Loading atom data from file: " << cfg.atom_file.string() << std::endl;
+
+		cfg.atom.atomic_number =  requiredField<double>(atom_config, "atomic_number");
 		cfg.atom.mass = requiredField<double>(atom_config, "mass");
 		cfg.atom.Aul  = requiredField<double>(atom_config, "Aul");
 
@@ -292,6 +300,8 @@ preconditioner_emissivity_model_to_string(const preconditioner_emissivity_model_
 			return "PRD_AA_GB";
 		case preconditioner_emissivity_model_t::PRD_AA_MAPV_GB:
 			return "PRD_AA_MAPV_GB";
+		case preconditioner_emissivity_model_t::CRD_TWOTERM:
+			return "CRD_TWOTERM";
 		case preconditioner_emissivity_model_t::ZERO:
 			return "ZERO";
 		default:
@@ -342,6 +352,7 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 	print_AppCfg_field("Input Directory", cfg.input_directory.string());
 	print_AppCfg_field("Input File", cfg.input_file.string());
 	print_AppCfg_field("Frequency File", cfg.frequency_file.string());
+	print_AppCfg_field("Atom File", cfg.atom_file.string());
 	print_AppCfg_field("Input CUL File", cfg.input_cul.string());
 	print_AppCfg_field("Input QEL File", cfg.input_qel.string());
 	print_AppCfg_field("Input LLP File", cfg.input_llp.string());

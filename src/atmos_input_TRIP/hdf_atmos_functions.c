@@ -558,6 +558,8 @@ create_atom_two_terms_compound_type(void) {
   H5Tinsert(atom_type, "L2_upper", HOFFSET(THDF_atom_two_terms_t, L2_upper), H5T_NATIVE_INT);
   H5Tinsert(atom_type, "L2_lower", HOFFSET(THDF_atom_two_terms_t, L2_lower), H5T_NATIVE_INT);
   H5Tinsert(atom_type, "S2", HOFFSET(THDF_atom_two_terms_t, S2), H5T_NATIVE_INT);
+  H5Tinsert(atom_type, "g_lower", HOFFSET(THDF_atom_two_terms_t, g_lower), H5T_NATIVE_DOUBLE);
+  H5Tinsert(atom_type, "g_upper", HOFFSET(THDF_atom_two_terms_t, g_upper), H5T_NATIVE_DOUBLE);
   H5Tinsert(atom_type, "E_size", HOFFSET(THDF_atom_two_terms_t, E_size), H5T_NATIVE_INT);
   H5Tinsert(atom_type, "E_lower", HOFFSET(THDF_atom_two_terms_t, E_lower), E_array_type);
   H5Tinsert(atom_type, "E_upper", HOFFSET(THDF_atom_two_terms_t, E_upper), E_array_type);

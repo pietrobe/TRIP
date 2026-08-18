@@ -87,6 +87,9 @@ typedef struct {
   int    L2_lower;       // Lower level orbital angular momentum (multiplied by 2)
   int    S2;             // total spin multiplied by 2
 
+  double g_lower; // Lande factor associated with orbital L magnetic moments for the lower term
+  double g_upper; // Lande factor associated with orbital L magnetic moments for the upper term
+
   int    E_size;                                // Number of energy levels (should not exceed MAX_ATOM_TERMS_PLACEHOLDER)
   double E_lower[MAX_ATOM_TERMS_PLACEHOLDER];  // Lower level energy in cm^-1
   double E_upper[MAX_ATOM_TERMS_PLACEHOLDER];  // Upper level energy in cm^-1
