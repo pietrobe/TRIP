@@ -4540,7 +4540,7 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const double theta, con
         int b;        
 
 
-        if ( mpi_rank_ == 0) printf("Start: update S_field_ from output scaling by eta_I, %s:%d \n", __FILE__, __LINE__);
+        // if ( mpi_rank_ == 0) printf("Start: update S_field_ from output scaling by eta_I, %s:%d \n", __FILE__, __LINE__);
         for (int n_nu = 0; n_nu < N_nu; n_nu++)
         {
             b = 4 * n_nu;
