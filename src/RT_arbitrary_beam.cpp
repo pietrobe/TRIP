@@ -270,8 +270,10 @@ process_arbitrary_beams_hdf(const std::vector<BeamDirection> &beams,				 //
 		const auto &beam = beams[beam_index];
 		if (mpi_rank == 0)
 		{
-			std::cout << getCurrentDateTime() << " - Computing arbitrary beam: mu = " << beam.mu << ", chi = " << beam.chi
-					  << std::endl;
+			
+			std::cout << std::endl << std::string(80, '=') << std::endl;
+			std::cout << "START: Computing arbitrary beam: mu = " << beam.mu << ", chi = " << beam.chi
+					  << " at " << getCurrentDateTime() << std::endl;
 		}
 
 		compute_arbitrary_beam_hdf(rt_solver, write_text_output, rt_problem_ptr, beams, beam_index, output_file);
