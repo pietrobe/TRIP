@@ -1,17 +1,45 @@
 #include "RT_solver.hpp"
 #include "cpu_clock.h"
 #include <cmath>
+#include <vector>
 
-namespace {
-unsigned int RII_contrib_block_size = 1;
+namespace
+{
+	unsigned int			  RII_contrib_block_size	= 1;
+	std::vector<unsigned int> RII_contrib_block_margins = {};
+} // namespace
+
+bool
+has_RII_contrib_block_margins()
+{
+	return not RII_contrib_block_margins.empty();
 }
 
-void set_RII_contrib_block_size(const unsigned int block_size) {
-  RII_contrib_block_size = block_size;
+void
+set_RII_contrib_block_margins(const std::vector<unsigned int> &margins)
+{
+	RII_contrib_block_margins = margins;
+    RII_contrib_block_size    = 0;
 }
 
-unsigned int get_RII_contrib_block_size() { return RII_contrib_block_size; }
+std::vector<unsigned int>
+get_RII_contrib_block_margins()
+{
+	return RII_contrib_block_margins;
+}
 
+void
+set_RII_contrib_block_size(const unsigned int block_size)
+{
+	RII_contrib_block_size = block_size;
+    RII_contrib_block_margins.clear();
+}
+
+unsigned int
+get_RII_contrib_block_size()
+{
+	return RII_contrib_block_size;
+}
 
 //////////////////////////////////////////////////////
 // Jiri functions for find_prolongation
@@ -3667,7 +3695,11 @@ void MF_context::set_up_emission_module(){
     auto fsf_sh_ptr = rii_formal_solver_factory::make_formal_solver_factory_from_3D_RT_problem_shared_ptr();
     in_RT_problem_3D::add_models(RT_problem_, ecc_sh_ptr_, fsf_sh_ptr, true);
     fsf_sh_ptr->make_formal_solver();
-    ecc_sh_ptr_->set_RII_contrib_block_size(get_RII_contrib_block_size());
+
+    if (not has_RII_contrib_block_margins())
+        ecc_sh_ptr_->set_RII_contrib_block_size(get_RII_contrib_block_size());
+    else 
+        ecc_sh_ptr_->set_RII_contrib_block_marigins(get_RII_contrib_block_margins());
 
     std::list<emission_coefficient_components> components;
     std::list<emission_coefficient_components> components_approx;  

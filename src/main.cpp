@@ -100,7 +100,14 @@ main(int argc, char *argv[])
 
 #else
 
-	set_RII_contrib_block_size(rii_include::get_RII_block_size());
+	if (cfg.RII_contrib_block_margins.size() == 0)
+	{
+		set_RII_contrib_block_size(rii_include::get_RII_block_size());
+	}
+	else
+	{
+		set_RII_contrib_block_margins(cfg.RII_contrib_block_margins);
+	}
 
 #endif // ACC_SOLAR_3D
 
@@ -164,7 +171,7 @@ main(int argc, char *argv[])
 				output_file_info.close();
 
 				std::filesystem::path geometry_file_name = output_path / "geometry.txt";
-				std::ofstream geometry_file(geometry_file_name);
+				std::ofstream		  geometry_file(geometry_file_name);
 				print_geometry(*rt_problem_ptr, geometry_file);
 				geometry_file.close();
 			}
@@ -190,7 +197,7 @@ main(int argc, char *argv[])
 		///////////////////////////////////////////////////
 		// solve //////////////////////////////////////////
 		rt_solver.solve();
-		
+
 		clocks.solve_end_time = MPI_Wtime();
 
 		// print some memory info
@@ -269,10 +276,10 @@ main(int argc, char *argv[])
 			if (cfg.write_whole_3D_field_hdf5)
 			{
 				if (mpi_rank == 0) std::cout << "Writing whole 3D field to HDF5..." << std::endl;
-				write_3D_whole_field_falp_hdf5(*rt_problem_ptr,										  //
-										  (output_path / "whole_3D_radiation_field.h5").string(), //
-										  2,													  //
-										  false);												  //
+				write_3D_whole_field_falp_hdf5(*rt_problem_ptr,										   //
+											   (output_path / "whole_3D_radiation_field.h5").string(), //
+											   2,													   //
+											   false);												   //
 			}
 
 			clocks.hdf5_out_time_whole_3D_field = MPI_Wtime() - clocks.hdf5_out_time_whole_3D_field;

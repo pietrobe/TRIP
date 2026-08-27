@@ -163,6 +163,9 @@ loadConfig(const std::string &filename)
 			? config["preconditioner_emissivity_model"].as<preconditioner_emissivity_model_t>()
 			: preconditioner_emissivity_model_t::CRD_limit;
 
+	cfg.RII_contrib_block_margins = 
+			config["RII_contrib_block_margins"] ? readUnsignedIntVec(config["RII_contrib_block_margins"]) : std::vector<unsigned int>{};
+
 	// Flags
 	if (config["use_B"]) cfg.use_B = config["use_B"].as<bool>();
 	if (config["use_1_5D_approx"]) cfg.use_1_5D_approx = config["use_1_5D_approx"].as<bool>();
@@ -331,7 +334,7 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 		return oss.str();
 	};
 
-	auto vec_to_str = [](const std::vector<double> &v)
+	auto vec_to_str = [](const auto &v)
 	{
 		std::ostringstream oss;
 		oss << "[";
@@ -344,6 +347,9 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 		return oss.str();
 	};
 
+	// optional paths are printed as "(none)" when left empty in the configuration file
+	auto path_to_str = [](const std::filesystem::path &p) { return p.empty() ? std::string("(none)") : p.string(); };
+
 	os << std::string(total_width, '=') << std::endl;
 	os << std::string((total_width - 21) / 2, ' ') << "CONFIGURATION SUMMARY" << std::endl;
 	os << std::string(total_width, '=') << std::endl;
@@ -352,25 +358,28 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 	print_AppCfg_field("Input Directory", cfg.input_directory.string());
 	print_AppCfg_field("Input File", cfg.input_file.string());
 	print_AppCfg_field("Frequency File", cfg.frequency_file.string());
-	print_AppCfg_field("Atom File", cfg.atom_file.string());
-	print_AppCfg_field("Input CUL File", cfg.input_cul.string());
-	print_AppCfg_field("Input QEL File", cfg.input_qel.string());
-	print_AppCfg_field("Input LLP File", cfg.input_llp.string());
-	print_AppCfg_field("Input BACK File", cfg.input_back.string());
+	print_AppCfg_field("Atom File", path_to_str(cfg.atom_file));
+	print_AppCfg_field("Input CUL File", path_to_str(cfg.input_cul));
+	print_AppCfg_field("Input QEL File", path_to_str(cfg.input_qel));
+	print_AppCfg_field("Input LLP File", path_to_str(cfg.input_llp));
+	print_AppCfg_field("Input BACK File", path_to_str(cfg.input_back));
 
 	print_section("Output");
-	print_AppCfg_field("Output Directory", cfg.output_directory.string());
+	print_AppCfg_field("Output Directory", path_to_str(cfg.output_directory));
 	print_AppCfg_field("Output Enabled", (cfg.output ? "Yes" : "No"));
 	print_AppCfg_field("Output Overwrite Prevention", (cfg.output_overwrite_prevention ? "Yes" : "No"));
 	print_AppCfg_field("Write Whole 3D Field (HDF5)", (cfg.write_whole_3D_field_hdf5 ? "Yes" : "No"));
 	print_AppCfg_field("Write Text Output", (cfg.write_text_output ? "Yes" : "No"));
-	print_AppCfg_field("Reference Solution Directory", cfg.reference_sol_directory.string());
+	print_AppCfg_field("Reference Solution Directory", path_to_str(cfg.reference_sol_directory));
 	print_AppCfg_field("Verbose", (cfg.verbose ? "Yes" : "No"));
 
 	print_section("Physics");
 	print_AppCfg_field("Emissivity Model", emissivity_model_to_string_long(cfg.emissivity_model));
 	print_AppCfg_field("Preconditioner Emissivity Model",
 					   preconditioner_emissivity_model_to_string(cfg.preconditioner_emissivity_model));
+	print_AppCfg_field("RII Contribution Block Margins", cfg.RII_contrib_block_margins.empty()
+														  ? "(none)"
+														  : vec_to_str(cfg.RII_contrib_block_margins));
 	print_AppCfg_field("Use Magnetic Field", (cfg.use_B ? "Yes" : "No"));
 	print_AppCfg_field("Use Bulk Velocity", (cfg.use_Vb ? "Yes" : "No"));
 	print_AppCfg_field("Use D2 from Input", (cfg.use_D2_from_input ? "Yes" : "No"));
@@ -428,6 +437,8 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 	print_AppCfg_field("PC Approximate Formal Solver", (cfg.prec.pc_formal_solver_approx ? "Yes" : "No"));
 
 	print_section("Atom");
+	print_AppCfg_field("Atom Source", (cfg.atom_file.empty() ? "Default model (two-level CaI)" : "Atom file"));
+	print_AppCfg_field("Atom Atomic Number", std::to_string(cfg.atom.atomic_number));
 	print_AppCfg_field("Atom Mass (amu)", to_sci(cfg.atom.mass, 4));
 	print_AppCfg_field("Atom Aul (s^-1)", to_sci(cfg.atom.Aul));
 	print_AppCfg_field("Atom S2", std::to_string(cfg.atom.S2));

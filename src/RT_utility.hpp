@@ -473,6 +473,24 @@ readDoubleVec(const YAML::Node &node)
 	}
 }
 
+// function to read vector or scalar
+inline std::vector<unsigned int>
+readUnsignedIntVec(const YAML::Node &node)
+{
+	if (node.IsSequence())
+	{
+		return node.as<std::vector<unsigned int>>();
+	}
+	else if (node.IsScalar())
+	{
+		return {node.as<unsigned int>()}; // wrap scalar in a vector
+	}
+	else
+	{
+		throw std::runtime_error("Expected a scalar or sequence");
+	}
+}
+
 // Function declarations
 std::string
 getCurrentDateTime();
@@ -557,6 +575,8 @@ struct AppConfig
 	// emissivity
 	emissivity_model_t				  emissivity_model;
 	preconditioner_emissivity_model_t preconditioner_emissivity_model;
+
+	std::vector<unsigned int> RII_contrib_block_margins = {};
 
 	// Physical switches
 	bool use_B			   = true;

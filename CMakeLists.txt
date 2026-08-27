@@ -11,9 +11,13 @@ project(par_moonolith_usage VERSION 1.0.0 LANGUAGES C CXX)
 ### DEBUG OPTION
 if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
 	set(OPENMP_FLAG "-qopenmp")
-	add_compile_options(-Wno-tautological-constant-compare)
+	# -Wnan-infinity-disabled fires because -ffast-math (below) disables
+	# infinity/NaN support; the code only uses infinity as a sentinel value
+	# in min/max searches, never relying on IEEE inf semantics, so the
+	# warning is silenced rather than dropping -ffast-math.
+	add_compile_options(-Wno-tautological-constant-compare -Wno-nan-infinity-disabled)
 	message(STATUS
-		"IntelLLVM compiler detected: using -qopenmp, disabling -Wtautological-constant-compare"
+		"IntelLLVM compiler detected: using -qopenmp, disabling -Wtautological-constant-compare and -Wnan-infinity-disabled"
 	)
 else()
 	set(OPENMP_FLAG "-fopenmp")
