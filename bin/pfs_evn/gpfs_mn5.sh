@@ -26,14 +26,14 @@ export HDF_ROMIO_DS_READ=disable
 # HDF_GPFS_RECV_QUEUES: removed — causes MPI abort on MN5 GPFS client
 # HDF_GPFS_ACCESS_STYLE: removed — conflicts with serial H5Fopen for metadata
 
-export I_MPI_OFI_PROVIDER=mlx
-export I_MPI_FABRICS=shm:ofi
-export I_MPI_PIN=1
-export I_MPI_PIN_DOMAIN=core
-export I_MPI_ADJUST_ALLREDUCE=4
-export I_MPI_ADJUST_BARRIER=4
-export I_MPI_ADJUST_BCAST=4
-export I_MPI_OFI_STARTUP_CONNECT=1
+# export I_MPI_OFI_PROVIDER=mlx
+# export I_MPI_FABRICS=shm:ofi
+# export I_MPI_PIN=1
+# export I_MPI_PIN_DOMAIN=core
+# export I_MPI_ADJUST_ALLREDUCE=4
+# export I_MPI_ADJUST_BARRIER=4
+# export I_MPI_ADJUST_BCAST=4
+# export I_MPI_OFI_STARTUP_CONNECT=1
 
 ROMIO_HINTS_FILE=${OUTPUT_DIR}/romio_hints.txt
 cat > ${ROMIO_HINTS_FILE} << EOF

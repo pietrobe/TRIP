@@ -35,6 +35,7 @@ indent = "  "
 
 # Custom colormaps
 CMAP_BLACKRED = LinearSegmentedColormap.from_list("blackred", ["black", "red"])
+CMAP_REDYELLOW = LinearSegmentedColormap.from_list("redyellow", ["#3b0000", "red", "yellow"])
 
 
 # Physical constants (CGS/Gauss units)
@@ -688,6 +689,40 @@ def analyze_height_grid(path: str) -> None:
     print(f"  {BLUE}Spacing (adjacent heights):{RESET}")
     print(f"    min Δh: {YELLOW}{dh_min:.4e} cm{RESET}")
     print(f"    max Δh: {GREEN}{dh_max:.4e} cm{RESET}")
+
+
+def write_geometry_text(path: str, output_path: str) -> None:
+    """
+    Write geometry information to a plain-text file.
+
+    Parameters
+    ----------
+    path : str
+        Path to the HDF5 file.
+    output_path : str
+        Path to the output text file.
+    """
+    geometry, _, _ = read_metadata(path)
+    # Distances are stored in cm; convert to km for the text output.
+    delta_km = geometry.delta / 1e5
+    height_km = geometry.height / 1e5
+    dh = np.diff(height_km)
+
+    with open(output_path, "w") as f:
+        f.write(f"# Geometry file generated from {path}\n")
+        f.write("# All distances are in km\n\n")
+        f.write(f"N_x: {geometry.N_x}\n")
+        f.write(f"N_y: {geometry.N_y}\n")
+        f.write(f"N_z: {geometry.N_z}\n")
+        f.write(f"delta: {delta_km:.15e}\n")
+        f.write(f"height_min: {height_km.min():.15e}\n")
+        f.write(f"height_max: {height_km.max():.15e}\n")
+        f.write(f"height_delta_min: {dh.min():.15e}\n")
+        f.write(f"height_delta_max: {dh.max():.15e}\n")
+        heights_str = ", ".join(f"{h:.15e}" for h in height_km)
+        f.write(f"heights: [{heights_str}]\n")
+
+    print(f"Geometry written to: {output_path}")
 
 
 def check_damping_stats(path: str, plot: bool = False, axis: str = "xy", idx: int = 0) -> np.ndarray:
@@ -1689,6 +1724,8 @@ def plot_slice_xy(path: str, field: str = "temperature", k: int = 0, log: bool =
         slice_xy = np.log10(slice_xy)
     if cmap == "blackred":
         cmap = CMAP_BLACKRED
+    elif cmap == "redyellow":
+        cmap = CMAP_REDYELLOW
     elif cmap == "seismic":
         cmap = "seismic"
     else:
@@ -1755,6 +1792,8 @@ def plot_slice_xz(path: str, field: str = "temperature", j: int = 0, log: bool =
         slice_xz = np.log10(slice_xz)
     if cmap == "blackred":
         cmap = CMAP_BLACKRED
+    elif cmap == "redyellow":
+        cmap = CMAP_REDYELLOW
     elif cmap == "seismic":
         cmap = "seismic"
     else:
@@ -1819,6 +1858,8 @@ def plot_slice_yz(path: str, field: str = "temperature", i: int = 0, log: bool =
         slice_yz = np.log10(slice_yz)
     if cmap == "blackred":
         cmap = CMAP_BLACKRED
+    elif cmap == "redyellow":
+        cmap = CMAP_REDYELLOW
     elif cmap == "seismic":
         cmap = "seismic"
     else:
@@ -2260,7 +2301,7 @@ Examples:
     plots.add_argument("--threshold", type=float, default=None,
                        help="Maximum value for colormap scaling")
     plots.add_argument("--cmap", type=str, default="blackred",
-                       help="Colormap: blackred (default), hot, seismic")
+                       help="Colormap: blackred (default), redyellow, hot, seismic")
     plots.add_argument("--z-profile", action="store_true",
                        help="Plot vertical profile (mean ± std) of a field vs height")
     plots.add_argument("--z-profile-minmax", action="store_true",
@@ -2291,7 +2332,9 @@ Examples:
     analysis.add_argument("--stats", action="store_true",
                           help="Compute global statistics (mean/min/max/std) for a given field (use with --field)")
     analysis.add_argument("--analyze-height", action="store_true",
-                           help="Print height grid statistics (min/max height and spacing)")
+                            help="Print height grid statistics (min/max height and spacing)")
+    analysis.add_argument("--write-geometry", type=str, default="", metavar="OUTPUT",
+                           help="Write geometry information to a text file")
 
     # ── Update methods ─────────────────────────────────────────────────
     updates = parser.add_argument_group("update methods (modify file in place)")
@@ -2531,6 +2574,10 @@ Examples:
 
     if args.analyze_height:
         analyze_height_grid(hdf5_path)
+        exit(0)
+
+    if args.write_geometry:
+        write_geometry_text(hdf5_path, args.write_geometry)
         exit(0)
 
     if args.rescale_heights is not None:

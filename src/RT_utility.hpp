@@ -49,6 +49,8 @@ enum class preconditioner_emissivity_model_t
 	PRD_AA_MAPV,	//
 	PRD_AA_GB,		//
 	PRD_AA_MAPV_GB, //
+	CRD_TWOTERM,    //
+	// PRD_AA_TWOTERM, //
 	ZERO			//
 }; //
 
@@ -400,6 +402,9 @@ namespace YAML
 				case preconditioner_emissivity_model_t::PRD_AA_MAPV_GB:
 					node = "PRD_AA_MAPV_GB";
 					break;
+				case preconditioner_emissivity_model_t::CRD_TWOTERM:
+					node = "CRD_TWOTERM";
+					break;
 				case preconditioner_emissivity_model_t::ZERO:
 					node = "ZERO";
 					break;
@@ -429,6 +434,8 @@ namespace YAML
 				rhs = preconditioner_emissivity_model_t::PRD_AA;
 			else if (s == "PRD_AA_MAPV")
 				rhs = preconditioner_emissivity_model_t::PRD_AA_MAPV;
+			else if (s == "CRD_TWOTERM")
+				rhs = preconditioner_emissivity_model_t::CRD_TWOTERM;
 			else if (s == "ZERO")
 				rhs = preconditioner_emissivity_model_t::ZERO;
 			else
@@ -459,6 +466,24 @@ readDoubleVec(const YAML::Node &node)
 	else if (node.IsScalar())
 	{
 		return {node.as<double>()}; // wrap scalar in a vector
+	}
+	else
+	{
+		throw std::runtime_error("Expected a scalar or sequence");
+	}
+}
+
+// function to read vector or scalar
+inline std::vector<unsigned int>
+readUnsignedIntVec(const YAML::Node &node)
+{
+	if (node.IsSequence())
+	{
+		return node.as<std::vector<unsigned int>>();
+	}
+	else if (node.IsScalar())
+	{
+		return {node.as<unsigned int>()}; // wrap scalar in a vector
 	}
 	else
 	{
@@ -512,6 +537,7 @@ struct PrecConfig
 
 struct AtomConfig
 {
+	int atomic_number = 20;
 	double mass = 40.078;
 	double Aul	= 2.18e+08;
 
@@ -534,6 +560,7 @@ struct AppConfig
 	std::filesystem::path input_directory;
 	std::filesystem::path input_file;
 	std::filesystem::path frequency_file;
+	std::filesystem::path atom_file;
 	std::filesystem::path output_directory;
 
 	// optinonal txt files for FAL-C
@@ -552,6 +579,8 @@ struct AppConfig
 	// emissivity
 	emissivity_model_t				  emissivity_model;
 	preconditioner_emissivity_model_t preconditioner_emissivity_model;
+
+	std::vector<unsigned int> RII_contrib_block_margins = {};
 
 	// Physical switches
 	bool use_B			   = true;

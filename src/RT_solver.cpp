@@ -1,16 +1,45 @@
 #include "RT_solver.hpp"
 #include "cpu_clock.h"
+#include <cmath>
+#include <vector>
 
-namespace {
-unsigned int RII_contrib_block_size = 1;
+namespace
+{
+	unsigned int			  RII_contrib_block_size	= 1;
+	std::vector<unsigned int> RII_contrib_block_margins = {};
+} // namespace
+
+bool
+has_RII_contrib_block_margins()
+{
+	return not RII_contrib_block_margins.empty();
 }
 
-void set_RII_contrib_block_size(const unsigned int block_size) {
-  RII_contrib_block_size = block_size;
+void
+set_RII_contrib_block_margins(const std::vector<unsigned int> &margins)
+{
+	RII_contrib_block_margins = margins;
+    RII_contrib_block_size    = 0;
 }
 
-unsigned int get_RII_contrib_block_size() { return RII_contrib_block_size; }
+std::vector<unsigned int>
+get_RII_contrib_block_margins()
+{
+	return RII_contrib_block_margins;
+}
 
+void
+set_RII_contrib_block_size(const unsigned int block_size)
+{
+	RII_contrib_block_size = block_size;
+    RII_contrib_block_margins.clear();
+}
+
+unsigned int
+get_RII_contrib_block_size()
+{
+	return RII_contrib_block_size;
+}
 
 //////////////////////////////////////////////////////
 // Jiri functions for find_prolongation
@@ -207,18 +236,16 @@ void MF_context::apply_bc_serial(Field_ptr_t I_field, const Real I0, const bool 
     const auto N_y = RT_problem_->N_y_;     
     const auto N_z = RT_problem_->N_z_;
 
-    // only intensity in the unpolarized case     
-    PetscInt increment, block_size;
-    // NOTE With the new layout of field this could be avoided 
-    if (polarized)
+    // only intensity in the unpolarized case
+    const PetscInt increment = polarized ? 4 : 1;
+
+    const PetscInt block_size = I_field->getBlockSize();
+
+    if (block_size % increment != 0 and mpi_rank_ == 0)
     {
-        increment  = 4;
-        block_size = n_local_rays_;
-    }
-    else
-    {
-        increment  = 1;
-        block_size = n_local_rays_unpol_;
+        std::cout << "ERROR: in apply_bc_serial(): block size of field " << I_field->getName()
+                  << " (" << block_size << ") is not a multiple of " << increment
+                  << "    file: " << __FILE__ << ":" << __LINE__ << std::endl;
     }
 
     space_grid_serial_->parallel_for([&](int i, int j, int k) {
@@ -233,10 +260,10 @@ void MF_context::apply_bc_serial(Field_ptr_t I_field, const Real I0, const bool 
                         
             const Real W_T_deep = I0 * W_T_ij_serial_[j_global * N_y + i_global];                        
                     
-            for (int b = 0; b < block_size; b = b + increment) 
-            {                
-                I_field->block(i,j,k)[b] = W_T_deep;                
-            }                                                
+            for (PetscInt b = 0; b < block_size; b = b + increment)
+            {
+                I_field->block(i,j,k)[b] = W_T_deep;
+            }
         }
     });     
 }
@@ -1545,6 +1572,321 @@ void MF_context::get_formation_height(const double theta, const double chi)
 }     
 
 
+
+
+std::tuple<int,double, bool> MF_context::get_line_center_optical_depth(
+    const double theta, 
+    const double chi, 
+    const double tau_target,
+    bool use_min)
+{
+    const auto N_nu = RT_problem_->N_nu_;
+    const double nu_0_ = RT_problem_->get_nu0();
+    const auto& nu = RT_problem_->nu_grid_;
+
+
+    if (mpi_size_ < N_nu and mpi_rank_ == 0) std::cout << "\nWARNING, get_line_center_optical_depth() method is set for mpi_size_ >= 1";
+
+    // compute mu for later use 
+    const double mu = cos(theta);
+
+    // allocate new data structure
+    if (not formal_solution_Omega_)
+    {
+        if (mpi_rank_ == 0) std::cout << "\nAllocating fields for new direction for line-center optical depth computations...";
+
+        RT_problem_->allocate_fields_Omega();
+        init_serial_fields_Omega();
+        formal_solution_Omega_ = true;
+
+        if (mpi_rank_ == 0) std::cout << "done" << std::endl;    
+    }       
+
+    // set eta and rhos (only eta is needed)
+    RT_problem_->set_eta_and_rhos_Omega(theta, chi);    
+
+    // write eta to the serial grid
+    // if (mpi_rank_ == 0) std::cout << "Sending eta to serial" << std::endl;
+    MPI_Barrier(MPI_COMM_WORLD);
+    Omega_remap.from_space_to_block_distributed(RT_problem_->eta_field_Omega_, eta_field_serial_Omega_);  
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (mpi_rank_ == 0) std::cout << "\nGet optical depth for mu = " << mu << ", and chi = " << chi << std::endl;    
+
+    if (mu <= 0)
+    {
+        std::cout << "ERROR: mu should be positive for emerging direction!" << std::endl;    
+        MPI_Abort(MPI_COMM_WORLD, 1);
+    } 
+
+    // allocate data structures to get temperature
+    auto T_serial_ = std::make_shared<Field>("T_serial", space_grid_serial_, 1, false);  
+    ReMap3D T_remap;
+    T_remap.init(RT_problem_->space_grid_, space_grid_serial_, 1, 1);         
+    T_remap.from_space_to_block_distributed(RT_problem_->T_, T_serial_);  
+
+    // HERE T_serial_ is known only to rank 0! <-------------------------------------------------
+    
+    // init some quantities         
+    const auto N_x  = RT_problem_->N_x_;
+    const auto N_y  = RT_problem_->N_y_;
+    const auto N_z  = RT_problem_->N_z_;    
+    
+    const auto depth_grid = RT_problem_->depth_grid_;   
+    const auto L          = RT_problem_->L_;            
+
+    const auto eta_dev = eta_field_serial_Omega_; 
+
+    // we use these data structures to store the dtaus
+    const auto tau_dev = I_field_serial_Omega_;      
+
+    int k_aux, k_global, b_index;
+
+    std::vector<int> i_intersect(4), j_intersect(4), k_intersect(4);
+
+    // misc coeffs
+    double dtau, dz, weight;
+    
+    bool horizontal_face, long_ray;
+
+    // intersection object
+    t_intersect intersection_data;  
+
+    // intersection_data_long_ray
+    std::vector<t_intersect> T;
+
+    // minus for optical depth conversion, trap rule and conversion to cm (- 0.5 * 1e5)
+    const double coeff = -50000;
+
+    const double epsilon = 1e-1 * tau_target; // Tolerance margin for optical depth match
+
+    int best_z = (use_min) ? N_z : -1;
+    double best_height = use_min ?  std::numeric_limits<double>::infinity()
+                              : -std::numeric_limits<double>::infinity();
+    double best_tau = 0.0; 
+    bool found_any = false;
+
+    if (mpi_rank_ < N_nu) // not idle processor
+    {                              
+        // loops over spatial points
+        for (int k = 0; k < N_z - 1; ++k)      
+        {                
+            // set vertical box size
+            dz = depth_grid[k] - depth_grid[k + 1];
+                                        
+            find_intersection(theta, chi, dz, dz, L, &intersection_data); 
+
+            horizontal_face = intersection_data.iz[0] == intersection_data.iz[1] and 
+                              intersection_data.iz[0] == intersection_data.iz[2] and 
+                              intersection_data.iz[0] == intersection_data.iz[3];
+            
+            long_ray = not horizontal_face;                        
+                
+            if (long_ray) T = find_prolongation(theta, chi, dz, L);           
+
+            for (int j = 0; j < N_y; ++j)
+            {                
+                for (int i = 0; i < N_x; ++i)
+                {                                                                                                                                  
+                    // set intersection indeces 
+                    if (not long_ray) 
+                    {
+                        for (int face_v = 0; face_v < 4; ++face_v)
+                        {
+                            i_intersect[face_v] = i + intersection_data.ix[face_v];
+                            j_intersect[face_v] = j + intersection_data.iy[face_v];
+                            k_intersect[face_v] = k - intersection_data.iz[face_v]; // minus because k increases going downwards  
+                            
+                            // impose periodic BC
+                            i_intersect[face_v] = apply_periodic_bc(i_intersect[face_v], N_x);
+                            j_intersect[face_v] = apply_periodic_bc(j_intersect[face_v], N_y);                                                            
+                        }                                                           
+                    }                                                                                                             
+
+                    // loop over block (frequencies)
+                    for (int b = 0; b < local_block_size_; b = b + 4)
+                    {             
+                        double previous_dts = 0;
+
+                        // set first to zero, just in case it is not 
+                        if (k == 0) tau_dev->block(i,j,k)[b] = 0;                            
+
+                        // set (1)
+                        const double eta_I_1 = eta_dev->block(i,j,k)[b];
+                        
+                        // set (2)
+                        double eta_I_2 = 0;
+
+                        if (long_ray)
+                        {                                                                                                          
+                            // coeff trap + cm conversion = - 0.5 * 1e5;
+                            const double coeff = -50000;
+                            
+                            int i_intersect, j_intersect, k_intersect;                                                                                
+                                                       
+                            const double debug_value = std::abs(T[0].iz[0] + T[0].iz[1] + T[0].iz[2] + T[0].iz[3]);
+                            if (debug_value != 4) std::cout << "ERROR HERE" << std::endl;
+
+                            for (int face_vertices = 0; face_vertices < 4; ++face_vertices)
+                            {
+                                i_intersect = i + T[0].ix[face_vertices];
+                                j_intersect = j + T[0].iy[face_vertices];
+                                k_intersect = k - T[0].iz[face_vertices]; 
+                                
+                                // correction for periodic BC 
+                                i_intersect = apply_periodic_bc(i_intersect, N_x);
+                                j_intersect = apply_periodic_bc(j_intersect, N_y);                
+                               
+                                weight = T[0].w[face_vertices];      
+                                
+                                eta_I_2 += weight * eta_dev->block(i_intersect,j_intersect,k_intersect)[b];
+
+                                // for accumulation (opposite direction)
+                                if (k > 0) 
+                                {
+                                    i_intersect = i - T[0].ix[face_vertices];
+                                    j_intersect = j - T[0].iy[face_vertices];
+                                    k_intersect = k + T[0].iz[face_vertices]; 
+                                    
+                                    // correction for periodic BC 
+                                    i_intersect = apply_periodic_bc(i_intersect, N_x);
+                                    j_intersect = apply_periodic_bc(j_intersect, N_y);                
+
+                                    if (k_intersect != k-1) std::cout << "ERROR: k_intersect should be on thes previous plane!" << std::endl;                                          
+                                   
+                                    previous_dts += weight * tau_dev->block(i_intersect, j_intersect, k - 1)[b];
+                                }
+                            }
+                            
+                            if (eta_I_2 < 0) std::cout << "WARNING eta_I_2" << std::endl;      
+
+                            // optical depth step                               
+                            dtau = - coeff * (eta_I_1 + eta_I_2) * T[0].distance;
+                        }
+                        else // short ray
+                        {                                                   
+                            // set (2)
+                            // loop over the four vertex of the intersection face
+                            for (int face_v = 0; face_v < 4; ++face_v)
+                            {                                                       
+                                weight = intersection_data.w[face_v];
+                            
+                                // interpolate eta 
+                                eta_I_2 += weight * eta_dev->block(i_intersect[face_v] ,j_intersect[face_v],k_intersect[face_v])[b];                                
+                                                                                                                                  
+
+                                // for accumulation
+                                if (k > 0) 
+                                {
+                                    i_intersect[face_v] = i - intersection_data.ix[face_v];
+                                    j_intersect[face_v] = j - intersection_data.iy[face_v];
+                                    k_intersect[face_v] = k + intersection_data.iz[face_v]; // minus because k increases going downwards  
+                                    
+                                    // impose periodic BC
+                                    i_intersect[face_v] = apply_periodic_bc(i_intersect[face_v], N_x);
+                                    j_intersect[face_v] = apply_periodic_bc(j_intersect[face_v], N_y); 
+
+                                    // weight = intersection_data.w[face_v];
+
+                                    if (k_intersect[face_v] != k-1) std::cout << "ERROR: k_intersect should be the previous (k-1) plane!" << std::endl;                                   
+
+                                    previous_dts += weight * tau_dev->block(i_intersect[face_v], j_intersect[face_v], k - 1)[b];                                
+                                }      
+                            }                                      
+                                                                                                                                    
+                            // optical depth step                               
+                            dtau = - coeff * (eta_I_1 + eta_I_2) * intersection_data.distance;                                                                                                    
+                        }   
+
+                        if (dtau < 0) std::cout << "ERROR in dtau sign, dtau = " << dtau << std::endl;  
+
+                        tau_dev->block(i,j,k)[b] = dtau;                        
+
+                        // if k > 0 accumulate values from previous step
+                        if (k > 0) tau_dev->block(i,j,k)[b] += previous_dts;                                                                    
+                    }                          
+                }                
+            }   
+        }    
+    
+        int b_nu0 = 0;
+        for (int j = 0; j < N_y; ++j) {        
+            for (int i = 0; i < N_x; ++i) {  
+
+                int    col_z    = -1;
+                double col_height = use_min ?  std::numeric_limits<double>::infinity()
+                              : -std::numeric_limits<double>::infinity();
+                double col_diff = std::numeric_limits<double>::max();
+                double col_tau  = 0.0;
+                
+                // for each element z  in the column (x,y)
+                for (int z = 0; z < N_z; ++z) {
+                    const double h = depth_grid[z];
+                    const double tau_ij = tau_dev->block(i,j,z)[b_nu0];
+                    const double diff   = std::abs(tau_ij - tau_target) / tau_target;
+
+                    if (diff < col_diff) {
+                        col_diff   = diff;
+                        col_z      = z;
+                        col_tau    = tau_ij;
+                        col_height = h;
+                    } else if (diff == col_diff) {
+                        if (use_min  && h < col_height) { col_z = z; col_height = h; col_tau = tau_ij; }
+                        if (!use_min && h > col_height) { col_z = z; col_height = h; col_tau = tau_ij; }
+                    }
+                }
+                
+                // col_z is now ALWAYS the best available match in this column (>=0 as long as N_z>0)
+                // if (col_diff > epsilon) {
+                //     std::cout << "WARNING: column (" << i << "," << j << ") closest tau="
+                //                << col_tau << " at z=" << col_z
+                //                << " is outside tolerance (diff=" << col_diff
+                //                << ", epsilon=" << epsilon << ")\n";
+                // }
+    
+                if (col_diff <= epsilon) {
+                    found_any = true;
+                    const double h = depth_grid[col_z];
+
+                    if (use_min && h < best_height)  { 
+                        best_height = h;
+                        best_z = col_z;
+                        best_tau = col_tau; 
+                        std::cout << "change: column (" << i << "," << j << ") closest tau="
+                               << col_tau << " at z=" << col_z
+                               << " (diffrel=" << col_diff
+                               << ", tol=" << epsilon << ")\n";
+                    }
+                    if (!use_min && h > best_height) { 
+                        best_height = h; 
+                        best_z = col_z; 
+                        best_tau = col_tau;
+                        std::cout << "change: column (" << i << "," << j << ") closest tau="
+                               << col_tau << " at z=" << col_z
+                               << " (diffrel=" << col_diff
+                               << ", tol=" << epsilon << ")\n";
+                    }
+                }
+
+            }
+        }  
+
+        if (not found_any && mpi_rank_ == 0)
+        {
+            best_z = N_z - 1;
+            best_tau = tau_dev->block(0,0,best_z)[b_nu0];
+            std::cout << "WARNING: no columns satisfy tau  = " << tau_target
+                      << " within the tolerance = " << epsilon 
+                      << ", setting (x,y,z)=(0,0," << best_z << ")"
+                      << " with tau=" << best_tau
+                      << std::endl << std::flush;
+        }
+        return std::make_tuple(best_z, best_tau, found_any);          
+    }      
+
+    return std::make_tuple(-1, 0.0, false);
+}     
+
 void MF_context::formal_solve_ray(const double theta, const double chi)
 {       
     // timers
@@ -1554,8 +1896,11 @@ void MF_context::formal_solve_ray(const double theta, const double chi)
 
     const double mu = cos(theta);
 
-    if (mpi_rank_ == 0) std::cout << "\nStart formal solution for mu = " << mu << 
-                                    ", theta = " << theta << ", and chi = " << chi << std::endl;    
+    if (mpi_rank_ == 0) {
+        std::cout << "---------------------------------------------------------------------------------------------------\n";
+        std::cout << "\nStart formal solution for: mu = " << mu << " (theta = " << theta << "), and chi = " << chi << std::endl;
+        std::cout << "---------------------------------------------------------------------------------------------------\n";
+    }
 
     // init some quantities         
     const auto N_x = RT_problem_->N_x_;
@@ -3350,7 +3695,11 @@ void MF_context::set_up_emission_module(){
     auto fsf_sh_ptr = rii_formal_solver_factory::make_formal_solver_factory_from_3D_RT_problem_shared_ptr();
     in_RT_problem_3D::add_models(RT_problem_, ecc_sh_ptr_, fsf_sh_ptr, true);
     fsf_sh_ptr->make_formal_solver();
-    ecc_sh_ptr_->set_RII_contrib_block_size(get_RII_contrib_block_size());
+
+    if (not has_RII_contrib_block_margins())
+        ecc_sh_ptr_->set_RII_contrib_block_size(get_RII_contrib_block_size());
+    else 
+        ecc_sh_ptr_->set_RII_contrib_block_marigins(get_RII_contrib_block_margins());
 
     std::list<emission_coefficient_components> components;
     std::list<emission_coefficient_components> components_approx;  
@@ -3512,6 +3861,10 @@ void MF_context::set_up_emission_module(){
             components_approx.push_back(emission_coefficient_components::epsilon_R_II_AA_FAST);
             components_approx.push_back(emission_coefficient_components::epsilon_R_III_GL);
             if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA for preconditioner emissivity" << std::endl;
+        break;
+        case preconditioner_emissivity_model_t::CRD_TWOTERM: // ADDED 
+            components_approx.push_back(emission_coefficient_components::epsilon_R_III_TwoTerm_GL_FAST);
+            if (mpi_rank_ == 0) std::cout << "\nUsing CRD_TWOTERM for preconditioner emissivity" << std::endl;
         break;
 		case preconditioner_emissivity_model_t::CRD_limit:
 		default:
@@ -4185,29 +4538,18 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const double theta, con
         // scattering_model = "CONTINUUM"; 
         // for continuum only   
         // DANGER: this is a hack to TEST and debug the continuum only
-        if ( mpi_rank_ == 0) printf("Start: ecc_sh_ptr_->make_computation_function_arbitrary_direction, %s:%d \n", __FILE__, __LINE__);
+        // if ( mpi_rank_ == 0) printf("Start: ecc_sh_ptr_->make_computation_function_arbitrary_direction, %s:%d \n", __FILE__, __LINE__);
         auto epsilon_computation_Omega = ecc_sh_ptr_->make_computation_function_arbitrary_direction(scattering_model, 
                                                                                                     include_continuum, 
                                                                                                     include_eps_lth);
 
-        
-        MPI_Barrier(MPI_COMM_WORLD);
-        if (mpi_rank_ == 0) std::cout << "CP1" << std::endl;
-
-        if ( mpi_rank_ == 0) printf("Start: ecc_sh_ptr_->update_incoming_field, %s:%d \n", __FILE__, __LINE__);
+        // if ( mpi_rank_ == 0) printf("Start: ecc_sh_ptr_->update_incoming_field, %s:%d \n", __FILE__, __LINE__);
         ecc_sh_ptr_->update_incoming_field(i, j, k, offset_fun_, input.data());
-
-        MPI_Barrier(MPI_COMM_WORLD);
-        if (mpi_rank_ == 0) std::cout << "CP2" << std::endl;
-
-
+        
         // get IQUV for (theta, chi direction)
-        if ( mpi_rank_ == 0) printf("Start: epsilon_computation_Omega, %s:%d \n", __FILE__, __LINE__);
+        // if ( mpi_rank_ == 0) printf("Start: epsilon_computation_Omega, %s:%d \n", __FILE__, __LINE__);
         auto IQUV_matrix_sh_ptr = epsilon_computation_Omega(i, j, k, theta, chi);
-
-        MPI_Barrier(MPI_COMM_WORLD);
-        if (mpi_rank_ == 0) std::cout << "CP3" << std::endl;
-
+        
 
 #ifdef DEBUG_MU_ARBITRARY
         if (mpi_rank_ == 0 and i == i_start and j == j_start and k == k_start)
@@ -4231,7 +4573,7 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const double theta, con
         int b;        
 
 
-        if ( mpi_rank_ == 0) printf("Start: update S_field_ from output scaling by eta_I, %s:%d \n", __FILE__, __LINE__);
+        // if ( mpi_rank_ == 0) printf("Start: update S_field_ from output scaling by eta_I, %s:%d \n", __FILE__, __LINE__);
         for (int n_nu = 0; n_nu < N_nu; n_nu++)
         {
             b = 4 * n_nu;
@@ -4528,40 +4870,83 @@ void MF_context::unpolarized_to_polarized(Vec &unpol_v, Vec &pol_v) {
 
 void MF_context::init_serial_fields_Omega(){
     
-    auto N_z  = RT_problem_->N_z_;
-    auto N_nu = RT_problem_->N_nu_;
-    auto block_size_Omega = 4 * N_nu;
+    const auto N_nu             = RT_problem_->N_nu_;
+    const int  block_size_Omega = 4 * N_nu;
 
-    // set the number of local rays and tiles   
-    local_block_size_ = block_size_Omega/mpi_size_;        
+    // The Omega serial fields live on space_grid_serial_, which is created by
+    // init_serial_fields(). That call is skipped when use_1_5D_approx_ is true.
+    if (not space_grid_serial_)
+    {
+        if (mpi_rank_ == 0)
+        {
+            std::cout << "ERROR: in init_serial_fields_Omega(): space_grid_serial_ is null, "
+                      << "init_serial_fields() must run first (it is skipped for use_1_5D_approx_)"
+                      << "    file: " << __FILE__ << ":" << __LINE__ << std::endl;
+            std::cout.flush();
+        }
+
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+
+    // -------------------------------------------------------------------------------
+    // Split the block dimension (4 * N_nu) across ranks.
+    //
+    // Two invariants the rest of the Omega path relies on without checking:
+    //
+    //   (1) local_block_size_ % 4 == 0
+    //       formal_solve_ray() walks the block with "b += 4" and touches
+    //       [b + 0 .. b + 3]. A block size that is not a multiple of 4 makes the
+    //       last iteration write past the end of the serial field block -> heap
+    //       corruption (Field::block() bounds-checks i,j,k but not the block index).
+    //
+    //   (2) block_size_Omega % local_block_size_ == 0
+    //       ReMap3D::init() asserts num_tiles_per_block == block_size / tile_size,
+    //       and asserts are compiled out in the -O3 build (NDEBUG).
+    //
+    // Both were previously reported with a plain "ERROR: ..." print, after which
+    // execution continued into undefined behaviour. They are now fatal.
+    // -------------------------------------------------------------------------------
+    local_block_size_ = block_size_Omega/mpi_size_;
 
     if (local_block_size_ < 4)
     {
-        if (mpi_rank_ == 0) std::cout << "WARNING: mpi_size > number of rays" << std::endl;
-        
-        local_block_size_ = 4; 
-        
-        // // some ranks can stay idle
-        // if (mpi_rank_ >= N_nu)
-        // {
-        //     idle_processor_Omega_ = true;         TODO  local_block_size_ = 0 here?
-        // }
-    } 
-    else
-    {
-        if (local_block_size_ * mpi_size_ != block_size_Omega and this->mpi_rank_ == 0) { 
-            std::cout << "ERROR: file: " << __FILE__ << " line: " << __LINE__ << std::endl;
-            std::cout << "ERROR: in init_serial_fields(): block_size_Omega/mpi_size_ not integer" << std::endl;
-            std::cout << "ERROR: block_size_Omega = " << block_size_Omega << std::endl;
-            std::cout << "ERROR: mpi_size = " << mpi_size_ << std::endl;
-            std::cout << "ERROR: n_local_rays_ = " << n_local_rays_ << std::endl;
-            std::cout << "ERROR: block_size_Omega % mpi_size_ = " << (block_size_Omega % mpi_size_) << std::endl;
-        }    
+        // More ranks than frequencies: give every rank one full Stokes quadruplet and
+        // let ranks >= N_nu stay idle (see idle_proc in formal_solve_ray()).
+        // block_size_Omega is 4 * N_nu, so a tile of 4 always satisfies (1) and (2).
+        if (mpi_rank_ == 0)
+        {
+            std::cout << "WARNING: mpi_size (" << mpi_size_ << ") > number of frequencies ("
+                      << N_nu << "): " << (mpi_size_ - N_nu)
+                      << " ranks will be idle in the arbitrary-direction formal solution."
+                      << std::endl;
+        }
+
+        local_block_size_ = 4;
     }
-    
-    if (local_block_size_ % 4 != 0) std::cout << "ERROR: in init_serial_fields_Omega(): local_block_size_ should be divisible by 4" << std::endl;        
-        
-    // create serial fields 
+
+    // Every rank evaluates this identically (only global sizes and mpi_size_ are involved),
+    // so the abort is collective and cannot deadlock.
+    if (local_block_size_ % 4 != 0 or block_size_Omega % local_block_size_ != 0)
+    {
+        if (mpi_rank_ == 0)
+        {
+            std::cout << "ERROR: in init_serial_fields_Omega(): invalid block decomposition"
+                      << "    file: " << __FILE__ << ":" << __LINE__ << std::endl;
+            std::cout << "ERROR: N_nu              = " << N_nu              << std::endl;
+            std::cout << "ERROR: block_size_Omega  = " << block_size_Omega  << std::endl;
+            std::cout << "ERROR: mpi_size          = " << mpi_size_         << std::endl;
+            std::cout << "ERROR: local_block_size_ = " << local_block_size_ << std::endl;
+            std::cout << "ERROR: local_block_size_ must be a multiple of 4 and must divide "
+                      << block_size_Omega << " exactly." << std::endl;
+            std::cout << "ERROR: pick a rank count for which (4 * N_nu) / mpi_size is a "
+                      << "multiple of 4, or a rank count >= N_nu." << std::endl;
+            std::cout.flush();
+        }
+
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+
+    // create serial fields
     I_field_serial_Omega_   = std::make_shared<Field>(
         "I_serial", space_grid_serial_, local_block_size_, false
     ); 

@@ -4,6 +4,11 @@
 #include "Formal_solver.hpp"
 #include "RT_problem.hpp"
 #include "GridManager/GridManager.hpp"
+#include <tuple>
+#include <iostream>
+#include <algorithm>
+#include <cmath>
+#include <limits>
 
 extern PetscErrorCode UserMult(Mat mat,Vec x,Vec y);
 extern PetscErrorCode UserMult_approx(Mat mat,Vec x,Vec y);
@@ -11,9 +16,20 @@ extern PetscErrorCode UserMult_JKQ(Mat mat,Vec x,Vec y);
 extern PetscErrorCode MF_pc_Destroy(PC pc);
 extern PetscErrorCode MF_pc_Apply(PC pc,Vec x,Vec y);
 
-unsigned int get_RII_contrib_block_size();
+bool
+has_RII_contrib_block_margins();
 
-void set_RII_contrib_block_size(const unsigned int block_size);
+void
+set_RII_contrib_block_margins(const std::vector<unsigned int> &margins);
+
+std::vector<unsigned int>
+get_RII_contrib_block_margins();
+
+unsigned int
+get_RII_contrib_block_size();
+
+void
+set_RII_contrib_block_size(const unsigned int block_size);
 
 // structs for ray - grid intersection 
 typedef struct t_intersect {
@@ -155,6 +171,12 @@ struct MF_context {
 
 	// formation height of a specific LOS
 	void get_formation_height(const double mu, const double chi);
+
+	// tau at line center frequency of a specific LOS
+	std::tuple<int,double, bool> get_line_center_optical_depth(
+		const double mu, const double chi, 
+		const double tau_target = 10.0,
+		bool use_min = true);
 
 	void apply_bc(       Field_ptr_t I_field, const Real I0, const bool polarized = true);	
 	void apply_bc_serial(Field_ptr_t I_field, const Real I0, const bool polarized = true);	
@@ -369,10 +391,10 @@ public:
 			CHKERRV(ierr);
 			if (cfg.prec.verbose)
 			{
-				ierr = KSPMonitorCancel(mf_ctx_.pc_solver_);
-				CHKERRV(ierr);
-				ierr = KSPMonitorSet(mf_ctx_.pc_solver_, precond_ksp_monitor, NULL, NULL);
-				CHKERRV(ierr);
+				// ierr = KSPMonitorCancel(mf_ctx_.pc_solver_);
+				// CHKERRV(ierr);
+				// ierr = KSPMonitorSet(mf_ctx_.pc_solver_, precond_ksp_monitor, NULL, NULL);
+				// CHKERRV(ierr);
 			} else {
 				ierr = KSPMonitorCancel(mf_ctx_.pc_solver_);
 				CHKERRV(ierr);
@@ -718,6 +740,16 @@ public:
 	inline void get_formation_height(const double theta, const double chi)
 	{
 		mf_ctx_.get_formation_height(theta, chi);
+	}
+
+
+	std::tuple<int,double,bool> get_line_center_optical_depth(
+		const double theta, 
+		const double chi, 
+		const double tau_target,
+		bool use_min)
+	{
+		return mf_ctx_.get_line_center_optical_depth(theta, chi, tau_target, use_min);
 	}
 
 	// inline void test()
