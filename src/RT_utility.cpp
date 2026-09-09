@@ -98,6 +98,9 @@ loadConfig(const std::string &filename)
 	cfg.input_file		= std::filesystem::path(requiredField<std::string>(config, "input_file"));
 	cfg.frequency_file	= std::filesystem::path(requiredField<std::string>(config, "frequency_file"));
 
+	if (config["magnetic_field_file"])  cfg.magnetic_field_file  = std::filesystem::path(config["magnetic_field_file"].as<std::string>());
+	if (config["bulk_velocities_file"]) cfg.bulk_velocities_file = std::filesystem::path(config["bulk_velocities_file"].as<std::string>());
+
 	int mpi_rank;
 	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 

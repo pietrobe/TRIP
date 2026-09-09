@@ -536,6 +536,10 @@ struct AppConfig
 	std::filesystem::path frequency_file;
 	std::filesystem::path output_directory;
 
+	// optinonal txt files for FAL-C
+	std::filesystem::path magnetic_field_file;
+	std::filesystem::path bulk_velocities_file;
+
 	// Output settings
 	bool output						 = false;
 	bool output_overwrite_prevention = false;

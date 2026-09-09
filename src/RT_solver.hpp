@@ -362,8 +362,8 @@ public:
 			ierr = PCShellSetDestroy(pc_,MF_pc_Destroy);CHKERRV(ierr);	
 
 			// adding some options for verbosity
-	    	ierr = PetscOptionsSetValue(NULL, "-ksp_converged_reason", "");CHKERRV(ierr);
-#define PRECOND_MONITORING // If it dosent work with some petsc versions, switch-off this macro.
+	    	 if (cfg.prec.verbose) ierr = PetscOptionsSetValue(NULL, "-ksp_converged_reason", "");CHKERRV(ierr);
+#define PRECOND_MONITORING
 #ifdef PRECOND_MONITORING
 			ierr = KSPSetFromOptions(mf_ctx_.pc_solver_);
 			CHKERRV(ierr);
@@ -387,7 +387,7 @@ public:
 
 		if (RT_problem_->verbose_)  {
 			ierr = PetscOptionsSetValue(NULL, "-ksp_monitor", "");CHKERRV(ierr);
-			ierr = PetscOptionsSetValue(NULL, "-ksp_monitor_true_residual", "");CHKERRV(ierr);    // WARNING: this costs
+			// ierr = PetscOptionsSetValue(NULL, "-ksp_monitor_true_residual", "");CHKERRV(ierr);    // WARNING: this costs
 			ierr = PetscOptionsSetValue(NULL, "-ksp_view", "");CHKERRV(ierr);			
 		}
 
@@ -681,11 +681,15 @@ public:
 
 		// set eta and rhos 
 	    RT_problem_->set_eta_and_rhos_Omega(theta, chi);
-	
+
 		const double clock_start = MPI_Wtime();				
 
 		// update emissivity with current I_field (in all directions)
 		mf_ctx_.update_emission_Omega(RT_problem_->I_vec_, theta, chi);	// TODO RT_problem_->I_vec_ => field->getVec()	
+
+		MPI_Barrier(MPI_COMM_WORLD);
+		if (mpi_rank_ == 0) std::cout << "update_emission_Omega done" << std::endl;
+	
 
 		const double clock_end = MPI_Wtime();
 		const double clock_diff = clock_end - clock_start;

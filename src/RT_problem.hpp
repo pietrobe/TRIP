@@ -398,13 +398,30 @@ class RT_problem
 		allocate_atmosphere();
 
 		// read atm data (needs grid object)
-		read_atmosphere_1D(input_path + "/atmosphere.dat"); // NOTE: solar surface for space index k = 0
-		read_bulk_velocity_1D(input_path + "/bulk_velocity.dat");
-		read_magnetic_field_1D(input_path + "/magnetic_field.dat");
-
+		read_atmosphere_1D(input_path     + "/atmosphere.dat"); // NOTE: solar surface for space index k = 0
+		
 		read_continumm_1D(input_path + "/continuum/continuum_scat_opac.dat",
-						  input_path + "/continuum/continuum_tot_opac.dat",
-						  input_path + "/continuum/continuum_therm_emiss.dat");
+						      input_path + "/continuum/continuum_tot_opac.dat",
+						      input_path + "/continuum/continuum_therm_emiss.dat");
+
+
+		if (cfg_.magnetic_field_file.string().empty())
+		{
+			read_magnetic_field_1D(input_path  + "/magnetic_field.dat");
+		}
+		else
+		{
+			read_magnetic_field_1D(cfg_.magnetic_field_file.string());
+		}
+
+		if (cfg_.bulk_velocities_file.string().empty())
+		{
+			read_bulk_velocity_1D(input_path  + "/bulk_velocity.dat");
+		}
+		else
+		{
+			read_bulk_velocity_1D(cfg_.bulk_velocities_file.string());
+		}
 	}
 
 	// convert block index to to local ones = [j_theta, k_chi, n_nu, i_stokes]
