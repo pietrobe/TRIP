@@ -209,6 +209,10 @@ class RT_problem
 		if (mpi_rank_ == 0 and verbose_) printf("Reading input time:\t\t%g (seconds)\n", MPI_Wtime() - start);
 		start = MPI_Wtime();
 
+		// scale magnetic field and velocities
+		if (cfg_.B_scaling  != 1.0) space_grid_->parallel_for([&](int i, int j, int k) {B_  ->block(i, j, k)[0] *= cfg_.B_scaling;});		
+		if (cfg_.Vb_scaling != 1.0) space_grid_->parallel_for([&](int i, int j, int k) {v_b_->block(i, j, k)[0] *= cfg_.Vb_scaling;});		
+
 		// set up atomic quantities
 		set_up_atom();
 
@@ -228,6 +232,9 @@ class RT_problem
 			   const char *filename_back, input_string input_path_frequency,
 			   const emissivity_model_t emissivity_model_arg, const bool use_magnetic_field = false)
 	{
+
+		if (mpi_rank_ == 0) printf("WARNING: old RT_problem constructor is deprecated, input options may be read wrong or incompletely!");
+
 		Real start = MPI_Wtime();
 
 		// assign MPI varaibles
@@ -268,6 +275,8 @@ class RT_problem
 	RT_problem(const char *PORTA_input, input_string input_path_frequency, const emissivity_model_t emissivity_model_arg,
 			   const bool use_magnetic_field = false)
 	{
+		if (mpi_rank_ == 0) printf("WARNING: old RT_problem constructor is deprecated, input options may be read wrong or incompletely!");
+
 		Real start = MPI_Wtime();
 
 		// assign MPI varaibles
@@ -310,6 +319,8 @@ class RT_problem
 			   const emissivity_model_t emissivity_model_arg = emissivity_model_t::NONE,
 			   const bool				use_magnetic_field	 = false)
 	{
+		if (mpi_rank_ == 0) printf("WARNING: old RT_problem constructor is deprecated, input options may be read wrong or incompletely!");
+
 		Real start = MPI_Wtime();
 
 		// set emissivity model

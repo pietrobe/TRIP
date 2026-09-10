@@ -599,6 +599,10 @@ struct AppConfig
 	bool				  set_uniform_Vb = false;
 	std::array<double, 3> Vb_field		 = {0.0, 0.0, 0.0};
 
+	// scaling 
+	double B_scaling  = 1.0;
+	double Vb_scaling = 1.0;
+
 	// numerical inputs
 	bool		use_1_5D_approx = false;
 	std::string formal_solver	= "BESSER";
