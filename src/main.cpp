@@ -64,6 +64,22 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	const auto cfg_output_tail_dir = [&cfg]()
+	{
+		if (not cfg.output_new_convention)
+		{
+			return cfg.input_file;
+		}
+		else
+		{
+			auto p = cfg.input_directory.lexically_normal();
+
+			if (p.filename().empty() && p.has_parent_path()) return p.parent_path().filename();
+
+			return p.filename();
+		}
+	}();
+
 	std::stringstream	  ss_a, ss_b;
 	std::filesystem::path output_info_file_name;
 
@@ -121,27 +137,26 @@ main(int argc, char *argv[])
 
 		// create output output directory name including options
 		std::string suffix;
-		if (!cfg.use_B)             suffix += ".no_B";
-		if (!cfg.use_Vb)            suffix += ".no_Vb";
-		if (!cfg.enable_continuum)  suffix += ".no_cont";
+		if (!cfg.use_B) suffix += ".no_B";
+		if (!cfg.use_Vb) suffix += ".no_Vb";
+		if (!cfg.enable_continuum) suffix += ".no_cont";
 		if (!cfg.use_D2_from_input) suffix += ".D2_computed";
-		if (cfg.set_uniform_B)      suffix += ".uniform_B";
-		if (cfg.set_uniform_Vb)     suffix += ".uniform_Vb";
-		if (cfg.use_1_5D_approx)    suffix += ".1_5D";
+		if (cfg.set_uniform_B) suffix += ".uniform_B";
+		if (cfg.set_uniform_Vb) suffix += ".uniform_Vb";
+		if (cfg.use_1_5D_approx) suffix += ".1_5D";
 
-		const auto format_scaling = [](double v) 
+		const auto format_scaling = [](double v)
 		{
-    		std::ostringstream oss;
-    		oss << std::defaultfloat << std::setprecision(6) << v;
-    		return oss.str();
+			std::ostringstream oss;
+			oss << std::defaultfloat << std::setprecision(6) << v;
+			return oss.str();
 		};
-		
-		if (cfg.B_scaling  != 1.0) suffix += ".B_scale_" + format_scaling(cfg.B_scaling);
+
+		if (cfg.B_scaling != 1.0) suffix += ".B_scale_" + format_scaling(cfg.B_scaling);
 		if (cfg.Vb_scaling != 1.0) suffix += ".V_scale_" + format_scaling(cfg.Vb_scaling);
 
-		const std::filesystem::path output_subdir =
-		    std::filesystem::path(cfg.input_file.string() + "."
-		        + emissivity_model_to_string_long(cfg.emissivity_model) + suffix);
+		const std::filesystem::path output_subdir = std::filesystem::path(
+			cfg_output_tail_dir.string() + "." + emissivity_model_to_string_long(cfg.emissivity_model) + suffix);
 
 		const std::filesystem::path output_path =
 			std::filesystem::path(cfg.output_directory) / std::filesystem::path(output_subdir);
@@ -277,19 +292,19 @@ main(int argc, char *argv[])
 			if (is_CRD_limit(cfg.emissivity_model))
 			{ // The CRD solition can be fully reconstructed from the J_KQ CRD solution.
 				// So we output only this filed for the CRD case.
-				rt_problem_ptr																		//
-					->write_JKQ_CRD_field_hdf5((output_path / "JKQ_CRD_field.h5").string(), false); //
-
 				rt_problem_ptr																					   //
-					->write_JKQ_CRD_field_hdf5((output_path / "JKQ_CRD_Doppler_shifted_field.h5").string(), true); //
+					->write_JKQ_CRD_field_hdf5((output_path / "JKQ_CRD_field_comoving_frame.h5").string(), false); //
+
+				rt_problem_ptr																					  //
+					->write_JKQ_CRD_field_hdf5((output_path / "JKQ_CRD_field_observer_frame.h5").string(), true); //
 			}
 			else
 			{
-				rt_problem_ptr																//
-					->write_JKQ_field_hdf5((output_path / "JKQ_field.h5").string(), false); //
-
 				rt_problem_ptr																			   //
-					->write_JKQ_field_hdf5((output_path / "JKQ_Doppler_shifted_field.h5").string(), true); //
+					->write_JKQ_field_hdf5((output_path / "JKQ_field_comoving_frame.h5").string(), false); //
+
+				rt_problem_ptr																			  //
+					->write_JKQ_field_hdf5((output_path / "JKQ_field_observer_frame.h5").string(), true); //
 			}
 			clocks.hdf5_out_time_JKQ = MPI_Wtime() - clocks.hdf5_out_time_JKQ;
 

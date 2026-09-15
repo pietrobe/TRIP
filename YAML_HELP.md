@@ -42,6 +42,8 @@ General rules:
 | `input_qel` | string (path) | `""` | Optional PORTA auxiliary file with elastic collision rates (`.qel`). |
 | `input_llp` | string (path) | `""` | Optional PORTA auxiliary file with lower-level population data (`.llp`). |
 | `input_back` | string (path) | `""` | Optional PORTA auxiliary file with background/continuum data (`.back`). |
+| `magnetic_field_file` | string (path) | `""` | FAL-C mode only. Overrides the default `magnetic_field.dat` file read from the input directory. |
+| `bulk_velocities_file` | string (path) | `""` | FAL-C mode only. Overrides the default `bulk_velocity.dat` file read from the input directory. |
 
 When `input_cul`, `input_qel`, and `input_llp` are all provided, the code runs
 in the "PMD + CUL + QEL + LLP + BACK" input mode; otherwise only the PMD/HDF5
@@ -63,10 +65,18 @@ used to build the problem, and the horizontal grid is defined by the `N_x`,
 | `output` | bool | `false` | Master switch: enable writing of results to disk. |
 | `output_directory` | string (path) | `""` | Directory where the results directory is created. |
 | `output_overwrite_prevention` | bool | `false` | If `true`, the code stops instead of overwriting an existing results directory. |
+| `output_new_convention` | bool | `true` | Naming convention for the results subdirectory (see below). If `true`, the subdirectory name is built from the last component of `input_directory`. If `false`, it is built from `input_file` (legacy behavior). |
 | `write_whole_3D_field_hdf5` | bool | `false` | Also write the whole 3D radiation field to an HDF5 file (large output). |
 | `write_text_output` | bool | `false` | Also write results as plain-text files. |
 | `reference_sol_directory` | string (path) | `""` | Directory with a reference solution, used by the tests to validate results. |
 | `verbose` | bool | `true` | Print extra progress/diagnostic information. |
+
+The results are written to a subdirectory of `output_directory` whose name is
+`<tail>.<emissivity_model>[.<option_suffixes>]`, where `<tail>` is either the
+last path component of `input_directory` (`output_new_convention: true`, the
+default) or the full `input_file` name (`output_new_convention: false`), and
+`<option_suffixes>` encodes any non-default flags such as `.no_B`, `.no_Vb`,
+`.no_cont`, `.uniform_B`, `.uniform_Vb`, `.1_5D`, `.B_scale_<v>`, `.V_scale_<v>`.
 
 ## Physics
 
@@ -83,6 +93,8 @@ used to build the problem, and the horizontal grid is defined by the `N_x`,
 | `B_field` | sequence of 3 numbers | `[0.0, 0.0, 0.0]` | Uniform magnetic field as `[magnitude (Gauss), theta (rad), chi (rad)]`. Only used when `set_uniform_B: true`. Must contain exactly three numbers. |
 | `set_uniform_Vb` | bool | `false` | Override the model's bulk velocity with a uniform velocity given by `Vb_field`. |
 | `Vb_field` | sequence of 3 numbers | `[0.0, 0.0, 0.0]` | Uniform bulk velocity as `[Vx, Vy, Vz]` in cm/s. Only used when `set_uniform_Vb: true`. Must contain exactly three numbers. |
+| `B_scaling` | double | `1.0` | Multiplicative scaling factor applied to the magnetic field magnitude read from the model. |
+| `Vb_scaling` | double | `1.0` | Multiplicative scaling factor applied to the bulk velocity field read from the model. |
 
 ### `emissivity_model` values
 
@@ -115,6 +127,7 @@ used to build the problem, and the horizontal grid is defined by the `N_x`,
 | `N_y` | int | `1` | Number of horizontal grid points in y (used only for FAL-C input). |
 | `L` | double | `400.0` | Horizontal domain size (used only for FAL-C input). |
 | `use_prec` | bool | `true` | Use the preconditioner in the iterative solver. **Note:** automatically forced to `false` when `emissivity_model` is `CRD_limit`, `CRD_limit_VHP`, or `ZERO`. |
+| `RII_contrib_block_margins` | sequence of unsigned int | `[]` (empty) | Custom frequency-grid indices defining the block boundaries used when computing the RII (partial redistribution) contribution, for PRD-type `emissivity_model` values. When given, these margins replace the default uniform block size. |
 
 ## Solver section (`solver`)
 
@@ -187,6 +200,7 @@ built-in default two-level CaI model is used (the defaults below). Example:
 
 ```yaml
 # atom_CaI.yml
+atomic_number: 20   # atomic number (Z)
 mass: 40.078        # atomic mass (amu)
 Aul: 2.18e+08       # Einstein A coefficient (s^-1)
 S2: 0               # 2*S (twice the spin quantum number)
@@ -200,6 +214,7 @@ gu: 1.0             # upper level Landé factor(s)
 
 | Key | Type | Required / Default | Description |
 |---|---|---|---|
+| `atomic_number` | int | **required** | Atomic number (Z) of the element. |
 | `mass` | double | **required** | Atomic mass in atomic mass units. |
 | `Aul` | double | **required** | Einstein coefficient for spontaneous emission, in s^-1. |
 | `S2` | int | **required** | Twice the spin quantum number (2S). |

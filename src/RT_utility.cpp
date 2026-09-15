@@ -98,8 +98,10 @@ loadConfig(const std::string &filename)
 	cfg.input_file		= std::filesystem::path(requiredField<std::string>(config, "input_file"));
 	cfg.frequency_file	= std::filesystem::path(requiredField<std::string>(config, "frequency_file"));
 
-	if (config["magnetic_field_file"])  cfg.magnetic_field_file  = std::filesystem::path(config["magnetic_field_file"].as<std::string>());
-	if (config["bulk_velocities_file"]) cfg.bulk_velocities_file = std::filesystem::path(config["bulk_velocities_file"].as<std::string>());
+	if (config["magnetic_field_file"])
+		cfg.magnetic_field_file = std::filesystem::path(config["magnetic_field_file"].as<std::string>());
+	if (config["bulk_velocities_file"])
+		cfg.bulk_velocities_file = std::filesystem::path(config["bulk_velocities_file"].as<std::string>());
 
 	int mpi_rank;
 	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
@@ -111,16 +113,17 @@ loadConfig(const std::string &filename)
 		cfg.atom_file = cfg.input_directory / std::filesystem::path(config["atom_file"].as<std::string>());
 
 		if (not std::filesystem::exists(cfg.atom_file))
-			throw std::runtime_error("Atom file not found: " + cfg.atom_file.string() +
-									 " (it must be placed in the input directory " + cfg.input_directory.string() + ")");
+			throw std::runtime_error("Atom file not found: " + cfg.atom_file.string()
+									 + " (it must be placed in the input directory " + cfg.input_directory.string()
+									 + ")");
 
 		YAML::Node atom_config = YAML::LoadFile(cfg.atom_file.string());
 
 		if (mpi_rank == 0) std::cout << "Loading atom data from file: " << cfg.atom_file.string() << std::endl;
 
-		cfg.atom.atomic_number =  requiredField<double>(atom_config, "atomic_number");
-		cfg.atom.mass = requiredField<double>(atom_config, "mass");
-		cfg.atom.Aul  = requiredField<double>(atom_config, "Aul");
+		cfg.atom.atomic_number = requiredField<double>(atom_config, "atomic_number");
+		cfg.atom.mass		   = requiredField<double>(atom_config, "mass");
+		cfg.atom.Aul		   = requiredField<double>(atom_config, "Aul");
 
 		cfg.atom.S2 = requiredField<int>(atom_config, "S2");
 
@@ -148,6 +151,7 @@ loadConfig(const std::string &filename)
 		cfg.write_whole_3D_field_hdf5 = config["write_whole_3D_field_hdf5"].as<bool>();
 
 	if (config["write_text_output"]) cfg.write_text_output = config["write_text_output"].as<bool>();
+	if (config["output_new_convention"]) cfg.output_new_convention = config["output_new_convention"].as<bool>();
 
 	// Optional string (converted to filesystem::path)
 	if (config["output_directory"])
@@ -161,13 +165,15 @@ loadConfig(const std::string &filename)
 	if (config["verbose"]) cfg.verbose = config["verbose"].as<bool>();
 
 	// Emissivity model (required)
-	cfg.emissivity_model                = config["emissivity_model"].as<emissivity_model_t>();
-	cfg.preconditioner_emissivity_model = config["preconditioner_emissivity_model"]
+	cfg.emissivity_model = config["emissivity_model"].as<emissivity_model_t>();
+	cfg.preconditioner_emissivity_model =
+		config["preconditioner_emissivity_model"]
 			? config["preconditioner_emissivity_model"].as<preconditioner_emissivity_model_t>()
 			: preconditioner_emissivity_model_t::CRD_limit;
 
-	cfg.RII_contrib_block_margins = 
-			config["RII_contrib_block_margins"] ? readUnsignedIntVec(config["RII_contrib_block_margins"]) : std::vector<unsigned int>{};
+	cfg.RII_contrib_block_margins = config["RII_contrib_block_margins"]
+										? readUnsignedIntVec(config["RII_contrib_block_margins"])
+										: std::vector<unsigned int>{};
 
 	// Flags
 	if (config["use_B"]) cfg.use_B = config["use_B"].as<bool>();
@@ -220,8 +226,8 @@ loadConfig(const std::string &filename)
 		}
 	}
 
-	if (config["B_scaling"])  cfg.B_scaling  = config["B_scaling" ].as<double>();
-	if (config["Vb_scaling"]) cfg.Vb_scaling = config["Vb_scaling"].as<double>();	
+	if (config["B_scaling"]) cfg.B_scaling = config["B_scaling"].as<double>();
+	if (config["Vb_scaling"]) cfg.Vb_scaling = config["Vb_scaling"].as<double>();
 
 	// Integers
 	if (config["N_theta"]) cfg.N_theta = config["N_theta"].as<int>();
@@ -257,10 +263,10 @@ loadConfig(const std::string &filename)
 		auto s = config["solver"];
 
 		if (s["ksp_solver_type"]) cfg.solver.ksp_solver_type = toKSPType(s["ksp_solver_type"].as<std::string>());
-		if (s["ksp_rtol"])        cfg.solver.ksp_rtol      = s["ksp_rtol"].as<double>();
-		if (s["ksp_max_it"])      cfg.solver.ksp_max_it    = s["ksp_max_it"].as<int>();
-		if (s["gmres_restart"])   cfg.solver.gmres_restart = s["gmres_restart"].as<int>();
-		if (s["ksp_use_J_KQ"])    cfg.solver.ksp_use_J_KQ  = s["ksp_use_J_KQ"].as<bool>();
+		if (s["ksp_rtol"]) cfg.solver.ksp_rtol = s["ksp_rtol"].as<double>();
+		if (s["ksp_max_it"]) cfg.solver.ksp_max_it = s["ksp_max_it"].as<int>();
+		if (s["gmres_restart"]) cfg.solver.gmres_restart = s["gmres_restart"].as<int>();
+		if (s["ksp_use_J_KQ"]) cfg.solver.ksp_use_J_KQ = s["ksp_use_J_KQ"].as<bool>();
 	}
 
 	// Preconditioner section
@@ -269,10 +275,10 @@ loadConfig(const std::string &filename)
 		auto p = config["prec"];
 
 		if (p["pc_solver_type"]) cfg.prec.pc_solver_type = toKSPType(p["pc_solver_type"].as<std::string>());
-		if (p["pc_rtol"])        cfg.prec.pc_rtol     = p["pc_rtol"].as<double>();
-		if (p["pc_max_it"])      cfg.prec.pc_max_it   = p["pc_max_it"].as<int>();
-		if (p["pc_use_J_KQ"])    cfg.prec.pc_use_J_KQ = p["pc_use_J_KQ"].as<bool>();
-		if (p["verbose"])        cfg.prec.verbose     = p["verbose"].as<bool>();
+		if (p["pc_rtol"]) cfg.prec.pc_rtol = p["pc_rtol"].as<double>();
+		if (p["pc_max_it"]) cfg.prec.pc_max_it = p["pc_max_it"].as<int>();
+		if (p["pc_use_J_KQ"]) cfg.prec.pc_use_J_KQ = p["pc_use_J_KQ"].as<bool>();
+		if (p["verbose"]) cfg.prec.verbose = p["verbose"].as<bool>();
 
 		if (p["pc_formal_solver_approx"]) cfg.prec.pc_formal_solver_approx = p["pc_formal_solver_approx"].as<bool>();
 	}
@@ -369,11 +375,14 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 	print_AppCfg_field("Input QEL File", path_to_str(cfg.input_qel));
 	print_AppCfg_field("Input LLP File", path_to_str(cfg.input_llp));
 	print_AppCfg_field("Input BACK File", path_to_str(cfg.input_back));
+	print_AppCfg_field("Magnetic Field File (FAL-C)", path_to_str(cfg.magnetic_field_file));
+	print_AppCfg_field("Bulk Velocities File (FAL-C)", path_to_str(cfg.bulk_velocities_file));
 
 	print_section("Output");
 	print_AppCfg_field("Output Directory", path_to_str(cfg.output_directory));
 	print_AppCfg_field("Output Enabled", (cfg.output ? "Yes" : "No"));
 	print_AppCfg_field("Output Overwrite Prevention", (cfg.output_overwrite_prevention ? "Yes" : "No"));
+	print_AppCfg_field("Output New Convention", (cfg.output_new_convention ? "Yes" : "No"));
 	print_AppCfg_field("Write Whole 3D Field (HDF5)", (cfg.write_whole_3D_field_hdf5 ? "Yes" : "No"));
 	print_AppCfg_field("Write Text Output", (cfg.write_text_output ? "Yes" : "No"));
 	print_AppCfg_field("Reference Solution Directory", path_to_str(cfg.reference_sol_directory));
@@ -383,11 +392,12 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os)
 	print_AppCfg_field("Emissivity Model", emissivity_model_to_string_long(cfg.emissivity_model));
 	print_AppCfg_field("Preconditioner Emissivity Model",
 					   preconditioner_emissivity_model_to_string(cfg.preconditioner_emissivity_model));
-	print_AppCfg_field("RII Contribution Block Margins", cfg.RII_contrib_block_margins.empty()
-														  ? "(none)"
-														  : vec_to_str(cfg.RII_contrib_block_margins));
+	print_AppCfg_field("RII Contribution Block Margins",
+					   cfg.RII_contrib_block_margins.empty() ? "(none)" : vec_to_str(cfg.RII_contrib_block_margins));
 	print_AppCfg_field("Use Magnetic Field", (cfg.use_B ? "Yes" : "No"));
+	print_AppCfg_field("Magnetic Field Scaling", to_sci(cfg.B_scaling));
 	print_AppCfg_field("Use Bulk Velocity", (cfg.use_Vb ? "Yes" : "No"));
+	print_AppCfg_field("Bulk Velocity Scaling", to_sci(cfg.Vb_scaling));
 	print_AppCfg_field("Use D2 from Input", (cfg.use_D2_from_input ? "Yes" : "No"));
 	print_AppCfg_field("Enable Continuum", (cfg.enable_continuum ? "Yes" : "No"));
 	print_AppCfg_field("Enable Sigma_c in Emissivity", (cfg.enable_sigma_c ? "Yes" : "No"));
@@ -668,13 +678,8 @@ print_geometry(const RT_problem &rt_problem, std::ostream &os)
 	os << "N_y: " << rt_problem.N_y_ << std::endl;
 	os << "N_z: " << rt_problem.N_z_ << std::endl;
 	os << "delta: " << rt_problem.L_ << std::endl;
-	os << "height_min: " << *std::min_element(rt_problem.depth_grid_.begin(), rt_problem.depth_grid_.end())
-	   << std::endl;
-	os << "height_max: " << *std::max_element(rt_problem.depth_grid_.begin(), rt_problem.depth_grid_.end())
-	   << std::endl;
-
-
-
+	os << "height_min: " << *std::min_element(rt_problem.depth_grid_.begin(), rt_problem.depth_grid_.end()) << std::endl;
+	os << "height_max: " << *std::max_element(rt_problem.depth_grid_.begin(), rt_problem.depth_grid_.end()) << std::endl;
 
 	std::vector<double> depth_grid_local = rt_problem.depth_grid_;
 
