@@ -127,11 +127,7 @@ default) or the full `input_file` name (`output_new_convention: false`), and
 | `N_y` | int | `1` | Number of horizontal grid points in y (used only for FAL-C input). |
 | `L` | double | `400.0` | Horizontal domain size (used only for FAL-C input). |
 | `use_prec` | bool | `true` | Use the preconditioner in the iterative solver. **Note:** automatically forced to `false` when `emissivity_model` is `CRD_limit`, `CRD_limit_VHP`, or `ZERO`. |
-<<<<<<< HEAD
-| `RII_contrib_block_margins` | sequence of unsigned ints | `[]` (none) | Custom, non-uniform chunk sizes used to split the angular-direction grid (`N_theta` x `N_chi`) when computing the PRD `R_II` emission-coefficient contribution, in place of the fixed block size otherwise picked automatically. Lets a job be tuned for a reasonable memory/throughput balance on a given grid size. The last value must be greater than or equal to the total number of scattering angles; if omitted, a single automatic block size is used instead. Reccomended for an angular grid with $8 \times 16$: `[55, 90, 120, 150, 174]`. |
-=======
 | `RII_contrib_block_margins` | sequence of unsigned int | `[]` (empty) | Custom frequency-grid indices defining the block boundaries used when computing the RII (partial redistribution) contribution, for PRD-type `emissivity_model` values. When given, these margins replace the default uniform block size. |
->>>>>>> 30e9c2f0f848d0c328d06c584a2e08171146e965
 
 ## Solver section (`solver`)
 
