@@ -12,9 +12,9 @@ output: true
 output_overwrite_prevention: true
 
 # output_directory: /gpfs/scratch/ehpc597/model128/CRD_limit_128x128_DL_PORTA_comparison
-output_directory: /gpfs/scratch/ehpc597/model128_nij/AA
+output_directory: /gpfs/scratch/ehpc597/model128/small_128x128x285
 
-write_whole_3D_field_hdf5: false
+write_whole_3D_field_hdf5: true
 write_text_output: false
 
 use_B: true
@@ -29,19 +29,24 @@ enable_sigma_c: true
 # emissivity_model: PRD
 preconditioner_emissivity_model: CRD_limit
 
-emissivity_model: PRD_AA_MAPV
+emissivity_model: PRD
 # emissivity_model: CRD_limit
+# emissivity_model: PRD_AA_MAPV
 
 # used only for FAL-C input
 N_theta: 8
 N_chi:   16
+
+# could be ideal for the 8 x 16 case.
+# ensure a reasonable job and memory balance
+RII_contrib_block_margins:  [55, 90, 120, 150, 174]
 
 use_prec: true
 
 solver:
   ksp_solver_type: KSPRICHARDSON
   ksp_rtol: 1e-6
-  ksp_max_it: 12
+  ksp_max_it: 15
   verbose: true
 
 prec:
@@ -50,6 +55,8 @@ prec:
   pc_max_it: 25
   pc_use_J_KQ: true
   verbose: true
+  pc_formal_solver_approx: true
+
 
 
 default_chi: &default_chi 0.0
@@ -58,11 +65,26 @@ arbitrary_beams:
  - mu: 0.1
    chi: *default_chi
 
+ - mu: 0.2
+   chi: *default_chi
+
  - mu: 0.3
    chi: *default_chi
-    
+
+ - mu: 0.4
+   chi: *default_chi  
+  
+ - mu: 0.5
+   chi: *default_chi    
+
+ - mu: 0.6
+   chi: *default_chi  
+
  - mu: 0.7
    chi: *default_chi
+
+ - mu: 0.8
+   chi: *default_chi  
 
  - mu: 0.9
    chi: *default_chi
@@ -70,6 +92,6 @@ arbitrary_beams:
  - mu: 1.0
    chi: *default_chi
 
-#  - mu:  3.30009478207572e-01
-#    chi: 1.96349540849362e-01
+ - mu:  3.30009478207572e-01
+   chi: 1.96349540849362e-01
 
