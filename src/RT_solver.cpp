@@ -2337,7 +2337,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     double comm_timer1    = 0;
     double comm_timer2    = 0;
     double one_step_timer = 0;    
-    double one_step_count = 0;
+    // double one_step_count = 0;
 
     // impose boundary conditions 
     apply_bc_serial(I_field_serial_, I0);  
@@ -2659,7 +2659,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     								}			
 
                                     one_step_timer += MPI_Wtime() - start_one;
-                                    one_step_count += (n_nu_end - n_nu_start) * intersection_data_long_ray.size();
+                                    // one_step_count += (n_nu_end - n_nu_start) * intersection_data_long_ray.size();
     							}
     						}
     					}
@@ -2681,7 +2681,7 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
     {
         double comm_timer_max1, comm_timer_max2, one_step_timer_max, total_timer_max;
         double one_step_timer_min, one_step_timer_sum;
-        double one_step_count_min, one_step_count_mean, one_step_count_max;
+        // double one_step_count_min, one_step_count_mean, one_step_count_max;
  
 // #define SUPER_VERBOSE_STATS
 #ifdef SUPER_VERBOSE_STATS        
@@ -2706,9 +2706,9 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
         MPI_Reduce(&one_step_timer, &one_step_timer_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
         MPI_Reduce(&one_step_timer, &one_step_timer_min, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
         MPI_Reduce(&one_step_timer, &one_step_timer_sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-        MPI_Reduce(&one_step_count, &one_step_count_min, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
-        MPI_Reduce(&one_step_count, &one_step_count_mean, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-        MPI_Reduce(&one_step_count, &one_step_count_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        // MPI_Reduce(&one_step_count, &one_step_count_min, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+        // MPI_Reduce(&one_step_count, &one_step_count_mean, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        // MPI_Reduce(&one_step_count, &one_step_count_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
         MPI_Reduce(&total_timer,    &total_timer_max,    1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
 #ifdef SUPER_VERBOSE_STATS  
@@ -2739,17 +2739,17 @@ void MF_context::formal_solve_global(Field_ptr_t I_field, const Field_ptr_t S_fi
         if (mpi_rank_ == 0)
         {
             const double one_step_timer_avg = one_step_timer_sum / mpi_size_;
-            const double one_step_count_avg = one_step_count_mean / mpi_size_;
+            // const double one_step_count_avg = one_step_count_mean / mpi_size_;
             
 
             printf("Comm. time (S):\t\t%g seconds\n", comm_timer_max1);
             printf("Comm. time (I):\t\t%g seconds\n", comm_timer_max2);
-            printf("ODE step time:\t\t%g seconds (min = %g, avg = %g, max = %g, max/avg = %g)\n",
+            printf("ODE step time:\t\t%g seconds (min = %g, avg = %g, max = %g)\n",
                    one_step_timer_max, one_step_timer_min, one_step_timer_avg,
-                   one_step_timer_max, one_step_timer_max / one_step_timer_avg);
-            printf("ODE step count:\t\t%g (min = %g, avg = %g, max = %g, max/avg = %g)\n",
-                   one_step_count_max, one_step_count_min, one_step_count_avg,
-                   one_step_count_max, one_step_count_max / one_step_count_avg);
+                   one_step_timer_max);
+            // printf("ODE step count:\t\t%g (min = %g, avg = %g, max = %g, max/avg = %g)\n",
+            //        one_step_count_max, one_step_count_min, one_step_count_avg,
+            //        one_step_count_max, one_step_count_max / one_step_count_avg);
         
             printf("Total time:\t\t%g seconds\n",     total_timer_max);
 
@@ -4545,10 +4545,11 @@ void MF_context::update_emission_Omega(const Vec &I_vec, const double theta, con
 
         // if ( mpi_rank_ == 0) printf("Start: ecc_sh_ptr_->update_incoming_field, %s:%d \n", __FILE__, __LINE__);
         ecc_sh_ptr_->update_incoming_field(i, j, k, offset_fun_, input.data());
-
+        
         // get IQUV for (theta, chi direction)
         // if ( mpi_rank_ == 0) printf("Start: epsilon_computation_Omega, %s:%d \n", __FILE__, __LINE__);
         auto IQUV_matrix_sh_ptr = epsilon_computation_Omega(i, j, k, theta, chi);
+        
 
 #ifdef DEBUG_MU_ARBITRARY
         if (mpi_rank_ == 0 and i == i_start and j == j_start and k == k_start)

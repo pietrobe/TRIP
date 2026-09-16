@@ -28,7 +28,7 @@ enum class emissivity_model_t
 	PRD_FAST,			 //
 	PRD_AA,				 //
 	PRD_AA_MAPV,		 //
-	PRD_AA_GB, 			 //
+	PRD_AA_GB,			 //
 	PRD_TWOTERM,		 //
 	PRD_AA_TWOTERM,		 //
 	PRD_AA_TWOTERM_MAPV, //
@@ -49,9 +49,9 @@ enum class preconditioner_emissivity_model_t
 	PRD_AA_MAPV,	//
 	PRD_AA_GB,		//
 	PRD_AA_MAPV_GB, //
-	CRD_TWOTERM,    //
+	CRD_TWOTERM,	//
 	// PRD_AA_TWOTERM, //
-	ZERO			//
+	ZERO //
 }; //
 
 namespace TRIP_Comms
@@ -530,16 +530,16 @@ struct PrecConfig
 	double	pc_rtol		   = 1e-5;
 	int		pc_max_it	   = 1000;
 	bool	pc_use_J_KQ	   = false;
-	bool	verbose	       = false;
+	bool	verbose		   = false;
 
-	bool pc_formal_solver_approx = false; 
+	bool pc_formal_solver_approx = false;
 };
 
 struct AtomConfig
 {
-	int atomic_number = 20;
-	double mass = 40.078;
-	double Aul	= 2.18e+08;
+	int	   atomic_number = 20;
+	double mass			 = 40.078;
+	double Aul			 = 2.18e+08;
 
 	int S2 = 0;
 
@@ -563,11 +563,16 @@ struct AppConfig
 	std::filesystem::path atom_file;
 	std::filesystem::path output_directory;
 
+	// optinonal txt files for FAL-C
+	std::filesystem::path magnetic_field_file;
+	std::filesystem::path bulk_velocities_file;
+
 	// Output settings
 	bool output						 = false;
 	bool output_overwrite_prevention = false;
 	bool write_whole_3D_field_hdf5	 = false;
 	bool write_text_output			 = false;
+	bool output_new_convention		 = true;
 
 	// testing
 	std::filesystem::path reference_sol_directory;
@@ -594,6 +599,10 @@ struct AppConfig
 	// Set constant bulk velocity
 	bool				  set_uniform_Vb = false;
 	std::array<double, 3> Vb_field		 = {0.0, 0.0, 0.0};
+
+	// scaling
+	double B_scaling  = 1.0;
+	double Vb_scaling = 1.0;
 
 	// numerical inputs
 	bool		use_1_5D_approx = false;
@@ -643,10 +652,8 @@ writeConfigResume(const AppConfig &cfg, std::ostream &os);
 int
 acc_devices_print_info(const int mpi_rank, const int mpi_size, std::ostream &os);
 
-
 int
 print_geometry(const RT_problem &rt_problem, std::ostream &os);
-
 
 int
 write_emergent_field_hdf5(RT_problem &rt_problem_ptr, const std::string &output_file);
