@@ -77,23 +77,31 @@ class RadiationFieldSlice:
 @dataclasses.dataclass
 class RadiationFieldMap2D:
     """
-    Four Stokes-like 2D maps on the (i, j) plane for fixed k, direction, and frequency.
+    Four Stokes-like 2D maps on a selected spatial plane for fixed direction and frequency.
 
-    Each array has shape (Nx, Ny).
+    ``axis`` selects the plane: ``"xy"`` (fixed z), ``"xz"`` (fixed y), or ``"yz"`` (fixed x).
+
+    Each array has shape (N_dim1, N_dim2).
     """
     k: int
     freq_idx: int
     inc_idx: int
     az_idx: int
-    I: np.ndarray
-    QI_pc: np.ndarray
-    UI_pc: np.ndarray
-    VI_pc: np.ndarray
+    axis: str = "xy"
+    I: np.ndarray = None
+    QI_pc: np.ndarray = None
+    UI_pc: np.ndarray = None
+    VI_pc: np.ndarray = None
+    height: float | None = None
+    mu: float | None = None
+    chi: float | None = None
+    y_vals: np.ndarray | None = None
+    delta: float | None = None
 
     def __repr__(self) -> str:  # pragma: no cover
         return (
             "RadiationFieldMap2D("
-            f"k={self.k}, freq_idx={self.freq_idx}, "
+            f"axis={self.axis}, k={self.k}, freq_idx={self.freq_idx}, "
             f"dir=({self.inc_idx},{self.az_idx}), "
             f"shape={self.I.shape})"
         )
@@ -185,7 +193,11 @@ def read_radiation_field(
             )
 
         # HDF5 hyperslab: only load the slice we need
-        I_arr = rf["I"][i, j, k, :, :, :]
+        try:
+            I_arr = rf["I"][i, j, k, :, :, :]
+        except OSError:
+            N_inc, N_az, N_freq = shape[3:]
+            I_arr = np.full((N_inc, N_az, N_freq), np.nan, dtype=np.float32)
         QI_arr = rf["QI_pc"][i, j, k, :, :, :]
         UI_arr = rf["UI_pc"][i, j, k, :, :, :]
         VI_arr = rf["VI_pc"][i, j, k, :, :, :]
@@ -198,24 +210,27 @@ def read_radiation_field(
 
 def map_filed(
     filepath: str | Path,
-    k: int,
+    fixed_idx: int,
     freq_idx: int,
     inc_idx: int,
     az_idx: int,
+    axis: str = "xy",
 ) -> RadiationFieldMap2D:
     """
-    Build 2D maps over spatial indices (i, j) at fixed z-index, frequency, and direction.
+    Build 2D maps over a spatial plane at fixed third index, frequency, and direction.
 
     Parameters
     ----------
     filepath:
         Path to the HDF5 file.
-    k:
-        z-index of the spatial grid.
+    fixed_idx:
+        Index of the fixed spatial dimension (z for xy, y for xz, x for yz).
     freq_idx:
         Frequency index.
     inc_idx, az_idx:
         Direction indices in inclination and azimuthal grids.
+    axis:
+        Plane to extract: ``"xy"`` (default), ``"xz"``, or ``"yz"``.
 
     Returns
     -------
@@ -228,8 +243,6 @@ def map_filed(
         shape = rf["I"].shape  # (Nx, Ny, Nz, N_inc, N_az, N_freq)
         Nx, Ny, Nz, N_inc, N_az, N_freq = shape
 
-        if not (0 <= k < Nz):
-            raise IndexError(f"k={k} out of bounds [0, {Nz - 1}].")
         if not (0 <= freq_idx < N_freq):
             raise IndexError(
                 f"freq_idx={freq_idx} out of bounds [0, {N_freq - 1}].")
@@ -239,22 +252,62 @@ def map_filed(
         if not (0 <= az_idx < N_az):
             raise IndexError(f"az_idx={az_idx} out of bounds [0, {N_az - 1}].")
 
-        I_map = rf["I"][:, :, k, inc_idx, az_idx, freq_idx]
-        QI_map = rf["QI_pc"][:, :, k, inc_idx, az_idx, freq_idx]
-        UI_map = rf["UI_pc"][:, :, k, inc_idx, az_idx, freq_idx]
-        VI_map = rf["VI_pc"][:, :, k, inc_idx, az_idx, freq_idx]
+        y_vals = None
 
-    assert I_map.shape == (Nx, Ny)
+        if axis == "xy":
+            if not (0 <= fixed_idx < Nz):
+                raise IndexError(
+                    f"k={fixed_idx} out of bounds [0, {Nz - 1}] for axis=xy.")
+            I_map = rf["I"][:, :, fixed_idx, inc_idx, az_idx, freq_idx]
+            QI_map = rf["QI_pc"][:, :, fixed_idx, inc_idx, az_idx, freq_idx]
+            UI_map = rf["UI_pc"][:, :, fixed_idx, inc_idx, az_idx, freq_idx]
+            VI_map = rf["VI_pc"][:, :, fixed_idx, inc_idx, az_idx, freq_idx]
+            expected = (Nx, Ny)
+        elif axis == "xz":
+            if not (0 <= fixed_idx < Ny):
+                raise IndexError(
+                    f"j={fixed_idx} out of bounds [0, {Ny - 1}] for axis=xz.")
+            heights = f["geometry_3D/heights"][:]
+            y_vals = heights[::-1].copy()
+            I_map = rf["I"][:, fixed_idx, :, inc_idx, az_idx, freq_idx][:, ::-1]
+            QI_map = rf["QI_pc"][:, fixed_idx, :, inc_idx, az_idx, freq_idx][:, ::-1]
+            UI_map = rf["UI_pc"][:, fixed_idx, :, inc_idx, az_idx, freq_idx][:, ::-1]
+            VI_map = rf["VI_pc"][:, fixed_idx, :, inc_idx, az_idx, freq_idx][:, ::-1]
+            expected = (Nx, Nz)
+        elif axis == "yz":
+            if not (0 <= fixed_idx < Nx):
+                raise IndexError(
+                    f"i={fixed_idx} out of bounds [0, {Nx - 1}] for axis=yz.")
+            heights = f["geometry_3D/heights"][:]
+            y_vals = heights[::-1].copy()
+            I_map = rf["I"][fixed_idx, :, :, inc_idx, az_idx, freq_idx][:, ::-1]
+            QI_map = rf["QI_pc"][fixed_idx, :, :, inc_idx, az_idx, freq_idx][:, ::-1]
+            UI_map = rf["UI_pc"][fixed_idx, :, :, inc_idx, az_idx, freq_idx][:, ::-1]
+            VI_map = rf["VI_pc"][fixed_idx, :, :, inc_idx, az_idx, freq_idx][:, ::-1]
+            expected = (Ny, Nz)
+        else:
+            raise ValueError(f"Unknown axis '{axis}'; expected 'xy', 'xz', or 'yz'.")
+
+        try:
+            delta = float(f["geometry_3D/delta"][0])
+        except (KeyError, IndexError):
+            delta = None
+
+    assert I_map.shape == expected, (
+        f"Expected shape {expected}, got {I_map.shape}")
 
     return RadiationFieldMap2D(
-        k=k,
+        k=fixed_idx,
         freq_idx=freq_idx,
         inc_idx=inc_idx,
         az_idx=az_idx,
+        axis=axis,
         I=I_map,
         QI_pc=QI_map,
         UI_pc=UI_map,
         VI_pc=VI_map,
+        y_vals=y_vals,
+        delta=delta,
     )
 
 
@@ -489,12 +542,28 @@ def plot_radiation_field_direction(
     return fig
 
 
+_AXIS_LABELS = {
+    "xy": ("x", "y"),
+    "xz": ("x", "height"),
+    "yz": ("y", "height"),
+}
+
+_FIXED_LABELS = {
+    "xy": "k",
+    "xz": "j",
+    "yz": "i",
+}
+
+
 def plot_radiation_field_maps(
     rf_map: RadiationFieldMap2D,
     figsize: Tuple[float, float] = (12, 10),
     as_percent: bool = False,
+    log_I: bool = False,
 ) -> plt.Figure:
     """Plot I, Q/I, U/I, V/I spatial maps in a 2 × 2 layout."""
+    from matplotlib.colors import LogNorm
+
     percent_label = r"$Q/I$ [%]"
     components = [
         (r"Stokes $I$", rf_map.I),
@@ -505,21 +574,93 @@ def plot_radiation_field_maps(
 
     fig, axes = plt.subplots(2, 2, figsize=figsize, constrained_layout=True)
 
-    for ax, (title, arr) in zip(axes.ravel(), components):
-        im = ax.imshow(arr.T, origin="lower", aspect="auto", cmap="viridis")
+    xlabel, ylabel = _AXIS_LABELS.get(rf_map.axis, ("x", "y"))
+
+    dx = rf_map.delta if rf_map.delta is not None else 1.0
+
+    for panel_idx, (ax, (title, arr)) in enumerate(zip(axes.ravel(), components)):
+        norm = LogNorm() if (log_I and panel_idx == 0) else None
+        ny, nx = arr.T.shape
+        if rf_map.y_vals is not None:
+            extent = (0, (nx - 1) * dx, rf_map.y_vals[0], rf_map.y_vals[-1])
+        else:
+            extent = (0, (nx - 1) * dx, 0, (ny - 1) * dx)
+        im = ax.imshow(arr.T, origin="lower", aspect="auto",
+                       cmap="viridis", extent=extent, norm=norm)
         ax.set_title(title, fontsize=11)
-        ax.set_xlabel("i", fontsize=9)
-        ax.set_ylabel("j", fontsize=9)
+        ax.set_xlabel(xlabel, fontsize=9)
+        ax.set_ylabel(ylabel, fontsize=9)
         ax.tick_params(labelsize=8)
         fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
 
-    fig.suptitle(
-        "Spatial maps at "
-        f"k={rf_map.k}, freq_idx={rf_map.freq_idx}, "
-        f"dir=(inc={rf_map.inc_idx}, az={rf_map.az_idx})",
-        fontsize=12,
-    )
+    fixed_name = _FIXED_LABELS.get(rf_map.axis, "k")
+
+    if rf_map.axis == "xy" and rf_map.height is not None:
+        fixed_str = f"z={rf_map.height:.1f}"
+    else:
+        fixed_str = f"{fixed_name}={rf_map.k}"
+
+    if rf_map.mu is not None and rf_map.chi is not None:
+        title = (
+            f"Spatial maps at {fixed_str}, "
+            f"freq_idx={rf_map.freq_idx}, "
+            f"dir=(\u03bc={rf_map.mu:.4f}, \u03c7={rf_map.chi:.4f} rad)"
+        )
+    else:
+        title = (
+            f"Spatial maps at {fixed_str}, "
+            f"freq_idx={rf_map.freq_idx}, "
+            f"dir=(inc={rf_map.inc_idx}, az={rf_map.az_idx})"
+        )
+    fig.suptitle(title, fontsize=12,)
     return fig
+
+
+# ---------------------------------------------------------------------------
+# NaN detection
+# ---------------------------------------------------------------------------
+
+_COORD_LABELS = {
+    "xy": ("i", "j"),
+    "xz": ("i", "k"),
+    "yz": ("j", "k"),
+}
+
+
+def _report_nan(rf_map: RadiationFieldMap2D) -> None:
+    """Print warnings for NaN/Inf/zero pixels in each Stokes component."""
+    labels = _COORD_LABELS.get(rf_map.axis, ("d0", "d1"))
+    components = [
+        ("I",     rf_map.I),
+        ("Q/I",   rf_map.QI_pc),
+        ("U/I",   rf_map.UI_pc),
+        ("V/I",   rf_map.VI_pc),
+    ]
+    for name, arr in components:
+        n_nan = int(np.isnan(arr).sum())
+        n_inf = int(np.isinf(arr).sum())
+        report_zero = name == "I"
+        n_zero = int((arr == 0).sum()) if report_zero else 0
+        if n_nan == 0 and n_inf == 0 and n_zero == 0:
+            continue
+        parts = []
+        if n_nan > 0:
+            parts.append(f"{n_nan} NaN")
+        if n_inf > 0:
+            parts.append(f"{n_inf} Inf")
+        if n_zero > 0:
+            parts.append(f"{n_zero} zero")
+        bad = ~np.isfinite(arr) | ((arr == 0) if report_zero else False)
+        n_bad = int(bad.sum())
+        idxs = np.argwhere(bad)
+        n_show = min(n_bad, 10)
+        examples = ", ".join(
+            f"({lbls[0]}={idx[0]}, {lbls[1]}={idx[1]})"
+            for idx, lbls in zip(idxs[:n_show], [labels] * n_show)
+        )
+        if n_bad > n_show:
+            examples += f", ... ({n_bad - n_show} more)"
+        print(f"  ⚠ Abnormal in {name}: {', '.join(parts)} at {examples}")
 
 
 # ---------------------------------------------------------------------------
@@ -588,13 +729,22 @@ def _build_parser() -> "argparse.ArgumentParser":
     )
     parser.add_argument(
         "--map",
-        metavar="K",
+        metavar="IDX",
         type=int,
         default=None,
         help=(
-            "If set, produce 2D maps on the (i, j) plane at z-index k. "
+            "If set, produce 2D maps on the spatial plane selected by --axis. "
+            "IDX is the fixed index along the third axis "
+            "(z-index for xy, y-index for xz, x-index for yz). "
             "Direction is taken from --dir/--adir and frequency index from --freq-idx."
         ),
+    )
+
+    parser.add_argument(
+        "--axis",
+        choices=["xy", "xz", "yz"],
+        default="xy",
+        help="Spatial plane for --map mode (default: xy).",
     )
 
     parser.add_argument(
@@ -620,7 +770,49 @@ def _build_parser() -> "argparse.ArgumentParser":
         default=False,
         help="Show Q/I, U/I, V/I labels with percent symbol.",
     )
+    parser.add_argument(
+        "--log",
+        action="store_true",
+        default=False,
+        help="Plot Stokes I in logarithmic scale.",
+    )
     return parser
+
+
+def _print_h5_structure(filepath: str | Path) -> None:
+    """Walk the HDF5 tree and print all groups/datasets in a compact tree format."""
+    with h5py.File(filepath, "r") as f:
+        def _show(name: str, indent: str = "") -> None:
+            item = f[name]
+            if isinstance(item, h5py.Group):
+                label = name.rstrip("/").split("/")[-1]
+                if label:
+                    print(f"{indent}{label}/")
+                for child in item:
+                    _show(f"{name}/{child}" if name else child, indent + ("  " if label else ""))
+            elif isinstance(item, h5py.Dataset):
+                label = name.split("/")[-1]
+                total = np.prod(item.shape) if item.shape else 1
+                val_str = ""
+                if total <= 20:
+                    data = item[()]
+                    if item.dtype.kind == 'f':
+                        vals = np.atleast_1d(data)
+                        if vals.size <= 6:
+                            val_str = "  [" + ", ".join(f"{v:10.4e}" for v in vals) + "]"
+                        else:
+                            val_str = f"  [{vals[0]:10.4e}  ...  {vals[-1]:10.4e}]  N={vals.size}"
+                    elif item.dtype.kind in ('i', 'u'):
+                        vals = np.atleast_1d(data)
+                        if vals.size <= 12:
+                            val_str = "  " + str(vals.tolist())
+                        else:
+                            val_str = f"  [{vals[0]}  ...  {vals[-1]}]  N={vals.size}"
+                print(f"{indent}{label:25s}  {str(item.shape):25s}  {str(item.dtype):10s}{val_str}")
+
+        print(f"\n{'─' * 75}")
+        _show("/")
+        print(f"{'─' * 75}\n")
 
 
 def main() -> None:
@@ -632,6 +824,8 @@ def main() -> None:
     path = Path(args.file)
     if not path.exists():
         parser.error(f"File not found: {path.resolve()}")
+
+    _print_h5_structure(path)
 
     i, j, k = args.coords
 
@@ -693,14 +887,22 @@ def main() -> None:
     )
 
     if args.map is not None:
-        k_map = int(args.map)
+        axis = args.axis
+        fixed_idx = int(args.map)
         freq_idx = int(args.freq_idx)
 
         if not (0 <= freq_idx < len(freqs)):
             parser.error(
                 f"--freq-idx {freq_idx} out of range [0, {len(freqs) - 1}]")
 
-        rf_map = map_filed(path, k_map, freq_idx, ii, ia)
+        rf_map = map_filed(path, fixed_idx, freq_idx, ii, ia, axis=axis)
+
+        with h5py.File(path, "r") as f:
+            heights = f["geometry_3D/heights"][:]
+        if axis == "xy":
+            rf_map.height = float(heights[fixed_idx])
+        rf_map.mu = float(np.cos(theta_plot))
+        rf_map.chi = float(chi_plot)
 
         if args.percent:
             rf_map = RadiationFieldMap2D(
@@ -708,16 +910,24 @@ def main() -> None:
                 freq_idx=rf_map.freq_idx,
                 inc_idx=rf_map.inc_idx,
                 az_idx=rf_map.az_idx,
+                axis=rf_map.axis,
                 I=rf_map.I,
                 QI_pc=rf_map.QI_pc * 100.0,
                 UI_pc=rf_map.UI_pc * 100.0,
                 VI_pc=rf_map.VI_pc * 100.0,
+                height=rf_map.height,
+                mu=rf_map.mu,
+                chi=rf_map.chi,
+                y_vals=rf_map.y_vals,
+                delta=rf_map.delta,
             )
+
+        _report_nan(rf_map)
 
         print(f"  Radiation map : {rf_map}")
         print(f"  freq[{freq_idx}] = {float(freqs[freq_idx]):.6e}")
 
-        fig = plot_radiation_field_maps(rf_map, as_percent=args.percent)
+        fig = plot_radiation_field_maps(rf_map, as_percent=args.percent, log_I=args.log)
     else:
         rf = read_radiation_field(path, i, j, k)
 
