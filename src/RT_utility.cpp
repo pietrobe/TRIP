@@ -298,32 +298,6 @@ loadConfig(const std::string &filename)
 	return cfg;
 }
 
-inline std::string
-preconditioner_emissivity_model_to_string(const preconditioner_emissivity_model_t &model)
-{
-	switch (model)
-	{
-		case preconditioner_emissivity_model_t::NONE:
-			return "NONE";
-		case preconditioner_emissivity_model_t::CRD_limit:
-			return "CRD_limit";
-		case preconditioner_emissivity_model_t::PRD_AA:
-			return "PRD_AA";
-		case preconditioner_emissivity_model_t::PRD_AA_MAPV:
-			return "PRD_AA_MAPV";
-		case preconditioner_emissivity_model_t::PRD_AA_GB:
-			return "PRD_AA_GB";
-		case preconditioner_emissivity_model_t::PRD_AA_MAPV_GB:
-			return "PRD_AA_MAPV_GB";
-		case preconditioner_emissivity_model_t::CRD_TWOTERM:
-			return "CRD_TWOTERM";
-		case preconditioner_emissivity_model_t::ZERO:
-			return "ZERO";
-		default:
-			return "UNKNOWN";
-	}
-}
-
 void
 writeConfigResume(const AppConfig &cfg, std::ostream &os)
 {
