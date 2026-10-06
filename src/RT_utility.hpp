@@ -19,21 +19,106 @@
 // emissivty models
 enum class emissivity_model_t
 {
-	NONE,				 //
-	CRD_limit,			 //
-	CRD_limit_VHP,		 //
-	PRD,				 //
-	PRD_NORMAL,			 //
-	PRD_MEDIUM,			 //
-	PRD_FAST,			 //
-	PRD_AA,				 //
-	PRD_AA_MAPV,		 //
-	PRD_AA_GB,			 //
-	PRD_TWOTERM,		 //
-	PRD_AA_TWOTERM,		 //
-	PRD_AA_TWOTERM_MAPV, //
-	ZERO				 //
+	NONE,					//
+	CRD_limit,				//
+	CRD_limit_NO_HANLE,		//
+	CRD_limit_VHP,			//
+	CRD_limit_VHP_NO_HANLE, //
+	PRD,					//
+	PRD_NO_HANLE,			//
+	PRD_NORMAL,				//
+	PRD_NORMAL_NO_HANLE,	//
+	PRD_MEDIUM,				//
+	PRD_MEDIUM_NO_HANLE,	//
+	PRD_FAST,				//
+	PRD_FAST_NO_HANLE,		//
+	PRD_AA,					//
+	PRD_AA_NO_HANLE,		//
+	PRD_AA_MAPV,			//
+	PRD_AA_MAPV_NO_HANLE,	//
+	PRD_AA_GB,				//
+	PRD_TWOTERM,			//
+	PRD_AA_TWOTERM,			//
+	PRD_AA_TWOTERM_MAPV,	//
+	ZERO					//
 }; //
+
+inline std::string
+emissivity_model_to_string_long(const emissivity_model_t &model)
+{
+	switch (model)
+	{
+		case emissivity_model_t::NONE:
+			return "NONE";
+			break;
+		case emissivity_model_t::CRD_limit:
+			return "CRD_limit";
+			break;
+		case emissivity_model_t::CRD_limit_NO_HANLE:
+			return "CRD_limit_NO_HANLE";
+			break;
+		case emissivity_model_t::CRD_limit_VHP:
+			return "CRD_limit_VHP";
+			break;
+		case emissivity_model_t::CRD_limit_VHP_NO_HANLE:
+			return "CRD_limit_VHP_NO_HANLE";
+			break;
+		case emissivity_model_t::PRD:
+			return "PRD";
+			break;
+		case emissivity_model_t::PRD_NO_HANLE:
+			return "PRD_NO_HANLE";
+			break;
+		case emissivity_model_t::PRD_NORMAL:
+			return "PRD_NORMAL";
+			break;
+		case emissivity_model_t::PRD_NORMAL_NO_HANLE:
+			return "PRD_NORMAL_NO_HANLE";
+			break;
+		case emissivity_model_t::PRD_MEDIUM:
+			return "PRD_MEDIUM";
+			break;
+		case emissivity_model_t::PRD_MEDIUM_NO_HANLE:
+			return "PRD_MEDIUM_NO_HANLE";
+			break;
+		case emissivity_model_t::PRD_FAST:
+			return "PRD_FAST";
+			break;
+		case emissivity_model_t::PRD_FAST_NO_HANLE:
+			return "PRD_FAST_NO_HANLE";
+			break;
+		case emissivity_model_t::PRD_AA:
+			return "PRD_AA";
+			break;
+		case emissivity_model_t::PRD_AA_NO_HANLE:
+			return "PRD_AA_NO_HANLE";
+			break;
+		case emissivity_model_t::PRD_AA_MAPV:
+			return "PRD_AA_MAPV";
+			break;
+		case emissivity_model_t::PRD_AA_MAPV_NO_HANLE:
+			return "PRD_AA_MAPV_NO_HANLE";
+			break;
+		case emissivity_model_t::PRD_AA_GB:
+			return "PRD_AA_GB";
+			break;
+		case emissivity_model_t::PRD_TWOTERM:
+			return "PRD_TWOTERM";
+			break;
+		case emissivity_model_t::PRD_AA_TWOTERM:
+			return "PRD_AA_TWOTERM";
+			break;
+		case emissivity_model_t::PRD_AA_TWOTERM_MAPV:
+			return "PRD_AA_TWOTERM_MAPV";
+			break;
+		case emissivity_model_t::ZERO:
+			return "CONTINUUM";
+			break;
+		default:
+			return "UNKNOWN";
+			break;
+	}
+}
 
 inline bool
 is_CRD_limit(const emissivity_model_t model)
@@ -43,16 +128,51 @@ is_CRD_limit(const emissivity_model_t model)
 
 enum class preconditioner_emissivity_model_t
 {
-	NONE,			//
-	CRD_limit,		//
-	PRD_AA,			//
-	PRD_AA_MAPV,	//
-	PRD_AA_GB,		//
-	PRD_AA_MAPV_GB, //
-	CRD_TWOTERM,	//
+	NONE,				  //
+	CRD_limit,			  //
+	CRD_limit_NO_HANLE,	  //
+	PRD_AA,				  //
+	PRD_AA_NO_HANLE,	  //
+	PRD_AA_MAPV,		  //
+	PRD_AA_MAPV_NO_HANLE, //
+	PRD_AA_GB,			  //
+	PRD_AA_MAPV_GB,		  //
+	CRD_TWOTERM,		  //
 	// PRD_AA_TWOTERM, //
 	ZERO //
 }; //
+
+inline std::string
+preconditioner_emissivity_model_to_string(const preconditioner_emissivity_model_t &model)
+{
+	switch (model)
+	{
+		case preconditioner_emissivity_model_t::NONE:
+			return "NONE";
+		case preconditioner_emissivity_model_t::CRD_limit:
+			return "CRD_limit";
+		case preconditioner_emissivity_model_t::CRD_limit_NO_HANLE:
+			return "CRD_limit_NO_HANLE";
+		case preconditioner_emissivity_model_t::PRD_AA:
+			return "PRD_AA";
+		case preconditioner_emissivity_model_t::PRD_AA_NO_HANLE:
+			return "PRD_AA_NO_HANLE";
+		case preconditioner_emissivity_model_t::PRD_AA_MAPV:
+			return "PRD_AA_MAPV";
+		case preconditioner_emissivity_model_t::PRD_AA_MAPV_NO_HANLE:
+			return "PRD_AA_MAPV_NO_HANLE";
+		case preconditioner_emissivity_model_t::PRD_AA_GB:
+			return "PRD_AA_GB";
+		case preconditioner_emissivity_model_t::PRD_AA_MAPV_GB:
+			return "PRD_AA_MAPV_GB";
+		case preconditioner_emissivity_model_t::CRD_TWOTERM:
+			return "CRD_TWOTERM";
+		case preconditioner_emissivity_model_t::ZERO:
+			return "ZERO";
+		default:
+			return "UNKNOWN";
+	}
+}
 
 namespace TRIP_Comms
 {
@@ -285,53 +405,9 @@ namespace YAML
 		static Node
 		encode(const emissivity_model_t &rhs)
 		{
-			Node node;
-			switch (rhs)
-			{
-				case emissivity_model_t::NONE:
-					node = "NONE";
-					break;
-				case emissivity_model_t::CRD_limit:
-					node = "CRD_limit";
-					break;
-				case emissivity_model_t::CRD_limit_VHP:
-					node = "CRD_limit_VHP";
-					break;
-				case emissivity_model_t::PRD:
-					node = "PRD";
-					break;
-				case emissivity_model_t::PRD_NORMAL:
-					node = "PRD_NORMAL";
-					break;
-				case emissivity_model_t::PRD_MEDIUM:
-					node = "PRD_MEDIUM";
-					break;
-				case emissivity_model_t::PRD_FAST:
-					node = "PRD_FAST";
-					break;
-				case emissivity_model_t::PRD_AA:
-					node = "PRD_AA";
-					break;
-				case emissivity_model_t::PRD_AA_MAPV:
-					node = "PRD_AA_MAPV";
-					break;
-				case emissivity_model_t::PRD_AA_GB:
-					node = "PRD_AA_GB";
-					break;
-				case emissivity_model_t::PRD_TWOTERM:
-					node = "PRD_TWOTERM";
-					break;
-				case emissivity_model_t::PRD_AA_TWOTERM:
-					node = "PRD_AA_TWOTERM";
-					break;
-				case emissivity_model_t::PRD_AA_TWOTERM_MAPV:
-					node = "PRD_AA_TWOTERM_MAPV";
-					break;
-				case emissivity_model_t::ZERO:
-					node = "ZERO";
-					break;
-			}
-			return node;
+			// emissivity_model_to_string_long maps ZERO to "CONTINUUM", the YAML key is "ZERO"
+			if (rhs == emissivity_model_t::ZERO) return Node("ZERO");
+			return Node(emissivity_model_to_string_long(rhs));
 		}
 
 		static bool
@@ -340,38 +416,24 @@ namespace YAML
 			if (!node.IsScalar()) return false;
 			const std::string s = node.as<std::string>();
 
-			if (s == "NONE")
-				rhs = emissivity_model_t::NONE;
-			else if (s == "CRD_limit")
-				rhs = emissivity_model_t::CRD_limit;
-			else if (s == "CRD_limit_VHP")
-				rhs = emissivity_model_t::CRD_limit_VHP;
-			else if (s == "PRD")
-				rhs = emissivity_model_t::PRD;
-			else if (s == "PRD_NORMAL")
-				rhs = emissivity_model_t::PRD_NORMAL;
-			else if (s == "PRD_MEDIUM")
-				rhs = emissivity_model_t::PRD_MEDIUM;
-			else if (s == "PRD_FAST")
-				rhs = emissivity_model_t::PRD_FAST;
-			else if (s == "PRD_AA")
-				rhs = emissivity_model_t::PRD_AA;
-			else if (s == "PRD_AA_MAPV")
-				rhs = emissivity_model_t::PRD_AA_MAPV;
-			else if (s == "PRD_AA_GB")
-				rhs = emissivity_model_t::PRD_AA_GB;
-			else if (s == "PRD_TWOTERM")
-				rhs = emissivity_model_t::PRD_TWOTERM;
-			else if (s == "PRD_AA_TWOTERM")
-				rhs = emissivity_model_t::PRD_AA_TWOTERM;
-			else if (s == "PRD_AA_TWOTERM_MAPV")
-				rhs = emissivity_model_t::PRD_AA_TWOTERM_MAPV;
-			else if (s == "ZERO")
+			if (s == "ZERO")
+			{
 				rhs = emissivity_model_t::ZERO;
-			else
-				return false;
+				return true;
+			}
 
-			return true;
+			// relies on NONE being the first and ZERO the last enumerator
+			for (int i = static_cast<int>(emissivity_model_t::NONE); i <= static_cast<int>(emissivity_model_t::ZERO); ++i)
+			{
+				const auto model = static_cast<emissivity_model_t>(i);
+				if (s == emissivity_model_to_string_long(model))
+				{
+					rhs = model;
+					return true;
+				}
+			}
+
+			return false;
 		}
 	};
 
@@ -381,35 +443,7 @@ namespace YAML
 		static Node
 		encode(const preconditioner_emissivity_model_t &rhs)
 		{
-			Node node;
-			switch (rhs)
-			{
-				case preconditioner_emissivity_model_t::NONE:
-					node = "NONE";
-					break;
-				case preconditioner_emissivity_model_t::CRD_limit:
-					node = "CRD_limit";
-					break;
-				case preconditioner_emissivity_model_t::PRD_AA:
-					node = "PRD_AA";
-					break;
-				case preconditioner_emissivity_model_t::PRD_AA_MAPV:
-					node = "PRD_AA_MAPV";
-					break;
-				case preconditioner_emissivity_model_t::PRD_AA_GB:
-					node = "PRD_AA_GB";
-					break;
-				case preconditioner_emissivity_model_t::PRD_AA_MAPV_GB:
-					node = "PRD_AA_MAPV_GB";
-					break;
-				case preconditioner_emissivity_model_t::CRD_TWOTERM:
-					node = "CRD_TWOTERM";
-					break;
-				case preconditioner_emissivity_model_t::ZERO:
-					node = "ZERO";
-					break;
-			}
-			return node;
+			return Node(preconditioner_emissivity_model_to_string(rhs));
 		}
 
 		static bool
@@ -418,30 +452,19 @@ namespace YAML
 			if (!node.IsScalar()) return false;
 			const std::string s = node.as<std::string>();
 
-			if (s == "NONE")
-				rhs = preconditioner_emissivity_model_t::NONE;
-			else if (s == "CRD_limit")
-				rhs = preconditioner_emissivity_model_t::CRD_limit;
-			else if (s == "PRD_AA")
-				rhs = preconditioner_emissivity_model_t::PRD_AA;
-			else if (s == "PRD_AA_MAPV")
-				rhs = preconditioner_emissivity_model_t::PRD_AA_MAPV;
-			else if (s == "PRD_AA_GB")
-				rhs = preconditioner_emissivity_model_t::PRD_AA_GB;
-			else if (s == "PRD_AA_MAPV_GB")
-				rhs = preconditioner_emissivity_model_t::PRD_AA_MAPV_GB;
-			else if (s == "PRD_AA")
-				rhs = preconditioner_emissivity_model_t::PRD_AA;
-			else if (s == "PRD_AA_MAPV")
-				rhs = preconditioner_emissivity_model_t::PRD_AA_MAPV;
-			else if (s == "CRD_TWOTERM")
-				rhs = preconditioner_emissivity_model_t::CRD_TWOTERM;
-			else if (s == "ZERO")
-				rhs = preconditioner_emissivity_model_t::ZERO;
-			else
-				return false;
+			// relies on NONE being the first and ZERO the last enumerator
+			for (int i = static_cast<int>(preconditioner_emissivity_model_t::NONE);
+				 i <= static_cast<int>(preconditioner_emissivity_model_t::ZERO); ++i)
+			{
+				const auto model = static_cast<preconditioner_emissivity_model_t>(i);
+				if (s == preconditioner_emissivity_model_to_string(model))
+				{
+					rhs = model;
+					return true;
+				}
+			}
 
-			return true;
+			return false;
 		}
 	};
 
