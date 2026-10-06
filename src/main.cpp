@@ -144,6 +144,7 @@ main(int argc, char *argv[])
 		if (cfg.set_uniform_B) suffix += ".uniform_B";
 		if (cfg.set_uniform_Vb) suffix += ".uniform_Vb";
 		if (cfg.use_1_5D_approx) suffix += ".1_5D";
+		if (is_NO_HANLE(cfg.emissivity_model)) suffix += ".no_Hanle";
 
 		const auto format_scaling = [](double v)
 		{

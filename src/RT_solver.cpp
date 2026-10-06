@@ -4137,10 +4137,24 @@ MF_context::set_up_emission_module()
 			components_approx.push_back(emission_coefficient_components::epsilon_R_III_GL);
 			if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_MAPV for preconditioner emissivity" << std::endl;
 			break;
+		case preconditioner_emissivity_model_t::PRD_AA_MAPV_NO_HANLE:
+			components_approx.push_back(emission_coefficient_components::epsilon_R_II_AA_FAST_MAPV_NO_HANLE);
+			components_approx.push_back(emission_coefficient_components::epsilon_R_III_GL_NO_HANLE);
+			if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_MAPV_NO_HANLE for preconditioner emissivity" << std::endl;
+			break;
 		case preconditioner_emissivity_model_t::PRD_AA:
 			components_approx.push_back(emission_coefficient_components::epsilon_R_II_AA_FAST);
 			components_approx.push_back(emission_coefficient_components::epsilon_R_III_GL);
 			if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA for preconditioner emissivity" << std::endl;
+			break;
+		case preconditioner_emissivity_model_t::PRD_AA_NO_HANLE:
+			components_approx.push_back(emission_coefficient_components::epsilon_R_II_AA_FAST_NO_HANLE);
+			components_approx.push_back(emission_coefficient_components::epsilon_R_III_GL_NO_HANLE);
+			if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_NO_HANLE for preconditioner emissivity" << std::endl;
+			break;
+		case preconditioner_emissivity_model_t::CRD_limit_NO_HANLE:
+			components_approx.push_back(emission_coefficient_components::epsilon_pCRD_GL_limit_NO_HANLE);
+			if (mpi_rank_ == 0) std::cout << "\nUsing CRD limit (NO_HANLE) for preconditioner emissivity" << std::endl;
 			break;
 		case preconditioner_emissivity_model_t::CRD_TWOTERM: // ADDED
 			components_approx.push_back(emission_coefficient_components::epsilon_R_III_TwoTerm_GL_FAST);

@@ -126,6 +126,25 @@ is_CRD_limit(const emissivity_model_t model)
 	return model == emissivity_model_t::CRD_limit || model == emissivity_model_t::CRD_limit_VHP;
 }
 
+inline bool
+is_NO_HANLE(const emissivity_model_t model)
+{
+	switch (model)
+	{
+		case emissivity_model_t::CRD_limit_NO_HANLE:
+		case emissivity_model_t::CRD_limit_VHP_NO_HANLE:
+		case emissivity_model_t::PRD_NO_HANLE:
+		case emissivity_model_t::PRD_NORMAL_NO_HANLE:
+		case emissivity_model_t::PRD_MEDIUM_NO_HANLE:
+		case emissivity_model_t::PRD_FAST_NO_HANLE:
+		case emissivity_model_t::PRD_AA_NO_HANLE:
+		case emissivity_model_t::PRD_AA_MAPV_NO_HANLE:
+			return true;
+		default:
+			return false;
+	}
+}
+
 enum class preconditioner_emissivity_model_t
 {
 	NONE,				  //
