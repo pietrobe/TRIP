@@ -156,12 +156,11 @@ enum class preconditioner_emissivity_model_t
 	PRD_AA_MAPV,		    //
 	PRD_AA_MAPV_NO_HANLE,   //
 	PRD_AA_GB,			    //
-	PRD_AA_MAPV_GB,		    //
+	PRD_AA_GB_MAPV,		    //
 	CRD_TWOTERM_limit,	    //
 	PRD_AA_GB_TWOTERM_MAPV, //
 	PRD_AA_GB_TWOTERM,      //
 	PRD_AA_TWOTERM_MAPV,    //
-	PRD_AA_TWOTERM,         //
 	PRD_AA_TWOTERM,         //
 	ZERO                    //
 }; //
@@ -187,8 +186,8 @@ preconditioner_emissivity_model_to_string(const preconditioner_emissivity_model_
 			return "PRD_AA_MAPV_NO_HANLE";
 		case preconditioner_emissivity_model_t::PRD_AA_GB:
 			return "PRD_AA_GB";
-		case preconditioner_emissivity_model_t::PRD_AA_MAPV_GB:
-			return "PRD_AA_MAPV_GB";
+		case preconditioner_emissivity_model_t::PRD_AA_GB_MAPV:
+			return "PRD_AA_GB_MAPV";
 		case preconditioner_emissivity_model_t::CRD_TWOTERM_limit:
 			return "CRD_TWOTERM_limit";
 		case preconditioner_emissivity_model_t::ZERO:
