@@ -4016,6 +4016,13 @@ MF_context::set_up_emission_module()
 
 			if (mpi_rank_ == 0) std::cout << "\nUsing CRD emission (VHP version), components:" << std::endl;
 
+		case emissivity_model_t::PRD_AA_GB:
+			components_approx.push_back(emission_coefficient_components::epsilon_R_II_AA_GB_MAPV);
+			components_approx.push_back(emission_coefficient_components::epsilon_pCRD_unpol_RIII_GL); 
+			components_approx.push_back(emission_coefficient_components::epsilon_csc_unpolarized);  
+			// components.push_back(emission_coefficient_components::epsilon_R_III_GL);
+			// components.push_back(emission_coefficient_components::epsilon_csc);  
+			if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_GB emission, components:" << std::endl;
 			break;
 
 		case emissivity_model_t::PRD_AA:
@@ -4068,7 +4075,7 @@ MF_context::set_up_emission_module()
 
 		case emissivity_model_t::PRD_TWOTERM:
 			components.push_back(emission_coefficient_components::epsilon_R_II_TwoTerm);
-			components.push_back(emission_coefficient_components::epsilon_R_III_GL);
+			components.push_back(emission_coefficient_components::epsilon_R_III_TwoTerm_GL);
 			components.push_back(emission_coefficient_components::epsilon_csc);
 
 			if (mpi_rank_ == 0) std::cout << "\nUsing PRD_TWOTERM emission, components:" << std::endl;
@@ -4094,6 +4101,15 @@ MF_context::set_up_emission_module()
 			components.push_back(emission_coefficient_components::epsilon_csc);
 
 			if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_TWOTERM_MAPV emission, components:" << std::endl;
+
+			break;
+
+		case emissivity_model_t::CRD_TWOTERM_limit:
+
+			components.push_back(emission_coefficient_components::epsilon_R_III_TwoTerm_GL);
+			components.push_back(emission_coefficient_components::epsilon_csc);
+
+			if (mpi_rank_ == 0) std::cout << "\nUsing CRD_TWOTERM_limit emission, components:" << std::endl;
 
 			break;
 
@@ -4127,10 +4143,22 @@ MF_context::set_up_emission_module()
 			if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_MAPV_GB for preconditioner emissivity" << std::endl;
 			break;
 		case preconditioner_emissivity_model_t::PRD_AA_GB:
-			components_approx.push_back(emission_coefficient_components::epsilon_R_II_TwoTerm_AA_GB_MAPV);
-			components_approx.push_back(emission_coefficient_components::epsilon_pCRD_unpol_RIII); // TODO TwoTerm
+			components_approx.push_back(emission_coefficient_components::epsilon_R_II_AA_GB_MAPV);
+			components_approx.push_back(emission_coefficient_components::epsilon_pCRD_unpol_RIII);
 			// components_approx.push_back(emission_coefficient_components::epsilon_csc_unpolarized);
 			if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_GB for preconditioner emissivity" << std::endl;
+			break;
+		case preconditioner_emissivity_model_t::PRD_AA_GB_TWOTERM:
+			components_approx.push_back(emission_coefficient_components::epsilon_R_II_TwoTerm_AA_GB);
+			components_approx.push_back(emission_coefficient_components::epsilon_pCRD_unpol_RIII); // TODO two term version
+			// components_approx.push_back(emission_coefficient_components::epsilon_csc_unpolarized);
+			if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_GB_TWOTERM for preconditioner emissivity" << std::endl;
+			break;
+		case preconditioner_emissivity_model_t::PRD_AA_GB_TWOTERM_MAPV:
+			components_approx.push_back(emission_coefficient_components::epsilon_R_II_TwoTerm_AA_GB_MAPV);
+			components_approx.push_back(emission_coefficient_components::epsilon_pCRD_unpol_RIII); // TODO two term version
+			// components_approx.push_back(emission_coefficient_components::epsilon_csc_unpolarized);
+			if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_GB_TWOTERM_MAPV for preconditioner emissivity" << std::endl;
 			break;
 		case preconditioner_emissivity_model_t::PRD_AA_MAPV:
 			components_approx.push_back(emission_coefficient_components::epsilon_R_II_AA_FAST_MAPV);
@@ -4156,9 +4184,9 @@ MF_context::set_up_emission_module()
 			components_approx.push_back(emission_coefficient_components::epsilon_pCRD_GL_limit_NO_HANLE);
 			if (mpi_rank_ == 0) std::cout << "\nUsing CRD limit (NO_HANLE) for preconditioner emissivity" << std::endl;
 			break;
-		case preconditioner_emissivity_model_t::CRD_TWOTERM: // ADDED
-			components_approx.push_back(emission_coefficient_components::epsilon_R_III_TwoTerm_GL_FAST);
-			if (mpi_rank_ == 0) std::cout << "\nUsing CRD_TWOTERM for preconditioner emissivity" << std::endl;
+		case preconditioner_emissivity_model_t::CRD_TWOTERM_limit: // ADDED
+			components_approx.push_back(emission_coefficient_components::epsilon_R_III_TwoTerm_GL_FAST_limit);
+			if (mpi_rank_ == 0) std::cout << "\nUsing CRD_TWOTERM_limit for preconditioner emissivity" << std::endl;
 			break;
 		case preconditioner_emissivity_model_t::CRD_limit:
 		default:

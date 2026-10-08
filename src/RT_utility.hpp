@@ -19,28 +19,29 @@
 // emissivty models
 enum class emissivity_model_t
 {
-	NONE,					//
-	CRD_limit,				//
-	CRD_limit_NO_HANLE,		//
-	CRD_limit_VHP,			//
+	NONE,				    //
+	CRD_limit,			    //
+	CRD_limit_NO_HANLE,	    //
+	CRD_limit_VHP,		    //
 	CRD_limit_VHP_NO_HANLE, //
-	PRD,					//
+	PRD,				    //
 	PRD_NO_HANLE,			//
-	PRD_NORMAL,				//
+	PRD_NORMAL,			    //
 	PRD_NORMAL_NO_HANLE,	//
-	PRD_MEDIUM,				//
+	PRD_MEDIUM,			    //
 	PRD_MEDIUM_NO_HANLE,	//
-	PRD_FAST,				//
+	PRD_FAST,			    //
 	PRD_FAST_NO_HANLE,		//
-	PRD_AA,					//
+	PRD_AA,				    //
 	PRD_AA_NO_HANLE,		//
-	PRD_AA_MAPV,			//
+	PRD_AA_MAPV,		    //
 	PRD_AA_MAPV_NO_HANLE,	//
-	PRD_AA_GB,				//
-	PRD_TWOTERM,			//
-	PRD_AA_TWOTERM,			//
-	PRD_AA_TWOTERM_MAPV,	//
-	ZERO					//
+	PRD_AA_GB,			    //
+	PRD_TWOTERM,		    //
+	PRD_AA_TWOTERM,		    //
+	PRD_AA_TWOTERM_MAPV,    //
+	CRD_TWOTERM_limit,      //
+	ZERO				    //
 }; //
 
 inline std::string
@@ -147,18 +148,20 @@ is_NO_HANLE(const emissivity_model_t model)
 
 enum class preconditioner_emissivity_model_t
 {
-	NONE,				  //
-	CRD_limit,			  //
-	CRD_limit_NO_HANLE,	  //
-	PRD_AA,				  //
-	PRD_AA_NO_HANLE,	  //
-	PRD_AA_MAPV,		  //
-	PRD_AA_MAPV_NO_HANLE, //
-	PRD_AA_GB,			  //
-	PRD_AA_MAPV_GB,		  //
-	CRD_TWOTERM,		  //
-	// PRD_AA_TWOTERM, //
-	ZERO //
+	NONE,				    //
+	CRD_limit,			    //
+	CRD_limit_NO_HANLE,	    //
+	PRD_AA,				    //
+	PRD_AA_NO_HANLE,	    //
+	PRD_AA_MAPV,		    //
+	PRD_AA_MAPV_NO_HANLE,   //
+	PRD_AA_GB,			    //
+	PRD_AA_MAPV_GB,		    //
+	CRD_TWOTERM_limit,	    //
+	PRD_AA_GB_TWOTERM_MAPV, //
+	PRD_AA_GB_TWOTERM,      //
+	PRD_AA_TWOTERM,         //
+	ZERO                    //
 }; //
 
 inline std::string
@@ -184,10 +187,14 @@ preconditioner_emissivity_model_to_string(const preconditioner_emissivity_model_
 			return "PRD_AA_GB";
 		case preconditioner_emissivity_model_t::PRD_AA_MAPV_GB:
 			return "PRD_AA_MAPV_GB";
-		case preconditioner_emissivity_model_t::CRD_TWOTERM:
-			return "CRD_TWOTERM";
+		case preconditioner_emissivity_model_t::CRD_TWOTERM_limit:
+			return "CRD_TWOTERM_limit";
 		case preconditioner_emissivity_model_t::ZERO:
 			return "ZERO";
+		case preconditioner_emissivity_model_t::PRD_AA_GB_TWOTERM:
+			return "PRD_AA_GB_TWOTERM";
+		case preconditioner_emissivity_model_t::PRD_AA_GB_TWOTERM_MAPV:
+			return "PRD_AA_GB_TWOTERM_MAPV";
 		default:
 			return "UNKNOWN";
 	}
