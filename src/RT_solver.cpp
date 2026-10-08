@@ -4144,19 +4144,31 @@ MF_context::set_up_emission_module()
 			break;
 		case preconditioner_emissivity_model_t::PRD_AA_GB:
 			components_approx.push_back(emission_coefficient_components::epsilon_R_II_AA_GB_MAPV);
-			components_approx.push_back(emission_coefficient_components::epsilon_pCRD_unpol_RIII);
+			components_approx.push_back(emission_coefficient_components::epsilon_pCRD_unpol_RIII);  // TODO TwoTerm
 			// components_approx.push_back(emission_coefficient_components::epsilon_csc_unpolarized);
 			if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_GB for preconditioner emissivity" << std::endl;
 			break;
 		case preconditioner_emissivity_model_t::PRD_AA_GB_TWOTERM:
 			components_approx.push_back(emission_coefficient_components::epsilon_R_II_TwoTerm_AA_GB);
-			components_approx.push_back(emission_coefficient_components::epsilon_pCRD_unpol_RIII); // TODO two term version
+			components_approx.push_back(emission_coefficient_components::epsilon_R_III_TwoTerm_GL_FAST); 
 			// components_approx.push_back(emission_coefficient_components::epsilon_csc_unpolarized);
 			if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_GB_TWOTERM for preconditioner emissivity" << std::endl;
 			break;
 		case preconditioner_emissivity_model_t::PRD_AA_GB_TWOTERM_MAPV:
 			components_approx.push_back(emission_coefficient_components::epsilon_R_II_TwoTerm_AA_GB_MAPV);
-			components_approx.push_back(emission_coefficient_components::epsilon_pCRD_unpol_RIII); // TODO two term version
+			components_approx.push_back(emission_coefficient_components::epsilon_R_III_TwoTerm_GL_FAST); 
+			// components_approx.push_back(emission_coefficient_components::epsilon_csc_unpolarized);
+			if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_GB_TWOTERM_MAPV for preconditioner emissivity" << std::endl;
+			break;
+		case preconditioner_emissivity_model_t::PRD_AA_TWOTERM:
+			components_approx.push_back(emission_coefficient_components::epsilon_R_II_TwoTerm_GB);
+			components_approx.push_back(emission_coefficient_components::epsilon_R_III_TwoTerm_GL_FAST);
+			// components_approx.push_back(emission_coefficient_components::epsilon_csc_unpolarized);
+			if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_GB_TWOTERM for preconditioner emissivity" << std::endl;
+			break;
+		case preconditioner_emissivity_model_t::PRD_AA_TWOTERM_MAPV:
+			components_approx.push_back(emission_coefficient_components::epsilon_R_II_TwoTerm_AA_MAPV);
+			components_approx.push_back(emission_coefficient_components::epsilon_R_III_TwoTerm_GL_FAST);
 			// components_approx.push_back(emission_coefficient_components::epsilon_csc_unpolarized);
 			if (mpi_rank_ == 0) std::cout << "\nUsing PRD_AA_GB_TWOTERM_MAPV for preconditioner emissivity" << std::endl;
 			break;

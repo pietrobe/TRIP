@@ -160,6 +160,8 @@ enum class preconditioner_emissivity_model_t
 	CRD_TWOTERM_limit,	    //
 	PRD_AA_GB_TWOTERM_MAPV, //
 	PRD_AA_GB_TWOTERM,      //
+	PRD_AA_TWOTERM_MAPV,    //
+	PRD_AA_TWOTERM,         //
 	PRD_AA_TWOTERM,         //
 	ZERO                    //
 }; //
@@ -195,6 +197,10 @@ preconditioner_emissivity_model_to_string(const preconditioner_emissivity_model_
 			return "PRD_AA_GB_TWOTERM";
 		case preconditioner_emissivity_model_t::PRD_AA_GB_TWOTERM_MAPV:
 			return "PRD_AA_GB_TWOTERM_MAPV";
+		case preconditioner_emissivity_model_t::PRD_AA_TWOTERM:
+			return "PRD_AA_TWOTERM";
+		case preconditioner_emissivity_model_t::PRD_AA_TWOTERM_MAPV:
+			return "PRD_AA_TWOTERM_MAPV";
 		default:
 			return "UNKNOWN";
 	}
