@@ -112,6 +112,9 @@ emissivity_model_to_string_long(const emissivity_model_t &model)
 		case emissivity_model_t::PRD_AA_TWOTERM_MAPV:
 			return "PRD_AA_TWOTERM_MAPV";
 			break;
+		case emissivity_model_t::CRD_TWOTERM_limit:
+			return "CRD_TWOTERM_limit";
+			break;
 		case emissivity_model_t::ZERO:
 			return "CONTINUUM";
 			break;
