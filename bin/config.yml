@@ -43,8 +43,8 @@ Vb_scaling: 0.3
 #  - mu: 1.0
 #    chi: 0.0
 
-emissivity_model: PRD_NO_HANLE
-preconditioner_emissivity_model: CRD_limit_NO_HANLE
+emissivity_model: PRD
+preconditioner_emissivity_model: CRD_limit
 
 # used only for FAL-C input
 N_theta: 8

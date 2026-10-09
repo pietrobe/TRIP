@@ -409,8 +409,11 @@ public:
 
 		if (RT_problem_->verbose_)  {
 			ierr = PetscOptionsSetValue(NULL, "-ksp_monitor", "");CHKERRV(ierr);
-			// ierr = PetscOptionsSetValue(NULL, "-ksp_monitor_true_residual", "");CHKERRV(ierr);    // WARNING: this costs
-			ierr = PetscOptionsSetValue(NULL, "-ksp_view", "");CHKERRV(ierr);			
+			// true residual monitoring is cheap only for KSPRICHARDSON (no extra MatMult needed)
+			if (strcmp(ksp_type_, KSPRICHARDSON) == 0) {
+				ierr = PetscOptionsSetValue(NULL, "-ksp_monitor_true_residual", "");CHKERRV(ierr);
+			}
+			ierr = PetscOptionsSetValue(NULL, "-ksp_view", "");CHKERRV(ierr);
 		}
 
 		ierr = PetscOptionsSetValue(NULL, "-ksp_converged_reason", "");CHKERRV(ierr);

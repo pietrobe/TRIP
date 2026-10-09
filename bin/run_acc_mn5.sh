@@ -55,7 +55,7 @@ echo ""
 echo ""
 echo "Starting TRIP ...... "
 echo ""
-
+_   
 source ${SCRIPT_DIR}/pfs_evn/gpfs_mn5.sh
 
 # Define arguments as a bash array

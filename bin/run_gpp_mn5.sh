@@ -2,15 +2,16 @@
 #SBATCH --job-name="TRIP_PRD_3D"
 #SBATCH --account=ehpc597
 #SBATCH --qos=gp_ehpc
-#SBATCH --time=05:47:28
-#### #SBATCH --nodes=476
-#SBATCH --ntasks=32768
-#### #SBATCH --ntasks=
-#SBATCH --ntasks-per-node=112
+#SBATCH --time=06:17:28
+### #SBATCH --nodes=5
+#SBATCH --ntasks=65536
+########### #SBATCH --ntasks=1024
+#### #SBATCH --ntasks-per-node=112
 #SBATCH --cpus-per-task=1
 #SBATCH --exclusive
 #SBATCH --propagate=STACK,MEMLOCK
 #### SBATCH --exclude=gs21r1b06
+#SBATCH  --exclude=gs05r1b60,gs06r1b11,gs21r1b06
 
 
 export APP_PATH=${HOME}/git/TRIP/build
@@ -62,7 +63,11 @@ unset I_MPI_ASYNC_PROGRESS
 # Rabenseifner allreduce, good for medium/large messages at scale.
 export I_MPI_ADJUST_ALLREDUCE=5
 
+# Increase the timeout and retry counts for the network transport
+export UCX_IB_RETRY_COUNT=15
+export UCX_IB_TIMEOUT=20
 
+ulimit -c 0
 
 ARGS=(
     "--yaml_config" "$HOME/git/TRIP/bin/config_mn5.yml"

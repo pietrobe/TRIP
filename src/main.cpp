@@ -64,6 +64,22 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	const auto cfg_output_tail_dir = [&cfg]()
+	{
+		if (not cfg.output_new_convention)
+		{
+			return cfg.input_file;
+		}
+		else
+		{
+			auto p = cfg.input_directory.lexically_normal();
+
+			if (p.filename().empty() && p.has_parent_path()) return p.parent_path().filename();
+
+			return p.filename();
+		}
+	}();
+
 	std::stringstream	  ss_a, ss_b;
 	std::filesystem::path output_info_file_name;
 
@@ -277,19 +293,19 @@ main(int argc, char *argv[])
 			if (is_CRD_limit(cfg.emissivity_model))
 			{ // The CRD solition can be fully reconstructed from the J_KQ CRD solution.
 				// So we output only this filed for the CRD case.
-				rt_problem_ptr																		//
-					->write_JKQ_CRD_field_hdf5((output_path / "JKQ_CRD_field.h5").string(), false); //
-
 				rt_problem_ptr																					   //
-					->write_JKQ_CRD_field_hdf5((output_path / "JKQ_CRD_Doppler_shifted_field.h5").string(), true); //
+					->write_JKQ_CRD_field_hdf5((output_path / "JKQ_CRD_field_comoving_frame.h5").string(), false); //
+
+				rt_problem_ptr																					  //
+					->write_JKQ_CRD_field_hdf5((output_path / "JKQ_CRD_field_observer_frame.h5").string(), true); //
 			}
 			else
 			{
-				rt_problem_ptr																//
-					->write_JKQ_field_hdf5((output_path / "JKQ_field.h5").string(), false); //
-
 				rt_problem_ptr																			   //
-					->write_JKQ_field_hdf5((output_path / "JKQ_Doppler_shifted_field.h5").string(), true); //
+					->write_JKQ_field_hdf5((output_path / "JKQ_field_comoving_frame.h5").string(), false); //
+
+				rt_problem_ptr																			  //
+					->write_JKQ_field_hdf5((output_path / "JKQ_field_observer_frame.h5").string(), true); //
 			}
 			clocks.hdf5_out_time_JKQ = MPI_Wtime() - clocks.hdf5_out_time_JKQ;
 

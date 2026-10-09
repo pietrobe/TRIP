@@ -1,7 +1,7 @@
+#include <iomanip>
 #include "RT_problem.hpp"
 #include "RT_utility.hpp"
 #include "hdf_atmos_cpp.hpp"
-#include <iomanip>
 
 // read 3D input from pmd file
 void
@@ -16,7 +16,8 @@ RT_problem::read_3D_h5(const std::string filename, const AppConfig &cfg, const b
 	}
 
 	//////////////// read atom data ////////////////////////////////
-	if (THDF_is_two_term_atom(file_id)) { // Two-term atom
+	if (THDF_is_two_term_atom(file_id))
+	{ // Two-term atom
 		THDF_atom_two_terms_t atom;
 
 		if (hdf_atmos_cpp::read_atom_two_terms(file_id, atom) < 0)
@@ -30,17 +31,18 @@ RT_problem::read_3D_h5(const std::string filename, const AppConfig &cfg, const b
 		this->El_vec_.resize(atom.E_size);
 		this->Eu_vec_.resize(atom.E_size);
 
-		for (size_t i = 0; i < atom.E_size; i++) {
+		for (size_t i = 0; i < atom.E_size; i++)
+		{
 			this->El_vec_[i] = (atom.E_lower[i]);
 			this->Eu_vec_[i] = (atom.E_upper[i]);
 		}
-		this->Ll2_		 = atom.L2_lower; 
-		this->Lu2_		 = atom.L2_upper; 
-		this->S2_ 		 = atom.S2;
-		this->mass_		 = atom.atomic_mass;
-		this->Aul_		 = atom.Aul;
-		this->gl_        = atom.g_lower;
-		this->gu_        = atom.g_upper;
+		this->Ll2_	= atom.L2_lower;
+		this->Lu2_	= atom.L2_upper;
+		this->S2_	= atom.S2;
+		this->mass_ = atom.atomic_mass;
+		this->Aul_	= atom.Aul;
+		this->gl_	= atom.g_lower;
+		this->gu_	= atom.g_upper;
 
 		// Print Atom data for verification
 		if (mpi_rank_ == 0 and verbose)
@@ -55,16 +57,15 @@ RT_problem::read_3D_h5(const std::string filename, const AppConfig &cfg, const b
 			std::cout << "  gL_lower =    " << gl_ << std::endl;
 			std::cout << "  gL_upper =    " << gu_ << std::endl;
 			std::cout << "  E_lower =     [";
-			for(size_t i = 0; i < atom.E_size; i++)
-				std::cout<< El_vec_[i] << " ";
+			for (size_t i = 0; i < atom.E_size; i++) std::cout << El_vec_[i] << " ";
 			std::cout << "]" << std::endl;
 			std::cout << "  E_upper =     [";
-			for(size_t i = 0; i < atom.E_size; i++)
-				std::cout<< Eu_vec_[i] << " ";
+			for (size_t i = 0; i < atom.E_size; i++) std::cout << Eu_vec_[i] << " ";
 			std::cout << "]" << std::endl;
 		}
-
-	} else { // Two-level data
+	}
+	else
+	{ // Two-level data
 		THDF_atom_two_levels_t atom;
 
 		if (hdf_atmos_cpp::read_atom(file_id, atom) < 0)
@@ -101,7 +102,7 @@ RT_problem::read_3D_h5(const std::string filename, const AppConfig &cfg, const b
 			std::cout << "  b_coef_D2 =   " << b_coef_D2_ << std::endl;
 		}
 	}
-	
+
 	//////////////// read frequency grid ////////////////////////////////
 	// Read geometry and set the sizes:
 
@@ -276,7 +277,7 @@ RT_problem::read_3D_h5(const std::string filename, const AppConfig &cfg, const b
 																			 atmos_data.bulk_velocity_z); //
 					v_b_->block(i, j, k)[0] = v_spherical[0];
 					v_b_->block(i, j, k)[1] = v_spherical[1];
-					v_b_->block(i, j, k)[2] = v_spherical[2];					
+					v_b_->block(i, j, k)[2] = v_spherical[2];
 				}
 
 				// set to 0.0 as in PORTA, meaning that the scattering

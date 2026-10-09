@@ -1,7 +1,21 @@
+import sys
 import h5py
 import numpy as np
 import argparse
 import os
+from scipy.ndimage import gaussian_filter
+
+# ANSI color codes for pretty terminal output
+class C:
+    BOLD = '\033[1m'
+    DIM = '\033[2m'
+    CYAN = '\033[96m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    MAGENTA = '\033[95m'
+    BLUE = '\033[94m'
+    RESET = '\033[0m'
 
 
 def resolve_cli_direction_indices(incl_value, azim_value, angular_grid):
@@ -588,6 +602,53 @@ def read_map_data(h5file, mu, chi, freq_idx=None):
     }
 
 
+def spatial_convolution_hdf5(input_file, output_file, deltax, deltay, sigmax, sigmay):
+    """
+    Perform Gaussian spatial convolution of the emergent Stokes fields.
+
+    The convolution is applied over the first two dimensions (x, y) of the
+    5-D datasets using periodic boundary conditions (mode='wrap').
+
+    Parameters
+    ----------
+    input_file : str
+        Path to the input HDF5 file.
+    output_file : str
+        Path for the output HDF5 file (will be created/overwritten).
+    deltax : float
+        Grid spacing along the x axis (physical units).
+    deltay : float
+        Grid spacing along the y axis (physical units).
+    sigmax : float
+        Gaussian sigma along the x axis (same physical units as deltax).
+    sigmay : float
+        Gaussian sigma along the y axis (same physical units as deltay).
+    """
+    s_grid_x = sigmax / deltax
+    s_grid_y = sigmay / deltay
+    sigmas = (s_grid_x, s_grid_y, 0, 0, 0)
+
+    with h5py.File(input_file, "r") as f_in, h5py.File(output_file, "w") as f_out:
+        # Copy all top-level groups except emergent_field
+        for key in f_in.keys():
+            if key == "emergent_field":
+                continue
+            f_in.copy(f_in[key], f_out, key)
+
+        # Create emergent_field group and write convolved datasets
+        grp_out = f_out.create_group("emergent_field")
+        for ds_name in ["emergent_I", "emergent_QI_pc", "emergent_UI_pc", "emergent_VI_pc"]:
+            ds_in = f_in[f"emergent_field/{ds_name}"]
+            data = np.array(ds_in, dtype=np.float64)
+            convolved = gaussian_filter(data, sigma=sigmas, mode="wrap")
+            grp_out.create_dataset(ds_name, data=convolved, dtype=ds_in.dtype)
+
+    print(f"{C.BOLD}{C.GREEN}Spatial convolution complete -> {output_file}{C.RESET}")
+    print(f"  {C.CYAN}grid spacing:{C.RESET}        dx={deltax}, dy={deltay}")
+    print(f"  {C.CYAN}Gaussian sigma:{C.RESET}       sx={sigmax}, sy={sigmay}")
+    print(f"  {C.CYAN}sigma in grid units:{C.RESET}  sx_grid={s_grid_x:.4f}, sy_grid={s_grid_y:.4f}")
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Read HDF5 demo outputs")
@@ -598,6 +659,8 @@ if __name__ == "__main__":
     parser.add_argument("--save", help="If set, save plot to this filename (e.g. plot.png)")
     parser.add_argument("--x",    type=int,   default=1, help="x index (default 1)")
     parser.add_argument("--y",    type=int,   default=2, help="y index (default 2)")
+    parser.add_argument("--ij",   type=int,   nargs=2, metavar=("X", "Y"), default=None,
+                        help="Equivalent to --x X --y Y (two integers)")
     parser.add_argument("--incl", type=int,   default=2, help="inclination index (default 2)")
     parser.add_argument("--azim", type=int,   default=2, help="azimuth index (default 2)")
     # --- angle-based direction search (values in radians) ---
@@ -643,20 +706,38 @@ if __name__ == "__main__":
         "--freq-idx", type=int, default=0, metavar="F",
         help="Frequency index for --map mode (default: 0).  "
              "Ignored when --map is not set.")
+    parser.add_argument(
+        "--spatial_convolution", type=float, nargs=4,
+        metavar=("DELTAX", "DELTAY", "SIGMAX", "SIGMAY"), default=None,
+        help="Perform Gaussian spatial convolution of emergent Stokes fields "
+             "(deltax deltay sigmax sigmay).  Use with --out <file>.")
+    parser.add_argument(
+        "--out", type=str, default=None,
+        help="Output HDF5 file for --spatial_convolution.")
     args = parser.parse_args()
+    if args.ij is not None:
+        args.x, args.y = args.ij
     file_name = args.file
 
+    if args.spatial_convolution is not None:
+        if args.out is None:
+            parser.error("--spatial_convolution requires --out <filename>")
+        deltax, deltay, sigmax, sigmay = args.spatial_convolution
+        spatial_convolution_hdf5(file_name, args.out, deltax, deltay, sigmax, sigmay)
+        if not args.plot and not args.map:
+            sys.exit(0)
+
     output_freq_grid = THDF_read_frequencies_grid_from_hdf5(file_name)
-    print("Number of frequencies:", output_freq_grid["N_frequencies"])
-    print("Frequencies (Hz):", output_freq_grid["frequencies"])
+    # print("Number of frequencies:", output_freq_grid["N_frequencies"])
+    # print("Frequencies (Hz):", output_freq_grid["frequencies"])
 
     try:
         angular_grid = THDF_read_angular_grid_from_hdf5(file_name)
     except KeyError:
         angular_grid = None
         N_azimuth    = None
-        print("Warning: group '/emergent_angular_grid' not found; "
-              "continuing with explicit --incl/--azim indices.")
+        print(f"{C.YELLOW}Warning: group '/emergent_angular_grid' not found; "
+              f"continuing with explicit --incl/--azim indices.{C.RESET}")
     else:
         azimithal_angles   = angular_grid["azimuthal_angles"]
         inclination_angles = angular_grid["inclination_angles"]
@@ -664,14 +745,30 @@ if __name__ == "__main__":
         az_len   = len(azimithal_angles)
         incl_len = len(inclination_angles)
 
-        print("Number of directions:", angular_grid["N_directions"])
-        print("Inclination angles (rad):", inclination_angles)
-        print("Azimuthal angles (rad):  ", azimithal_angles)
-        print("Inclination indices:", angular_grid["inclinations_indices"][:incl_len])
-        print("Azimuthal indices:  ", angular_grid["azimuthal_indices"][:az_len])
-        print("N_inclination_angles:", angular_grid["N_inclination_angles"])
-        print("N_azimuthal_angles:  ", angular_grid["N_azimuthal_angles"])
-        print("N_directions:        ", angular_grid["N_directions"])
+        # Read spatial dimensions from the emergent_field group
+        N_x = N_y = 0
+        try:
+            with h5py.File(file_name, "r") as _f_sp:
+                if "/emergent_field" in _f_sp:
+                    _ds = _f_sp["/emergent_field/emergent_I"]
+                    N_x, N_y = _ds.shape[0], _ds.shape[1]
+        except Exception:
+            pass
+
+        print(f"{C.BOLD}{C.CYAN}═══════════════════════════════════════{C.RESET}")
+        print(f"{C.BOLD}{C.CYAN}  Dataset Information{C.RESET}")
+        print(f"{C.BOLD}{C.CYAN}═══════════════════════════════════════{C.RESET}")
+        lbl_w = 26
+        print(f"{C.GREEN}{'Spatial size (x, y):'.ljust(lbl_w)}{C.RESET}{N_x} x {N_y}")
+        print(f"{C.GREEN}{'Number of directions:'.ljust(lbl_w)}{C.RESET}{angular_grid['N_directions']}")
+        print(f"{C.GREEN}{'N_inclination_angles:'.ljust(lbl_w)}{C.RESET}{angular_grid['N_inclination_angles']}")
+        print(f"{C.GREEN}{'N_azimuthal_angles:'.ljust(lbl_w)}{C.RESET}{angular_grid['N_azimuthal_angles']}")
+        print(f"{C.GREEN}{'N_frequencies:'.ljust(lbl_w)}{C.RESET}{output_freq_grid['N_frequencies']}")
+        print(f"{C.CYAN}{'Inclination angles (rad):'.ljust(lbl_w)}{C.RESET}{inclination_angles}")
+        print(f"{C.GREEN}{'μ = cos(inclination):'.ljust(lbl_w)}{C.RESET}{np.cos(inclination_angles)}")
+        print(f"{C.CYAN}{'Azimuthal angles (rad):'.ljust(lbl_w)}{C.RESET}{azimithal_angles}")
+        print(f"{'Inclination indices:'.ljust(lbl_w)}{angular_grid['inclinations_indices'][:incl_len]}")
+        print(f"{'Azimuthal indices:'.ljust(lbl_w)}{angular_grid['azimuthal_indices'][:az_len]}")
 
         N_azimuth = angular_grid["N_azimuthal_angles"]
 
@@ -715,9 +812,9 @@ if __name__ == "__main__":
         profiles              = CSV_read_stokes_profiles(prof_csv, dir_index)
 
         print(
-            f"[compare] angular_grid: {ag_csv}\n"
-            f"[compare] profiles:     {prof_csv}\n"
-            f"[compare] closest CSV direction: dir_index={dir_index}, "
+            f"{C.BLUE}[compare]{C.RESET} angular_grid: {ag_csv}\n"
+            f"{C.BLUE}[compare]{C.RESET} profiles:     {prof_csv}\n"
+            f"{C.BLUE}[compare]{C.RESET} closest CSV direction: dir_index={dir_index}, "
             f"theta={match_info['theta']:.4f} rad, "
             f"mu={match_info['mu']:.4f}, "
             f"chi={match_info['chi']:.4f} rad, "
@@ -751,11 +848,12 @@ if __name__ == "__main__":
     # -----------------------------------------------------------------------
     def _legend_label(info, is_nearest=False):
         label = (
-            rf"$\theta$={info['incl_rad']:.4f},  "
+            rf"$\theta$={info['incl_rad']:.4f}"
+            "\n"
             rf"$\mu$={info['mu']:.4f}"
+            "\n"
+            rf"$\chi$={info['azim_rad']:.4f}"
         )
-        if is_nearest and info["angular_distance_rad"] > 0.0:
-            label += rf",  $\Delta$={np.degrees(info['angular_distance_rad']):.4f}°"
         return label
 
     # -----------------------------------------------------------------------
@@ -797,7 +895,7 @@ if __name__ == "__main__":
         azim_resolved = int(np.argmin(
             np.abs(angular_grid["azimuthal_angles"] - azim_rad_fixed)))
 
-        print(f"--lincl mode: fixed {azim_note}, resolved to azim_i={azim_resolved}")
+        print(f"{C.BOLD}{C.MAGENTA}--lincl mode:{C.RESET}  fixed {azim_note}, resolved to azim_i={azim_resolved}")
 
         directions = []
         for incl_i in args.lincl:
@@ -874,7 +972,7 @@ if __name__ == "__main__":
 
                 ax[0].legend(
                     handles=legend_handles,
-                    loc="upper right",
+                    loc="best",
                     fontsize=8,
                     framealpha=0.85,
                     handlelength=1.2,
@@ -962,11 +1060,23 @@ if __name__ == "__main__":
                 closest_info = _info_from_indices(
                     incl_resolved, azim_resolved, angular_grid)
 
-        print(
-            "Resolved indices:",
-            f"incl={incl_resolved}, azim={azim_resolved}",
-            f"({resolution_note})",
-        )
+        print(f"{C.BOLD}{C.CYAN}═══════════════════════════════════════{C.RESET}")
+        print(f"{C.BOLD}{C.CYAN}  Selected Direction{C.RESET}")
+        print(f"{C.BOLD}{C.CYAN}═══════════════════════════════════════{C.RESET}")
+        lbl_w = 26
+        print(f"{C.GREEN}{'Grid indices (i, j):'.ljust(lbl_w)}{C.RESET}{args.x}, {args.y}")
+        print(f"{C.GREEN}{'Grid indices (incl, azim):'.ljust(lbl_w)}{C.RESET}{incl_resolved}, {azim_resolved}")
+        if closest_info is not None:
+            print(f"{C.GREEN}{'θ (rad):'.ljust(lbl_w)}{C.RESET}{closest_info['incl_rad']:.6f}")
+            print(f"{C.GREEN}{'θ (deg):'.ljust(lbl_w)}{C.RESET}{closest_info['incl_deg']:.4f}")
+            print(f"{C.GREEN}{'μ = cos(θ):'.ljust(lbl_w)}{C.RESET}{closest_info['mu']:.6f}")
+            print(f"{C.GREEN}{'χ (rad):'.ljust(lbl_w)}{C.RESET}{closest_info['azim_rad']:.6f}")
+            print(f"{C.GREEN}{'χ (deg):'.ljust(lbl_w)}{C.RESET}{closest_info['azim_deg']:.4f}")
+            print(f"{'Flat direction index:'.ljust(lbl_w)}{closest_info['direction_index']}")
+            if closest_info['angular_distance_rad'] > 0:
+                print(f"{'Angular distance (deg):'.ljust(lbl_w)}{np.degrees(closest_info['angular_distance_rad']):.4f}")
+        else:
+            print(f"{C.DIM}{resolution_note}{C.RESET}")
 
         output_filed = THDF_read_field_from_hdf5(
             file_name,
@@ -978,11 +1088,11 @@ if __name__ == "__main__":
             N_azimuth=N_azimuth,
         )
 
-        print("Output field:")
-        print("Stokes I:", output_filed["stokes_I"])
-        print("Stokes Q:", output_filed["stokes_QI"])
-        print("Stokes U:", output_filed["stokes_UI"])
-        print("Stokes V:", output_filed["stokes_VI"])
+        # print("Output field:")
+        # print("Stokes I:", output_filed["stokes_I"])
+        # print("Stokes Q:", output_filed["stokes_QI"])
+        # print("Stokes U:", output_filed["stokes_UI"])
+        # print("Stokes V:", output_filed["stokes_VI"])
 
         if args.plot:
             try:
@@ -1038,7 +1148,7 @@ if __name__ == "__main__":
                                  else float(angular_grid["azimuthal_angles"][azim_resolved])
                                  if angular_grid is not None else None)
                     if theta_ref is None:
-                        print("[compare] Cannot resolve angles without angular-grid metadata.")
+                        print(f"{C.YELLOW}[compare] Cannot resolve angles without angular-grid metadata.{C.RESET}")
                     else:
                         cmp = _load_compare_data(theta_ref, chi_ref, args.x, args.y)
                         if cmp is not None:
@@ -1057,8 +1167,8 @@ if __name__ == "__main__":
                                     for k in cmp_keys
                                 }
                                 print(
-                                    f"[compare] CSV has {n_csv} pts, HDF5 has {n_h5} pts "
-                                    f"— interpolated onto HDF5 wavelength grid."
+                                    f"{C.YELLOW}[compare] CSV has {n_csv} pts, HDF5 has {n_h5} pts "
+                                    f"— interpolated onto HDF5 wavelength grid.{C.RESET}"
                                 )
                             else:
                                 cmp_interp = {k: cmp[k] for k in cmp_keys}
@@ -1072,7 +1182,7 @@ if __name__ == "__main__":
 
                 ax[0].legend(
                     handles=legend_handles,
-                    loc="upper right",
+                    loc="best",
                     fontsize=8,
                     framealpha=0.85,
                     handlelength=1.2,
@@ -1182,8 +1292,12 @@ if __name__ == "__main__":
                     norm = None
                 else:
                     vmax = np.nanmax(np.abs(data))
-                    norm = mcolors.TwoSlopeNorm(vmin=-vmax, vcenter=0, vmax=vmax)
-                    cmap = "RdBu_r"
+                    if vmax == 0 or np.isnan(vmax):
+                        norm = None
+                        cmap = "Greys_r"
+                    else:
+                        norm = mcolors.TwoSlopeNorm(vmin=-vmax, vcenter=0, vmax=vmax)
+                        cmap = "RdBu_r"
 
                 im = ax[panel].imshow(
                     data.T,           # transpose so x is horizontal, y vertical

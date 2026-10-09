@@ -14,6 +14,10 @@ def freq_to_angstrom(freq):
     return cm_to_angstrom(speed_of_light() / freq)
 
 
+def angstrom_to_freq(wave):
+    return speed_of_light() / angstrom_to_cm(wave)
+
+
 def vacuum_to_air(wave, to_air_limit=200.0):
     """
     https://github.com/ITA-Solar/rh/blob/master/idl/vacuumtoair.pro

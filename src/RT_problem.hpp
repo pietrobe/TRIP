@@ -29,14 +29,29 @@ emissivity_model_to_string(const emissivity_model_t &model)
 		case emissivity_model_t::CRD_limit:
 			return "CRD";
 			break;
+		case emissivity_model_t::CRD_limit_VHP_NO_HANLE:
+		case emissivity_model_t::CRD_limit_NO_HANLE:
+			return "CRD_NO_HANLE";
+			break;
 		case emissivity_model_t::PRD:
 		case emissivity_model_t::PRD_NORMAL:
+		case emissivity_model_t::PRD_MEDIUM:
 		case emissivity_model_t::PRD_FAST:
 			return "PRD";
+			break;
+		case emissivity_model_t::PRD_NO_HANLE:
+		case emissivity_model_t::PRD_NORMAL_NO_HANLE:
+		case emissivity_model_t::PRD_MEDIUM_NO_HANLE:
+		case emissivity_model_t::PRD_FAST_NO_HANLE:
+			return "PRD_NO_HANLE";
 			break;
 		case emissivity_model_t::PRD_AA:
 		case emissivity_model_t::PRD_AA_MAPV:
 			return "PRD_AA";
+			break;
+		case emissivity_model_t::PRD_AA_NO_HANLE:
+		case emissivity_model_t::PRD_AA_MAPV_NO_HANLE:
+			return "PRD_AA_NO_HANLE";
 			break;
 		case emissivity_model_t::PRD_AA_GB:
 			return "PRD_AA_GB";
@@ -47,56 +62,6 @@ emissivity_model_to_string(const emissivity_model_t &model)
 		case emissivity_model_t::PRD_AA_TWOTERM:
 		case emissivity_model_t::PRD_AA_TWOTERM_MAPV:
 			return "PRD_AA_TWOTERM";
-			break;
-		case emissivity_model_t::ZERO:
-			return "CONTINUUM";
-			break;
-		default:
-			return "UNKNOWN";
-			break;
-	}
-}
-
-inline std::string
-emissivity_model_to_string_long(const emissivity_model_t &model)
-{
-	switch (model)
-	{
-		case emissivity_model_t::NONE:
-			return "NONE";
-			break;
-		case emissivity_model_t::CRD_limit:
-			return "CRD_limit";
-			break;
-		case emissivity_model_t::CRD_limit_VHP:
-			return "CRD_limit_VHP";
-			break;
-		case emissivity_model_t::PRD:
-			return "PRD";
-			break;
-		case emissivity_model_t::PRD_NORMAL:
-			return "PRD_NORMAL";
-			break;
-		case emissivity_model_t::PRD_FAST:
-			return "PRD_FAST";
-			break;
-		case emissivity_model_t::PRD_AA:
-			return "PRD_AA";
-			break;
-		case emissivity_model_t::PRD_AA_MAPV:
-			return "PRD_AA_MAPV";
-			break;
-		case emissivity_model_t::PRD_AA_GB:
-			return "PRD_AA_GB";
-			break;
-		case emissivity_model_t::PRD_TWOTERM:
-			return "PRD_TWOTERM";
-			break;
-		case emissivity_model_t::PRD_AA_TWOTERM:
-			return "PRD_AA_TWOTERM";
-			break;
-		case emissivity_model_t::PRD_AA_TWOTERM_MAPV:
-			return "PRD_AA_TWOTERM_MAPV";
 			break;
 		case emissivity_model_t::ZERO:
 			return "CONTINUUM";

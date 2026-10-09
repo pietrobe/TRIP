@@ -1339,6 +1339,8 @@ void RT_problem::print_info() const{
 		if (S2_ == 0) {
 			std::cout << "El = "   << El_   << std::endl;
 			std::cout << "Eu = "   << Eu_   << std::endl;	
+			std::cout << "gl = "   << gl_   << std::endl;		
+			std::cout << "gu = "   << gu_   << std::endl;
 		} else {
 			std::cout << "El = [";
 			for (size_t i = 0; i < El_vec_.size(); i++) {
@@ -1350,13 +1352,21 @@ void RT_problem::print_info() const{
 				std::cout << Eu_vec_[i] << " ";
 			}
 			std::cout << "]\n";
+			std::cout << "gl = [";
+			for (size_t i = 0; i < gl_vec_.size(); i++) {
+				std::cout << gl_vec_[i] << " ";
+			}
+			std::cout << "]\n";
+			std::cout << "gu = [";
+			for (size_t i = 0; i < gu_vec_.size(); i++) {
+				std::cout << gu_vec_[i] << " ";
+			}
+			std::cout << "]\n";
 		}
 		std::cout << "2Ll = "  << Ll2_   << std::endl;
 		std::cout << "2Lu = "  << Lu2_   << std::endl;
-		std::cout << "gl = "   << gl_   << std::endl;		
-		std::cout << "gu = "   << gu_   << std::endl;
-		std::cout << "Aul = "  << Aul_  << std::endl;
 		std::cout << "2S = "   << S2_  << std::endl;
+		std::cout << "Aul = "  << Aul_  << std::endl;
 		
 		std::cout << "\n=========== Grids parameters ===========\n" << std::endl;	
 		std::cout << "N_x = "     << N_x_     << std::endl;	

@@ -1,0 +1,10 @@
+# atom_SrII.yml
+mass: 87.62         # atomic mass (amu)
+Aul: 1.41e+08       # Einstein A coefficient (s^-1)
+S2: 0               # 2*S (twice the spin quantum number)
+Ll2: 1              # 2*L of the lower level/term
+Lu2: 3              # 2*L of the upper level/term
+El: 0.0             # lower level energy(ies) (cm^-1)
+Eu: 24516.7         # upper level energy(ies) (cm^-1)
+gl: 2.0             # lower level Landé factor(s)
+gu: 1.33333         # upper level Landé factor(s)

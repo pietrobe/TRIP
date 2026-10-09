@@ -1,26 +1,28 @@
 # I/O
-input_directory: /gpfs/projects/ehpc597/model128/original
+input_directory: /playground/simone/model_128_SrII_4097/
 # input_file: cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_32x32x133.pmd
 # input_file:      AR_385_Cut_128x128x48_V0-B0_V0_fix_conv_KQ_MC.pmd
 # input_file:        GPP_SCALING_test_64x64x128.pmd
 # input_file:     small_ssd_from3D_128x128x143.h5
 # input_file:      small_ssd_from3D_8x8x143.h5
-input_file:      small_ssd_from3D_nij.h5
-frequency_file:  frequency/96F/frequency.dat
+input_file:      small_ssd_from3D_SrII_4097_nij_1x1x279_2lv.h5
+frequency_file:  frequency/96F/freq_128_centered.dat
 
 output: true
 output_overwrite_prevention: true
 
 # output_directory: /gpfs/scratch/ehpc597/model128/CRD_limit_128x128_DL_PORTA_comparison
-output_directory: /gpfs/scratch/ehpc597/model128/small_128x128x285
+output_directory: /playground/simone/SrII_new_grid_128/
 
-write_whole_3D_field_hdf5: true
+RII_contrib_block_margins:  [55, 90, 120, 150, 174]
+atom_file: atom_SrII.yml
+
+write_whole_3D_field_hdf5: false
 write_text_output: false
 
 use_B: true
 use_Vb: true
 
-use_continuum: false
 formal_solver: BESSER
 # formal_solver: DELO_linear
 
@@ -31,7 +33,6 @@ preconditioner_emissivity_model: CRD_limit
 
 emissivity_model: PRD
 # emissivity_model: CRD_limit
-# emissivity_model: PRD_AA_MAPV
 
 # used only for FAL-C input
 N_theta: 8
@@ -46,17 +47,16 @@ use_prec: true
 solver:
   ksp_solver_type: KSPRICHARDSON
   ksp_rtol: 1e-6
-  ksp_max_it: 15
+  ksp_max_it: 25
   verbose: true
 
 prec:
   pc_solver_type: KSPFGMRES
-  pc_rtol: 1e-6
-  pc_max_it: 25
+  pc_rtol: 1e-1
+  pc_max_it: 15
   pc_use_J_KQ: true
   verbose: true
   pc_formal_solver_approx: true
-
 
 
 default_chi: &default_chi 0.0
@@ -65,26 +65,11 @@ arbitrary_beams:
  - mu: 0.1
    chi: *default_chi
 
- - mu: 0.2
-   chi: *default_chi
-
  - mu: 0.3
    chi: *default_chi
-
- - mu: 0.4
-   chi: *default_chi  
-  
- - mu: 0.5
-   chi: *default_chi    
-
- - mu: 0.6
-   chi: *default_chi  
-
+    
  - mu: 0.7
    chi: *default_chi
-
- - mu: 0.8
-   chi: *default_chi  
 
  - mu: 0.9
    chi: *default_chi
@@ -92,6 +77,6 @@ arbitrary_beams:
  - mu: 1.0
    chi: *default_chi
 
- - mu:  3.30009478207572e-01
-   chi: 1.96349540849362e-01
+#  - mu:  3.30009478207572e-01
+#    chi: 1.96349540849362e-01
 
