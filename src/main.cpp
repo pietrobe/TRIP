@@ -118,8 +118,30 @@ main(int argc, char *argv[])
 		//////////////////////////////////////////////////////////////////////////
 		// Prepare output directory
 		// If the output directory does not exist, create it. If it exists, abort !
+
+		// create output output directory name including options
+		std::string suffix;
+		if (!cfg.use_B)             suffix += ".no_B";
+		if (!cfg.use_Vb)            suffix += ".no_Vb";
+		if (!cfg.enable_continuum)  suffix += ".no_cont";
+		if (!cfg.use_D2_from_input) suffix += ".D2_computed";
+		if (cfg.set_uniform_B)      suffix += ".uniform_B";
+		if (cfg.set_uniform_Vb)     suffix += ".uniform_Vb";
+		if (cfg.use_1_5D_approx)    suffix += ".1_5D";
+
+		const auto format_scaling = [](double v) 
+		{
+    		std::ostringstream oss;
+    		oss << std::defaultfloat << std::setprecision(6) << v;
+    		return oss.str();
+		};
+		
+		if (cfg.B_scaling  != 1.0) suffix += ".B_scale_" + format_scaling(cfg.B_scaling);
+		if (cfg.Vb_scaling != 1.0) suffix += ".V_scale_" + format_scaling(cfg.Vb_scaling);
+
 		const std::filesystem::path output_subdir =
-			std::filesystem::path(cfg.input_file.string() + "." + emissivity_model_to_string_long(cfg.emissivity_model));
+		    std::filesystem::path(cfg.input_file.string() + "."
+		        + emissivity_model_to_string_long(cfg.emissivity_model) + suffix);
 
 		const std::filesystem::path output_path =
 			std::filesystem::path(cfg.output_directory) / std::filesystem::path(output_subdir);

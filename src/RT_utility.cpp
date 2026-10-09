@@ -220,6 +220,9 @@ loadConfig(const std::string &filename)
 		}
 	}
 
+	if (config["B_scaling"])  cfg.B_scaling  = config["B_scaling" ].as<double>();
+	if (config["Vb_scaling"]) cfg.Vb_scaling = config["Vb_scaling"].as<double>();	
+
 	// Integers
 	if (config["N_theta"]) cfg.N_theta = config["N_theta"].as<int>();
 	if (config["N_chi"]) cfg.N_chi = config["N_chi"].as<int>();
