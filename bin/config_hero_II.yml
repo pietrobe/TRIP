@@ -1,37 +1,44 @@
 # I/O
-input_directory: /playground/simone/model_128_SrII_4097/
+input_directory: /playground/simone/Muram_SSD_6Mm/input/Muram_SSD_6Mm_1x1x143_CaI4227/
 # input_file: cai_1Bx_1By_1Bz_1Vx_1Vy_1Vz_GT4_32x32x133.pmd
 # input_file:      AR_385_Cut_128x128x48_V0-B0_V0_fix_conv_KQ_MC.pmd
 # input_file:        GPP_SCALING_test_64x64x128.pmd
 # input_file:     small_ssd_from3D_128x128x143.h5
 # input_file:      small_ssd_from3D_8x8x143.h5
-input_file:      small_ssd_from3D_SrII_4097_nij_1x1x279_2lv.h5
-frequency_file:  frequency/96F/freq_128_centered.dat
+# input_file:      small_ssd_from3D_SrII_4097_nij_1x1x279_2lv.h5
+input_file: Muram_SSD_6Mm_1x1x143_CaI4227.h5
+
+# frequency_file:  frequency/96F/freq_128_centered.dat
+frequency_file:  frequency/96F/frequency.dat
 
 output: true
 output_overwrite_prevention: true
 
 # output_directory: /gpfs/scratch/ehpc597/model128/CRD_limit_128x128_DL_PORTA_comparison
-output_directory: /playground/simone/SrII_new_grid_128/
+output_directory: /playground/simone/test_mu
 
 RII_contrib_block_margins:  [55, 90, 120, 150, 174]
-atom_file: atom_SrII.yml
+# atom_file: atom_SrII.yml
 
 write_whole_3D_field_hdf5: false
 write_text_output: false
 
 use_B: true
-use_Vb: true
+use_Vb: false
 
 formal_solver: BESSER
 # formal_solver: DELO_linear
 
 enable_sigma_c: true
 
-# emissivity_model: PRD
-preconditioner_emissivity_model: CRD_limit
-
 emissivity_model: PRD
+# preconditioner_emissivity_model: CRD_limit
+preconditioner_emissivity_model: CRD_limit_NO_HANLE
+
+# emissivity_model: PRD_AA_MAPV_NO_HANLE
+# emissivity_model: PRD_AA_MAPV
+# emissivity_model: PRD_NO_HANLE
+# emissivity_model: PRD
 # emissivity_model: CRD_limit
 
 # used only for FAL-C input
@@ -52,8 +59,8 @@ solver:
 
 prec:
   pc_solver_type: KSPFGMRES
-  pc_rtol: 1e-1
-  pc_max_it: 15
+  pc_rtol: 1e-6
+  pc_max_it: 25
   pc_use_J_KQ: true
   verbose: true
   pc_formal_solver_approx: true
@@ -65,13 +72,109 @@ arbitrary_beams:
  - mu: 0.1
    chi: *default_chi
 
+ - mu: 0.125
+   chi: *default_chi
+
+ - mu: 0.15
+   chi: *default_chi
+
+ - mu: 0.175
+   chi: *default_chi
+
+ - mu: 0.2
+   chi: *default_chi
+
+ - mu: 0.225
+   chi: *default_chi
+
+ - mu: 0.25
+   chi: *default_chi
+
+ - mu: 0.275
+   chi: *default_chi
+
  - mu: 0.3
    chi: *default_chi
-    
+
+ - mu: 0.325
+   chi: *default_chi
+
+ - mu: 0.35
+   chi: *default_chi
+
+ - mu: 0.375
+   chi: *default_chi
+
+ - mu: 0.4
+   chi: *default_chi
+
+ - mu: 0.425
+   chi: *default_chi
+
+ - mu: 0.45
+   chi: *default_chi
+
+ - mu: 0.475
+   chi: *default_chi
+
+ - mu: 0.5
+   chi: *default_chi
+
+ - mu: 0.525
+   chi: *default_chi
+
+ - mu: 0.55
+   chi: *default_chi
+
+ - mu: 0.575
+   chi: *default_chi
+
+ - mu: 0.6
+   chi: *default_chi
+
+ - mu: 0.625
+   chi: *default_chi
+
+ - mu: 0.65
+   chi: *default_chi
+
+ - mu: 0.675
+   chi: *default_chi
+
  - mu: 0.7
    chi: *default_chi
 
+ - mu: 0.725
+   chi: *default_chi
+
+ - mu: 0.75
+   chi: *default_chi
+
+ - mu: 0.775
+   chi: *default_chi
+
+ - mu: 0.8
+   chi: *default_chi
+
+ - mu: 0.825
+   chi: *default_chi
+
+ - mu: 0.85
+   chi: *default_chi
+
+ - mu: 0.875
+   chi: *default_chi
+
  - mu: 0.9
+   chi: *default_chi
+
+ - mu: 0.925
+   chi: *default_chi
+
+ - mu: 0.95
+   chi: *default_chi
+
+ - mu: 0.975
    chi: *default_chi
 
  - mu: 1.0
