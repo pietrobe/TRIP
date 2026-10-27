@@ -353,6 +353,7 @@ public:
 			}
 			else
 			{
+				
 				ierr = MatCreateShell(PETSC_COMM_WORLD,local_size,local_size,RT_problem_->tot_size_,RT_problem_->tot_size_,
 					                                   (void*)&mf_ctx_,&MF_operator_approx_);CHKERRV(ierr); 
 			}
