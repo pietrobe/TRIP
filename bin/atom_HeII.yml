@@ -1,0 +1,10 @@
+# atom_HeII.yml
+mass: 4.002602         # atomic mass (amu)
+Aul: 1.0029e+10       # Einstein A coefficient (s^-1)
+S2: 1               # 2*S (twice the spin quantum number)
+Ll2: 0              # 2*L of the lower level/term
+Lu2: 2              # 2*L of the upper level/term
+El: [0.0 0.0]             # lower level energy(ies) (cm^-1)
+Eu: [329179.2939406 329185.15110923]         # upper level energy(ies) (cm^-1)
+gl: 0.0             # lower level Landé factor(s)
+gu: 1.0         # upper level Landé factor(s)

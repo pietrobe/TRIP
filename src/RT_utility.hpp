@@ -37,6 +37,7 @@ enum class emissivity_model_t
 	PRD_AA_MAPV,		    //
 	PRD_AA_MAPV_NO_HANLE,	//
 	PRD_AA_GB,			    //
+	PRD_AA_GB_TWOTERM,      //
 	PRD_TWOTERM,		    //
 	PRD_AA_TWOTERM,		    //
 	PRD_AA_TWOTERM_MAPV,    //
@@ -102,6 +103,9 @@ emissivity_model_to_string_long(const emissivity_model_t &model)
 			break;
 		case emissivity_model_t::PRD_AA_GB:
 			return "PRD_AA_GB";
+			break;
+		case emissivity_model_t::PRD_AA_GB_TWOTERM:
+			return "PRD_AA_GB_TWOTERM";
 			break;
 		case emissivity_model_t::PRD_TWOTERM:
 			return "PRD_TWOTERM";
