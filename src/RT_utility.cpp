@@ -226,8 +226,8 @@ loadConfig(const std::string &filename)
 		}
 	}
 
-	if (config["B_scaling"])  cfg.B_scaling  = config["B_scaling" ].as<double>();
-	if (config["Vb_scaling"]) cfg.Vb_scaling = config["Vb_scaling"].as<double>();	
+	if (config["B_scaling"]) cfg.B_scaling = config["B_scaling"].as<double>();
+	if (config["Vb_scaling"]) cfg.Vb_scaling = config["Vb_scaling"].as<double>();
 
 	// Integers
 	if (config["N_theta"]) cfg.N_theta = config["N_theta"].as<int>();
@@ -289,8 +289,36 @@ loadConfig(const std::string &filename)
 		for (const auto &beam : config["arbitrary_beams"])
 		{
 			BeamDirection bd;
-			if (beam["mu"]) bd.mu = beam["mu"].as<double>();
-			if (beam["chi"]) bd.chi = beam["chi"].as<double>();
+			if (beam["mu"])
+			{
+				bd.mu = beam["mu"].as<double>();
+				if (not(bd.mu > 0.0 and bd.mu <= 1.0))
+				{
+					int mpi_rank;
+					MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+
+					if (mpi_rank == 0)
+						std::cerr << "ERROR: Invalid mu value on rank: " << mpi_rank << ", mu: " << bd.mu << std::endl
+								  << "Valid range is (0, 1]." << std::endl;
+
+					MPI_Abort(MPI_COMM_WORLD, 1);
+				}
+			}
+			if (beam["chi"])
+			{
+				bd.chi = beam["chi"].as<double>();
+				if (not(bd.chi >= 0.0 and bd.chi <= 6.28318530718))
+				{
+					int mpi_rank;
+					MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+
+					if (mpi_rank == 0)
+						std::cerr << "ERROR: Invalid chi value on rank: " << mpi_rank << ", chi: " << bd.chi << std::endl
+								  << "Valid range is [0, 2*pi]." << std::endl;
+
+					MPI_Abort(MPI_COMM_WORLD, 1);
+				}
+			};
 			cfg.arbitrary_beams.push_back(bd);
 		}
 	}
