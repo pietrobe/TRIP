@@ -35,6 +35,24 @@ namespace domain_decomposition_3D {
   }
 
   // ---------------------------------------------------------------------------
+  // has_valid_decomposition
+  // ---------------------------------------------------------------------------
+
+  bool
+  has_valid_decomposition(int size, int Nx, int Ny, int Nz) noexcept {
+    for (int px = 1; px <= std::min(size, Nx); ++px) {
+      if (size % px != 0)
+        continue;
+      const int rem = size / px;
+      for (int py = 1; py <= std::min(rem, Ny); ++py) {
+        if (rem % py == 0 && rem / py <= Nz)
+          return true;
+      }
+    }
+    return false;
+  }
+
+  // ---------------------------------------------------------------------------
   // DomainDecomposition class definition
   // ---------------------------------------------------------------------------
   void
@@ -512,9 +530,11 @@ namespace domain_decomposition_3D {
     }
     std::printf("  max prime factor: %d\n", max_prime);
 
-    if (max_prime > std::min({N_x, N_y, N_z})) {
-      std::fprintf(stderr, "Invalid domain size: N_x=%d, N_y=%d, N_z=%d, for MPI size=%d with max prime factor %d\n", N_x,
-                   N_y, N_z, mpi_size, max_prime);
+    if (!has_valid_decomposition(mpi_size, N_x, N_y, N_z)) {
+      std::fprintf(stderr,
+                   "Invalid domain size: N_x=%d, N_y=%d, N_z=%d, MPI size=%d has no factorization Px*Py*Pz "
+                   "with Px<=N_x, Py<=N_y, Pz<=N_z\n",
+                   N_x, N_y, N_z, mpi_size);
       return;
     }
 
@@ -559,12 +579,9 @@ namespace domain_decomposition_3D {
     std::printf("=== Ranking Model Comparison ===\n");
     std::printf("Domain: %d x %d x %d | MPI size: %d | Rank: %d\n\n", N_x, N_y, N_z, mpi_size, mpi_rank);
 
-    const auto primes    = prime_factors(mpi_size);
-    const int  max_prime = primes.empty() ? 1 : primes.back();
-
-    if (max_prime > std::min({N_x, N_y, N_z})) {
-      std::fprintf(stderr, "Invalid domain: N_x=%d, N_y=%d, N_z=%d for MPI size=%d (max prime=%d)\n", N_x, N_y, N_z,
-                   mpi_size, max_prime);
+    if (!has_valid_decomposition(mpi_size, N_x, N_y, N_z)) {
+      std::fprintf(stderr, "Invalid domain: N_x=%d, N_y=%d, N_z=%d for MPI size=%d (no Px<=N_x, Py<=N_y, Pz<=N_z)\n", N_x,
+                   N_y, N_z, mpi_size);
       return;
     }
 

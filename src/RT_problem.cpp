@@ -2932,15 +2932,12 @@ RT_problem::set_3D_decomposition_BLC(const int mpi_rank, const int mpi_size,cons
 	{
 		if (verbose_ == 0) std::cout << "Starting domain decomposition for MPI size = " << mpi_size << " and grid size N_x=" << N_x << ", N_y=" << N_y
 				  << ", N_z=" << N_z << std::endl;
-		const auto primes	 = ddc::prime_factors(mpi_size);
-		const int  max_prime = primes.empty() ? 1 : std::max(0, primes.back());
-
-		if (max_prime > std::min({N_x, N_y, N_z}))
+		if (!ddc::has_valid_decomposition(mpi_size, N_x, N_y, N_z))
 		{
 			std::fprintf(stderr,
 						 "It is impossible to decompose the domain with size: N_x=%d, N_y=%d, N_z=%d, for MPI size=%d "
-						 "with max prime factor %d\n",
-						 N_x, N_y, N_z, mpi_size, max_prime);
+						 "(no Px*Py*Pz with Px<=N_x, Py<=N_y, Pz<=N_z)\n",
+						 N_x, N_y, N_z, mpi_size);
 			MPI_Abort(MPI_COMM_WORLD, 1);
 			return;
 		}

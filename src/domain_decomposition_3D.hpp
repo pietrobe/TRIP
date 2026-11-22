@@ -19,6 +19,11 @@ namespace domain_decomposition_3D {
   std::vector<int>
   prime_factors(int n);
 
+  /// True if \p size can be written as Px*Py*Pz with Px <= Nx, Py <= Ny, Pz <= Nz,
+  /// i.e. every rank gets at least one cell along each axis.
+  bool
+  has_valid_decomposition(int size, int Nx, int Ny, int Nz) noexcept;
+
   // ---------------------------------------------------------------------------
   // DomainInfo — plain data holder for a single rank's decomposition result
   // ---------------------------------------------------------------------------
